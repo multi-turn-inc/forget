@@ -14,6 +14,7 @@ check "서버 IP"                 "155\.230\."
 check "개인 이메일"             "hebo1221"
 check "사업자등록번호"          "517-86-03611"
 check "터널/내부 URL"           "trycloudflare\.com"
+check "구 브랜드 잔재(Enacta)"       "Enacta"
 check "개인키 블록"             "BEGIN (RSA|OPENSSH|EC|ED25519)? ?PRIVATE KEY"
 DB=$(find . -name "*.sqlite3" -o -name "*.db" | grep -v ".git" | head -3)
 if [ -n "$DB" ]; then echo "✗ DB 파일 존재:"; echo "$DB"; FAIL=1; else echo "✓ DB 파일 없음"; fi

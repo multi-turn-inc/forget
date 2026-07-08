@@ -1360,7 +1360,7 @@ def init_db() -> None:
                     "proj_local",
                     "org_local",
                     "Default Project",
-                    "Local Mem1 project",
+                    "Local Forget project",
                     os.getenv("MEM1_API_KEY", "m0-local-dev-key"),
                     "",
                     json.dumps(

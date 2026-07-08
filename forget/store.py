@@ -7748,7 +7748,7 @@ def _context_source_route_availability(source_class: str, *, payload: dict[str, 
             "evidence": {"workdir": workdir},
         }
     if source_class == "enacta_memory":
-        return {"status": "available", "reason": "current process can assemble Enacta context", "evidence": {}}
+        return {"status": "available", "reason": "current process can assemble Forget context", "evidence": {}}
     if source_class == "codex_memory":
         memory_root = os.path.expanduser("~/.codex/memories")
         registry = os.path.join(memory_root, "MEMORY.md")
@@ -8710,7 +8710,7 @@ def _context_source_route_display_text(source_route: dict[str, Any]) -> str:
     source_labels = {
         "repo_inspection": "저장소 파일 확인",
         "remote_4090_runtime": "4090 런타임 확인",
-        "enacta_memory": "Enacta 기억 확인",
+        "enacta_memory": "Forget 기억 확인",
         "codex_memory": "Codex 메모리 확인",
         "browser_or_file_view": "브라우저/파일 화면 확인",
         "goal_state": "목표 상태 확인",
@@ -8857,7 +8857,7 @@ def _compile_use_now_packet(
             {
                 "action": "inspect_context_gap",
                 "target": str(context_status.get("primary_reason") or "context_status"),
-                "purpose": "Resolve why Enacta could not assemble actionable context.",
+                "purpose": "Resolve why Forget could not assemble actionable context.",
                 "source": "context_status",
             }
         )
@@ -11517,7 +11517,7 @@ def apply_mem1_policy_preset(
     normalized_id = str(preset_id or "").strip().lower()
     preset = MEM1_POLICY_PRESETS.get(normalized_id)
     if not preset:
-        raise HTTPException(status_code=404, detail=f"Unknown Mem1 policy preset: {preset_id}")
+        raise HTTPException(status_code=404, detail=f"Unknown Forget policy preset: {preset_id}")
     apply = _bool_or(payload.get("apply"), False)
     before = get_project_settings(project_id)
     updates = dict(preset["settings"])

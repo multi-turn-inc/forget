@@ -367,7 +367,7 @@ def _provider_entry(category: str, provider: str) -> dict[str, str]:
     return {
         "provider": provider,
         "status": "adapter_needed",
-        "notes": "Public Mem0 provider module exists; Mem1 currently needs a provider adapter before claiming parity.",
+        "notes": "Public Mem0 provider module exists; Forget currently needs a provider adapter before claiming parity.",
     }
 
 

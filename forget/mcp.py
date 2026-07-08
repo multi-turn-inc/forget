@@ -63,12 +63,12 @@ _FILTERS_PROPERTY = {
 TOOLS: list[dict[str, Any]] = [
     {
         "name": "get_mem1_capabilities",
-        "description": "Discover Mem1 preferred API namespaces and compatibility routes.",
+        "description": "Discover Forget preferred API namespaces and compatibility routes.",
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
         "name": "get_provider_parity",
-        "description": "Read the Mem0 provider-module parity matrix and current Mem1 provider adapter status.",
+        "description": "Read the Mem0 provider-module parity matrix and current Forget provider adapter status.",
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
@@ -93,7 +93,7 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "configure_provider",
-        "description": "Preview or apply a supported Mem1 provider configuration for a project.",
+        "description": "Preview or apply a supported Forget provider configuration for a project.",
         "inputSchema": {
             "type": "object",
             "required": ["category", "provider"],
@@ -111,7 +111,7 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "get_preflight_status",
-        "description": "Check combined Mem1 API, contract, evaluation, LoRA, and promotion readiness gates.",
+        "description": "Check combined Forget API, contract, evaluation, LoRA, and promotion readiness gates.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -150,7 +150,7 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "get_self_improvement_status",
-        "description": "Read the server-owned Mem1 self-improvement readiness snapshot without recomputing it in MCP.",
+        "description": "Read the server-owned Forget self-improvement readiness snapshot without recomputing it in MCP.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -243,7 +243,7 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "judge_memory",
-        "description": "Run the server-owned Mem1 memory policy judgment contract without reimplementing it in MCP.",
+        "description": "Run the server-owned Forget memory policy judgment contract without reimplementing it in MCP.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -440,7 +440,7 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "verify_context_evidence",
-        "description": "Verify a Mem1 context result or evidence object against current memory hashes.",
+        "description": "Verify a Forget context result or evidence object against current memory hashes.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -452,7 +452,7 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "verify_judgment_evidence",
-        "description": "Verify a Mem1 judgment result or judgment evidence object against current memory hashes.",
+        "description": "Verify a Forget judgment result or judgment evidence object against current memory hashes.",
         "inputSchema": {
             "type": "object",
             "properties": {
