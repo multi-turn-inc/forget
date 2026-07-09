@@ -1,0 +1,37 @@
+{
+  "name": "forget-connect",
+  "version": "0.1.0",
+  "description": "Safely connect Claude Code, Codex, and Claude Desktop to Forget memory.",
+  "type": "module",
+  "bin": {
+    "forget-connect": "bin/forget-connect.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "lint": "node --check bin/forget-connect.js && node --check src/cli.js && node --check src/core.js && node --check src/doctor.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "forget",
+    "memory",
+    "mcp",
+    "claude",
+    "codex"
+  ],
+  "author": "multi-turn",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/multi-turn-inc/forget.git",
+    "directory": "packages/forget-connect"
+  },
+  "homepage": "https://multi-turn.ai"
+}

@@ -60,6 +60,25 @@ curl -X POST localhost:8000/v1/memories/search/ \
 Forget speaks MCP over streamable HTTP at `/mcp` — 41 tools including
 `search_memories`, `add_memory`, `supersede_memory`, and `assemble_context`.
 
+Connect the hosted service without hand-editing config files:
+
+```bash
+npx forget-connect --user-id <memory-user> --app-id <project>
+```
+
+For the local server started above:
+
+```bash
+npx forget-connect --url http://localhost:8000/mcp --no-auth --client all
+```
+
+The CLI preserves other MCP servers, backs up existing files once, and installs
+the marked Claude Code/Codex instruction layer described below. The explicit
+scope keeps cross-client recall on the intended user and project rather than a
+legacy default.
+
+Manual configuration:
+
 **Claude Code**
 
 ```json

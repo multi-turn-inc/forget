@@ -16,7 +16,12 @@ check "사업자등록번호"          "517-86-03611"
 check "터널/내부 URL"           "trycloudflare\.com"
 check "구 브랜드 잔재(Enacta)"       "Enacta"
 check "개인키 블록"             "BEGIN (RSA|OPENSSH|EC|ED25519)? ?PRIVATE KEY"
-DB=$(find . -name "*.sqlite3" -o -name "*.db" | grep -v ".git" | head -3)
+DB=$(find . -type f \( \
+  -name "*.sqlite" -o -name "*.sqlite3" -o -name "*.db" -o \
+  -name "*.sqlite-wal" -o -name "*.sqlite-shm" -o -name "*.sqlite-journal" -o \
+  -name "*.sqlite3-wal" -o -name "*.sqlite3-shm" -o -name "*.sqlite3-journal" -o \
+  -name "*.db-wal" -o -name "*.db-shm" -o -name "*.db-journal" \
+\) ! -path "./.git/*" | head -3)
 if [ -n "$DB" ]; then echo "✗ DB 파일 존재:"; echo "$DB"; FAIL=1; else echo "✓ DB 파일 없음"; fi
 ENV=$(find . -name ".env*" ! -name ".env.example" | grep -v ".git" | head -3)
 if [ -n "$ENV" ]; then echo "✗ .env 파일 존재:"; echo "$ENV"; FAIL=1; else echo "✓ .env 없음"; fi
