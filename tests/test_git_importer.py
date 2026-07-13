@@ -63,3 +63,20 @@ def test_skip_wins_over_decision_verbs():
     # a conventional prefix is a label, not a verdict: stripping "chore:"
     # exposes a real (if small) decision underneath
     assert extract_decision("chore: switch CI to ubuntu-24.04", "") is not None
+
+
+def test_version_arrows_are_motion_not_decisions():
+    assert extract_decision("pre-commit autoupdate", "ruff-pre-commit: v0.7.0 → v0.7.1") is None
+    assert extract_decision("update deps v1.2.3 -> v1.2.4", "") is None
+    # a real rename arrow still counts
+    assert extract_decision("serverInfo name mem1-mcp -> forget-mcp", "") is not None
+
+
+def test_bare_rename_without_reason_is_dropped():
+    assert extract_decision("Rename bstate to bpop", "") is None
+    assert extract_decision(
+        "Rename bstate to bpop",
+        "Because the struct now only carries blocking-pop state.",
+    ) is not None
+    # renames with surrounding context still pass the normal path
+    assert extract_decision("Slave removal: slave -> replica in redis.conf", "") is not None

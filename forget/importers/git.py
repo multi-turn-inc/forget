@@ -36,7 +36,7 @@ DECISION_PATTERN = re.compile(
     r"drop(?:ped|s)?|deprecat(?:e|ed|es)|remove(?:d|s)? support|"
     r"renam(?:e|ed|es)|cho(?:o)?se(?:n)?|chose|settle(?:d)? on|"
     r"default(?:s)? to|instead of|rather than|revert(?:ed|s)?|"
-    r"introduc(?:e|ed|es)|standardiz(?:e|ed|es)|pin(?:ned)? to|"
+    r"introduc(?:e|ed|es)(?!\s+by)|standardiz(?:e|ed|es)|pin(?:ned)? to|"
     r"mov(?:e|ed|es) (?:to|from|off|behind)|flip(?:ped|s)?|"
     r"opt(?:ed)?[ -](?:in|out|for)|disabl(?:e|ed|es) .+ by default|"
     r"enabl(?:e|ed|es) .+ by default|works? without|no longer|"
@@ -46,18 +46,39 @@ DECISION_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
-# "old-name -> new-name" subjects are rename/replacement decisions.
-ARROW_PATTERN = re.compile(r"\S+\s*(?:->|→)\s*\S+")
+# "old-name -> new-name" subjects are rename/replacement decisions —
+# except version bumps ("v0.7.0 -> v0.7.1"), which are motion, not choice.
+ARROW_PATTERN = re.compile(r"(\S+)\s*(?:->|→)\s*(\S+)")
+VERSION_TOKEN = re.compile(r"^v?\d+(?:[.\-][\w]+)*[,.):\]]*$")
+
+# Automation authors never make decisions worth remembering. The 2026-07-13
+# external-repo audit found pre-commit.ci autoupdates were the single
+# largest noise source (5 of 20 sampled fastapi "decisions").
+BOT_AUTHOR = re.compile(r"\[bot\]|pre-commit|dependabot|renovate|github-actions", re.IGNORECASE)
+
+# "Rename bstate to bpop" / "last_vote_epoch -> lastVoteEpoch." — a bare
+# rename with no reason is refactoring motion; renames earn a memory only
+# with context around them.
+BARE_RENAME = re.compile(
+    r"^(?:rename[sd]?\s+\S+\s+to\s+\S+|\S+\s*(?:->|→)\s*\S+)[.,]?$", re.IGNORECASE
+)
 
 # "engine:", "feat(scope):", "docs:" — context labels, not content.
 CONVENTIONAL_PREFIX = re.compile(r"^[a-z][\w-]*(?:\([^)]*\))?!?:\s*", re.IGNORECASE)
 
 # Routine motion that never carries a decision worth remembering.
+# Translation/doc-sync churn dominates docs-heavy repos (fastapi audit:
+# 8 of 20 sampled "decisions" were translation commits).
 SKIP_PATTERN = re.compile(
     r"^(fix(?:up)?|typo|fmt|format|lint|whitespace|style|chore|wip|merge|"
-    r"bump version|release v?\d|update changelog|update readme)\b",
+    r"bump version|release v?\d|update changelog|update readme|"
+    r"sync \S+ docs)\b|\btranslations?\b|\bi18n\b",
     re.IGNORECASE,
 )
+
+# Leading gitmoji/emoji are labels, not content — strip before any match
+# (":memo: Fix typo" and "✏️ Fix typo" must hit the skip list).
+LEADING_EMOJI = re.compile(r"^(?::\w+:|[^\w\s\"'`(\[])+\s*")
 
 REASON_PATTERN = re.compile(
     r"(?:because|since|so that|reason:|why:)\s+(.{10,240}?)(?:\.\s|\.$|\n|$)",
@@ -78,8 +99,15 @@ def _first_sentence(text: str, limit: int = 240) -> str:
     return cleaned[:limit].rstrip()
 
 
+def _meaningful_arrow(text: str) -> bool:
+    return any(
+        not (VERSION_TOKEN.match(match.group(1)) and VERSION_TOKEN.match(match.group(2)))
+        for match in ARROW_PATTERN.finditer(text)
+    )
+
+
 def _is_decision(text: str) -> bool:
-    return bool(DECISION_PATTERN.search(text) or ARROW_PATTERN.search(text))
+    return bool(DECISION_PATTERN.search(text)) or _meaningful_arrow(text)
 
 
 def _first_decision_sentence(body: str) -> str | None:
@@ -99,8 +127,11 @@ def extract_decision(subject: str, body: str) -> str | None:
     the subject for context. Precision still beats recall: skip-listed
     subjects are dropped outright.
     """
-    subject = CONVENTIONAL_PREFIX.sub("", subject.strip())
+    subject = LEADING_EMOJI.sub("", CONVENTIONAL_PREFIX.sub("", subject.strip())).strip()
     if not subject or SKIP_PATTERN.search(subject):
+        return None
+    reason_in_body = REASON_PATTERN.search(body or "")
+    if BARE_RENAME.match(subject) and not reason_in_body:
         return None
     if _is_decision(subject):
         text = _first_sentence(subject)
@@ -142,6 +173,8 @@ def iter_commits(repo_path: Path) -> list[dict[str, str]]:
 def mine(repo_path: Path) -> list[Decision]:
     decisions = []
     for commit in iter_commits(repo_path):
+        if BOT_AUTHOR.search(commit["author"]):
+            continue
         text = extract_decision(commit["subject"], commit["body"])
         if text:
             decisions.append(Decision(
