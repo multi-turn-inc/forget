@@ -18,6 +18,8 @@ dependencies = [
 
 [project.optional-dependencies]
 server = ["uvicorn>=0.29"]
+vault = ["pynacl>=1.5"]
+fast = ["numpy>=1.24"]  # optional speedup for rerank/consolidation; pure-Python fallback otherwise
 
 [project.urls]
 Homepage = "https://multi-turn.ai"
