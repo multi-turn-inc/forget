@@ -1238,7 +1238,7 @@ def handle_mcp_rpc(payload: dict[str, Any], context: dict[str, str] | None = Non
                 request_id,
                 {
                     "protocolVersion": params.get("protocolVersion") or "2025-06-18",
-                    "serverInfo": {"name": "mem1-mcp", "version": "0.1.0"},
+                    "serverInfo": {"name": "forget-mcp", "version": "0.1.0"},
                     "capabilities": {"tools": {"listChanged": False}},
                 },
             )
