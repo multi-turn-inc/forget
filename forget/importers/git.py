@@ -221,10 +221,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--user-id", required=True)
     parser.add_argument("--app-id", default="", help="memory scope; defaults to the repo directory name")
     parser.add_argument("--dry-run", action="store_true", help="print decisions without storing")
+    parser.add_argument("--limit", type=int, default=0, help="keep only the N most recent decisions")
     args = parser.parse_args(argv)
 
     repo = args.repo.resolve()
     decisions = mine(repo)
+    if args.limit > 0:
+        decisions = decisions[: args.limit]  # git log order: newest first
     if args.dry_run:
         for decision in decisions:
             print(f"[{decision.date[:10]} {decision.sha[:8]}] {decision.text}")
