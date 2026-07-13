@@ -1,8 +1,9 @@
 import { readFile } from "node:fs/promises";
 import readline from "node:readline/promises";
-import { stdin, stdout } from "node:process";
+import { stdin, stdout, stderr } from "node:process";
 import {
   DEFAULT_MCP_URL,
+  HOSTED_MCP_URL,
   ConfigError,
   applyPlan,
   buildPlan,
@@ -31,9 +32,10 @@ Usage:
 Options:
   --client <ids>       Comma-separated: claude-code,codex,claude-desktop,all
   --url <url>          MCP URL (default: ${DEFAULT_MCP_URL})
+  --hosted             Use the managed Forget service (legacy) instead of a local server
   --user-id <id>       Memory user scope (pair with --app-id)
   --app-id <id>        Project/app scope (pair with --user-id)
-  --no-auth            Connect without a Bearer token (for a local server)
+  --no-auth            Connect without a Bearer token
   --no-rules           Do not manage CLAUDE.md or AGENTS.md instruction blocks
   --no-migrate-enacta  Keep matching legacy config and rules blocks
   --dry-run            Show the files that would change without writing them
@@ -44,14 +46,14 @@ Options:
   -v, --version        Show version
 
 Authentication:
-  Set FORGET_API_KEY, or run interactively and paste the key when prompted.
+  The default local server needs no token. For --hosted (legacy) set
+  FORGET_API_KEY, or run interactively and paste the key when prompted.
   Keys are intentionally not accepted as command-line arguments.
 
 Examples:
-  npx forget-connect
-  FORGET_API_KEY=... npx forget-connect --client claude-code,codex
-  FORGET_API_KEY=... npx forget-connect --user-id junghunkim --app-id Mem1
-  npx forget-connect --url http://localhost:8000/mcp --no-auth --client all
+  npx forget-connect                    # local server at ${DEFAULT_MCP_URL}
+  npx forget-connect --client claude-code,codex
+  FORGET_API_KEY=... npx forget-connect --hosted --user-id junghunkim --app-id Mem1
   npx forget-connect status
   npx forget-connect doctor --client codex
   npx forget-connect disconnect --client codex
@@ -68,7 +70,7 @@ function requireValue(argv, index, flag) {
 
 function isHostedBaseUrl(value) {
   const candidate = new URL(value);
-  const hosted = new URL(DEFAULT_MCP_URL);
+  const hosted = new URL(HOSTED_MCP_URL);
   const candidateHost = candidate.hostname.toLowerCase().replace(/\.+$/, "");
   const hostedHost = hosted.hostname.toLowerCase().replace(/\.+$/, "");
   if (candidateHost !== hostedHost) return false;
@@ -88,6 +90,8 @@ export function parseArgs(argv, env = process.env) {
     action: "connect",
     clientValues: [],
     url: env.FORGET_MCP_URL || DEFAULT_MCP_URL,
+    urlExplicit: false,
+    hostedFlag: false,
     userId: env.FORGET_USER_ID?.trim() || "",
     appId: env.FORGET_APP_ID?.trim() || "",
     auth: true,
@@ -114,9 +118,13 @@ export function parseArgs(argv, env = process.env) {
       options.clientValues.push(arg.slice("--client=".length));
     } else if (arg === "--url") {
       options.url = requireValue(argv, index, arg);
+      options.urlExplicit = true;
       index += 1;
     } else if (arg.startsWith("--url=")) {
       options.url = arg.slice("--url=".length);
+      options.urlExplicit = true;
+    } else if (arg === "--hosted") {
+      options.hostedFlag = true;
     } else if (arg === "--user-id") {
       options.userId = requireValue(argv, index, arg);
       index += 1;
@@ -159,6 +167,12 @@ export function parseArgs(argv, env = process.env) {
     } else {
       throw new ConfigError(`Unknown argument: ${arg}`);
     }
+  }
+  if (options.hostedFlag) {
+    if (options.urlExplicit) {
+      throw new ConfigError("--hosted and --url are mutually exclusive.");
+    }
+    options.url = HOSTED_MCP_URL;
   }
   options.baseUrl = normalizeUrl(options.url);
   options.hosted = isHostedBaseUrl(options.baseUrl);
@@ -278,16 +292,27 @@ async function promptHidden(question) {
   }
 }
 
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+function isLoopbackUrl(value) {
+  return LOOPBACK_HOSTS.has(new URL(value).hostname.toLowerCase());
+}
+
 async function apiKeyFor(options, env) {
   if (!["connect", "doctor"].includes(options.action) || !options.auth || options.dryRun) return "";
   const fromEnv = env.FORGET_API_KEY?.trim();
   if (fromEnv) {
-    if (new URL(options.url).protocol !== "https:") {
+    if (new URL(options.url).protocol === "https:") return validateApiKey(fromEnv);
+    if (!isLoopbackUrl(options.url)) {
       throw new ConfigError(
         "Bearer authentication requires HTTPS. Use --no-auth for a local HTTP server.",
       );
     }
-    return validateApiKey(fromEnv);
+    // A leftover hosted key must not block the local-first default flow, and
+    // a loopback target never puts the secret on the wire anyway.
+    stderr.write(
+      "Note: FORGET_API_KEY is set but the target is a loopback HTTP server; connecting without a token.\n",
+    );
   }
   if (!options.hosted) return "";
   const prompted = (await promptHidden("Paste your Forget API key: ")).trim();
@@ -444,7 +469,7 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
     apiKey,
     installInstructionRules: options.rules,
     migrateLegacy: options.migrateLegacy,
-    legacyUrls: [...new Set([options.url, options.baseUrl])],
+    legacyUrls: [...new Set([options.url, options.baseUrl, HOSTED_MCP_URL])],
   });
 
   if (options.dryRun) {

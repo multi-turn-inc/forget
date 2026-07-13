@@ -1,14 +1,16 @@
 # forget-connect
 
-Connect Claude Code, Codex, and Claude Desktop to [Forget](https://multi-turn.ai)
-without overwriting the MCP servers or global instructions you already have.
+Connect Claude Code, Codex, and Claude Desktop to a local
+[Forget](https://github.com/junghunkim/forget) memory server without
+overwriting the MCP servers or global instructions you already have.
 
 ```bash
-npx forget-connect --user-id <memory-user> --app-id <project>
+npx forget-connect
 ```
 
-The guided flow detects installed clients, asks for a hosted Forget API key
-with hidden input, and then:
+By default this targets the local server at `http://localhost:8000/mcp` —
+your memories stay on your machine. The guided flow detects installed
+clients and then:
 
 - merges a `forget` entry into each selected MCP config;
 - installs a marked memory rule in Claude Code's `CLAUDE.md` and Codex's
@@ -20,36 +22,33 @@ with hidden input, and then:
 Other MCP servers and text outside the marked rule block are preserved. Invalid
 JSON or a damaged marker block aborts before any selected client is changed.
 
-The two scope values are part of the connection, not search-time hints. They
-produce `/mcp/<app-id>/http/<user-id>` so a new client resumes the intended
-project instead of the legacy default scope. For hosted continuity, always set
-both. A bare hosted connection remains available for compatibility but prints a
-warning, and `doctor` will not call it continuity-ready.
-
 ## Non-interactive use
 
+```bash
+npx forget-connect --client claude-code,codex --yes
+```
+
+Use `FORGET_MCP_URL` or `--url` for a server on another port or host. A Bearer
+token (`FORGET_API_KEY`) is only sent over HTTPS; over loopback HTTP the CLI
+connects without a token and says so.
+
+## Hosted service (legacy)
+
+The managed service remains available behind an explicit flag while it is
+phased out in favor of local-first:
+
+```bash
+FORGET_API_KEY=... npx forget-connect --hosted \
+  --user-id <memory-user> --app-id <project>
+```
+
 Pass the key through the environment, not a command-line flag (command-line
-arguments can be visible to other local processes):
-
-```bash
-FORGET_API_KEY=... npx forget-connect \
-  --user-id my-user \
-  --app-id my-project \
-  --client claude-code,codex
-```
-
-`FORGET_USER_ID` and `FORGET_APP_ID` are equivalent to the two scope flags.
-
-For a local, unauthenticated Forget server:
-
-```bash
-npx forget-connect \
-  --url http://localhost:8000/mcp \
-  --no-auth \
-  --client all
-```
-
-Use `FORGET_MCP_URL` instead of `--url` if preferred.
+arguments can be visible to other local processes). `FORGET_USER_ID` and
+`FORGET_APP_ID` are equivalent to the two scope flags. The scope values are
+part of the connection, not search-time hints: they produce
+`/mcp/<app-id>/http/<user-id>` so a new client resumes the intended project.
+A bare hosted connection prints a warning, and `doctor` will not call it
+continuity-ready.
 
 ## Inspect or remove
 
@@ -62,11 +61,10 @@ npx forget-connect disconnect
 `doctor` is non-mutating. It checks that each selected client has the generated
 transport shape, expected URL and authorization, plus the current full
 instruction block (not only its markers). Only after those local checks pass
-does it verify the scoped endpoint identity and perform MCP initialize and
-tools/list against that URL. It fails when hosted scope is absent or mismatched,
-or when the continuity tools for search, write, context, outcome, and task state
-are missing. Add `--json` for automation or `--timeout 30` on a slow network.
-No authorization value or memory content is printed.
+does it perform MCP initialize and tools/list against that URL. For hosted
+connections it also verifies the scoped endpoint identity. Add `--json` for
+automation or `--timeout 30` on a slow network. No authorization value or
+memory content is printed.
 
 `disconnect` removes only the `forget` MCP entry and the marked Forget rules
 block. It does not restore backups or remove unrelated config.
@@ -75,7 +73,8 @@ block. It does not restore backups or remove unrelated config.
 
 ```text
 --client <ids>       claude-code,codex,claude-desktop,all
---url <url>          MCP URL (default: https://api.multi-turn.ai/mcp)
+--url <url>          MCP URL (default: http://localhost:8000/mcp)
+--hosted             Use the managed Forget service (legacy)
 --user-id <id>       Memory user scope; pair with --app-id
 --app-id <id>        Project/app scope; pair with --user-id
 --no-auth            Do not install a Bearer token
@@ -87,9 +86,9 @@ block. It does not restore backups or remove unrelated config.
 -y, --yes            Use detected clients, or all if none are detected
 ```
 
-By default, a legacy `enacta` entry is removed only when it points to the same
-MCP URL being installed. Its marked instruction block is upgraded to the
-Forget block. Use `--no-migrate-enacta` to keep both.
+By default, a legacy `enacta` entry is removed when it points to the URL being
+installed or to the hosted service. Its marked instruction block is upgraded
+to the Forget block. Use `--no-migrate-enacta` to keep both.
 
 ## Files managed
 

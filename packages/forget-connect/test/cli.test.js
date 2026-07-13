@@ -32,9 +32,30 @@ test("doctor timeout enforces the documented 1 to 60 second range", () => {
   assert.equal(parseArgs(["doctor", "--timeout=1"], {}).timeoutMs, 1000);
 });
 
-test("scope flags and environment build the hosted scoped endpoint", () => {
+test("the default endpoint is the local server; --hosted opts into the managed service", () => {
+  const defaults = parseArgs([], {});
+  assert.equal(defaults.baseUrl, "http://localhost:8000/mcp");
+  assert.equal(defaults.hosted, false);
+
+  const hosted = parseArgs(["connect", "--hosted"], {});
+  assert.equal(hosted.baseUrl, "https://api.multi-turn.ai/mcp");
+  assert.equal(hosted.hosted, true);
+
+  const hostedOverridesEnv = parseArgs(["connect", "--hosted"], {
+    FORGET_MCP_URL: "http://localhost:9999/mcp",
+  });
+  assert.equal(hostedOverridesEnv.baseUrl, "https://api.multi-turn.ai/mcp");
+
+  assert.throws(
+    () => parseArgs(["connect", "--hosted", "--url", "https://example.test/mcp"], {}),
+    /mutually exclusive/,
+  );
+});
+
+test("scope flags and environment build the scoped endpoint", () => {
   const flags = parseArgs([
     "connect",
+    "--hosted",
     "--user-id",
     "junghunkim",
     "--app-id=Mem1",
@@ -48,7 +69,8 @@ test("scope flags and environment build the hosted scoped endpoint", () => {
     FORGET_USER_ID: "user-env",
     FORGET_APP_ID: "app-env",
   });
-  assert.equal(fromEnv.url, "https://api.multi-turn.ai/mcp/app-env/http/user-env");
+  assert.equal(fromEnv.url, "http://localhost:8000/mcp/app-env/http/user-env");
+  assert.equal(fromEnv.hosted, false);
   assert.throws(
     () => parseArgs(["connect", "--user-id", "lonely"], {}),
     /must be provided together/,
@@ -97,7 +119,7 @@ test("scope flags and environment build the hosted scoped endpoint", () => {
   }
 });
 
-test("Bearer authentication is never sent over a custom plaintext URL", async (t) => {
+test("Bearer authentication is never sent over a plaintext URL", async (t) => {
   const home = await mkdtemp(path.join(os.tmpdir(), "forget-connect-http-auth-"));
   t.after(() => rm(home, { recursive: true, force: true }));
 
@@ -106,11 +128,23 @@ test("Bearer authentication is never sent over a custom plaintext URL", async (t
     "--client",
     "codex",
     "--url",
-    "http://localhost:8000/mcp",
+    "http://192.168.0.10:8000/mcp",
   ]);
   assert.equal(blocked.status, 1);
   assert.match(blocked.stderr, /Bearer authentication requires HTTPS/);
   assert.doesNotMatch(blocked.stdout + blocked.stderr, new RegExp(SECRET));
+
+  // A leftover hosted key must not break the loopback default: connect
+  // proceeds without a token and says so.
+  const loopback = invoke(home, ["connect", "--client", "codex"]);
+  assert.equal(loopback.status, 0, loopback.stderr);
+  assert.match(loopback.stderr, /connecting without a token/);
+  assert.doesNotMatch(loopback.stdout + loopback.stderr, new RegExp(SECRET));
+  const loopbackConfig = await readFile(
+    path.join(home, ".codex", "config.toml"),
+    "utf8",
+  );
+  assert.doesNotMatch(loopbackConfig, new RegExp(SECRET));
 
   const noAuth = invoke(home, [
     "connect",
@@ -153,7 +187,8 @@ test("CLI connects, reports status, and disconnects all clients without leaking 
   for (const client of clients) {
     const config = await readFile(client.configPath, "utf8");
     assert.match(config, /forget/);
-    assert.match(config, /integration-secret-must-not-print/);
+    assert.match(config, /localhost:8000\/mcp/);
+    assert.doesNotMatch(config, new RegExp(SECRET));
     assert.equal(await readFile(`${client.configPath}.forget-backup`, "utf8").then(Boolean), true);
     if (client.rulesPath) {
       const rules = await readFile(client.rulesPath, "utf8");
@@ -192,6 +227,17 @@ test("dry-run lists paths but writes nothing", async (t) => {
   await assert.rejects(readFile(path.join(home, ".codex", "config.toml")), /ENOENT/);
 });
 
+test("hosted connect writes the Bearer token to client configs", async (t) => {
+  const home = await mkdtemp(path.join(os.tmpdir(), "forget-connect-hosted-"));
+  t.after(() => rm(home, { recursive: true, force: true }));
+  const result = invoke(home, ["connect", "--client", "codex", "--hosted"]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stdout, new RegExp(SECRET));
+  const config = await readFile(path.join(home, ".codex", "config.toml"), "utf8");
+  assert.match(config, /api\.multi-turn\.ai\/mcp/);
+  assert.match(config, new RegExp(SECRET));
+});
+
 test("scoped CLI writes the same encoded endpoint for every client", async (t) => {
   const home = await mkdtemp(path.join(os.tmpdir(), "forget-connect-scoped-"));
   t.after(() => rm(home, { recursive: true, force: true }));
@@ -199,6 +245,7 @@ test("scoped CLI writes the same encoded endpoint for every client", async (t) =
     "connect",
     "--client",
     "all",
+    "--hosted",
     "--user-id",
     "user-one",
     "--app-id",

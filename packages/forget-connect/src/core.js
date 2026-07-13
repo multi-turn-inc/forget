@@ -14,7 +14,8 @@ import {
 import os from "node:os";
 import path from "node:path";
 
-export const DEFAULT_MCP_URL = "https://api.multi-turn.ai/mcp";
+export const DEFAULT_MCP_URL = "http://localhost:8000/mcp";
+export const HOSTED_MCP_URL = "https://api.multi-turn.ai/mcp";
 export const SERVER_KEY = "forget";
 export const BACKUP_SUFFIX = ".forget-backup";
 
