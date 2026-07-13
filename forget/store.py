@@ -4325,49 +4325,56 @@ def _promote_newer_siblings(
     try:
         import numpy as np
     except ImportError:
-        return 0
-    matrix = np.asarray([embeddings_by_id[item["id"]] for item in pool], dtype=np.float64)
-    norms = np.linalg.norm(matrix, axis=1, keepdims=True)
-    norms[norms == 0.0] = 1.0
-    unit = matrix / norms
-    epochs = np.array(
-        [
-            (parse_datetime(item.get("created_at")) or parse_datetime(item.get("updated_at"))).timestamp()
-            if (parse_datetime(item.get("created_at")) or parse_datetime(item.get("updated_at"))) is not None
-            else np.nan
-            for item in pool
-        ],
-        dtype=np.float64,
-    )
-    promotable = np.array([item.get("id") not in superseded_ids for item in pool], dtype=bool)
+        np = None
+    if np is not None:
+        matrix = np.asarray([embeddings_by_id[item["id"]] for item in pool], dtype=np.float64)
+        norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+        norms[norms == 0.0] = 1.0
+        unit = matrix / norms
+    else:
+        unit = _unit_rows([embeddings_by_id[item["id"]] for item in pool])
+    epochs: list[float | None] = []
+    for item in pool:
+        created = parse_datetime(item.get("created_at")) or parse_datetime(item.get("updated_at"))
+        epochs.append(created.timestamp() if created is not None else None)
+    promotable = [item.get("id") not in superseded_ids for item in pool]
     index_by_id = {item["id"]: i for i, item in enumerate(pool)}
     promotions = 0
     for anchor in scored[: max(anchor_count, 0)]:
         if promotions >= max_promotions:
             break
         anchor_index = index_by_id.get(anchor.get("id"))
-        if anchor_index is None or np.isnan(epochs[anchor_index]):
+        if anchor_index is None or epochs[anchor_index] is None:
             continue
-        similarities = (unit @ unit[anchor_index] + 1.0) / 2.0
+        if np is not None:
+            similarities = ((unit @ unit[anchor_index] + 1.0) / 2.0).tolist()
+        else:
+            anchor_row = unit[anchor_index]
+            similarities = [
+                (sum(a * b for a, b in zip(row, anchor_row)) + 1.0) / 2.0
+                for row in unit
+            ]
         # band-pass: above the ceiling is a near-duplicate echo of the anchor
         # (same stale content, no news value — templated chat rows especially),
         # below the floor is a different topic; the replacement register the
         # diag1 A/B was after lives in between
-        eligible = (
-            (similarities >= min_similarity)
-            & (similarities <= max_similarity)
-            & (epochs > epochs[anchor_index] + min_days * 86400.0)
-            & ~np.isnan(epochs)
-            & promotable
-        )
-        eligible[anchor_index] = False
-        if not eligible.any():
-            continue
-        candidates = np.flatnonzero(eligible)
+        newer_floor = epochs[anchor_index] + min_days * 86400.0
         # most-similar-in-band wins (stay on the anchor's topic), newest
         # breaks ties — newest-first let any recent above-floor row hijack
         # the slot in a large noisy corpus (caught by the diag1 A/B)
-        chosen = candidates[np.lexsort((epochs[candidates], similarities[candidates]))[-1]]
+        chosen, chosen_key = None, None
+        for j, similarity in enumerate(similarities):
+            if j == anchor_index or not promotable[j] or epochs[j] is None:
+                continue
+            if epochs[j] <= newer_floor:
+                continue
+            if not (min_similarity <= similarity <= max_similarity):
+                continue
+            key = (similarity, epochs[j])
+            if chosen_key is None or key > chosen_key:
+                chosen, chosen_key = j, key
+        if chosen is None:
+            continue
         sibling = pool[chosen]
         target_score = round(float(anchor["score"]) * score_mult, 4)
         if sibling["score"] >= target_score:
@@ -4453,12 +4460,28 @@ def _demote_stale_siblings(
     return demoted
 
 
+def _unit_rows(rows: list[list[float]]) -> list[list[float]]:
+    unit = []
+    for row in rows:
+        norm = sum(value * value for value in row) ** 0.5 or 1.0
+        unit.append([value / norm for value in row])
+    return unit
+
+
 def _pairwise_cosine_matrix(embeddings: list[list[float]]) -> Any:
-    """(cos+1)/2-scaled pairwise similarity matrix, or None without numpy."""
+    """(cos+1)/2-scaled pairwise similarity matrix — numpy when available,
+    pure-Python fallback otherwise. Temporal rerank and consolidation are
+    headline behavior; they must not silently turn off on a minimal
+    install. Callers only index the result, so nested lists interchange
+    with an ndarray."""
     try:
         import numpy as np
     except ImportError:
-        return None
+        unit = _unit_rows(embeddings)
+        return [
+            [(sum(a * b for a, b in zip(left, right)) + 1.0) / 2.0 for right in unit]
+            for left in unit
+        ]
     matrix = np.asarray(embeddings, dtype=np.float64)
     norms = np.linalg.norm(matrix, axis=1, keepdims=True)
     norms[norms == 0.0] = 1.0
