@@ -81,6 +81,18 @@ AAD binds the ciphertext to its envelope so the server cannot replay a
 record under a different scope or position. Optional length padding to
 size buckets (256 B steps) blunts size-correlation analysis.
 
+v1 packs text and embedding into one ciphertext per record. The
+alternative — separate ciphertexts under distinct HKDF info strings, so
+embeddings can re-sync alone on a model change — is deferred: model
+changes get a dedicated re-embed op instead.
+
+**Scope names are data, not routing.** The server sees random scope
+UUIDs only. Human-readable names ("work", "project-X") live in a small
+encrypted *scope manifest*, sealed under an MK-derived manifest key —
+even the shape of a user's life (how they label their layers) stays
+unreadable. The sync scope unit defaults to the engine's `project_id`
+in v1.
+
 ## Sync data model (server)
 
 The server-side `memories` table is replaced, for synced vaults, by an
@@ -121,11 +133,15 @@ CREATE TABLE devices (
 ```
 
 Clients pull `seq > last_seen`, decrypt locally, and apply to the local
-SQLite store; local changes push as new oplog entries. The engine's
-supersede model is append-oriented, so conflicts converge: last writer
-wins per `record_id`, and local consolidation cleans up semantic
-duplicates afterwards. (Multi-device merge cost is an open crux — see
-below.)
+SQLite store; local changes push as new oplog entries. An op is one of
+`add`, `supersede(old→new)`, or `tombstone` — mirroring the engine's
+non-destructive semantics. Merge is client-side and order-tolerant: ops
+union; supersede edges apply on top; concurrent adds of identical content
+dedupe on the engine's existing content `hash`; concurrent supersedes of
+the same record resolve last-writer-wins by (logical clock, device id).
+Because supersede is non-destructive, a "lost" writer stays auditable —
+the engine's philosophy survives sync intact. (Merge cost at scale is an
+open crux — see below.)
 
 ## Authentication
 
@@ -177,19 +193,48 @@ scopes are an opt-in exception, cryptographically bounded.
 | Malicious server swaps/replays records | AAD binding fails authentication |
 | Metadata analysis (counts, sizes, times) | Partially mitigated (padding); documented residual |
 
-## Open cruxes (de-risk before README/landing rewrite)
+## Plaintext egress audit (2026-07-13)
 
-1. **Local extraction quality.** The E2EE story requires extraction to run
-   locally by default (cloud LLM extraction is a disclosed opt-out).
-   Benchmark the heuristic extractor + fastembed against the current
-   cloud path; define the acceptable gap.
-2. **Encrypted-index multi-device merge.** Embeddings sync as ciphertext;
-   each device maintains its own local index. Measure rebuild/merge cost
-   at 10k–100k memories on laptop hardware.
+Every path where plaintext leaves the device today, and its disposition
+under vault mode:
+
+| Path | Today | E2EE disposition |
+|---|---|---|
+| Remote LLM extraction (`providers.extract_facts` remote branches) | opt-in via config | allowed only with an explicit `plaintext_egress` ack per provider; default local extractor |
+| Remote embeddings (`providers.embed_text` remote branches) | opt-in, falls back local | same gate; prefer on-device upgrade (fastembed/ollama) over remote |
+| Consolidation adjudication (`consolidation` → cloud LLM) | no-op without API key | same gate; local-LLM adjudicator is the target |
+| Remote vector stores (`vector_adapters.*`) | opt-in, default sqlite | **hard-disabled in vault mode** — encrypted vectors cannot be searched server-side, so there is nothing honest to offer |
+| `forget-connect` default URL | local since 0.2.0 | done; hosted stays behind `--hosted` (legacy) |
+| Scope ids in MCP URLs/filters | plaintext | local transport only, acceptable; the sync layer uses scope UUIDs |
+
+## Spikes before any marketing claims
+
+In order — and the landing/waitlist copy does not get to say
+"end-to-end encrypted sync, in beta" until 1–2 pass:
+
+1. **Vault core round-trip** against a mock relay: key hierarchy +
+   record encrypt/decrypt + oplog encode/decode. (crypto.py done;
+   keyring/vault/relay remain.)
+2. **Two-device merge** through the mock relay, including concurrent
+   supersede conflict and content-hash dedupe.
+3. **Local embedding upgrade decision.** deterministic-128 is private but
+   weak; measure fastembed ONNX (e.g. bge-small) on-device cost vs
+   quality so the private default is also a good default.
+4. **Enrollment + recovery walkthrough on two real machines**, one a
+   headless Linux box — no OS keychain, exercising the 0600 identity-file
+   fallback — driven entirely from the CLI.
+
+## Open cruxes
+
+1. **Merge cost at scale.** Each device rebuilds its local index from
+   decrypted embeddings; measure rebuild/merge at 10k–100k memories on
+   laptop hardware.
+2. **Oplog compaction.** Tombstone GC without letting the server infer
+   deletion patterns — likely batched per-scope rewrites.
 3. **Padding policy.** Bucket sizes vs. storage overhead — pick defaults
    after measuring real memory-length distributions.
-4. **Scope granularity defaults.** `personal`/`work` + per-`app_id`
-   auto-scopes, or user-defined only — decide after design-partner
+4. **Scope granularity defaults.** v1 syncs per `project_id`; whether solo
+   users get `personal`/`work` auto-scopes is decided after design-partner
    interviews (see gtm/ discovery script, question 4).
 
 ## Implementation notes
