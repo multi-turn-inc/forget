@@ -80,10 +80,11 @@
     border: 1px solid var(--line); border-radius: 8px; outline: none;
   }
   form.waitlist input:focus { border-color: var(--accent); }
-  form.waitlist button {
+  form.waitlist button, .waitlist a.cta {
+    display: inline-block;
     padding: 13px 22px; font-size: 16px; font-weight: 650;
     background: var(--accent); color: var(--bg);
-    border: 0; border-radius: 8px; cursor: pointer;
+    border: 0; border-radius: 8px; cursor: pointer; text-decoration: none;
   }
   .hero .alt { font-size: 14px; color: var(--muted); }
 
@@ -163,14 +164,13 @@
       end-to-end encrypted sync next.
     </p>
 
-    <!-- TODO: point action at your form backend (Buttondown / Formspree /
-         Loops) once forget.sh email is live. Until then the button is a
-         mailto fallback via formaction. -->
-    <form class="waitlist" action="https://TODO-your-form-endpoint" method="post">
-      <input type="email" name="email" required
-             placeholder="you@example.com" aria-label="Email address">
-      <button type="submit">Join the sync waitlist</button>
-    </form>
+    <!-- Interim CTA: mailto until the form backend (Formspree) is wired.
+         Swap back to <form class="waitlist" action="https://formspree.io/f/ID"> -->
+    <div class="waitlist">
+      <a class="cta" href="mailto:founder@multi-turn.ai?subject=forget%20sync%20waitlist&body=Add%20me%20to%20the%20waitlist.">
+        Join the sync waitlist →
+      </a>
+    </div>
     <p class="alt">
       Or run the <a href="https://github.com/junghunkim/forget">open-source
       engine</a> locally right now — no signup, no server, one SQLite file.
