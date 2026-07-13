@@ -66,9 +66,7 @@ def mcp_info() -> dict[str, Any]:
     }
 
 
-@app.post("/mcp", dependencies=[Depends(auth)])
-def mcp_rpc(payload: Any = Body(...), profile: str | None = None) -> JSONResponse:
-    context = {"tool_profile": profile} if profile else None
+def _mcp_dispatch(payload: Any, context: dict[str, str] | None) -> JSONResponse:
     if isinstance(payload, list):
         responses = [response for item in payload if (response := handle_mcp_rpc(item, context=context)) is not None]
         return JSONResponse(responses)
@@ -76,6 +74,33 @@ def mcp_rpc(payload: Any = Body(...), profile: str | None = None) -> JSONRespons
     if response is None:
         return JSONResponse({}, status_code=202)
     return JSONResponse(response)
+
+
+@app.post("/mcp", dependencies=[Depends(auth)])
+def mcp_rpc(payload: Any = Body(...), profile: str | None = None) -> JSONResponse:
+    return _mcp_dispatch(payload, {"tool_profile": profile} if profile else None)
+
+
+@app.get("/mcp/{app_id}/http/{user_id}", dependencies=[Depends(auth)])
+def mcp_scope_info(app_id: str, user_id: str) -> dict[str, Any]:
+    # Identity echo for connection doctors: confirms which scope this
+    # endpoint pins before any tool call is made (forget-connect probes it).
+    return {"name": "forget-mcp", "user_id": user_id, "client_name": app_id}
+
+
+@app.post("/mcp/{app_id}/http/{user_id}", dependencies=[Depends(auth)])
+def mcp_rpc_scoped(
+    app_id: str, user_id: str, payload: Any = Body(...), profile: str | None = None
+) -> JSONResponse:
+    # Scoped MCP endpoint (same path shape as the hosted gateway): every
+    # tool call inherits this user/app scope unless the caller names an
+    # entity explicitly — an unscoped local /mcp connection otherwise
+    # searches the default scope and misses the user's memories entirely
+    # (2026-07-13 dogfooding: a fresh client recalled nothing).
+    context: dict[str, str] = {"user_id": user_id, "client_name": app_id}
+    if profile:
+        context["tool_profile"] = profile
+    return _mcp_dispatch(payload, context)
 
 
 @app.get("/v1/capabilities", dependencies=[Depends(auth)])
