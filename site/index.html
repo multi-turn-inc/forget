@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>forget — memory for your AI that nobody else can read</title>
+<meta name="description" content="Open-source, local-first memory for your AI. End-to-end encrypted sync, built so we cannot read what we carry.">
+<style>
+  :root {
+    --bg: #0e0f11;
+    --fg: #e8e6e1;
+    --muted: #9a978f;
+    --line: #26282c;
+    --accent: #e8b44a;
+    --card: #16181b;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #faf9f6;
+      --fg: #1c1b18;
+      --muted: #6b6961;
+      --line: #e4e1da;
+      --accent: #b07d1e;
+      --card: #f1efe9;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 17px/1.65 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; padding: 0 24px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 28px 0;
+  }
+  .brand { font-family: var(--mono); font-size: 18px; color: var(--fg); }
+  .brand s { text-decoration-color: var(--accent); }
+  nav a { color: var(--muted); margin-left: 20px; font-size: 15px; }
+
+  .hero { padding: 72px 0 56px; }
+  h1 {
+    font-size: clamp(34px, 6vw, 52px); line-height: 1.12;
+    letter-spacing: -0.02em; font-weight: 750; margin-bottom: 22px;
+  }
+  .hero p.sub { font-size: 20px; color: var(--muted); max-width: 56ch; }
+
+  form.waitlist { display: flex; gap: 10px; margin: 34px 0 10px; flex-wrap: wrap; }
+  form.waitlist input {
+    flex: 1 1 240px; padding: 13px 16px; font-size: 16px;
+    background: var(--card); color: var(--fg);
+    border: 1px solid var(--line); border-radius: 8px; outline: none;
+  }
+  form.waitlist input:focus { border-color: var(--accent); }
+  form.waitlist button {
+    padding: 13px 22px; font-size: 16px; font-weight: 650;
+    background: var(--accent); color: var(--bg);
+    border: 0; border-radius: 8px; cursor: pointer;
+  }
+  .hero .alt { font-size: 14px; color: var(--muted); }
+
+  section { border-top: 1px solid var(--line); padding: 56px 0; }
+  h2 {
+    font-family: var(--mono); font-size: 14px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--accent); margin-bottom: 28px;
+  }
+  .fact { margin-bottom: 26px; }
+  .fact:last-child { margin-bottom: 0; }
+  .fact h3 { font-size: 19px; margin-bottom: 6px; }
+  .fact p { color: var(--muted); }
+
+  blockquote {
+    font-size: 24px; line-height: 1.45; font-weight: 600;
+    border-left: 3px solid var(--accent); padding-left: 22px;
+    margin: 0;
+  }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+  @media (max-width: 560px) { .cols { grid-template-columns: 1fr; } }
+  .col h3 {
+    font-family: var(--mono); font-size: 15px; margin-bottom: 14px;
+    color: var(--fg);
+  }
+  .col ul { list-style: none; }
+  .col li {
+    padding: 8px 0 8px 22px; position: relative; color: var(--muted);
+    font-size: 15.5px;
+  }
+  .col li::before {
+    content: "—"; position: absolute; left: 0; color: var(--accent);
+  }
+
+  pre.demo {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 18px 20px; font-family: var(--mono); font-size: 14px;
+    overflow-x: auto; margin-top: 24px; color: var(--fg);
+  }
+  pre.demo .c { color: var(--muted); }
+
+  .honest li { margin: 0 0 14px 0; color: var(--muted); list-style: none; }
+  .honest li strong { color: var(--fg); }
+
+  .partners { background: var(--card); border-radius: 12px; padding: 32px; }
+  .partners p { color: var(--muted); margin-bottom: 16px; }
+  .partners a.btn {
+    display: inline-block; padding: 11px 20px; border-radius: 8px;
+    border: 1px solid var(--accent); font-weight: 600;
+  }
+
+  footer {
+    border-top: 1px solid var(--line); padding: 36px 0 56px;
+    color: var(--muted); font-size: 14px;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="brand"><s>forget</s></div>
+    <nav>
+      <a href="https://github.com/junghunkim/forget">GitHub</a>
+      <a href="https://github.com/junghunkim/forget/blob/main/MANIFESTO.md">Manifesto</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <h1>I don't want to share my prompts.</h1>
+    <p class="sub">
+      Forget is local-first memory for your AI — open source today,
+      end-to-end encrypted sync next. Built so that we cannot read what we
+      carry. Neither can whoever acquires us. Neither can a subpoena.
+    </p>
+
+    <!-- TODO: point action at your form backend (Buttondown / Formspree /
+         Loops) once forget.sh email is live. Until then the button is a
+         mailto fallback via formaction. -->
+    <form class="waitlist" action="https://TODO-your-form-endpoint" method="post">
+      <input type="email" name="email" required
+             placeholder="you@example.com" aria-label="Email address">
+      <button type="submit">Join the sync waitlist</button>
+    </form>
+    <p class="alt">
+      Or run the <a href="https://github.com/junghunkim/forget">open-source
+      engine</a> locally right now — no signup, no server, one SQLite file.
+    </p>
+  </div>
+
+  <section>
+    <h2>Three facts about AI memory</h2>
+    <div class="fact">
+      <h3>It is not privileged.</h3>
+      <p>In February 2026, a US federal court ruled that a defendant's AI
+      conversations were not protected — the provider's terms of service
+      said data could be used for training and disclosed to third parties.
+      What you tell an AI is, legally, what you told a company.</p>
+    </div>
+    <div class="fact">
+      <h3>Your memory vendor will change hands.</h3>
+      <p>Rewind promised local-first privacy, pivoted to the cloud, and was
+      acquired — its users were migrated onto the acquirer's terms overnight.
+      Every startup holding your memories is one term sheet away from being
+      someone else's database.</p>
+    </div>
+    <div class="fact">
+      <h3>The platforms will not fix this.</h3>
+      <p>A model provider cannot end-to-end encrypt memory its own servers
+      must read, and it will never port your memory to a competitor's tool.
+      Native memory features are silos by design.</p>
+    </div>
+  </section>
+
+  <section>
+    <blockquote>
+      Your model provider already reads your prompts. There is no reason
+      your memory layer should be a second reader.
+    </blockquote>
+  </section>
+
+  <section>
+    <h2>Today / Next</h2>
+    <div class="cols">
+      <div class="col">
+        <h3>Today — open source, works now</h3>
+        <ul>
+          <li>Runs entirely on your machine — one SQLite file you own</li>
+          <li>Observation gate keeps facts, forgets junk</li>
+          <li>Supersede, temporal rerank, background consolidation</li>
+          <li>MCP: Claude Code, Cursor, Codex, Claude Desktop</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3>Next — E2EE sync</h3>
+        <ul>
+          <li>Encrypted on your device before it touches a server</li>
+          <li>Embeddings encrypted too — a vector is a paraphrase</li>
+          <li>Scoped layers: grant a session your work memory, nothing else</li>
+          <li>No passwords — device keys plus a recovery code</li>
+        </ul>
+      </div>
+    </div>
+    <pre class="demo"><span class="c"># memory in sixty seconds</span>
+pip install forget-ai[server]
+uvicorn forget.server:app --port 8000
+npx forget-connect   <span class="c"># wires Claude Code, Codex, Claude Desktop</span></pre>
+  </section>
+
+  <section>
+    <h2>What we won't pretend</h2>
+    <ul class="honest">
+      <li><strong>The model you use still sees plaintext.</strong> It has to,
+      to use your memories. Encryption protects you from storage providers —
+      including us — not from the AI you deliberately hand a memory to.</li>
+      <li><strong>Cloud extraction is a disclosed trade-off.</strong> We
+      default to local processing and label the alternative instead of
+      hiding it.</li>
+      <li><strong>Lost devices plus lost recovery code means lost
+      memories.</strong> We can't reset what we can't read. That is the
+      price of the guarantee.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="partners">
+      <h2>Building AI for therapy, law, or health?</h2>
+      <p>Your users' memories are your liability. A memory layer you
+      cryptographically cannot read can't leak and can't be compelled.
+      We're taking design partners.</p>
+      <a class="btn" href="mailto:founder@multi-turn.ai?subject=forget%20design%20partner">Talk to us</a>
+    </div>
+  </section>
+
+  <footer>
+    <div>The safest secret-keeper is one with nothing to tell.</div>
+    <div>
+      <a href="https://github.com/junghunkim/forget">GitHub</a> ·
+      Apache-2.0
+    </div>
+  </footer>
+</div>
+
+</body>
+</html>

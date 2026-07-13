@@ -14,6 +14,9 @@ forgetting well.
   and context across sessions and across tools.
 - **Forget context limits.** Durable facts live outside the window and come
   back only when relevant.
+- **Forget trusting us.** Everything runs on your machine, in one SQLite
+  file you own. End-to-end encrypted sync is next — built so that we
+  cannot read what we carry. ([Why this matters →](MANIFESTO.md))
 - **Forget nothing** — that matters.
 
 ## How it works
@@ -60,22 +63,17 @@ curl -X POST localhost:8000/v1/memories/search/ \
 Forget speaks MCP over streamable HTTP at `/mcp` — 41 tools including
 `search_memories`, `add_memory`, `supersede_memory`, and `assemble_context`.
 
-Connect the hosted service without hand-editing config files:
+Connect the local server started above without hand-editing config files:
 
 ```bash
-npx forget-connect --user-id <memory-user> --app-id <project>
-```
-
-For the local server started above:
-
-```bash
-npx forget-connect --url http://localhost:8000/mcp --no-auth --client all
+npx forget-connect
 ```
 
 The CLI preserves other MCP servers, backs up existing files once, and installs
-the marked Claude Code/Codex instruction layer described below. The explicit
-scope keeps cross-client recall on the intended user and project rather than a
-legacy default.
+the marked Claude Code/Codex instruction layer described below. The legacy
+hosted service is still reachable with
+`npx forget-connect --hosted --user-id <memory-user> --app-id <project>`
+while it is phased out in favor of local-first.
 
 Manual configuration:
 
@@ -120,11 +118,19 @@ FORGET_API_KEY=<your key>        # sent as "Authorization: Bearer <key>"
 The REST surface and MCP tool names are API-compatible with mem0 and
 OpenMemory clients — point an existing client at Forget and it works.
 
-## Hosted
+## Sync — end-to-end encrypted (in design)
 
-A hosted, multi-device version with a memory console lives at
-[multi-turn.ai](https://multi-turn.ai) — same engine, plus sync, team
-sharing, and a UI to see and edit what your AI knows about you.
+The engine is local today. What's next is multi-device sync that cannot
+betray you: memories — and their embeddings — are encrypted on your device
+before they touch a server. The server stores ciphertext and nothing else.
+Not us, not an acquirer, not a subpoena.
+
+The reasoning is in [MANIFESTO.md](MANIFESTO.md); the key hierarchy, record
+format, and device-auth design are in
+[docs/vault-design.md](docs/vault-design.md).
+
+**Building AI for therapy, law, or health?** Your users' memories are your
+liability. We're taking design partners — founder@multi-turn.ai.
 
 ## License
 

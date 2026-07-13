@@ -9,3 +9,6 @@ dist/
 .env.*
 !.env.example
 .DS_Store
+
+# private GTM material — never ship with the public repo
+gtm/
