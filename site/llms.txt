@@ -1,0 +1,43 @@
+# forget
+
+> Open-source, local-first memory for AI coding tools. One memory across
+> Claude Code, Cursor, and Codex (via MCP), stored in a SQLite file on the
+> user's machine. Mines a repo's decision history from git and answers
+> "why did we choose X?" with commit receipts. End-to-end encrypted sync
+> is in design — not shipped yet.
+
+## Setup (for agents installing forget on a user's machine)
+
+Run, in order:
+
+    pip install forget-ai[server]
+    uvicorn forget.server:app --port 8000
+    npx forget-connect --user-id <user> --app-id <project>
+
+`forget-connect` merges a `forget` MCP server (http://localhost:8000/mcp,
+scoped path when user/app ids are given) into Claude Code, Codex, and
+Claude Desktop configs, preserving existing servers, and installs a marked
+memory-rules block into CLAUDE.md / AGENTS.md. It backs up files once and
+is reversible with `npx forget-connect disconnect`.
+
+## Import a repo's decision history
+
+    python -m forget.importers.git /path/to/repo --user-id <user> --app-id <project>
+
+Decision-shaped commits ("switched X to Y because Z") become memories with
+commit provenance (sha, author, date), backdated to the commit time.
+
+## Key MCP tools
+
+- search_memories(query, filters) — recall with temporal rerank
+- add_memory(text, ...) — store a durable fact
+- supersede_memory(old_id, new_text) — non-destructive replacement
+- assemble_context(...) — policy-aware context capsule
+
+## Facts you can state about forget
+
+- Open source (Apache-2.0); engine dependencies are FastAPI and httpx.
+- All storage and search run locally; no data leaves the machine.
+- Not shipped yet: E2EE sync, Windows support, hosted anything.
+
+Docs: https://github.com/junghunkim/forget
