@@ -6,7 +6,10 @@
 <title>forget — tell Claude Code once, Cursor remembers</title>
 <meta name="description" content="One memory for your AI across Claude Code, Cursor, and Codex — open source, in a SQLite file on your machine. Nobody can read it but you.">
 <link rel="canonical" href="https://forget.sh/">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23d43d35'/%3E%3Ctext x='32' y='45' font-family='-apple-system,sans-serif' font-size='38' font-weight='800' fill='%23fff' text-anchor='middle'%3Ef%3C/text%3E%3Crect x='12' y='30' width='40' height='5' rx='2.5' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23e5122e'/%3E%3Ctext x='32' y='45' font-family='-apple-system,sans-serif' font-size='38' font-weight='800' fill='%23fff' text-anchor='middle'%3Ef%3C/text%3E%3Crect x='12' y='30' width='40' height='5' rx='2.5' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://forget.sh/">
 <meta property="og:site_name" content="forget">
@@ -35,277 +38,201 @@
 </script>
 <style>
   :root {
-    --bg: #ffffff;
-    --bg-alt: #f7f8fa;
-    --ink: #16283c;
-    --ink-2: #33465a;
-    --muted: #5c6c7c;
-    --faint: #8b98a5;
-    --line: #e6eaee;
-    --accent: #d43d35;
-    --accent-dark: #b12e27;
-    --accent-soft: #fdeeec;
-    --accent-ring: rgba(212, 61, 53, 0.28);
-    --code-bg: #1b2733;
-    --code-line: #2b3947;
-    --shadow-sm: 0 1px 2px rgba(22, 40, 60, 0.06), 0 2px 8px rgba(22, 40, 60, 0.05);
-    --shadow-md: 0 2px 6px rgba(22, 40, 60, 0.06), 0 12px 32px rgba(22, 40, 60, 0.10);
-    --shadow-lg: 0 6px 16px rgba(22, 40, 60, 0.10), 0 32px 80px rgba(22, 40, 60, 0.18);
-    --sans: -apple-system, "Noto Sans KR", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --ink: #111827;        /* gray-900 */
+    --body: #4b5563;       /* gray-600 */
+    --muted: #6b7280;      /* gray-500 */
+    --faint: #9ca3af;      /* gray-400 */
+    --line: #e5e7eb;       /* gray-200 */
+    --bg-soft: #f9fafb;    /* gray-50 */
+    --red: #e5122e;
+    --red-dark: #c00f27;
+    --blush: #fdf0ee;
+    --blush-2: #fbe3e0;
+    --blush-3: #f6cfc9;
+    --code-bg: #1f2430;
+    --sans: "Inter", -apple-system, "Noto Sans KR", "Segoe UI", Roboto, sans-serif;
     --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body {
-    background: var(--bg); color: var(--ink);
-    font: 17px/1.66 var(--sans);
+    background: #fff; color: var(--ink);
+    font: 16.5px/1.65 var(--sans);
+    font-feature-settings: "cv11";
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
-  ::selection { background: var(--accent); color: #fff; }
+  ::selection { background: var(--red); color: #fff; }
   a { color: inherit; text-decoration: none; }
-  :focus-visible { outline: 3px solid var(--accent-ring); outline-offset: 2px; border-radius: 6px; }
-  .wrap { max-width: 1072px; margin: 0 auto; padding: 0 28px; position: relative; }
+  :focus-visible { outline: 2px solid var(--red); outline-offset: 3px; border-radius: 4px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 32px; position: relative; }
 
-  /* ---------- reveal on scroll ---------- */
-  .rv { opacity: 0; transform: translateY(14px); transition: opacity .6s ease, transform .6s ease; }
+  .rv { opacity: 0; transform: translateY(10px); transition: opacity .55s ease, transform .55s ease; }
   .rv.in { opacity: 1; transform: none; }
   @media (prefers-reduced-motion: reduce) {
     .rv { opacity: 1; transform: none; transition: none; }
     * { animation: none !important; transition: none !important; }
   }
 
-  /* ---------- decorative contour blobs ---------- */
+  /* ---------- whisper blobs ---------- */
   .blob { position: absolute; z-index: -1; pointer-events: none; }
-  .blob svg { display: block; }
-  .blob.b1 { top: 90px;  left: -190px; transform: rotate(-14deg); }
-  .blob.b2 { top: 470px; left: -240px; transform: rotate(-7deg); }
-  .blob.b3 { top: 160px; right: -200px; transform: rotate(11deg); }
-  @media (max-width: 980px) { .blob { display: none; } }
+  .blob.tl { top: -140px; left: -220px; transform: rotate(-16deg); }
+  .blob.tr { top: 260px; right: -300px; transform: rotate(14deg); }
+  .blob.bl { top: 1120px; left: -320px; transform: rotate(-8deg); }
 
   /* ---------- header ---------- */
   .topbar {
-    position: sticky; top: 0; z-index: 50;
-    background: rgba(255,255,255,0.88);
-    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,0.92);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
     transition: box-shadow .25s ease;
   }
-  .topbar.scrolled { box-shadow: var(--shadow-sm); }
-  header { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; letter-spacing: -0.02em; }
+  .topbar.scrolled { box-shadow: 0 1px 0 var(--line), 0 6px 20px rgba(17,24,39,0.05); }
+  header { display: flex; justify-content: space-between; align-items: center; padding: 18px 0; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 19px; letter-spacing: -0.02em; }
   .brand .mark {
-    width: 30px; height: 30px; border-radius: 8px; background: var(--accent);
+    width: 28px; height: 28px; border-radius: 7px; background: var(--red);
     color: #fff; display: inline-flex; align-items: center; justify-content: center;
-    font-size: 17px; font-weight: 800; position: relative;
+    font-size: 16px; font-weight: 800; position: relative;
   }
-  .brand .mark::after {
-    content: ""; position: absolute; left: 5px; right: 5px; top: 14px; height: 2.5px;
-    background: #fff; border-radius: 2px;
+  .brand .mark::after { content: ""; position: absolute; left: 5px; right: 5px; top: 13px; height: 2px; background: #fff; border-radius: 2px; }
+  .brand s { text-decoration-color: var(--red); text-decoration-thickness: 2.5px; }
+  nav { display: flex; align-items: center; gap: 8px; }
+  nav a.link { font-size: 15px; font-weight: 600; color: var(--ink); padding: 8px 12px; border-radius: 6px; }
+  nav a.link:hover { color: var(--red-dark); }
+  .btn {
+    display: inline-block; border: 0; cursor: pointer; font-family: var(--sans);
+    font-size: 15px; font-weight: 600; padding: 11px 20px; border-radius: 6px;
+    transition: background .15s ease;
   }
-  .brand s { text-decoration-color: var(--accent); text-decoration-thickness: 3px; }
-  nav { display: flex; align-items: center; gap: 24px; }
-  nav a { font-size: 15.5px; font-weight: 600; color: var(--ink-2); transition: color .15s; }
-  nav a:hover { color: var(--accent-dark); }
-  nav a.btn-nav {
-    background: var(--accent); color: #fff; padding: 10px 18px; border-radius: 9px;
-    box-shadow: 0 2px 8px rgba(212, 61, 53, 0.35);
-    transition: background .15s, transform .15s, box-shadow .15s;
-  }
-  nav a.btn-nav:hover { background: var(--accent-dark); color: #fff; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(212,61,53,.4); }
-  nav a.btn-nav:active { transform: translateY(0); }
-  @media (max-width: 640px) { nav a:not(.btn-nav) { display: none; } }
+  .btn.red { background: var(--red); color: #fff; }
+  .btn.red:hover { background: var(--red-dark); }
+  .btn.blush { background: var(--blush); color: var(--red); }
+  .btn.blush:hover { background: var(--blush-2); }
+  @media (max-width: 640px) { nav a.link { display: none; } }
 
   /* ---------- hero ---------- */
-  .hero { text-align: center; padding: 84px 0 24px; }
-  .hero .badge {
-    display: inline-flex; align-items: center; gap: 8px;
-    font-size: 13.5px; font-weight: 700; color: var(--accent-dark);
-    background: var(--accent-soft); border: 1px solid #f6d2ce;
-    padding: 6px 14px; border-radius: 999px; margin-bottom: 26px;
-  }
-  .hero .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: pulse 2.2s infinite; }
-  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+  .hero { text-align: center; padding: 108px 0 40px; }
   h1 {
-    font-size: clamp(40px, 6.4vw, 66px);
-    line-height: 1.05; letter-spacing: -0.032em; font-weight: 800;
-    max-width: 18ch; margin: 0 auto; text-wrap: balance;
+    font-size: clamp(38px, 5.6vw, 60px);
+    line-height: 1.08; letter-spacing: -0.035em; font-weight: 800;
+    max-width: 22ch; margin: 0 auto; text-wrap: balance;
   }
-  h1 em { font-style: normal; color: var(--accent); }
   .sub {
-    max-width: 56ch; margin: 22px auto 0;
-    font-size: 20px; line-height: 1.6; color: var(--muted); text-wrap: balance;
+    max-width: 52ch; margin: 22px auto 0;
+    font-size: 19px; line-height: 1.65; color: var(--muted); text-wrap: balance;
+  }
+  .sub code {
+    font: 600 0.86em var(--mono); color: var(--red-dark);
+    background: var(--blush); padding: 2px 7px; border-radius: 5px;
   }
 
-  /* ---------- waitlist ---------- */
-  .waitlist-form { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 34px; }
+  .waitlist-form { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 36px; }
   .waitlist-form input {
-    padding: 15px 18px; font-size: 16.5px; min-width: 290px;
-    border: 1.5px solid var(--line); border-radius: 10px;
-    color: var(--ink); outline: none; font-family: var(--sans);
-    background: #fff; box-shadow: var(--shadow-sm);
+    padding: 12px 16px; font-size: 15.5px; min-width: 280px;
+    border: 1px solid #d1d5db; border-radius: 6px;
+    color: var(--ink); outline: none; font-family: var(--sans); background: #fff;
     transition: border-color .15s, box-shadow .15s;
   }
-  .waitlist-form input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-ring); }
-  .btn {
-    display: inline-block; padding: 15px 26px; border-radius: 10px;
-    font-size: 16.5px; font-weight: 700; border: 0; cursor: pointer;
-    font-family: var(--sans);
-    transition: background .15s, transform .15s, box-shadow .15s;
-  }
-  .btn.primary { background: var(--accent); color: #fff; box-shadow: 0 2px 10px rgba(212,61,53,.35); }
-  .btn.primary:hover { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(212,61,53,.4); }
-  .btn.primary:active { transform: translateY(0); }
-  .form-note { margin-top: 20px; font-weight: 700; color: var(--accent-dark); }
-  .form-hint { margin-top: 14px; font-size: 13.5px; color: var(--faint); }
+  .waitlist-form input::placeholder { color: var(--faint); }
+  .waitlist-form input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(229,18,46,0.12); }
+  .form-note { margin-top: 18px; font-weight: 600; color: var(--red-dark); }
+  .form-hint { margin-top: 13px; font-size: 13px; color: var(--faint); }
 
-  /* ---------- terminal card ---------- */
+  /* ---------- terminal ---------- */
   .term {
-    background: var(--code-bg); border-radius: 16px;
-    margin: 52px auto 0; max-width: 840px; text-align: left;
-    box-shadow: var(--shadow-lg); overflow: hidden;
-    border: 1px solid rgba(255,255,255,0.06);
+    background: var(--code-bg); border-radius: 18px;
+    margin: 60px auto 0; max-width: 780px; text-align: left;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+    overflow: hidden;
   }
-  .term-bar {
-    display: flex; align-items: center; gap: 8px;
-    padding: 13px 18px; background: rgba(255,255,255,0.04);
-    border-bottom: 1px solid var(--code-line);
-  }
-  .term-bar .d { width: 12px; height: 12px; border-radius: 50%; }
+  .term-bar { display: flex; align-items: center; gap: 7px; padding: 13px 18px; }
+  .term-bar .d { width: 11px; height: 11px; border-radius: 50%; }
   .term-bar .d.r { background: #ff5f57; } .term-bar .d.y { background: #febc2e; } .term-bar .d.g { background: #28c840; }
-  .term-bar .title { margin-left: 10px; font: 12.5px var(--mono); color: #7d8f9e; }
   .term-bar .copy {
-    margin-left: auto; font: 12px var(--mono); color: #a9bac8;
-    background: rgba(255,255,255,0.07); border: 1px solid var(--code-line);
-    padding: 5px 12px; border-radius: 6px; cursor: pointer; transition: background .15s;
+    margin-left: auto; font: 12px var(--mono); color: #9aa4b2;
+    background: rgba(255,255,255,0.06); border: 0;
+    padding: 5px 12px; border-radius: 5px; cursor: pointer; transition: background .15s;
   }
-  .term-bar .copy:hover { background: rgba(255,255,255,0.14); }
+  .term-bar .copy:hover { background: rgba(255,255,255,0.12); }
   .term-body {
-    padding: 24px 28px; font: 14.5px/1.85 var(--mono); color: #d9e3eb;
-    overflow-x: auto; white-space: pre; min-height: 285px;
+    padding: 6px 26px 26px; font: 14px/1.8 var(--mono); color: #e6e9ef;
+    overflow-x: auto; white-space: pre; min-height: 244px;
   }
-  .term .k { color: #ff7b72; }
-  .term .s { color: #d2e174; }
-  .term .c { color: #7d8f9e; }
-  .term .a { color: #ffb454; }
-  .term .p { color: #79c0ff; }
-  .caret {
-    display: inline-block; width: 8px; height: 17px; background: #d9e3eb;
-    vertical-align: -3px; animation: blink 1s steps(1) infinite;
-  }
+  .term .k { color: #f92672; }
+  .term .s { color: #e6db74; }
+  .term .c { color: #778090; }
+  .term .a { color: #a6e22e; }
+  .term .p { color: #66d9ef; }
+  .caret { display: inline-block; width: 8px; height: 16px; background: #e6e9ef; vertical-align: -3px; animation: blink 1s steps(1) infinite; }
   @keyframes blink { 50% { opacity: 0 } }
-  .ai-note { margin-top: 18px; font-size: 15px; color: var(--muted); font-weight: 600; text-align: center; }
-  .ai-note a { color: var(--accent-dark); font-weight: 700; border-bottom: 2px solid var(--accent-soft); }
-  .ai-note a:hover { border-color: var(--accent); }
-
-  /* ---------- feature trio ---------- */
-  .trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; padding: 88px 0 28px; text-align: center; }
-  .trio > div { transition: transform .2s ease; }
-  .trio > div:hover { transform: translateY(-3px); }
-  .trio .icon {
-    width: 58px; height: 58px; margin: 0 auto 16px; border-radius: 16px;
-    background: var(--accent-soft); display: flex; align-items: center;
-    justify-content: center; color: var(--accent); box-shadow: var(--shadow-sm);
-  }
-  .trio h3 { font-size: 19px; margin-bottom: 8px; letter-spacing: -0.01em; }
-  .trio p { font-size: 15.5px; color: var(--muted); max-width: 30ch; margin: 0 auto; }
-  @media (max-width: 820px) { .trio { grid-template-columns: 1fr; gap: 36px; } }
+  .ai-note { margin-top: 20px; font-size: 14.5px; color: var(--body); font-weight: 600; text-align: center; }
+  .ai-note a { color: var(--red); }
+  .ai-note a:hover { text-decoration: underline; }
 
   /* ---------- sections ---------- */
-  section { padding: 84px 0; }
-  section.alt { background: var(--bg-alt); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-  .sec-head { text-align: center; max-width: 62ch; margin: 0 auto 48px; }
-  .sec-head .kicker {
-    display: inline-block;
-    color: var(--accent-dark); font-weight: 800; font-size: 14px;
-    text-transform: uppercase; letter-spacing: 0.09em;
-    background: var(--accent-soft); padding: 5px 14px; border-radius: 999px;
-  }
-  h2 { font-size: clamp(28px, 4vw, 42px); letter-spacing: -0.026em; line-height: 1.14; font-weight: 800; margin-top: 14px; text-wrap: balance; }
-  .sec-head p { color: var(--muted); margin-top: 12px; font-size: 17.5px; }
+  section { padding: 110px 0; }
+  .sec-title { text-align: center; font-size: clamp(28px, 3.6vw, 38px); font-weight: 800; letter-spacing: -0.03em; text-wrap: balance; }
+  .sec-sub { text-align: center; color: var(--muted); font-size: 17.5px; max-width: 56ch; margin: 14px auto 0; }
 
-  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
-  .fact {
-    background: #fff; border: 1px solid var(--line); border-radius: 16px;
-    padding: 30px 28px; box-shadow: var(--shadow-sm); position: relative;
-    transition: transform .2s ease, box-shadow .2s ease;
-  }
-  .fact:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
-  .fact .no {
-    font: 800 13px var(--mono); color: var(--accent);
-    background: var(--accent-soft); border-radius: 8px;
-    width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
-    margin-bottom: 16px;
-  }
-  .fact h3 { font-size: 18.5px; margin-bottom: 10px; letter-spacing: -0.01em; }
-  .fact p { font-size: 15px; color: var(--muted); }
-  .fact .src { display: block; margin-top: 14px; font: 12.5px var(--mono); color: var(--faint); }
+  /* trio — Formspree-style: left-aligned, bare icons */
+  .trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 56px; margin-top: 64px; }
+  .trio .icon { color: var(--red); margin-bottom: 16px; height: 34px; display: flex; align-items: flex-end; }
+  .trio h3 { font-size: 17.5px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.01em; }
+  .trio p { font-size: 15.5px; color: var(--body); }
+  .trio code { font: 600 0.85em var(--mono); color: var(--red-dark); background: var(--blush); padding: 2px 6px; border-radius: 5px; }
+  @media (max-width: 860px) { .trio { grid-template-columns: 1fr; gap: 40px; } }
+
+  /* facts */
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 64px; }
+  .fact { border: 1px solid var(--line); border-radius: 12px; padding: 30px 28px; background: #fff; }
+  .fact .no { font: 700 12.5px var(--mono); color: var(--red); margin-bottom: 14px; }
+  .fact h3 { font-size: 17.5px; margin-bottom: 10px; letter-spacing: -0.015em; line-height: 1.35; }
+  .fact p { font-size: 15px; color: var(--body); }
+  .fact .src { display: block; margin-top: 16px; font: 500 12.5px var(--mono); color: var(--faint); }
   @media (max-width: 860px) { .facts { grid-template-columns: 1fr; } }
 
-  .quote-wrap { text-align: center; position: relative; }
-  .quote-wrap .qmark {
-    font: 800 120px/1 Georgia, serif; color: var(--accent-soft);
-    position: absolute; top: -38px; left: 50%; transform: translateX(-50%); z-index: -1;
-  }
+  /* quote */
+  .quote { background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   blockquote {
-    font-size: clamp(22px, 3.1vw, 32px); font-weight: 800;
-    line-height: 1.42; letter-spacing: -0.02em; max-width: 34ch; margin: 0 auto; text-wrap: balance;
+    text-align: center; font-size: clamp(21px, 2.8vw, 29px); font-weight: 700;
+    line-height: 1.45; letter-spacing: -0.02em; max-width: 36ch; margin: 0 auto; text-wrap: balance;
   }
-  blockquote em { font-style: normal; color: var(--accent); }
+  blockquote .r { color: var(--red); }
 
-  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  /* today / next */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 64px; }
   @media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
-  .col {
-    background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 30px;
-    box-shadow: var(--shadow-sm);
-  }
+  .col { border: 1px solid var(--line); border-radius: 12px; padding: 32px; }
   .col .chip {
-    display: inline-block; font: 700 11.5px var(--mono); letter-spacing: 0.08em;
-    padding: 5px 12px; border-radius: 999px; margin-bottom: 18px;
+    display: inline-block; font: 600 12px var(--mono); letter-spacing: 0.05em;
+    padding: 4px 10px; border-radius: 5px; margin-bottom: 20px;
   }
-  .col .chip.ok { background: #e8f6ec; color: #157a3a; }
-  .col .chip.soon { background: var(--accent-soft); color: var(--accent-dark); }
-  .col h3 { font-size: 19px; margin-bottom: 14px; letter-spacing: -0.01em; }
+  .col .chip.ok { background: #ecfdf5; color: #047857; }
+  .col .chip.soon { background: var(--blush); color: var(--red-dark); }
+  .col h3 { font-size: 19px; margin-bottom: 16px; letter-spacing: -0.015em; }
   .col ul { list-style: none; }
-  .col li { padding: 9px 0 9px 28px; position: relative; font-size: 15.5px; color: var(--ink-2); }
-  .col li::before { content: ""; position: absolute; left: 2px; top: 15px; width: 14px; height: 14px;
-    border-radius: 50%; background: var(--accent-soft); }
-  .col li::after { content: ""; position: absolute; left: 6px; top: 19px; width: 6px; height: 6px;
-    border-radius: 50%; background: var(--accent); }
-  .col.today li::before { background: #e8f6ec; } .col.today li::after { background: #1f9d4d; }
+  .col li { padding: 8px 0 8px 26px; position: relative; font-size: 15.5px; color: var(--body); }
+  .col li::before { content: "→"; position: absolute; left: 0; color: var(--faint); font-weight: 600; }
+  .col.today li::before { content: "✓"; color: #059669; }
 
-  .honest { max-width: 760px; margin: 0 auto; counter-reset: h; }
-  .honest li {
-    list-style: none; padding: 24px 0 24px 58px; font-size: 16px; color: var(--muted);
-    border-bottom: 1px solid var(--line); position: relative; counter-increment: h;
-  }
-  .honest li::before {
-    content: counter(h, decimal-leading-zero);
-    position: absolute; left: 0; top: 26px;
-    font: 800 14px var(--mono); color: var(--accent);
-    background: var(--accent-soft); border-radius: 10px; padding: 6px 9px;
-  }
-  .honest li:last-child { border-bottom: 0; }
-  .honest li strong { color: var(--ink); display: block; margin-bottom: 4px; font-size: 17px; }
+  /* honesty */
+  .honest { max-width: 720px; margin: 56px auto 0; }
+  .honest li { list-style: none; padding: 24px 0; font-size: 15.5px; color: var(--body); border-bottom: 1px solid var(--line); }
+  .honest li:first-child { border-top: 1px solid var(--line); }
+  .honest li strong { color: var(--ink); display: block; margin-bottom: 5px; font-size: 16.5px; }
 
-  .partners {
-    background:
-      radial-gradient(1100px 420px at 85% -10%, rgba(212, 61, 53, 0.22), transparent 60%),
-      var(--code-bg);
-    color: #fff; border-radius: 22px;
-    padding: 60px 56px; text-align: center; box-shadow: var(--shadow-lg);
-  }
-  .partners h2 { color: #fff; margin-top: 0; }
-  .partners p { color: #a9bac8; max-width: 52ch; margin: 16px auto 30px; }
+  /* partners */
+  .partners { text-align: center; background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .partners p { color: var(--muted); max-width: 52ch; margin: 16px auto 30px; font-size: 17px; }
 
-  footer { padding: 52px 0 64px; border-top: 1px solid var(--line); }
-  .foot-grid { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 28px; }
-  .foot-brand { max-width: 34ch; }
-  .foot-brand .line { color: var(--muted); font-size: 15px; margin-top: 10px; }
-  .foot-links { display: flex; gap: 56px; }
-  .foot-links h4 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); margin-bottom: 12px; }
-  .foot-links a { display: block; font-size: 15px; font-weight: 600; color: var(--ink-2); padding: 4px 0; }
-  .foot-links a:hover { color: var(--accent-dark); }
-  .legal { margin-top: 36px; font-size: 13.5px; color: var(--faint); }
+  footer { padding: 48px 0 64px; }
+  .foot-grid { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+  .foot-brand .line { color: var(--muted); font-size: 14.5px; margin-top: 12px; max-width: 34ch; }
+  .foot-links { display: flex; gap: 64px; }
+  .foot-links h4 { font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--faint); margin-bottom: 12px; font-weight: 600; }
+  .foot-links a { display: block; font-size: 14.5px; font-weight: 500; color: var(--body); padding: 4px 0; }
+  .foot-links a:hover { color: var(--red-dark); }
+  .legal { margin-top: 40px; font-size: 13px; color: var(--faint); border-top: 1px solid var(--line); padding-top: 24px; }
 </style>
 </head>
 <body>
@@ -315,93 +242,96 @@
     <header>
       <a class="brand" href="/"><span class="mark">f</span><s>forget</s></a>
       <nav>
-        <a href="https://github.com/junghunkim/forget">GitHub</a>
-        <a href="https://github.com/junghunkim/forget/blob/main/MANIFESTO.md">Manifesto</a>
-        <a href="/llms.txt">llms.txt</a>
-        <a class="btn-nav" href="#waitlist">Get early access</a>
+        <a class="link" href="https://github.com/junghunkim/forget/blob/main/MANIFESTO.md">Manifesto</a>
+        <a class="link" href="/llms.txt">llms.txt</a>
+        <a class="btn blush" href="https://github.com/junghunkim/forget">GitHub</a>
+        <a class="btn red" href="#waitlist">Get early access</a>
       </nav>
     </header>
   </div>
 </div>
 
 <div class="wrap">
-  <div class="blob b1"><svg width="360" height="260" viewBox="0 0 360 260" fill="none">
-    <rect width="360" height="260" rx="48" fill="#d43d35"/>
-    <rect x="26" y="24" width="308" height="212" rx="38" stroke="#e2695f" stroke-width="2.5"/>
-    <rect x="52" y="48" width="256" height="164" rx="30" stroke="#e88379" stroke-width="2.5"/>
-    <rect x="78" y="72" width="204" height="116" rx="22" stroke="#efa29a" stroke-width="2.5"/>
-    <rect x="104" y="96" width="152" height="68" rx="16" stroke="#f6c2bc" stroke-width="2.5"/>
+  <div class="blob tl"><svg width="520" height="420" viewBox="0 0 520 420" fill="none">
+    <rect width="520" height="420" rx="90" fill="#fdf0ee"/>
+    <rect x="44" y="40" width="432" height="340" rx="72" stroke="#fbe3e0" stroke-width="3"/>
+    <rect x="92" y="84" width="336" height="252" rx="56" stroke="#f6cfc9" stroke-width="3"/>
+    <rect x="140" y="128" width="240" height="164" rx="40" stroke="#f2bcb4" stroke-width="3"/>
   </svg></div>
-  <div class="blob b2"><svg width="280" height="360" viewBox="0 0 280 360" fill="none">
-    <rect width="280" height="360" rx="52" fill="#d43d35"/>
-    <rect x="24" y="28" width="232" height="304" rx="42" stroke="#e2695f" stroke-width="2.5"/>
-    <rect x="48" y="56" width="184" height="248" rx="34" stroke="#e88379" stroke-width="2.5"/>
-    <rect x="72" y="84" width="136" height="192" rx="26" stroke="#efa29a" stroke-width="2.5"/>
-  </svg></div>
-  <div class="blob b3"><svg width="320" height="240" viewBox="0 0 320 240" fill="none">
-    <rect width="320" height="240" rx="46" fill="#d43d35"/>
-    <rect x="24" y="22" width="272" height="196" rx="36" stroke="#e2695f" stroke-width="2.5"/>
-    <rect x="48" y="44" width="224" height="152" rx="28" stroke="#e88379" stroke-width="2.5"/>
-    <rect x="72" y="66" width="176" height="108" rx="20" stroke="#efa29a" stroke-width="2.5"/>
+  <div class="blob tr"><svg width="560" height="440" viewBox="0 0 560 440" fill="none">
+    <rect width="560" height="440" rx="96" fill="#fdf0ee"/>
+    <rect x="48" y="42" width="464" height="356" rx="76" stroke="#fbe3e0" stroke-width="3"/>
+    <rect x="100" y="88" width="360" height="264" rx="58" stroke="#f6cfc9" stroke-width="3"/>
   </svg></div>
 
   <div class="hero" id="waitlist">
-    <div class="badge"><span class="dot"></span> Open source · local first · MCP native</div>
-    <h1>Tell Claude Code once. <em>Cursor remembers.</em></h1>
+    <h1>Tell Claude Code once. Cursor remembers.</h1>
     <p class="sub">One memory for your AI — decisions, preferences, project
-    context — in a SQLite file on your machine. We couldn't read it if we
-    tried.</p>
+    context — in a <code>SQLite</code> file on your machine. We couldn't
+    read it if we tried.</p>
 
     <form class="waitlist-form" action="https://formspree.io/f/mbdnjvjn" method="POST">
       <input type="email" name="email" required placeholder="you@example.com" aria-label="Email address">
-      <button class="btn primary" type="submit">Join the sync waitlist</button>
+      <button class="btn red" type="submit">Join the sync waitlist</button>
     </form>
     <p class="form-note" hidden>You're on the list. We'll write when sync ships. ✓</p>
     <p class="form-hint">For the end-to-end encrypted sync beta. No spam — launch news only.</p>
 
-    <div class="term rv">
+    <div class="term">
       <div class="term-bar">
         <span class="d r"></span><span class="d y"></span><span class="d g"></span>
-        <span class="title">memory in sixty seconds — zsh</span>
         <button class="copy" id="copyBtn" type="button">copy</button>
       </div>
-      <div class="term-body" id="termBody"><span class="k">pip</span> install forget-ai[server]
-<span class="k">npx</span> forget-connect          <span class="c"># wires Claude Code, Codex, Claude Desktop</span>
+      <div class="term-body"><span class="k">pip</span> install forget-ai[server]
+<span class="k">npx</span> forget-connect        <span class="c"># wires Claude Code, Codex, Claude Desktop</span>
 
 <span class="c"># then, against any repo:</span>
 <span class="p">$</span> <span id="typeTarget"></span><span class="caret" id="caret"></span><span id="answer" hidden>
-<span class="a">A: forget-connect 0.2.0: local-first default, --hosted legacy opt-in
-   [repo@7c8f0683 · 2026-07-13]</span>   <span class="c">← every answer carries a receipt</span></span></div>
+<span class="a">A: forget-connect 0.2.0: local-first default, --hosted legacy opt-in</span>
+<span class="a">   [repo@7c8f0683 · 2026-07-13]</span>  <span class="c">← every answer carries a receipt</span></span></div>
     </div>
     <p class="ai-note">Using an AI agent? forget's <a href="/llms.txt">llms.txt</a> has setup instructions for LLMs.</p>
   </div>
-
-  <div class="trio">
-    <div class="rv">
-      <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
-      <h3>Local</h3>
-      <p>Everything lives in one SQLite file on your machine. Offline included.</p>
-    </div>
-    <div class="rv" style="transition-delay:.08s">
-      <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h6M9 16h6"/></svg></div>
-      <h3>Receipts</h3>
-      <p>Every answer links back to the commit or conversation that decided it.</p>
-    </div>
-    <div class="rv" style="transition-delay:.16s">
-      <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M8.7 10.7l6.6-3.4M8.7 13.3l6.6 3.4"/></svg></div>
-      <h3>Portable</h3>
-      <p>The same memory in Claude Code, Cursor, and Codex — via MCP.</p>
-    </div>
-  </div>
 </div>
 
-<section class="alt">
+<section>
   <div class="wrap">
-    <div class="sec-head rv">
-      <div class="kicker">"I don't want to share my prompts"</div>
-      <h2>Three facts about AI memory</h2>
-      <p>Memory is not a chat log. It is a compounding profile of you — and today it lives on other people's servers.</p>
+    <h2 class="sec-title rv">Your memory, your machine</h2>
+    <div class="trio">
+      <div class="rv">
+        <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+        <h3>Local by construction</h3>
+        <p>Everything lives in one <code>~/.forget</code> SQLite file on your
+        machine. Search, extraction, everything — offline included.</p>
+      </div>
+      <div class="rv" style="transition-delay:.07s">
+        <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h6M9 16h4"/></svg></div>
+        <h3>Answers with receipts</h3>
+        <p>Ask <code>why did we choose X?</code> — the answer links back to
+        the commit or conversation that decided it.</p>
+      </div>
+      <div class="rv" style="transition-delay:.14s">
+        <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="M8.4 10.8l7.2-3.6M8.4 13.2l7.2 3.6"/></svg></div>
+        <h3>Portable via MCP</h3>
+        <p>The same memory in Claude Code, Cursor, and Codex. Your context
+        follows you, not the tool.</p>
+      </div>
     </div>
+  </div>
+</section>
+
+<section class="quote">
+  <div class="wrap rv">
+    <blockquote>Your model provider already reads your prompts.
+    <span class="r">There is no reason your memory layer should be a second
+    reader.</span></blockquote>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2 class="sec-title rv">Three facts about AI memory</h2>
+    <p class="sec-sub rv">Memory is not a chat log. It is a compounding profile of you — and today it lives on other people's servers.</p>
     <div class="facts">
       <div class="fact rv">
         <div class="no">01</div>
@@ -412,7 +342,7 @@
         legally, what you told a company.</p>
         <span class="src">U.S. v. Heppner, S.D.N.Y. 2026</span>
       </div>
-      <div class="fact rv" style="transition-delay:.08s">
+      <div class="fact rv" style="transition-delay:.07s">
         <div class="no">02</div>
         <h3>Your memory vendor will change hands.</h3>
         <p>Rewind promised local-first privacy, pivoted to the cloud, and was
@@ -421,7 +351,7 @@
         away from being someone else's database.</p>
         <span class="src">Rewind → Limitless → Meta, 2025</span>
       </div>
-      <div class="fact rv" style="transition-delay:.16s">
+      <div class="fact rv" style="transition-delay:.14s">
         <div class="no">03</div>
         <h3>The platforms will not fix this.</h3>
         <p>A model provider cannot end-to-end encrypt memory its own servers
@@ -433,38 +363,27 @@
   </div>
 </section>
 
-<section>
-  <div class="wrap quote-wrap rv">
-    <div class="qmark">"</div>
-    <blockquote>Your model provider already reads your prompts.
-    <em>There is no reason your memory layer should be a second reader.</em></blockquote>
-  </div>
-</section>
-
-<section class="alt">
+<section class="quote">
   <div class="wrap">
-    <div class="sec-head rv">
-      <div class="kicker">Today / Next</div>
-      <h2>Works now. Sealed next.</h2>
-    </div>
+    <h2 class="sec-title rv">Works now. Sealed next.</h2>
     <div class="cols">
-      <div class="col today rv">
+      <div class="col today rv" style="background:#fff">
         <span class="chip ok">SHIPPED · OPEN SOURCE</span>
         <h3>Runs on your machine today</h3>
         <ul>
           <li>One SQLite file you own — offline included</li>
-          <li>Mines your repo's decision history: "why did we choose X?" answered with commit receipts</li>
+          <li>Mines your repo's decision history from git</li>
           <li>Observation gate keeps facts, forgets junk</li>
           <li>MCP: Claude Code, Cursor, Codex, Claude Desktop</li>
         </ul>
       </div>
-      <div class="col rv" style="transition-delay:.08s">
+      <div class="col rv" style="background:#fff; transition-delay:.07s">
         <span class="chip soon">IN DESIGN · E2EE SYNC</span>
         <h3>Sync that cannot betray you</h3>
         <ul>
           <li>Encrypted on your device before it touches a server</li>
           <li>Embeddings encrypted too — a vector is a paraphrase</li>
-          <li>Scoped layers: grant a session your work memory, nothing else</li>
+          <li>Scoped layers: grant a session your work memory only</li>
           <li>No passwords — device keys plus a recovery code</li>
         </ul>
       </div>
@@ -474,10 +393,7 @@
 
 <section>
   <div class="wrap">
-    <div class="sec-head rv">
-      <div class="kicker">What we won't pretend</div>
-      <h2>Honesty is the product</h2>
-    </div>
+    <h2 class="sec-title rv">What we won't pretend</h2>
     <ul class="honest">
       <li class="rv"><strong>The model you use still sees plaintext.</strong> It has to,
       to use your memories. Encryption protects you from storage providers —
@@ -492,15 +408,13 @@
   </div>
 </section>
 
-<section style="padding-top: 0;">
-  <div class="wrap">
-    <div class="partners rv">
-      <h2>Building AI for therapy, law, or health?</h2>
-      <p>Your users' memories are your liability. A memory layer you
-      cryptographically cannot read can't leak and can't be compelled.
-      We're taking design partners.</p>
-      <a class="btn primary" href="mailto:founder@multi-turn.ai?subject=forget%20design%20partner">Talk to us</a>
-    </div>
+<section class="partners">
+  <div class="wrap rv">
+    <h2 class="sec-title">Building AI for therapy, law, or health?</h2>
+    <p>Your users' memories are your liability. A memory layer you
+    cryptographically cannot read can't leak and can't be compelled.
+    We're taking design partners.</p>
+    <a class="btn red" href="mailto:founder@multi-turn.ai?subject=forget%20design%20partner">Talk to us</a>
   </div>
 </section>
 
@@ -525,22 +439,19 @@
         </div>
       </div>
     </div>
-    <p class="legal">© 2026 Multi-turn Inc. · Apache-2.0 · Made in Daejeon &amp; Wonju</p>
+    <p class="legal">© 2026 Multi-turn Inc. · Apache-2.0</p>
   </footer>
 </div>
 
 <script>
-  // sticky header shadow
   const topbar = document.getElementById("topbar");
   addEventListener("scroll", () => topbar.classList.toggle("scrolled", scrollY > 8), { passive: true });
 
-  // reveal on scroll
   const io = new IntersectionObserver((entries) => {
     for (const entry of entries) if (entry.isIntersecting) { entry.target.classList.add("in"); io.unobserve(entry.target); }
   }, { threshold: 0.15 });
   document.querySelectorAll(".rv").forEach((el) => io.observe(el));
 
-  // terminal: type the question, then reveal the receipt
   const QUESTION = 'forget demo . "why did the default change to local?"';
   const target = document.getElementById("typeTarget");
   const answer = document.getElementById("answer");
@@ -553,7 +464,7 @@
     let i = 0;
     const tick = () => {
       target.textContent = QUESTION.slice(0, ++i);
-      if (i < QUESTION.length) setTimeout(tick, 26 + Math.random() * 40);
+      if (i < QUESTION.length) setTimeout(tick, 24 + Math.random() * 38);
       else setTimeout(() => { answer.hidden = false; caret.remove(); }, 420);
     };
     setTimeout(tick, 500);
@@ -563,7 +474,6 @@
   }, { threshold: 0.4 });
   termIo.observe(document.querySelector(".term"));
 
-  // copy install command
   document.getElementById("copyBtn").addEventListener("click", async (event) => {
     try {
       await navigator.clipboard.writeText("pip install forget-ai[server] && npx forget-connect");
@@ -572,7 +482,6 @@
     } catch {}
   });
 
-  // waitlist form
   const form = document.querySelector(".waitlist-form");
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
