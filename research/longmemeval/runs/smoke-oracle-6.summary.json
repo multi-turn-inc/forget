@@ -1,0 +1,35 @@
+{
+ "dataset": "oracle",
+ "n": 6,
+ "top_k": 10,
+ "reader": "gpt-4o",
+ "judge": "gpt-4o",
+ "overall_accuracy": 0.6667,
+ "by_type": {
+  "knowledge-update": {
+   "acc": 1.0,
+   "n": 1
+  },
+  "multi-session": {
+   "acc": 0.0,
+   "n": 1
+  },
+  "single-session-assistant": {
+   "acc": 1.0,
+   "n": 1
+  },
+  "single-session-preference": {
+   "acc": 0.0,
+   "n": 1
+  },
+  "single-session-user": {
+   "acc": 1.0,
+   "n": 1
+  },
+  "temporal-reasoning": {
+   "acc": 1.0,
+   "n": 1
+  }
+ },
+ "elapsed_s": 6.1
+}

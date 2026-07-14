@@ -1,0 +1,56 @@
+[
+ {
+  "question_id": "gpt4_731e37d7",
+  "question_type": "multi-session",
+  "question": "How much total money did I spend on attending workshops in the last four months?",
+  "answer": "$720",
+  "hypothesis": "I don't have that information.",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "gpt4_b4a80587",
+  "question_type": "temporal-reasoning",
+  "question": "Which event happened first, the road trip to the coast or the arrival of the new prime lens?",
+  "answer": "The arrival of the new prime lens",
+  "hypothesis": "The arrival of the new prime lens happened first. The user mentioned experimenting with the new 50mm f/1.8 prime lens before discussing the road trip to the coast.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "36580ce8",
+  "question_type": "single-session-user",
+  "question": "What health issue did I initially think was just a cold?",
+  "answer": "bronchitis",
+  "hypothesis": "You initially thought your health issue was just a cold, but it turned out to be a bad case of bronchitis.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "6b7dfb22",
+  "question_type": "single-session-preference",
+  "question": "I've been feeling a bit stuck with my paintings lately. Do you have any ideas on how I can find new inspiration?",
+  "answer": "The user would prefer responses that build upon their existing sources of inspiration, such as revisiting Instagram art accounts or exploring new techniques from online tutorials. They might also appreciate suggestions that revisit previous themes they found enjoyable, like painting flowers. The user would not prefer generic or vague suggestions for finding inspiration, and would likely appreciate responses that utilize their recent 30-day painting challenge experience.",
+  "hypothesis": "I don't have that information.",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "affe2881",
+  "question_type": "knowledge-update",
+  "question": "How many different species of birds have I seen in my local park?",
+  "answer": "32",
+  "hypothesis": "You have seen 32 different species of birds in your local park.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "8464fc84",
+  "question_type": "single-session-assistant",
+  "question": "I'm planning to visit the Vatican again and I was wondering if you could remind me of the name of that famous deli near the Vatican that serves the best cured meats and cheeses?",
+  "answer": "Roscioli",
+  "hypothesis": "The famous deli near the Vatican that serves the best cured meats and cheeses is Roscioli.",
+  "n_retrieved": 10,
+  "correct": true
+ }
+]
