@@ -225,6 +225,61 @@
   .partners { text-align: center; background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .partners p { color: var(--muted); max-width: 52ch; margin: 16px auto 30px; font-size: 17px; }
 
+  /* ---------- works-with band ---------- */
+  .band {
+    background: var(--code-bg); border-radius: 18px;
+    padding: 30px 44px; margin: 84px auto 0; max-width: 980px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 18px 36px;
+  }
+  .band .label { font: 600 12px var(--mono); letter-spacing: 0.14em; color: #8a93a3; }
+  .band .logo { color: #e6e9ef; font-weight: 700; font-size: 16.5px; letter-spacing: -0.01em; opacity: .92; }
+  .band .logo span { opacity: .55; font-weight: 500; }
+
+  /* ---------- how it works ---------- */
+  .hiw { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 72px; align-items: center; }
+  @media (max-width: 900px) { .hiw { grid-template-columns: 1fr; gap: 48px; } }
+  .hiw h2 { text-align: left; font-size: clamp(28px, 3.6vw, 38px); font-weight: 800; letter-spacing: -0.03em; }
+  .hiw .lead { color: var(--muted); font-size: 17px; margin-top: 12px; max-width: 46ch; }
+  .mock {
+    background: var(--code-bg); border-radius: 16px; padding: 22px 24px 26px;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); color: #e6e9ef;
+    font-size: 14.5px; line-height: 1.65;
+  }
+  .mock .mock-bar { display: flex; gap: 7px; margin-bottom: 18px; }
+  .mock .d { width: 11px; height: 11px; border-radius: 50%; }
+  .mock .d.r { background: #ff5f57; } .mock .d.y { background: #febc2e; } .mock .d.g { background: #28c840; }
+  .mock .u { color: #9aa4b2; font-family: var(--mono); font-size: 13px; }
+  .mock .msg { margin: 10px 0 16px; font-weight: 500; }
+  .mock .tool { font: 12.5px var(--mono); color: #66d9ef; margin-bottom: 14px; }
+  .mock .ans { background: rgba(255,255,255,0.05); border-left: 3px solid #a6e22e; border-radius: 6px; padding: 12px 16px; }
+  .mock .receipt { display: inline-block; margin-top: 10px; font: 600 12px var(--mono); color: #a6e22e; background: rgba(166,226,46,0.1); padding: 3px 10px; border-radius: 5px; }
+  .steps { list-style: none; position: relative; margin-top: 36px; }
+  .steps::before { content: ""; position: absolute; left: 11px; top: 14px; bottom: 14px; width: 2px; background: var(--line); border-radius: 2px; }
+  .steps li { position: relative; padding: 0 0 30px 44px; }
+  .steps li:last-child { padding-bottom: 0; }
+  .steps .dot {
+    position: absolute; left: 4px; top: 5px; width: 16px; height: 16px;
+    border-radius: 50%; background: #fff; border: 2px solid #d1d5db;
+  }
+  .steps li.hot .dot { border-color: var(--red); background: var(--red); box-shadow: 0 0 0 4px rgba(229,18,46,0.12); }
+  .steps h3 { font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
+  .steps p { font-size: 15px; color: var(--body); }
+  .steps .soon-tag { font: 600 11px var(--mono); color: var(--red-dark); background: var(--blush); border-radius: 4px; padding: 2px 8px; margin-left: 8px; vertical-align: 2px; }
+
+  /* ---------- dark closer ---------- */
+  .closer { background: var(--code-bg); text-align: center; padding: 110px 0; }
+  .closer h2 { color: #fff; font-size: clamp(30px, 4.2vw, 44px); font-weight: 800; letter-spacing: -0.03em; text-wrap: balance; }
+  .closer .cmd {
+    display: inline-block; margin: 28px auto 0; font: 500 15px var(--mono);
+    color: #e6e9ef; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+    padding: 12px 22px; border-radius: 8px;
+  }
+  .closer .cmd .k { color: #f92672; }
+  .closer .ctas { margin-top: 32px; display: flex; gap: 12px; justify-content: center; }
+  .closer .btn.ghost-dark { background: rgba(255,255,255,0.08); color: #fff; }
+  .closer .btn.ghost-dark:hover { background: rgba(255,255,255,0.15); }
+
   footer { padding: 48px 0 64px; }
   .foot-grid { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
   .foot-brand .line { color: var(--muted); font-size: 14.5px; margin-top: 12px; max-width: 34ch; }
@@ -291,8 +346,58 @@
 <span class="a">   [repo@7c8f0683 · 2026-07-13]</span>  <span class="c">← every answer carries a receipt</span></span></div>
     </div>
     <p class="ai-note">Using an AI agent? forget's <a href="/llms.txt">llms.txt</a> has setup instructions for LLMs.</p>
+
+    <div class="band rv">
+      <span class="label">WORKS WITH</span>
+      <span class="logo">Claude <span>Code</span></span>
+      <span class="logo">Cursor</span>
+      <span class="logo">Codex</span>
+      <span class="logo">Claude <span>Desktop</span></span>
+      <span class="logo"><span>via</span> MCP</span>
+    </div>
   </div>
 </div>
+
+<section>
+  <div class="wrap">
+    <div class="hiw">
+      <div class="mock rv">
+        <div class="mock-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span></div>
+        <div class="u">you — in Cursor, three weeks later</div>
+        <p class="msg">why is the payment provider Paddle and not Stripe?</p>
+        <div class="tool">⏺ forget · search_memories</div>
+        <div class="ans">
+          Paddle was chosen as merchant of record on&nbsp;July&nbsp;13 — KYB
+          review passed, and it handles global tax remittance so you don't
+          have to.
+          <span class="receipt">[decision · 2026-07-13 · via Claude Code]</span>
+        </div>
+      </div>
+      <div>
+        <h2 class="rv">How it works</h2>
+        <p class="lead rv">Here's what happens after <code style="font:600 .85em var(--mono); color:var(--red-dark); background:var(--blush); padding:2px 6px; border-radius:5px;">npx forget-connect</code> — with no behavior change asked of you.</p>
+        <ol class="steps">
+          <li class="rv"><span class="dot"></span>
+            <h3>Install once, in sixty seconds</h3>
+            <p>One local server, one connect command. Your existing MCP setup is preserved and backed up.</p>
+          </li>
+          <li class="rv"><span class="dot"></span>
+            <h3>It remembers quietly</h3>
+            <p>Decisions surface from your conversations and your git history. The observation gate keeps facts and forgets junk — nobody writes documentation.</p>
+          </li>
+          <li class="hot rv"><span class="dot"></span>
+            <h3>Ask "why" from any tool</h3>
+            <p>Claude Code, Cursor, or Codex — the answer comes back with the commit or conversation that decided it.</p>
+          </li>
+          <li class="rv"><span class="dot"></span>
+            <h3>Sync arrives sealed <span class="soon-tag">IN DESIGN</span></h3>
+            <p>End-to-end encrypted, device keys, no passwords. The server — ours included — only ever holds ciphertext.</p>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
 
 <section>
   <div class="wrap">
@@ -418,6 +523,17 @@
   </div>
 </section>
 
+<section class="closer">
+  <div class="wrap rv">
+    <h2>Give your AI a memory in sixty seconds.</h2>
+    <div class="cmd"><span class="k">pip</span> install forget-ai[server] &amp;&amp; <span class="k">npx</span> forget-connect</div>
+    <div class="ctas">
+      <a class="btn red" href="#waitlist">Join the sync waitlist</a>
+      <a class="btn ghost-dark" href="https://github.com/junghunkim/forget">Star on GitHub</a>
+    </div>
+  </div>
+</section>
+
 <div class="wrap">
   <footer>
     <div class="foot-grid">
@@ -447,10 +563,19 @@
   const topbar = document.getElementById("topbar");
   addEventListener("scroll", () => topbar.classList.toggle("scrolled", scrollY > 8), { passive: true });
 
-  const io = new IntersectionObserver((entries) => {
-    for (const entry of entries) if (entry.isIntersecting) { entry.target.classList.add("in"); io.unobserve(entry.target); }
-  }, { threshold: 0.15 });
-  document.querySelectorAll(".rv").forEach((el) => io.observe(el));
+  // rect-based reveal: an IntersectionObserver misses elements that a fast
+  // scroll jumps past (they never intersect on an observed frame), leaving
+  // them invisible forever. Checking rects on scroll cannot skip.
+  const rvs = Array.from(document.querySelectorAll(".rv"));
+  const reveal = () => {
+    for (const el of rvs) {
+      if (el.classList.contains("in")) continue;
+      if (el.getBoundingClientRect().top < innerHeight * 0.9) el.classList.add("in");
+    }
+    maybeType();
+  };
+  addEventListener("scroll", reveal, { passive: true });
+  addEventListener("resize", reveal, { passive: true });
 
   const QUESTION = 'forget demo . "why did the default change to local?"';
   const target = document.getElementById("typeTarget");
@@ -469,10 +594,11 @@
     };
     setTimeout(tick, 500);
   };
-  const termIo = new IntersectionObserver((entries) => {
-    if (entries[0].isIntersecting) { typeIt(); termIo.disconnect(); }
-  }, { threshold: 0.4 });
-  termIo.observe(document.querySelector(".term"));
+  const term = document.querySelector(".term");
+  const maybeType = () => {
+    if (!typed && term.getBoundingClientRect().top < innerHeight * 0.9) typeIt();
+  };
+  reveal();
 
   document.getElementById("copyBtn").addEventListener("click", async (event) => {
     try {
