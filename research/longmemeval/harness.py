@@ -18,6 +18,7 @@ import argparse
 import json
 import os
 import random
+import re
 import sys
 import time
 from collections import defaultdict
@@ -108,10 +109,22 @@ def ingest_instance(client: httpx.Client, scope: str, inst: dict, granularity: s
     return stored
 
 
+_DATE_RE = re.compile(r"(\d{4})[/-](\d{2})[/-](\d{2}).*?(\d{2}):(\d{2})")
+
+
 def normalize_date(date: str) -> str:
-    date = date.strip().replace(" (", "T").rstrip(")")
-    if "T" not in date:
-        date += "T12:00:00"
+    # LongMemEval format: "2023/05/20 (Sat) 02:21" -> "2023-05-20T02:21:00".
+    # The old strip/replace produced garbage ("2023/05/20TSat) 02:21"), the
+    # server rejected it, and every memory silently fell back to "now" — which
+    # flattened all haystack dates to one value and made temporal reasoning
+    # impossible (found 2026-07-14 by reading a failure case directly).
+    m = _DATE_RE.search(date.strip())
+    if m:
+        y, mo, d, hh, mm = m.groups()
+        return f"{y}-{mo}-{d}T{hh}:{mm}:00"
+    dm = re.search(r"(\d{4})[/-](\d{2})[/-](\d{2})", date)
+    if dm:
+        return f"{dm.group(1)}-{dm.group(2)}-{dm.group(3)}T12:00:00"
     return date
 
 

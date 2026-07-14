@@ -156,6 +156,45 @@ dev(seed 42, n=42) 세션 단위 vs turn 단위 (top_k 10 session ≈ 42 turn �
 **+ 검색된 턴을 그 세션 맥락으로 확장**해 reader에 제공(temporal 이득 획득). "찾을 땐
 정밀하게, 읽을 땐 넓게." 검색 턴↔세션 매핑 필요. 별도 실험.
 
+## 7. 헤드라인 갱신 — 하니스 날짜 버그 수정 (2026-07-15)
+
+**실패 케이스를 직접 읽다가** 하니스 버그를 발견했다: `normalize_date`가 LongMemEval
+포맷 `2023/05/20 (Sat) 02:21`을 `2023/05/20TSat) 02:21` 쓰레기로 만들어 서버가 파싱
+실패 → **모든 500 인스턴스의 모든 기억이 created_at을 "오늘"로 폴백**. temporal-reasoning
+(133문항, 벤치마크 최대 카테고리)이 날짜 신호 0으로 채점되고 있었다. (이것이 §6의 "rerank
+ON=OFF 완전 동일" 미스터리도 설명한다 — 모든 날짜가 같으니 재정렬 대상이 없었다.)
+
+정규식 파싱으로 수정 후 동일 config(fastembed + top_k 42 + 2단계 reader) full-500 재실행:
+
+| question_type | n | buggy | **date-fix** | Δ |
+|---|---|---|---|---|
+| temporal-reasoning | 133 | 44% | **75%** | **+32** |
+| single-session-preference | 30 | 23% | 30% | +7 |
+| knowledge-update | 78 | 77% | 81% | +4 |
+| single-session-user | 70 | 94% | 97% | +3 |
+| multi-session | 133 | 59% | 61% | +2 |
+| single-session-assistant | 56 | 95% | 95% | 0 |
+| **전체** | **500** | **64.4%** | **74.8%** | **+10.4** |
+
+### 확정 헤드라인: **forget = 74.8% on LongMemEval-S** (n=500, gpt-4o reader/judge)
+
+### Tier 재판정
+
+- Tier 1 (>49): ✅ · Tier 2 (≥60): ✅
+- 구 Zep 63.8 / 신 Zep 71.2: ✅ 상회
+- **Emergence Simple-Fast 79%: ❌ 미달 (4.2pp 아래)** — 우리 하니스 재현치 78.6과 비교해도 아래
+- Oracle gpt-4o 천장 ~82.4%: ❌ 미달
+- SOTA ~95% (더 센 reader): ❌ 미달
+
+**결론: 확정 Tier 2, Emergence에 4pp 근접하나 미달.** 정직한 서술 = "로컬 임베딩 forget이
+공개 SOTA급 오픈소스 베이스라인(Emergence 79)에 4pp 이내로 근접, knowledge-update는 우위."
+
+### 남은 갭 진단 (E2c 이후)
+
+date-fix 후에도 약한 두 지점: single-session-preference 30%(검색이 선호 진술을 못 올림),
+multi-session 61%(집계형 회수). temporal은 해결됨. E2c 하이브리드(턴 검색 + 세션 확장)는
+이제 temporal이 아니라 **multi-session/preference의 회수 완전성**을 겨냥해야 한다.
+
 ## 6. 다음 레버 (선등록 — 결과 보고 후에도 이 순서 유지)
 
 1. **single-session-preference** (14%): 선호 진술 검색 실패. 가설 — 선호는 저빈도·저유사도

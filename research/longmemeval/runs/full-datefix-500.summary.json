@@ -1,0 +1,35 @@
+{
+ "dataset": "s",
+ "n": 500,
+ "top_k": 42,
+ "reader": "gpt-4o",
+ "judge": "gpt-4o",
+ "overall_accuracy": 0.748,
+ "by_type": {
+  "knowledge-update": {
+   "acc": 0.8077,
+   "n": 78
+  },
+  "multi-session": {
+   "acc": 0.609,
+   "n": 133
+  },
+  "single-session-assistant": {
+   "acc": 0.9464,
+   "n": 56
+  },
+  "single-session-preference": {
+   "acc": 0.3,
+   "n": 30
+  },
+  "single-session-user": {
+   "acc": 0.9714,
+   "n": 70
+  },
+  "temporal-reasoning": {
+   "acc": 0.7519,
+   "n": 133
+  }
+ },
+ "elapsed_s": 27783.5
+}
