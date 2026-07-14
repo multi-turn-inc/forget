@@ -1,0 +1,380 @@
+[
+ {
+  "question_id": "a89d7624",
+  "question_type": "single-session-preference",
+  "question": "I'm planning a trip to Denver soon. Any suggestions on what to do there?",
+  "answer": "The user would prefer responses that take into account their previous experience in Denver, specifically their interest in live music and memorable encounter with Brandon Flowers. They might appreciate suggestions that revisit or build upon this experience, such as revisiting the same bar or exploring similar music venues in the area. The user may not prefer general tourist recommendations or activities unrelated to their interest in live music.",
+  "hypothesis": "During your trip to Denver, you can explore its vibrant music scene by visiting iconic venues like Red Rocks Park and Amphitheatre, The Ogden Theatre, and The Bluebird Theater. If you're interested in festivals, consider attending events like Grandoozy, Denver Folk Festival, or the Denver Jazz Festival. Additionally, you might enjoy dining at The Ship Rock Grille before a concert at Red Rocks, where you can enjoy views of the surrounding red rock formations. For BBQ near Red Rocks, check out places like GQue BBQ or Dinosaur Bar-B-Que. Enjoy your trip!",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "50635ada",
+  "question_type": "knowledge-update",
+  "question": "What was my previous frequent flyer status on United Airlines before I got the current status?",
+  "answer": "Premier Silver",
+  "hypothesis": "Your previous frequent flyer status on United Airlines was Premier Gold.",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "26bdc477",
+  "question_type": "knowledge-update",
+  "question": "How many trips have I taken my Canon EOS 80D camera on?",
+  "answer": "five",
+  "hypothesis": "You have taken your Canon EOS 80D camera on five trips.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "gpt4_731e37d7",
+  "question_type": "multi-session",
+  "question": "How much total money did I spend on attending workshops in the last four months?",
+  "answer": "$720",
+  "hypothesis": "You spent a total of $220 on attending workshops in the last four months: $20 for the mindfulness workshop and $200 for the writing workshop.",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "gpt4_7fce9456",
+  "question_type": "multi-session",
+  "question": "How many properties did I view before making an offer on the townhouse in the Brookside neighborhood?",
+  "answer": "I viewed four properties before making an offer on the townhouse in the Brookside neighborhood. The reasons I didn't make an offer on them were: the kitchen of the bungalow needed serious renovation, the property in Cedar Creek was out of my budget, the noise from the highway was a deal-breaker for the 1-bedroom condo, and my offer on the 2-bedroom condo was rejected due to a higher bid.",
+  "hypothesis": "You viewed at least five properties before making an offer on the townhouse in the Brookside neighborhood.",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "2ebe6c92",
+  "question_type": "temporal-reasoning",
+  "question": "Which book did I finish a week ago?",
+  "answer": "'The Nightingale' by Kristin Hannah",
+  "hypothesis": "You finished reading \"The Nightingale\" by Kristin Hannah a week ago.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "00ca467f",
+  "question_type": "multi-session",
+  "question": "How many doctor's appointments did I go to in March?",
+  "answer": 2,
+  "hypothesis": "You went to one doctor's appointment in March, which was with your primary care physician, Dr. Smith, on March 3rd.",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "ceb54acb",
+  "question_type": "single-session-assistant",
+  "question": "In our previous chat, you suggested 'sexual compulsions' and a few other options for alternative terms for certain behaviors. Can you remind me what the other four options were?",
+  "answer": "I suggested 'sexual fixations', 'problematic sexual behaviors', 'sexual impulsivity', and 'compulsive sexuality'.",
+  "hypothesis": "The other four alternative terms suggested for certain behaviors were \"sexual fixations,\" \"problematic sexual behaviors,\" \"sexual impulsivity,\" and \"compulsive sexuality.\"",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "57f827a0",
+  "question_type": "single-session-preference",
+  "question": "I was thinking about rearranging the furniture in my bedroom this weekend. Any tips?",
+  "answer": "The user would prefer responses that take into account their existing plans to replace the bedroom dresser and their interest in mid-century modern style, suggesting furniture layouts that accommodate the new dresser and incorporate elements of this design aesthetic. They might not prefer general furniture arrangement tips or suggestions that do not consider their specific design preferences.",
+  "hypothesis": "When rearranging your bedroom furniture, especially with an interest in mid-century modern design, consider these tips:\n\n1. **Plan the Layout**: Sketch a floor plan or use an online tool to visualize different arrangements. Focus on creating a balanced and functional space.\n\n2. **Key Elements**: Incorporate mid-century modern elements like clean lines, organic shapes, and tapered legs. Ensure the furniture pieces have a low profile and wood accents, such as walnut or teak.\n\n3. **Focal Point**: Decide on a focal point, like a bed or a dresser, and arrange other furniture around it to create a cohesive look.\n\n4. **Functionality**: Ensure the arrangement allows for easy movement and access to all areas of the room. Consider the flow of natural light and how it interacts with the furniture.\n\n5. **Accent Pieces**: Use bold color accents and simple drawer pulls or brass hardware to enhance the mid-century modern aesthetic.\n\n6. **Proportion and Balance**: Pay attention to the proportion of furniture pieces to maintain balance in the room. Avoid overcrowding by leaving some open space.\n\nBy keeping these tips in mind, you can create a stylish and functional bedroom that reflects your personal taste and the mid-century modern design you admire.",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "f523d9fe",
+  "question_type": "single-session-assistant",
+  "question": "I wanted to check back on our previous conversation about Netflix. I mentioned that I wanted to be able to access all seasons of old shows? Do you remember what show I used as an example, the one that only had the last season available?",
+  "answer": "Doc Martin",
+  "hypothesis": "You mentioned \"Doc Martin\" as the example of a show that only had the last season available on Netflix.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "0bc8ad93",
+  "question_type": "temporal-reasoning",
+  "question": "I mentioned visiting a museum two months ago. Did I visit with a friend or not?",
+  "answer": "No, you did not visit with a friend.",
+  "hypothesis": "Yes, you visited the Science Museum with a friend who is a chemistry professor.",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "6ae235be",
+  "question_type": "single-session-assistant",
+  "question": "I remember you told me about the refining processes at CITGO's three refineries earlier. Can you remind me what kind of processes are used at the Lake Charles Refinery?",
+  "answer": "Atmospheric distillation, fluid catalytic cracking (FCC), alkylation, and hydrotreating.",
+  "hypothesis": "The Lake Charles Refinery uses the following refining processes:\n\n1. Atmospheric distillation: Separates crude oil into different fractions based on boiling points.\n2. Fluid catalytic cracking (FCC): Breaks down heavier crude oil fractions into lighter products like gasoline and diesel.\n3. Alkylation: Combines smaller molecules to form larger ones, creating high-octane gasoline components.\n4. Hydrotreating: Removes impurities from gasoline and diesel fractions to improve quality.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "8464fc84",
+  "question_type": "single-session-assistant",
+  "question": "I'm planning to visit the Vatican again and I was wondering if you could remind me of the name of that famous deli near the Vatican that serves the best cured meats and cheeses?",
+  "answer": "Roscioli",
+  "hypothesis": "The famous deli near the Vatican that serves the best cured meats and cheeses is Roscioli.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "001be529",
+  "question_type": "single-session-user",
+  "question": "How long did I wait for the decision on my asylum application?",
+  "answer": "over a year",
+  "hypothesis": "You waited over a year for the decision on your asylum application.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "4388e9dd",
+  "question_type": "single-session-assistant",
+  "question": "I was going through our previous chat and I was wondering, what was Andy wearing in the script you wrote for the comedy movie scene?",
+  "answer": "Andy was wearing an untidy, stained white shirt.",
+  "hypothesis": "Andy was wearing an untidy, stained white shirt.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "7a87bd0c",
+  "question_type": "knowledge-update",
+  "question": "How long have I been sticking to my daily tidying routine?",
+  "answer": "4 weeks",
+  "hypothesis": "As of July 14, 2026, you mentioned sticking to your daily tidying routine for 4 weeks.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "60d45044",
+  "question_type": "single-session-user",
+  "question": "What type of rice is my favorite?",
+  "answer": "Japanese short-grain rice",
+  "hypothesis": "Your favorite type of rice is Japanese short-grain rice.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "07b6f563",
+  "question_type": "single-session-preference",
+  "question": "Can you suggest some useful accessories for my phone?",
+  "answer": "The user would prefer suggestions of accessories that are compatible with an iPhone 13 Pro, such as high-quality screen protectors, durable cases, portable power banks, or phone wallet cases. They may not prefer suggestions of accessories that are not compatible with Apple products or do not enhance the functionality or protection of their phone.",
+  "hypothesis": "I don't have that information.",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "2ebe6c90",
+  "question_type": "temporal-reasoning",
+  "question": "How many days did it take me to finish 'The Nightingale' by Kristin Hannah?",
+  "answer": "21 days. 22 days (including the last day) is also acceptable.",
+  "hypothesis": "You took 0 days to finish \"The Nightingale\" by Kristin Hannah, as you started and finished it on the same day, 2026-07-14.",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "15745da0_abs",
+  "question_type": "single-session-user",
+  "question": "How long have I been collecting vintage films?",
+  "answer": "You did not mention this information. You mentioned collecting vintage cameras but not vintage films.",
+  "hypothesis": "I don't have that information.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "gpt4_e05b82a6",
+  "question_type": "multi-session",
+  "question": "How many times did I ride rollercoasters across all the events I attended from July to October?",
+  "answer": "10 times",
+  "hypothesis": "You rode rollercoasters a total of 6 times across all the events you attended from July to October. This includes 3 rides at SeaWorld San Diego and 3 rides at Universal Studios Hollywood.",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "36580ce8",
+  "question_type": "single-session-user",
+  "question": "What health issue did I initially think was just a cold?",
+  "answer": "bronchitis",
+  "hypothesis": "You initially thought you had a cold, but it turned out to be bronchitis.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "75f70248",
+  "question_type": "single-session-preference",
+  "question": "I've been sneezing quite a bit lately. Do you think it might be my living room?",
+  "answer": "The user would prefer responses that consider the potential impact of their cat, Luna, and her shedding on their sneezing, as well as the recent deep clean of the living room and its possible effect on stirring up dust. They might not prefer responses that fail to take into account these specific details previously mentioned, such as generic suggestions or unrelated factors.",
+  "hypothesis": "Yes, it's possible that your living room is contributing to your sneezing. You mentioned having a cat that sheds a lot, which can contribute to dust and allergens. Additionally, your work on antique furniture restoration might involve dust from sanding or refinishing, and your Victorian-era armchair could potentially harbor dust or allergens. Regular vacuuming with a HEPA filter, dusting with a damp cloth, and grooming your cat regularly can help reduce allergens. Adding air-purifying plants like spider plants or snake plants might also improve air quality.",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "gpt4_1e4a8aeb",
+  "question_type": "temporal-reasoning",
+  "question": "How many days passed between the day I attended the gardening workshop and the day I planted the tomato saplings?",
+  "answer": "6 days. 7 days (including the last day) is also acceptable.",
+  "hypothesis": "0 days passed between the day you attended the gardening workshop and the day you planted the tomato saplings, as both events occurred on the same day, 2026-07-14.",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "edced276_abs",
+  "question_type": "multi-session",
+  "question": "How many days did I spend in total traveling in Hawaii and in Seattle?",
+  "answer": "The information provided is not enough. You mentioned traveling for 10 days in Hawaii but did not mention abything about the trip to Seattle.",
+  "hypothesis": "You spent a total of 10 days traveling in Hawaii. The duration of your trip to Seattle is not specified, so I don't have that information.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "b29f3365",
+  "question_type": "temporal-reasoning",
+  "question": "How long had I been taking guitar lessons when I bought the new guitar amp?",
+  "answer": "Four weeks",
+  "hypothesis": "You had been taking guitar lessons for approximately four weeks when you bought the new guitar amp.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "ce6d2d27",
+  "question_type": "knowledge-update",
+  "question": "What day of the week do I take a cocktail-making class?",
+  "answer": "Friday",
+  "hypothesis": "You have a cocktail-making class on Fridays.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "gpt4_59149c78",
+  "question_type": "temporal-reasoning",
+  "question": "I mentioned that I participated in an art-related event two weeks ago. Where was that event held at?",
+  "answer": "The Metropolitan Museum of Art.",
+  "hypothesis": "The event was held at the Metropolitan Museum of Art.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "a06e4cfe",
+  "question_type": "single-session-user",
+  "question": "What is my preferred gin-to-vermouth ratio for a classic gin martini?",
+  "answer": "3:1",
+  "hypothesis": "Your preferred gin-to-vermouth ratio for a classic gin martini is 3:1, with a dash of citrus bitters.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "bf659f65",
+  "question_type": "multi-session",
+  "question": "How many music albums or EPs have I purchased or downloaded?",
+  "answer": 3,
+  "hypothesis": "You have downloaded Billie Eilish's album \"Happier Than Ever\" on Spotify and purchased the EP \"Midnight Sky\" by \"The Whiskey Wanderers\" at a music festival.",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "a40e080f",
+  "question_type": "single-session-assistant",
+  "question": "I was going through our previous conversation and I was wondering if you could remind me of the two companies you mentioned that prioritize employee safety and well-being like Triumvirate?",
+  "answer": "Patagonia and Southwest Airlines.",
+  "hypothesis": "The two companies mentioned that prioritize employee safety and well-being like Triumvirate are Patagonia and Southwest Airlines.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "6b7dfb22",
+  "question_type": "single-session-preference",
+  "question": "I've been feeling a bit stuck with my paintings lately. Do you have any ideas on how I can find new inspiration?",
+  "answer": "The user would prefer responses that build upon their existing sources of inspiration, such as revisiting Instagram art accounts or exploring new techniques from online tutorials. They might also appreciate suggestions that revisit previous themes they found enjoyable, like painting flowers. The user would not prefer generic or vague suggestions for finding inspiration, and would likely appreciate responses that utilize their recent 30-day painting challenge experience.",
+  "hypothesis": "You might find inspiration by exploring new activities or environments. Since you have a small herb garden on your balcony, consider incorporating nature into your art. Experimenting with different flavors and ingredients in cocktails has been a creative outlet for you, so perhaps try translating that experimentation into your painting by playing with colors and textures. Additionally, attending events like the collectibles show you planned to visit could spark new ideas. Engaging with your social circle or reaching out to acquaintances might also provide fresh perspectives and inspiration.",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "f685340e",
+  "question_type": "knowledge-update",
+  "question": "How often do I play tennis with my friends at the local park previously? How often do I play now?",
+  "answer": "Previously, you play tennis with your friends at the local park every week (on Sunday). Currently, you play tennis every other week (on Sunday).",
+  "hypothesis": "Previously, you had weekly tennis sessions with friends at the local park. Currently, you play tennis with friends every other week at the local park.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "gpt4_4929293a",
+  "question_type": "temporal-reasoning",
+  "question": "Which event happened first, my cousin's wedding or Michael's engagement party?",
+  "answer": "Michael's engagement party",
+  "hypothesis": "Both events occurred on the same day, July 14, 2026. Therefore, neither event happened before the other; they took place simultaneously.",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "b0479f84",
+  "question_type": "single-session-preference",
+  "question": "I've got some free time tonight, any documentary recommendations?",
+  "answer": "The user would prefer documentary recommendations that are similar in style and theme to 'Our Planet', 'Free Solo', and 'Tiger King', which they have previously enjoyed. They might not prefer recommendations of documentaries that are vastly different in tone or subject matter from these titles. The preferred response utilizes the user's previously mentioned viewing history to suggest documentaries that cater to their tastes.",
+  "hypothesis": "I don't have specific documentary recommendations from your past conversations, but based on your interests, you might enjoy documentaries related to true crime, entrepreneurship, or educational topics with complex narratives. These align with your interest in podcasts like \"Crime Junkie\" and \"How I Built This,\" as well as your enjoyment of educational content.",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "81507db6",
+  "question_type": "multi-session",
+  "question": "How many graduation ceremonies have I attended in the past three months?",
+  "answer": 3,
+  "hypothesis": "You have attended three graduation ceremonies in the past three months.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "ad7109d1",
+  "question_type": "single-session-user",
+  "question": "What speed is my new internet plan?",
+  "answer": "500 Mbps",
+  "hypothesis": "Your new internet plan speed is 500 Mbps.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "66f24dbb",
+  "question_type": "single-session-user",
+  "question": "What did I buy for my sister's birthday gift?",
+  "answer": "a yellow dress",
+  "hypothesis": "You bought your sister a yellow dress and a pair of earrings to match for her birthday.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "affe2881",
+  "question_type": "knowledge-update",
+  "question": "How many different species of birds have I seen in my local park?",
+  "answer": "32",
+  "hypothesis": "You have seen 32 different species of birds in your local park.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "06f04340",
+  "question_type": "single-session-preference",
+  "question": "What should I serve for dinner this weekend with my homegrown ingredients?",
+  "answer": "The user would prefer dinner suggestions that incorporate their homegrown cherry tomatoes and herbs like basil and mint, highlighting recipes that showcase their garden produce. They might not prefer suggestions that do not utilize these specific ingredients or do not emphasize the use of homegrown elements.",
+  "hypothesis": "I don't have that information.",
+  "n_retrieved": 10,
+  "correct": false
+ },
+ {
+  "question_id": "cc5ded98",
+  "question_type": "knowledge-update",
+  "question": "How much time do I dedicate to coding exercises each day?",
+  "answer": "about two hours",
+  "hypothesis": "You dedicate approximately two hours daily to coding exercises.",
+  "n_retrieved": 10,
+  "correct": true
+ },
+ {
+  "question_id": "e8a79c70",
+  "question_type": "single-session-assistant",
+  "question": "I was going through our previous conversation about making a classic French omelette, and I wanted to confirm - how many eggs did you say we need for the recipe?",
+  "answer": "2-3 eggs",
+  "hypothesis": "For a classic French omelette, you need 2-3 eggs.",
+  "n_retrieved": 10,
+  "correct": true
+ }
+]

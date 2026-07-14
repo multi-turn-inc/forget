@@ -75,21 +75,36 @@ def dev_ids(data: list[dict], n: int) -> set[str]:
     return {inst["question_id"] for inst in stratified_sample(data, n, random.Random(42))}
 
 
-def ingest_instance(client: httpx.Client, scope: str, inst: dict) -> int:
+def ingest_instance(client: httpx.Client, scope: str, inst: dict, granularity: str = "turn") -> int:
     client.request("DELETE", "/v1/memories/", json={"user_id": scope, "app_id": "lme"})
     stored = 0
     dates = inst.get("haystack_dates") or []
     for si, session in enumerate(inst["haystack_sessions"]):
         date = dates[si] if si < len(dates) else inst.get("question_date", "2026-01-01")
         created = normalize_date(date)
-        for turn in session:
-            text = f"{turn['role']}: {turn['content']}"
+        if granularity == "session":
+            # one memory per session — retrieval unit is a whole session, so a
+            # broad-recall query pulls coherent multi-turn context instead of
+            # scattered fragments (the temporal/multi-session weakness in E2).
+            body = "\n".join(f"{t['role']}: {t['content']}" for t in session
+                             if "role" in t and "content" in t)
+            if not body:
+                continue
             resp = client.post("/v1/memories/", json={
-                "text": text, "infer": False, "user_id": scope, "app_id": "lme",
+                "text": body, "infer": False, "user_id": scope, "app_id": "lme",
                 "created_at": created,
             })
             resp.raise_for_status()
             stored += 1
+        else:
+            for turn in session:
+                text = f"{turn['role']}: {turn['content']}"
+                resp = client.post("/v1/memories/", json={
+                    "text": text, "infer": False, "user_id": scope, "app_id": "lme",
+                    "created_at": created,
+                })
+                resp.raise_for_status()
+                stored += 1
     return stored
 
 
@@ -100,9 +115,10 @@ def normalize_date(date: str) -> str:
     return date
 
 
-def retrieve(client: httpx.Client, scope: str, question: str, top_k: int) -> list[dict]:
+def retrieve(client: httpx.Client, scope: str, question: str, top_k: int,
+             temporal_rerank: bool = True) -> list[dict]:
     resp = client.post("/v3/memories/search/", json={
-        "query": question, "top_k": top_k, "temporal_rerank": True,
+        "query": question, "top_k": top_k, "temporal_rerank": temporal_rerank,
         "filters": {"user_id": scope, "app_id": "lme"},
     })
     resp.raise_for_status()
@@ -176,11 +192,12 @@ def _with_retry(fn, tries=4):
             delay *= 2
 
 
-def run_instance(inst, url, oai, reader_model, judge_model, top_k, two_stage=False):
+def run_instance(inst, url, oai, reader_model, judge_model, top_k, two_stage=False,
+                 temporal_rerank=True, granularity="turn"):
     scope = f"lme-{inst['question_id']}"
     with httpx.Client(base_url=url, timeout=180) as client:
-        _with_retry(lambda: ingest_instance(client, scope, inst))
-        memories = retrieve(client, scope, inst["question"], top_k)
+        _with_retry(lambda: ingest_instance(client, scope, inst, granularity))
+        memories = retrieve(client, scope, inst["question"], top_k, temporal_rerank)
     hyp = _with_retry(lambda: read_answer(oai, reader_model, inst["question"],
                                           inst.get("question_date", ""), memories, two_stage))
     correct = _with_retry(lambda: judge(oai, judge_model, inst, hyp))
@@ -206,6 +223,10 @@ def main() -> int:
                     help="draw a stratified sample disjoint from the seed-42 dev set")
     ap.add_argument("--two-stage", action="store_true",
                     help="Emergence-style extract-facts-then-answer reader")
+    ap.add_argument("--no-rerank", action="store_true",
+                    help="disable temporal_rerank (recency bias hurts broad-recall queries)")
+    ap.add_argument("--granularity", choices=["turn", "session"], default="turn",
+                    help="retrieval unit: per-message (turn) or per-session chunk")
     ap.add_argument("--tag", default="")
     args = ap.parse_args()
 
@@ -230,7 +251,8 @@ def main() -> int:
     started = time.time()
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         futures = [pool.submit(run_instance, inst, args.url, oai, args.reader_model,
-                               args.judge_model, args.top_k, args.two_stage) for inst in insts]
+                               args.judge_model, args.top_k, args.two_stage,
+                               not args.no_rerank, args.granularity) for inst in insts]
         for i, fut in enumerate(futures, 1):
             try:
                 r = fut.result()

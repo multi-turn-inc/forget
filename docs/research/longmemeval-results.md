@@ -130,6 +130,32 @@ config 잠금(날짜 + top_k 20, deterministic-128) 후 dev에 쓰지 않은 42�
 2. multi-session/temporal 질의에 top_k 대폭 상향 + 세션 다양성 확보.
 3. 이후에야 Emergence 79% / Oracle 82% 재도전이 의미. 지금 config로는 천장이 ~64%.
 
+## 6. E2b 결과 — 세션 단위 검색 (2026-07-14)
+
+dev(seed 42, n=42) 세션 단위 vs turn 단위 (top_k 10 session ≈ 42 turn 총량):
+
+| question_type | turn | session | Δ |
+|---|---|---|---|
+| temporal-reasoning | 14% | 43% | **+29** |
+| multi-session | 43% | 29% | −14 |
+| single-session-preference | 29% | 0% | −29 |
+| knowledge-update | 86% | 86% | 0 |
+| single-session-user/assistant | 100% | 100% | 0 |
+| **전체** | **61.9%** | **59.5%** | −2.4 (노이즈 내) |
+
+**판정: 단순 세션 가설 기각** — dev 기준선(61.9%)을 못 넘어 held-out/full-500 승격 안 함.
+
+**획득한 메커니즘 (세션 임베딩 희석)**: 세션 단위는 트레이드오프다. temporal은 통짜
+세션의 날짜·순서 맥락으로 개선되지만(+29), preference·multi-session은 특정 한 턴의 사실이
+긴 세션 임베딩에 평균화돼 묻혀 악화된다(−29/−14). overall Δ는 n=42 노이즈 안이나 타입별
+스윙은 dilution 메커니즘과 일관돼 신호로 본다.
+
+### E2c 후보 — 하이브리드 검색
+
+데이터가 가리키는 해법: **턴 단위 핀포인트 검색**(preference/multi-session 회수 유지)
+**+ 검색된 턴을 그 세션 맥락으로 확장**해 reader에 제공(temporal 이득 획득). "찾을 땐
+정밀하게, 읽을 땐 넓게." 검색 턴↔세션 매핑 필요. 별도 실험.
+
 ## 6. 다음 레버 (선등록 — 결과 보고 후에도 이 순서 유지)
 
 1. **single-session-preference** (14%): 선호 진술 검색 실패. 가설 — 선호는 저빈도·저유사도
