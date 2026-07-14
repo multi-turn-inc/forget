@@ -110,6 +110,15 @@
   .btn.primary:hover { background: #262626; }
   .btn.ghost { background: var(--card); border: 1px solid var(--line); }
   .btn.ghost:hover { border-color: var(--ink); }
+  .waitlist-form { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .waitlist-form input {
+    padding: 16px 22px; font-size: 17px; min-width: 260px;
+    border: 1px solid var(--line); border-radius: 999px;
+    background: var(--card); color: var(--ink); outline: none;
+    font-family: var(--sans);
+  }
+  .waitlist-form input:focus { border-color: var(--ink); }
+  .form-note { margin-top: 22px; font-weight: 700; }
 
   /* ---- sections ---- */
   section { padding: 84px 0; border-top: 1px solid var(--line); }
@@ -215,10 +224,13 @@
   </div>
 
   <div class="ctas">
-    <!-- Interim CTA: mailto until the form backend (Formspree) is wired. -->
-    <a class="btn primary" href="mailto:founder@multi-turn.ai?subject=forget%20sync%20waitlist&body=Add%20me%20to%20the%20waitlist.">Join the sync waitlist &rarr;</a>
+    <form class="waitlist-form" action="https://formspree.io/f/mbdnjvjn" method="POST">
+      <input type="email" name="email" required placeholder="you@example.com" aria-label="Email address">
+      <button class="btn primary" type="submit">Join the sync waitlist &rarr;</button>
+    </form>
     <a class="btn ghost" href="https://github.com/junghunkim/forget">Star on GitHub</a>
   </div>
+  <p class="form-note" hidden>You're on the list. We'll write when sync ships. ✓</p>
 </div>
 
 <div class="wrap">
@@ -323,5 +335,23 @@ scripts/demo-decisions.sh . "why did the default change to local?"
   </footer>
 </div>
 
+<script>
+  const form = document.querySelector(".waitlist-form");
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      const response = await fetch(form.action, {
+        method: "POST",
+        body: new FormData(form),
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) throw new Error();
+      form.hidden = true;
+      document.querySelector(".form-note").hidden = false;
+    } catch {
+      form.submit(); // programmatic submit skips listeners — falls back to Formspree's page
+    }
+  });
+</script>
 </body>
 </html>
