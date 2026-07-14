@@ -30,118 +30,151 @@
 </script>
 <style>
   :root {
-    --bg: #0e0f11;
-    --fg: #e8e6e1;
-    --muted: #9a978f;
-    --line: #26282c;
-    --accent: #e8b44a;
-    --card: #16181b;
-    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  }
-  @media (prefers-color-scheme: light) {
-    :root {
-      --bg: #faf9f6;
-      --fg: #1c1b18;
-      --muted: #6b6961;
-      --line: #e4e1da;
-      --accent: #b07d1e;
-      --card: #f1efe9;
-    }
+    --bg: #f4f4ef;
+    --ink: #0a0a0a;
+    --ink-2: #8a8a85;
+    --muted: #6f6f69;
+    --line: rgba(10,10,10,0.12);
+    --card: #fcfcfa;
+    --sans: -apple-system, "Noto Sans KR", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
-    background: var(--bg); color: var(--fg);
-    font: 17px/1.65 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--ink);
+    font: 17px/1.65 var(--sans);
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
-  .wrap { max-width: 680px; margin: 0 auto; padding: 0 24px; }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
+  a { color: inherit; text-decoration: none; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
 
+  /* ---- header ---- */
   header {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 28px 0;
+    padding: 26px 0;
   }
-  .brand { font-family: var(--mono); font-size: 18px; color: var(--fg); }
-  .brand s { text-decoration-color: var(--accent); }
-  nav a { color: var(--muted); margin-left: 20px; font-size: 15px; }
+  .brand { font-weight: 800; font-size: 20px; letter-spacing: -0.02em; }
+  .brand s { text-decoration-thickness: 3px; text-decoration-color: var(--ink); }
+  nav a {
+    font-size: 15px; color: var(--muted); margin-left: 26px; font-weight: 600;
+  }
+  nav a:hover { color: var(--ink); }
 
-  .hero { padding: 72px 0 56px; }
+  /* ---- hero ---- */
+  .hero { text-align: center; padding: 88px 0 72px; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted);
+    display: inline-flex; align-items: center; gap: 14px;
+  }
+  .eyebrow::before { content: ""; width: 44px; height: 1px; background: var(--line); }
   h1 {
-    font-size: clamp(34px, 6vw, 52px); line-height: 1.12;
-    letter-spacing: -0.02em; font-weight: 750; margin-bottom: 22px;
+    margin: 34px auto 0; max-width: 17ch;
+    font-size: clamp(52px, 9.5vw, 118px);
+    line-height: 0.98; letter-spacing: -0.045em; font-weight: 800;
   }
-  .hero p.sub { font-size: 20px; color: var(--muted); max-width: 56ch; }
+  h1 .dim { color: var(--ink-2); }
+  .sub {
+    max-width: 62ch; margin: 44px auto 0;
+    font-size: clamp(18px, 2.2vw, 22px); line-height: 1.6; color: #3d3d38;
+  }
 
-  form.waitlist { display: flex; gap: 10px; margin: 34px 0 10px; flex-wrap: wrap; }
-  form.waitlist input {
-    flex: 1 1 240px; padding: 13px 16px; font-size: 16px;
-    background: var(--card); color: var(--fg);
-    border: 1px solid var(--line); border-radius: 8px; outline: none;
+  /* ---- pillar cards ---- */
+  .pillars {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    border: 1px solid var(--line); border-radius: 14px; background: var(--card);
+    margin: 56px auto 0; max-width: 980px; text-align: left;
+    overflow: hidden;
   }
-  form.waitlist input:focus { border-color: var(--accent); }
-  form.waitlist button, .waitlist a.cta {
-    display: inline-block;
-    padding: 13px 22px; font-size: 16px; font-weight: 650;
-    background: var(--accent); color: var(--bg);
-    border: 0; border-radius: 8px; cursor: pointer; text-decoration: none;
+  .pillar { padding: 26px 28px; }
+  .pillar + .pillar { border-left: 1px solid var(--line); }
+  .pillar .label {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 10px;
   }
-  .hero .alt { font-size: 14px; color: var(--muted); }
+  .pillar p { font-size: 17px; font-weight: 700; line-height: 1.45; }
+  @media (max-width: 720px) {
+    .pillars { grid-template-columns: 1fr; }
+    .pillar + .pillar { border-left: 0; border-top: 1px solid var(--line); }
+  }
 
-  section { border-top: 1px solid var(--line); padding: 56px 0; }
-  h2 {
-    font-family: var(--mono); font-size: 14px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.14em;
-    color: var(--accent); margin-bottom: 28px;
+  /* ---- CTAs ---- */
+  .ctas { display: flex; gap: 14px; justify-content: center; margin-top: 48px; flex-wrap: wrap; }
+  .btn {
+    display: inline-block; padding: 16px 30px; border-radius: 999px;
+    font-size: 17px; font-weight: 700;
   }
-  .fact { margin-bottom: 26px; }
-  .fact:last-child { margin-bottom: 0; }
-  .fact h3 { font-size: 19px; margin-bottom: 6px; }
-  .fact p { color: var(--muted); }
+  .btn.primary { background: var(--ink); color: var(--bg); }
+  .btn.primary:hover { background: #262626; }
+  .btn.ghost { background: var(--card); border: 1px solid var(--line); }
+  .btn.ghost:hover { border-color: var(--ink); }
+
+  /* ---- sections ---- */
+  section { padding: 84px 0; border-top: 1px solid var(--line); }
+  .sec-label {
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted);
+    margin-bottom: 26px;
+  }
+  h2 { font-size: clamp(30px, 4.4vw, 44px); letter-spacing: -0.03em; line-height: 1.12; font-weight: 800; max-width: 22ch; }
+
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 44px; }
+  .fact {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 28px;
+  }
+  .fact h3 { font-size: 19px; margin-bottom: 10px; letter-spacing: -0.01em; }
+  .fact p { font-size: 15.5px; color: var(--muted); line-height: 1.6; }
+  @media (max-width: 820px) { .facts { grid-template-columns: 1fr; } }
 
   blockquote {
-    font-size: 24px; line-height: 1.45; font-weight: 600;
-    border-left: 3px solid var(--accent); padding-left: 22px;
-    margin: 0;
+    font-size: clamp(24px, 3.4vw, 34px); font-weight: 700; line-height: 1.35;
+    letter-spacing: -0.02em; max-width: 30ch;
   }
+  blockquote .dim { color: var(--ink-2); }
 
-  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
-  @media (max-width: 560px) { .cols { grid-template-columns: 1fr; } }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 44px; }
+  @media (max-width: 820px) { .cols { grid-template-columns: 1fr; } }
+  .col {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 28px;
+  }
   .col h3 {
-    font-family: var(--mono); font-size: 15px; margin-bottom: 14px;
-    color: var(--fg);
+    font-family: var(--mono); font-size: 13px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 18px; font-weight: 600;
   }
   .col ul { list-style: none; }
-  .col li {
-    padding: 8px 0 8px 22px; position: relative; color: var(--muted);
-    font-size: 15.5px;
-  }
-  .col li::before {
-    content: "—"; position: absolute; left: 0; color: var(--accent);
-  }
+  .col li { padding: 9px 0 9px 26px; position: relative; font-size: 16px; color: #3d3d38; }
+  .col li::before { content: "—"; position: absolute; left: 0; color: var(--ink-2); }
 
   pre.demo {
-    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
-    padding: 18px 20px; font-family: var(--mono); font-size: 14px;
-    overflow-x: auto; margin-top: 24px; color: var(--fg);
+    background: #0a0a0a; color: #f4f4ef; border-radius: 14px;
+    padding: 26px 30px; font: 14px/1.7 var(--mono);
+    overflow-x: auto; margin-top: 26px;
   }
-  pre.demo .c { color: var(--muted); }
+  pre.demo .c { color: #8a8a85; }
+  pre.demo .a { color: #ffb454; }
 
-  .honest li { margin: 0 0 14px 0; color: var(--muted); list-style: none; }
-  .honest li strong { color: var(--fg); }
+  .honest { margin-top: 44px; display: grid; gap: 0; border: 1px solid var(--line); border-radius: 14px; background: var(--card); overflow: hidden; }
+  .honest li { list-style: none; padding: 24px 28px; font-size: 16.5px; color: var(--muted); line-height: 1.6; }
+  .honest li + li { border-top: 1px solid var(--line); }
+  .honest li strong { color: var(--ink); display: block; margin-bottom: 4px; font-size: 17px; }
 
-  .partners { background: var(--card); border-radius: 12px; padding: 32px; }
-  .partners p { color: var(--muted); margin-bottom: 16px; }
-  .partners a.btn {
-    display: inline-block; padding: 11px 20px; border-radius: 8px;
-    border: 1px solid var(--accent); font-weight: 600;
+  .partners {
+    background: var(--ink); color: var(--bg); border-radius: 18px;
+    padding: 56px; text-align: center; margin-top: 0;
   }
+  .partners h2 { margin: 0 auto; }
+  .partners p { color: #b8b8b2; max-width: 52ch; margin: 18px auto 30px; font-size: 17px; }
+  .partners .btn { background: var(--bg); color: var(--ink); }
 
   footer {
-    border-top: 1px solid var(--line); padding: 36px 0 56px;
-    color: var(--muted); font-size: 14px;
+    padding: 44px 0 64px; color: var(--muted); font-size: 15px;
     display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    border-top: 1px solid var(--line);
   }
+  footer a { font-weight: 600; }
 </style>
 </head>
 <body>
@@ -154,69 +187,86 @@
       <a href="https://github.com/junghunkim/forget/blob/main/MANIFESTO.md">Manifesto</a>
     </nav>
   </header>
+</div>
 
-  <div class="hero">
-    <h1>Tell Claude Code once.<br>Cursor remembers.</h1>
-    <p class="sub">
-      One memory for your AI, across every tool you use — decisions,
-      preferences, project context. It lives in a SQLite file on your
-      machine, so nobody can read it but you. Open source today;
-      end-to-end encrypted sync next.
-    </p>
+<div class="wrap hero">
+  <span class="eyebrow">One memory for your AI · local first</span>
+  <h1>Tell Claude Code once. <span class="dim">Cursor remembers.</span></h1>
+  <p class="sub">
+    Your decisions, preferences, and project context — one memory across
+    every tool you use. It lives in a SQLite file on your machine, so
+    nobody can read it but you. Open source today; end-to-end encrypted
+    sync next.
+  </p>
 
-    <!-- Interim CTA: mailto until the form backend (Formspree) is wired.
-         Swap back to <form class="waitlist" action="https://formspree.io/f/ID"> -->
-    <div class="waitlist">
-      <a class="cta" href="mailto:founder@multi-turn.ai?subject=forget%20sync%20waitlist&body=Add%20me%20to%20the%20waitlist.">
-        Join the sync waitlist →
-      </a>
+  <div class="pillars">
+    <div class="pillar">
+      <span class="label">Local</span>
+      <p>Everything lives in one SQLite file on your machine.</p>
     </div>
-    <p class="alt">
-      Or run the <a href="https://github.com/junghunkim/forget">open-source
-      engine</a> locally right now — no signup, no server, one SQLite file.
-    </p>
+    <div class="pillar">
+      <span class="label">Receipts</span>
+      <p>Every answer links back to the commit that decided it.</p>
+    </div>
+    <div class="pillar">
+      <span class="label">Portable</span>
+      <p>The same memory in Claude Code, Cursor, and Codex.</p>
+    </div>
   </div>
 
+  <div class="ctas">
+    <!-- Interim CTA: mailto until the form backend (Formspree) is wired. -->
+    <a class="btn primary" href="mailto:founder@multi-turn.ai?subject=forget%20sync%20waitlist&body=Add%20me%20to%20the%20waitlist.">Join the sync waitlist &rarr;</a>
+    <a class="btn ghost" href="https://github.com/junghunkim/forget">Star on GitHub</a>
+  </div>
+</div>
+
+<div class="wrap">
   <section>
-    <h2>"I don't want to share my prompts"</h2>
-    <div class="fact">
-      <h3>It is not privileged.</h3>
-      <p>In February 2026, a US federal court ruled that a defendant's AI
-      conversations were not protected — the provider's terms of service
-      said data could be used for training and disclosed to third parties.
-      What you tell an AI is, legally, what you told a company.</p>
-    </div>
-    <div class="fact">
-      <h3>Your memory vendor will change hands.</h3>
-      <p>Rewind promised local-first privacy, pivoted to the cloud, and was
-      acquired — its users were migrated onto the acquirer's terms overnight.
-      Every startup holding your memories is one term sheet away from being
-      someone else's database.</p>
-    </div>
-    <div class="fact">
-      <h3>The platforms will not fix this.</h3>
-      <p>A model provider cannot end-to-end encrypt memory its own servers
-      must read, and it will never port your memory to a competitor's tool.
-      Native memory features are silos by design.</p>
+    <div class="sec-label">"I don't want to share my prompts"</div>
+    <h2>Three facts about AI memory.</h2>
+    <div class="facts">
+      <div class="fact">
+        <h3>It is not privileged.</h3>
+        <p>In February 2026, a US federal court ruled that a defendant's AI
+        conversations were not protected — the provider's terms said data
+        could be used for training and disclosed. What you tell an AI is,
+        legally, what you told a company.</p>
+      </div>
+      <div class="fact">
+        <h3>Your memory vendor will change hands.</h3>
+        <p>Rewind promised local-first privacy, pivoted to the cloud, and was
+        acquired — its users were migrated onto the acquirer's terms
+        overnight. Every startup holding your memories is one term sheet
+        away from being someone else's database.</p>
+      </div>
+      <div class="fact">
+        <h3>The platforms will not fix this.</h3>
+        <p>A model provider cannot end-to-end encrypt memory its own servers
+        must read, and it will never port your memory to a competitor's
+        tool. Native memory features are silos by design.</p>
+      </div>
     </div>
   </section>
 
   <section>
     <blockquote>
-      Your model provider already reads your prompts. There is no reason
-      your memory layer should be a second reader.
+      Your model provider already reads your prompts.
+      <span class="dim">There is no reason your memory layer should be a
+      second reader.</span>
     </blockquote>
   </section>
 
   <section>
-    <h2>Today / Next</h2>
+    <div class="sec-label">Today / Next</div>
+    <h2>Works now. Sealed next.</h2>
     <div class="cols">
       <div class="col">
-        <h3>Today — open source, works now</h3>
+        <h3>Today — open source</h3>
         <ul>
           <li>Runs entirely on your machine — one SQLite file you own</li>
+          <li>Mines your repo's decision history: "why did we choose X?" answered with commit receipts</li>
           <li>Observation gate keeps facts, forgets junk</li>
-          <li>Supersede, temporal rerank, background consolidation</li>
           <li>MCP: Claude Code, Cursor, Codex, Claude Desktop</li>
         </ul>
       </div>
@@ -233,11 +283,17 @@
     <pre class="demo"><span class="c"># memory in sixty seconds</span>
 pip install forget-ai[server]
 uvicorn forget.server:app --port 8000
-npx forget-connect   <span class="c"># wires Claude Code, Codex, Claude Desktop</span></pre>
+npx forget-connect   <span class="c"># wires Claude Code, Codex, Claude Desktop</span>
+
+<span class="c"># then, against any repo:</span>
+scripts/demo-decisions.sh . "why did the default change to local?"
+<span class="a">A: forget-connect 0.2.0: local-first default, --hosted legacy opt-in
+   [repo@7c8f0683 · 2026-07-13]</span></pre>
   </section>
 
   <section>
-    <h2>What we won't pretend</h2>
+    <div class="sec-label">What we won't pretend</div>
+    <h2>Honesty is the product.</h2>
     <ul class="honest">
       <li><strong>The model you use still sees plaintext.</strong> It has to,
       to use your memories. Encryption protects you from storage providers —
@@ -257,16 +313,13 @@ npx forget-connect   <span class="c"># wires Claude Code, Codex, Claude Desktop<
       <p>Your users' memories are your liability. A memory layer you
       cryptographically cannot read can't leak and can't be compelled.
       We're taking design partners.</p>
-      <a class="btn" href="mailto:founder@multi-turn.ai?subject=forget%20design%20partner">Talk to us</a>
+      <a class="btn" href="mailto:founder@multi-turn.ai?subject=forget%20design%20partner">Talk to us &rarr;</a>
     </div>
   </section>
 
   <footer>
     <div>The safest secret-keeper is one with nothing to tell.</div>
-    <div>
-      <a href="https://github.com/junghunkim/forget">GitHub</a> ·
-      Apache-2.0
-    </div>
+    <div><a href="https://github.com/junghunkim/forget">GitHub</a> · Apache-2.0 · Multi-turn Inc.</div>
   </footer>
 </div>
 
