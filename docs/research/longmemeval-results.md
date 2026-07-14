@@ -82,9 +82,53 @@ config 잠금(날짜 + top_k 20, deterministic-128) 후 dev에 쓰지 않은 42�
 한계: n=42, 이항 95% CI ≈ ±14pp. 방어 가능한 주장은 "42문항 held-out에서 Mem0/Zep
 대역에 안착". 리더보드 헤드라인은 §5의 full-500이 확정한다.
 
-## 5. Full-500 (headline) — 실행 중, 완료 시 기입
+## 5. Full-500 (headline) — 확정 (2026-07-14)
 
-_(pending: `research/longmemeval/runs/full-s-500.summary.json`)_
+**forget 조합 config, 전체 500문항: 64.4%.** (fastembed bge-small + top_k 42 +
+2단계 reader, gpt-4o reader/judge.)
+
+| question_type | n | full-500 acc |
+|---|---|---|
+| single-session-assistant | 56 | 94.6% |
+| single-session-user | 70 | 94.3% |
+| knowledge-update | 78 | 76.9% |
+| multi-session | 133 | 58.7% |
+| temporal-reasoning | 133 | 43.6% |
+| single-session-preference | 30 | 23.3% |
+| **전체** | **500** | **64.4%** |
+
+### Tier 판정 (선등록, gtm/validation-criteria.md 실험 5)
+
+- Tier 1 (>49% Mem0-old): ✅ 통과
+- Tier 2 (≥60% Zep권): ✅ 통과 (구 Zep 63.8 소폭 상회)
+- Emergence Simple-Fast 79% 초과: ❌ **미달** (약 15pp 아래)
+- Oracle gpt-4o 천장 ~82.4%: ❌ 미달
+- Tier 3 SOTA (~95%): ❌ 미달
+
+**결론: Tier 2 달성, SOTA 아님.**
+
+### 정직 노트 — held-out 76%는 노이즈였다
+
+§2b의 held-out(n=42) 조합 76.2%는 **낙관적 표본 오차**였다. full-500의 진짜 값은
+64.4%로 12pp 낮다. 이는 우리가 앞서 자각한 "n=42 CI ±13pp" 경고가 그대로 실현된 것 —
+작은 표본으로 낸 고무적 숫자를 헤드라인으로 쓰지 않은 이유다. **헤드라인은 64.4%다.**
+
+### 진단 — 갭은 어디에 있나
+
+- 최약체 두 타입(temporal-reasoning 43.6%, multi-session 58.7%)이 벤치마크의 **가장 큰
+  두 카테고리(각 133문항, 합 266/500 = 53%)**다. 즉 약점이 점수를 지배한다.
+- 이 둘은 held-out 재현에서 Emergence가 71%를 낸 지점 — forget의 검색이 raw-turn MiniLM
+  RAG보다 **광역 회수형 질의에서 열세**임이 full-500에서 확증됨. rerank/임베딩은 이미
+  레버가 아님을 배제했으므로, 남은 원인은 **검색 랭킹 함수 자체 또는 검색 단위**(메시지 vs 세션).
+- forget이 이기는 지점은 여전히 knowledge-update(76.9%, supersede 홈그라운드)와
+  단일세션(94%대). 명제("사실 수명주기가 중요하다")는 유효하나, 이 벤치마크의 무게중심은
+  거기 있지 않다.
+
+### 다음 (E2b, 별도 실험)
+
+1. **세션 단위 검색** — Emergence처럼 메시지 파편이 아니라 세션 청크를 회수(가장 유망).
+2. multi-session/temporal 질의에 top_k 대폭 상향 + 세션 다양성 확보.
+3. 이후에야 Emergence 79% / Oracle 82% 재도전이 의미. 지금 config로는 천장이 ~64%.
 
 ## 6. 다음 레버 (선등록 — 결과 보고 후에도 이 순서 유지)
 
