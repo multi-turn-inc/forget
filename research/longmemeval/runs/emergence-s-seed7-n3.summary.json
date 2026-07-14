@@ -1,0 +1,21 @@
+{
+ "method": "emergence-simple-fast",
+ "n": 3,
+ "top_k": 42,
+ "overall_accuracy": 0.6667,
+ "by_type": {
+  "multi-session": {
+   "acc": 1.0,
+   "n": 1
+  },
+  "single-session-preference": {
+   "acc": 0.0,
+   "n": 1
+  },
+  "single-session-user": {
+   "acc": 1.0,
+   "n": 1
+  }
+ },
+ "elapsed_s": 15.2
+}

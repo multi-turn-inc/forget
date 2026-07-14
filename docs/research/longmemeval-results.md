@@ -20,13 +20,37 @@ full-500 헤드라인 숫자는 실행 완료 시 §5에 추가된다. **나쁜 
 - **하니스**: `research/longmemeval/harness.py` (재현: `--dataset s --held-out --seed 7
   --top-k 20`). 재시도·에러 캡처 포함.
 
-## 2. 참조점 (공개 수치, GPT-4o reader)
+## 2. 참조점 — 2026 프론티어 (핸드오프 노트의 49/63.8은 2024 옛 수치)
 
-| 시스템 | LongMemEval-S |
-|---|---|
-| Mem0 | 49.0% |
-| Zep | 63.8% |
-| **forget (목표)** | Tier1 >49 · Tier2 ≥60 · Tier3 SOTA |
+| 시스템 | LongMemEval-S | reader | 비고 |
+|---|---|---|---|
+| OMEGA | 95.4% | GPT-4.1 | 벤더 자체발표, bge-small 임베딩 |
+| Mastra Observational Memory | 94.87% / 84.23% | gpt-5-mini / gpt-4o | 벤더 자체발표, 오픈소스 |
+| Emergence AI (internal) | 86% | gpt-4o | 벤더 자체발표 |
+| **Oracle GPT-4o (천장)** | **~82.4%** | gpt-4o | 정답 세션만 줬을 때의 상한 |
+| Emergence Simple-Fast | 79% | gpt-4o | **오픈소스, 우리 하니스로 재현 78.6%** |
+| Zep/Graphiti | 71.2% | gpt-4o | |
+
+핵심: gpt-4o reader의 현실적 천장은 ~82.4%(Oracle)다. 90%대는 더 센 reader 덕.
+공정 비교(gpt-4o) 목표선은 Mastra 84.23% / Emergence 79%.
+
+## 2b. 헤드투헤드 (동일 held-out 42문항, seed 7, gpt-4o judge)
+
+| question_type | forget baseline | forget 조합 | Emergence SF |
+|---|---|---|---|
+| knowledge-update | 100% | **100%** | 71% |
+| temporal-reasoning | 43% | 71% | 71% |
+| single-session-assistant | 100% | 100% | 100% |
+| multi-session | 43% | 57% | 71% |
+| single-session-preference | 14% | 43% | 57% |
+| single-session-user | 86% | 86% | 100% |
+| **OVERALL** | **64.3%** | **76.2%** | **78.6%** |
+
+- **forget 조합** = 엔진(fastembed bge-small 임베딩) + top_k 42 + 2단계 reader(사실추출→답변).
+- baseline 64.3 → 조합 76.2 (+11.9pp), Emergence 78.6과 n=42 오차범위(±13pp) 내 동률.
+- **knowledge-update 100 vs 71**: 비파괴 supersede가 raw-turn RAG를 압도 — forget 명제의 직접 입증.
+- 남은 갭(multi-session·preference·ss-user)은 검색 recall. 가설: forget 랭킹의 temporal_rerank
+  최근성 편향이 광역 회수형 질의에서 손해. 다음 레버 §6.
 
 ## 3. 개선 경로 (dev, seed 42, n=42 층화)
 

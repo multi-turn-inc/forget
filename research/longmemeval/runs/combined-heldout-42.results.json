@@ -1,0 +1,380 @@
+[
+ {
+  "question_id": "7a8d0b71",
+  "question_type": "single-session-assistant",
+  "question": "I'm looking back at our previous chat about the DHL Wellness Retreats campaign. Can you remind me how much was allocated for influencer marketing in the campaign plan?",
+  "answer": "$2,000",
+  "hypothesis": "The influencer marketing campaign plan for the DHL Wellness Retreats allocated a budget of $2,000 for influencer marketing.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "gpt4_6ed717ea",
+  "question_type": "temporal-reasoning",
+  "question": "Which item did I purchase first, the dog bed for Max or the training pads for Luna?",
+  "answer": "Training pads for Luna",
+  "hypothesis": "The training pads for Luna were purchased first.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "80ec1f4f_abs",
+  "question_type": "multi-session",
+  "question": "How many different museums or galleries did I visit in December?",
+  "answer": "0. You did not mention visitng any museum in December",
+  "hypothesis": "I don't have that information.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "c8090214",
+  "question_type": "temporal-reasoning",
+  "question": "How many days before I bought the iPhone 13 Pro did I attend the Holiday Market?",
+  "answer": "7 days. 8 days (including the last day) is also acceptable.",
+  "hypothesis": "You attended the Holiday Market 7 days before you bought the iPhone 13 Pro.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "3ba21379",
+  "question_type": "knowledge-update",
+  "question": "What type of vehicle model am I currently working on?",
+  "answer": "Ford F-150 pickup truck",
+  "hypothesis": "You are currently working on a Ford F-150 pickup truck model.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "35a27287",
+  "question_type": "single-session-preference",
+  "question": "Can you recommend some interesting cultural events happening around me this weekend?",
+  "answer": "The user would prefer responses that suggest cultural events where they can practice their language skills, particularly Spanish and French. They would also appreciate if the event has a focus on language learning resources. They would not prefer events that do not provide opportunities for language practice or cultural exchange.",
+  "hypothesis": "I don't have that information.",
+  "n_retrieved": 42,
+  "correct": false
+ },
+ {
+  "question_id": "0e5e2d1a",
+  "question_type": "single-session-assistant",
+  "question": "I wanted to follow up on our previous conversation about binaural beats for anxiety and depression. Can you remind me how many subjects were in the study published in the journal Music and Medicine that found significant reductions in symptoms of depression, anxiety, and stress?",
+  "answer": "38 subjects",
+  "hypothesis": "The study published in the journal Music and Medicine involved 38 subjects.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "b46e15ee",
+  "question_type": "temporal-reasoning",
+  "question": "What charity event did I participate in a month ago?",
+  "answer": "the 'Walk for Hunger' charity event",
+  "hypothesis": "You participated in the \"Walk for Hunger\" charity event approximately a month ago, around March 18, 2023.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "fca70973",
+  "question_type": "single-session-preference",
+  "question": "I am planning another theme park weekend; do you have any suggestions?",
+  "answer": "The user would prefer theme park suggestions that cater to their interest in both thrill rides and special events, utilizing their previous experiences at Disneyland, Knott's Berry Farm, Six Flags Magic Mountain, and Universal Studios Hollywood as a reference point. They would also appreciate recommendations that highlight unique food experiences and nighttime shows. The user might not prefer suggestions that focus solely on one aspect of theme parks, such as only thrill rides or only family-friendly attractions, and may not be interested in parks that lack special events or unique dining options.",
+  "hypothesis": "Consider visiting Halloween Horror Nights for a unique VIP experience with a Behind-the-Scenes Tour. Alternatively, explore Yosemite National Park for scenic drives and must-see attractions.",
+  "n_retrieved": 42,
+  "correct": false
+ },
+ {
+  "question_id": "gpt4_8c8961ae",
+  "question_type": "temporal-reasoning",
+  "question": "Which trip did I take first, the one to Europe with family or the solo trip to Thailand?",
+  "answer": "The solo trip to Thailand",
+  "hypothesis": "You took the solo trip to Thailand first in 2025, followed by the trip to Europe with your family in June 2026.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "488d3006",
+  "question_type": "single-session-assistant",
+  "question": "I'm planning to go back to the Natural Park of Moncayo mountain in Aragón and I was wondering, what was the name of that hiking trail you recommended that takes you through the park's most stunning landscapes and offers panoramic views of the surrounding mountainside?",
+  "answer": "The GR-90 trail.",
+  "hypothesis": "The hiking trail I recommended is the GR-90.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "778164c6",
+  "question_type": "single-session-assistant",
+  "question": "I was looking back at our previous conversation about Caribbean dishes and I was wondering, what was the name of that Jamaican dish you recommended I try with snapper that has fruit in it?",
+  "answer": "Grilled Snapper with Mango Salsa",
+  "hypothesis": "The Jamaican dish with snapper and fruit that I recommended is \"Grilled Snapper with Mango Salsa.\"",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "58bf7951",
+  "question_type": "single-session-user",
+  "question": "What play did I attend at the local community theater?",
+  "answer": "The Glass Menagerie",
+  "hypothesis": "You attended a production of \"The Glass Menagerie\" at the local community theater.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "9bbe84a2",
+  "question_type": "knowledge-update",
+  "question": "What was my previous goal for my Apex Legends level before I updated my goal?",
+  "answer": "level 100",
+  "hypothesis": "Your previous goal for Apex Legends was to reach level 100 before the end of the year.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "099778bb",
+  "question_type": "multi-session",
+  "question": "What percentage of leadership positions do women hold in the my company?",
+  "answer": "20%",
+  "hypothesis": "Women hold 20% of the leadership positions in your company.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "f9e8c073",
+  "question_type": "knowledge-update",
+  "question": "How many sessions of the bereavement support group did I attend?",
+  "answer": "five",
+  "hypothesis": "You attended three sessions of the bereavement support group this year and five sessions last year.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "c19f7a0b",
+  "question_type": "single-session-user",
+  "question": "What time do I usually get home from work on weeknights?",
+  "answer": "6:30 pm",
+  "hypothesis": "You usually get home from work around 6:30 pm on weekdays.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "gpt4_1a1dc16d",
+  "question_type": "temporal-reasoning",
+  "question": "Which event happened first, the meeting with Rachel or the pride parade?",
+  "answer": "The meeting with Rachel",
+  "hypothesis": "The meeting with Rachel happened first, on April 10th, 2026, before the pride parade on May 1st, 2026.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "118b2229",
+  "question_type": "single-session-user",
+  "question": "How long is my daily commute to work?",
+  "answer": "45 minutes each way",
+  "hypothesis": "I don't have that information.",
+  "n_retrieved": 42,
+  "correct": false
+ },
+ {
+  "question_id": "gpt4_af6db32f",
+  "question_type": "temporal-reasoning",
+  "question": "How many days ago did I watch the Super Bowl?",
+  "answer": "17 days ago. 18 days (including the last day) is also acceptable.",
+  "hypothesis": "You haven't watched the Super Bowl yet, as it is scheduled for July 14, 2026, which is a future date from today, March 1, 2023.",
+  "n_retrieved": 42,
+  "correct": false
+ },
+ {
+  "question_id": "7024f17c",
+  "question_type": "multi-session",
+  "question": "How many hours of jogging and yoga did I do last week?",
+  "answer": "0.5 hours",
+  "hypothesis": "You planned to do yoga for 6 hours last week (3 sessions x 2 hours each). There is no specific information about jogging hours last week.",
+  "n_retrieved": 42,
+  "correct": false
+ },
+ {
+  "question_id": "75832dbd",
+  "question_type": "single-session-preference",
+  "question": "Can you recommend some recent publications or conferences that I might find interesting?",
+  "answer": "The user would prefer suggestions related to recent research papers, articles, or conferences that focus on artificial intelligence in healthcare, particularly those that involve deep learning for medical image analysis. They would not be interested in general AI topics or those unrelated to healthcare.",
+  "hypothesis": "I don't have that information.",
+  "n_retrieved": 42,
+  "correct": false
+ },
+ {
+  "question_id": "dccbc061",
+  "question_type": "single-session-user",
+  "question": "What was my previous stance on spirituality?",
+  "answer": "A staunch atheist",
+  "hypothesis": "You previously identified as a staunch atheist but have recently been exploring other possibilities related to spirituality, including reading about Buddhism.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "4bc144e2",
+  "question_type": "multi-session",
+  "question": "How much did I spend on car wash and parking ticket?",
+  "answer": "$65",
+  "hypothesis": "You spent a total of $65 on the car wash and parking ticket, with $15 for the car wash on February 3rd and $50 for the parking ticket on January 5th.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "0e4e4c46",
+  "question_type": "knowledge-update",
+  "question": "What is my current highest score in Ticket to Ride?",
+  "answer": "132 points",
+  "hypothesis": "Your current highest score in Ticket to Ride is 132 points.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "6a1eabeb",
+  "question_type": "knowledge-update",
+  "question": "What was my personal best time in the charity 5K run?",
+  "answer": "25 minutes and 50 seconds (or 25:50)",
+  "hypothesis": "Your personal best time in a charity 5K run is 25:50.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "29f2956b_abs",
+  "question_type": "single-session-user",
+  "question": "How much time do I dedicate to practicing violin every day?",
+  "answer": "You did not mention this information. You mentioned practing guitar everyday, but not violin.",
+  "hypothesis": "I don't have that information.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "91b15a6e",
+  "question_type": "multi-session",
+  "question": "What is the minimum amount I could get if I sold the vintage diamond necklace and the antique vanity?",
+  "answer": "$5,150",
+  "hypothesis": "The minimum amount you could get if you sold the vintage diamond necklace and the antique vanity is $5,200. This is based on selling the necklace for its appraised value of $5,000 and the vanity for the lowest estimated price after minor improvements, which is $200.",
+  "n_retrieved": 42,
+  "correct": false
+ },
+ {
+  "question_id": "8752c811",
+  "question_type": "single-session-assistant",
+  "question": "I remember you provided a list of 100 prompt parameters that I can specify to influence your output. Can you remind me what was the 27th parameter on that list?",
+  "answer": "The 27th parameter was 'Sound effects (e.g., ambient, diegetic, non-diegetic, etc.)'.",
+  "hypothesis": "The 27th parameter on the list of 100 prompt parameters is \"Sound effects (e.g., ambient, diegetic, non-diegetic, etc.).\"",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "2bf43736",
+  "question_type": "single-session-assistant",
+  "question": "I was going through our previous chat and I wanted to clarify something about the prayer of beginners in Tanqueray's Spiritual Life treatise. Can you remind me which chapter of the second part discusses vocal prayer and meditation?",
+  "answer": "Chapter 4 of Book 1, titled 'Vocal Prayer and Meditation'.",
+  "hypothesis": "The chapter discussing vocal prayer and meditation for beginners in Adolphe Tanqueray's Spiritual Life treatise is Chapter 4 of Book 1 in the second part.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "gpt4_ab202e7f",
+  "question_type": "multi-session",
+  "question": "How many kitchen items did I replace or fix?",
+  "answer": "I replaced or fixed five items: the kitchen faucet, the kitchen mat, the toaster, the coffee maker, and the kitchen shelves.",
+  "hypothesis": "You replaced or fixed four kitchen items: the toaster, kitchen faucet, kitchen shelves, and kitchen mat.",
+  "n_retrieved": 42,
+  "correct": false
+ },
+ {
+  "question_id": "8a2466db",
+  "question_type": "single-session-preference",
+  "question": "Can you recommend some resources where I can learn more about video editing?",
+  "answer": "The user would prefer responses that suggest resources specifically tailored to Adobe Premiere Pro, especially those that delve into its advanced settings. They might not prefer general video editing resources or resources related to other video editing software.",
+  "hypothesis": "You can learn more about video editing, especially with Adobe Premiere Pro, through the following resources:\n\n- Adobe Premiere Pro's official documentation and tutorials.\n- YouTube channels like Premiere Bro, Video Copilot, and Adobe Creative Cloud.\n- Online courses on platforms like Udemy, LinkedIn Learning, and Skillshare.\n- Premiere Pro communities and forums, such as Reddit's r/premierepro and Adobe's Premiere Pro forum.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "gpt4_e072b769",
+  "question_type": "temporal-reasoning",
+  "question": "How many weeks ago did I start using the cashback app 'Ibotta'?",
+  "answer": "3 weeks ago",
+  "hypothesis": "You started using the cashback app 'Ibotta' on 2026/07/14, which is approximately 3 years and 2 months in the future from today's date, 2023/05/06. Therefore, you have not started using it yet.",
+  "n_retrieved": 42,
+  "correct": false
+ },
+ {
+  "question_id": "58ef2f1c",
+  "question_type": "single-session-user",
+  "question": "When did I volunteer at the local animal shelter's fundraising dinner?",
+  "answer": "February 14th",
+  "hypothesis": "You volunteered at the \"Love is in the Air\" fundraising dinner back in February on Valentine's Day.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "bc8a6e93_abs",
+  "question_type": "single-session-user",
+  "question": "What did I bake for my uncle's birthday party?",
+  "answer": "You did not mention this information. You mentioned baking for your niece's birthday party but not your uncle's",
+  "hypothesis": "I don't have that information.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "38146c39",
+  "question_type": "single-session-preference",
+  "question": "I've been feeling like my chocolate chip cookies need something extra. Any advice?",
+  "answer": "The user would prefer responses that build upon their previous experimentation with turbinado sugar, suggesting ingredients or techniques that complement its richer flavor. They might not prefer generic cookie-making advice or suggestions that don't take into account their existing use of turbinado sugar.",
+  "hypothesis": "You mentioned that you've been experimenting with different types of sugar and found that turbinado sugar adds a richer flavor to your chocolate chip cookies. To enhance the flavor even more, you could consider pairing turbinado sugar with ingredients like nuts (such as pecans or walnuts), dark chocolate chunks, or a hint of sea salt to complement the rich flavor of the sugar.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "89941a94",
+  "question_type": "knowledge-update",
+  "question": "Before I purchased the gravel bike, do I have other bikes in addition to my mountain bike and my commuter bike?",
+  "answer": "Yes. (You have a road bike too.)",
+  "hypothesis": "Yes, before purchasing the gravel bike, you also had a road bike in addition to your mountain bike and commuter bike.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "1d4e3b97",
+  "question_type": "single-session-preference",
+  "question": "I noticed my bike seems to be performing even better during my Sunday group rides. Could there be a reason for this?",
+  "answer": "The user would prefer responses that reference specific details from their previous interactions, such as the replacement of the bike's chain and cassette, and the use of a new Garmin bike computer. They might prefer explanations that connect these details to the observed improvement in bike performance. The user may not prefer responses that fail to acknowledge these specific details or provide vague, general explanations for the improvement.",
+  "hypothesis": "Your improved performance during Sunday group rides could be attributed to the recent upgrade of your bike's chain and cassette. This upgrade can enhance the bike's efficiency and smoothness, contributing to better performance.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "5c40ec5b",
+  "question_type": "knowledge-update",
+  "question": "How many times have I met up with Alex from Germany?",
+  "answer": "We've met up twice.",
+  "hypothesis": "You have met up with Alex from Germany two times.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "16c90bf4",
+  "question_type": "single-session-assistant",
+  "question": "I'm looking back at our previous conversation about the Seco de Cordero recipe from Ancash. You mentioned using a light or medium-bodied beer, but I was wondering if you could remind me what type of beer you specifically recommended?",
+  "answer": "I recommended using a Pilsner or Lager for the recipe.",
+  "hypothesis": "The recommended type of beer for the Seco de Cordero recipe from Ancash is a pilsner or lager. Alternatively, using a local beer from Ancash is suggested to give the dish a more authentic touch.",
+  "n_retrieved": 42,
+  "correct": true
+ },
+ {
+  "question_id": "06878be2",
+  "question_type": "single-session-preference",
+  "question": "Can you suggest some accessories that would complement my current photography setup?",
+  "answer": "The user would prefer suggestions of Sony-compatible accessories or high-quality photography gear that can enhance their photography experience. They may not prefer suggestions of other brands' equipment or low-quality gear.",
+  "hypothesis": "I don't have that information.",
+  "n_retrieved": 42,
+  "correct": false
+ },
+ {
+  "question_id": "f0e564bc",
+  "question_type": "multi-session",
+  "question": "What is the total amount I spent on the designer handbag and high-end skincare products?",
+  "answer": "$1,300",
+  "hypothesis": "The total amount you spent on the designer handbag and high-end skincare products is $1,300.",
+  "n_retrieved": 42,
+  "correct": true
+ }
+]

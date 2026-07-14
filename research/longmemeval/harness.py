@@ -117,16 +117,35 @@ READER_SYS = (
 )
 
 
-def read_answer(oai: OpenAI, model: str, question: str, qdate: str, memories: list[dict]) -> str:
-    # Surface each memory's date — temporal-reasoning questions are
-    # unanswerable without it, and the date is already stored, just not
-    # previously shown to the reader.
+def _context_lines(memories: list[dict]) -> str:
     lines = []
     for m in memories:
         date = (m.get("created_at") or "")[:10]
         lines.append(f"- [{date}] {m['memory']}")
-    context = "\n".join(lines) or "(no memories retrieved)"
-    prompt = f"Today's date: {qdate}\n\nRetrieved memories (each tagged with its date):\n{context}\n\nQuestion: {question}"
+    return "\n".join(lines) or "(no memories retrieved)"
+
+
+def read_answer(oai: OpenAI, model: str, question: str, qdate: str,
+                memories: list[dict], two_stage: bool = False) -> str:
+    # Surface each memory's date — temporal-reasoning questions are
+    # unanswerable without it, and the date is already stored.
+    context = _context_lines(memories)
+    if two_stage:
+        # Emergence-style: extract question-relevant facts first, then answer
+        # from facts + raw retrieved turns. Ported to run over forget's
+        # retrieved memories (not raw haystack).
+        facts = oai.chat.completions.create(
+            model=model, temperature=0, max_tokens=512,
+            messages=[{"role": "system", "content":
+                "You are a memory summarization assistant. Extract relevant facts to answer the question. "
+                "Follow this chain-of-thought:\n1. Identify key events, dates, quantities, or named entities.\n"
+                "2. Extract only information relevant to the question.\n3. Write the facts in structured bullet points.\n"
+                f"\nToday's date: {qdate}\n\nQuestion: {question}\n\nRetrieved memories:\n{context}\n\nNow extract the structured facts:\n-"}],
+        ).choices[0].message.content.strip()
+        prompt = (f"Extracted Facts:\n{facts}\n\nRetrieved memories (each tagged with its date):\n{context}\n"
+                  f"\nToday's date: {qdate}\nQuestion: {question}\nAnswer concisely:")
+    else:
+        prompt = f"Today's date: {qdate}\n\nRetrieved memories (each tagged with its date):\n{context}\n\nQuestion: {question}"
     resp = oai.chat.completions.create(
         model=model, temperature=0,
         messages=[{"role": "system", "content": READER_SYS}, {"role": "user", "content": prompt}],
@@ -157,13 +176,13 @@ def _with_retry(fn, tries=4):
             delay *= 2
 
 
-def run_instance(inst, url, oai, reader_model, judge_model, top_k):
+def run_instance(inst, url, oai, reader_model, judge_model, top_k, two_stage=False):
     scope = f"lme-{inst['question_id']}"
     with httpx.Client(base_url=url, timeout=180) as client:
         _with_retry(lambda: ingest_instance(client, scope, inst))
         memories = retrieve(client, scope, inst["question"], top_k)
     hyp = _with_retry(lambda: read_answer(oai, reader_model, inst["question"],
-                                          inst.get("question_date", ""), memories))
+                                          inst.get("question_date", ""), memories, two_stage))
     correct = _with_retry(lambda: judge(oai, judge_model, inst, hyp))
     return {
         "question_id": inst["question_id"], "question_type": inst["question_type"],
@@ -185,6 +204,8 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--held-out", action="store_true",
                     help="draw a stratified sample disjoint from the seed-42 dev set")
+    ap.add_argument("--two-stage", action="store_true",
+                    help="Emergence-style extract-facts-then-answer reader")
     ap.add_argument("--tag", default="")
     args = ap.parse_args()
 
@@ -209,7 +230,7 @@ def main() -> int:
     started = time.time()
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         futures = [pool.submit(run_instance, inst, args.url, oai, args.reader_model,
-                               args.judge_model, args.top_k) for inst in insts]
+                               args.judge_model, args.top_k, args.two_stage) for inst in insts]
         for i, fut in enumerate(futures, 1):
             try:
                 r = fut.result()
