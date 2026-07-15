@@ -1,0 +1,19 @@
+{
+ "experiment": "O1-observer",
+ "mode": "dual",
+ "observer": "qwen2.5:14b-instruct-q4_K_M",
+ "reader": "gpt-4o",
+ "n": 2,
+ "overall_accuracy": 1.0,
+ "by_type": {
+  "single-session-preference": {
+   "acc": 1.0,
+   "n": 1
+  },
+  "single-session-user": {
+   "acc": 1.0,
+   "n": 1
+  }
+ },
+ "elapsed_s": 546.3
+}

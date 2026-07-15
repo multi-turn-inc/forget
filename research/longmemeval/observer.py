@@ -101,15 +101,22 @@ def answer_context_mode(oai: OpenAI, reader_model: str, inst: dict, entries: lis
             time.sleep(2 * (attempt + 1))
 
 
-def run_one(inst, oai, observer_model, reader_model, mode, url, top_k):
-    entries = get_observations(oai, observer_model, inst)
+def _model_slug(model: str) -> str:
+    return model.replace("/", "-").replace(":", "-")
+
+
+def run_one(inst, oai, observer_model, reader_model, mode, url, top_k, obs_client=None):
+    entries = get_observations(obs_client or oai, observer_model, inst)
     if mode == "context":
         hyp = answer_context_mode(oai, reader_model, inst, entries)
         n_ctx = sum(len(e["observations"]) for e in entries)
     else:  # retrieval / hybrid / dual — observations (± raw turns) into forget
         from harness import read_answer
-        scope = f"lmeobs-{inst['question_id']}"
-        raw_scope = f"lmeraw-{inst['question_id']}"
+        # scope carries the observer model so concurrent runs with different
+        # observers never clobber each other's server-side stores
+        slug = _model_slug(observer_model)
+        scope = f"lmeobs-{slug}-{inst['question_id']}"
+        raw_scope = f"lmeraw-{slug}-{inst['question_id']}"
         with httpx.Client(base_url=url, timeout=180) as client:
             client.request("DELETE", "/v1/memories/", json={"user_id": scope, "app_id": "lme"})
             for e in entries:
@@ -161,10 +168,16 @@ def main() -> int:
     ap.add_argument("--held-out", action="store_true")
     ap.add_argument("--mode", choices=["context", "retrieval", "hybrid", "dual"], default="context")
     ap.add_argument("--observer-model", default="gpt-4o")
+    ap.add_argument("--observer-base-url", default=None,
+                    help="OpenAI-compatible endpoint for the Observer (e.g. ollama "
+                         "http://localhost:11435/v1) — O2: local write-time memory construction")
     ap.add_argument("--reader-model", default="gpt-4o")
     ap.add_argument("--url", default="http://localhost:8002")
     ap.add_argument("--top-k", type=int, default=42)
     ap.add_argument("--workers", type=int, default=3)
+    ap.add_argument("--complement-of", default=None,
+                    help="path to a file of question_ids (or results.json lines) already "
+                         "evaluated — run only the remaining instances")
     ap.add_argument("--tag", default="")
     args = ap.parse_args()
 
@@ -172,14 +185,22 @@ def main() -> int:
     if args.held_out:
         insts = stratified_sample(data, args.n, random.Random(args.seed),
                                   exclude_ids=dev_ids(data, args.n))
+    elif args.n >= len(data):
+        insts = data  # full protocol — stratified per-type caps would drop 100 items
+    elif args.complement_of:
+        prior = json.loads(Path(args.complement_of).read_text())
+        done = {r["question_id"] for r in prior}
+        insts = [d for d in data if d["question_id"] not in done]
     else:
         insts = stratified_sample(data, args.n, random.Random(args.seed))
 
     oai = OpenAI()
+    obs_client = OpenAI(base_url=args.observer_base_url, api_key="local") \
+        if args.observer_base_url else None
     results, started = [], time.time()
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         futs = [pool.submit(run_one, inst, oai, args.observer_model, args.reader_model,
-                            args.mode, args.url, args.top_k) for inst in insts]
+                            args.mode, args.url, args.top_k, obs_client) for inst in insts]
         for i, f in enumerate(futs, 1):
             try:
                 r = f.result()

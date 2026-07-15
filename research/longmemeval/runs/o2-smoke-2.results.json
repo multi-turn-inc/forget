@@ -1,0 +1,16 @@
+[
+ {
+  "question_id": "dccbc061",
+  "question_type": "single-session-user",
+  "hypothesis": "You mentioned a shift from being a staunch atheist to exploring other possibilities in spirituality, and you have been reading a lot about Buddhism.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "d6233ab6",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have information on whether attending your high school reunion would be a good idea for you. However, you have reminisced about your high school experiences, including being part of the debate team and taking advanced placement courses in economics, which might suggest a positive connection to that time.",
+  "correct": true,
+  "n_ctx": 84
+ }
+]
