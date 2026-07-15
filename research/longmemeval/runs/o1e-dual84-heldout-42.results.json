@@ -1,0 +1,296 @@
+[
+ {
+  "question_id": "7a8d0b71",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The influencer marketing campaign for DHL Wellness Retreats has a budget of $2,000.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "gpt4_6ed717ea",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You purchased the training pads for Luna first, in April 2023, before the dog bed for Max, which was purchased around 2023/05/08.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "80ec1f4f_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "c8090214",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended the Holiday Market 7 days before purchasing the iPhone 13 Pro.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "3ba21379",
+  "question_type": "knowledge-update",
+  "hypothesis": "You are currently working on a Ford F-150 pickup truck model.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "35a27287",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "0e5e2d1a",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The study published in the journal Music and Medicine involved 38 subjects.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "b46e15ee",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You participated in the \"Walk for Hunger\" charity event on March 19, 2023.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "fca70973",
+  "question_type": "single-session-preference",
+  "hypothesis": "Consider attending Halloween Horror Nights, which aligns with your interest in Halloween-themed events at theme parks. It offers a Behind-the-Scenes Tour as part of the VIP Experience, providing insights into makeup and special effects, maze design, scare zone development, costume and prop design, and backstage areas.",
+  "correct": false,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "gpt4_8c8961ae",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You took the solo trip to Thailand first in 2022, followed by the trip to Europe with your family in April 2023.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "488d3006",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The hiking trail I recommended is the GR-90 trail.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "778164c6",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The Jamaican dish with snapper that includes fruit is \"Grilled Snapper with Mango Salsa.\"",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "58bf7951",
+  "question_type": "single-session-user",
+  "hypothesis": "You attended a production of \"The Glass Menagerie\" at the local community theater.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "9bbe84a2",
+  "question_type": "knowledge-update",
+  "hypothesis": "Your previous goal for your Apex Legends level was to reach level 100 before the end of 2023.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "099778bb",
+  "question_type": "multi-session",
+  "hypothesis": "Women hold 20% of the leadership positions in your company.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "f9e8c073",
+  "question_type": "knowledge-update",
+  "hypothesis": "You attended five sessions of the bereavement support group.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "c19f7a0b",
+  "question_type": "single-session-user",
+  "hypothesis": "You usually get home from work around 6:30 pm on weekdays.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "gpt4_1a1dc16d",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "The meeting with Rachel happened first, on April 10, 2023, before the pride parade on May 1, 2023.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "118b2229",
+  "question_type": "single-session-user",
+  "hypothesis": "Your daily commute takes 45 minutes each way.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "gpt4_af6db32f",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You watched the Super Bowl 17 days ago.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "7024f17c",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "75832dbd",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your recent interests, here are some topics and areas you might find interesting in terms of publications or conferences:\n\n1. **Explainable AI in Medical Image Analysis**: You have shown interest in research papers and articles on explainable AI, particularly techniques for visualizing and interpreting deep learning models. You might want to explore conferences or journals focusing on AI in healthcare or medical imaging.\n\n2. **Leadership Styles Across Cultures**: You are interested in understanding different leadership styles across cultures. Look for conferences or publications in organizational behavior or international business that discuss leadership.\n\n3. **Gender Equality**: After attending a workshop on gender equality, you might find conferences or publications on workplace diversity and inclusion valuable.\n\n4. **Neural Interface and Nanotransducers**: Damian's study on neural interfaces and nanotransducers could lead you to explore conferences on neuroscience or biomedical engineering.\n\nThese topics reflect your recent engagements and could guide you in finding relevant publications or conferences.",
+  "correct": false,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "dccbc061",
+  "question_type": "single-session-user",
+  "hypothesis": "You were previously a staunch atheist.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "4bc144e2",
+  "question_type": "multi-session",
+  "hypothesis": "You spent $15 on a car wash and $50 on a parking ticket, totaling $65.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "0e4e4c46",
+  "question_type": "knowledge-update",
+  "hypothesis": "Your current highest score in Ticket to Ride is 132 points.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "6a1eabeb",
+  "question_type": "knowledge-update",
+  "hypothesis": "Your personal best time in a charity 5K run is 25:50.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "29f2956b_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "91b15a6e",
+  "question_type": "multi-session",
+  "hypothesis": "The minimum amount you could get if you sold both the vintage diamond necklace and the antique vanity is $5,150 ($5,000 for the necklace and $150 for the vanity).",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "8752c811",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The 27th parameter on the list is \"Sound effects (e.g., ambient, diegetic, non-diegetic, etc.).\"",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "2bf43736",
+  "question_type": "single-session-assistant",
+  "hypothesis": "Chapter 4 of Book 1 in the second part of Adolphe Tanqueray's Spiritual Life treatise discusses vocal prayer and meditation for beginners.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "gpt4_ab202e7f",
+  "question_type": "multi-session",
+  "hypothesis": "You replaced or fixed five kitchen items:\n1. Replaced the old kitchen faucet with a new Moen touchless sensor faucet.\n2. Fixed the kitchen shelves.\n3. Replaced the worn-out kitchen mat with a new one from IKEA.\n4. Replaced the old toaster with a toaster oven.\n5. Donated the old coffee maker after receiving a new espresso machine.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "8a2466db",
+  "question_type": "single-session-preference",
+  "hypothesis": "You can learn more about video editing through the following resources:\n\n1. **Online Courses**: Platforms like Udemy, LinkedIn Learning, and Skillshare offer comprehensive courses on video editing.\n2. **YouTube Channels**: Channels dedicated to video editing tutorials can provide practical insights and tips.\n3. **Communities and Forums**: Engage with forums and communities where video editors share tips and advice.\n\nFor Adobe Premiere Pro specifically, you can explore:\n\n1. **Adobe Premiere Pro's Official Documentation and Tutorials**.\n2. **YouTube Channels**: Premiere Bro, Video Copilot, and Adobe Creative Cloud.\n3. **Premiere Pro Communities and Forums**: Reddit's r/premierepro and Adobe's Premiere Pro forum.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "gpt4_e072b769",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You started using the cashback app 'Ibotta' approximately 3 weeks ago.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "58ef2f1c",
+  "question_type": "single-session-user",
+  "hypothesis": "You volunteered at the local animal shelter's fundraising dinner on February 14, 2023.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "bc8a6e93_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "38146c39",
+  "question_type": "single-session-preference",
+  "hypothesis": "You might consider experimenting with different types of sugar to enhance the flavor of your chocolate chip cookies. You've found that turbinado sugar adds a richer flavor, so incorporating it could be a great way to add depth to your cookies. Additionally, you could try substituting some of the granulated sugar with brown sugar, as you received advice on using light brown sugar and reducing the amount to 1 1/4 cups. These adjustments could give your cookies a more complex and satisfying taste.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "89941a94",
+  "question_type": "knowledge-update",
+  "hypothesis": "Yes, before purchasing the gravel bike, you also had a road bike in addition to your mountain bike and commuter bike.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "1d4e3b97",
+  "question_type": "single-session-preference",
+  "hypothesis": "Your bike's improved performance during your Sunday group rides could be attributed to several factors. You've recently upgraded your bike's chain and cassette, which can enhance the bike's performance and efficiency. Additionally, using a new Garmin bike computer to track your rides provides accurate data and insights, potentially contributing to better performance. Your focus on maintaining fitness during the winter months and staying hydrated during rides also supports improved cycling performance.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "5c40ec5b",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have met up with Alex from Germany twice.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "16c90bf4",
+  "question_type": "single-session-assistant",
+  "hypothesis": "You decided to use a Pilsner beer for the Seco de Cordero recipe.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "06878be2",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your current photography setup and interests, here are some accessory suggestions:\n\n1. **Camera Flash Accessories**: Since you've chosen the Godox V1 flash for your Sony A7R IV, consider purchasing a protective case or pouch to ensure its safety during transport and storage.\n\n2. **Photography Backdrops**: Invest in eco-friendly backdrops that align with the theme of your candle business. Options could include natural textures like wood, stone, or fabric.\n\n3. **Props for Candle Photography**: Use props that highlight the eco-friendly aspect of your candles, such as natural elements like leaves, flowers, or stones.\n\n4. **Lighting Equipment**: Consider additional lighting equipment like softboxes or reflectors to enhance the quality of your product photos.\n\n5. **Tripod**: A sturdy tripod can help stabilize your camera for clearer, sharper images, especially in low-light conditions.\n\n6. **Lens Filters**: Depending on your photography style, lens filters can help manage reflections and enhance colors in your product photos.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "f0e564bc",
+  "question_type": "multi-session",
+  "hypothesis": "The total amount you spent on the designer handbag and high-end skincare products is $1,300.",
+  "correct": true,
+  "n_ctx": 84
+ }
+]

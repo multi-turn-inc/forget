@@ -1,0 +1,296 @@
+[
+ {
+  "question_id": "7a8d0b71",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The influencer marketing campaign for DHL Wellness Retreats had a budget of $2,000.",
+  "correct": true,
+  "n_ctx": 34902
+ },
+ {
+  "question_id": "gpt4_6ed717ea",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You purchased the dog bed for Max first, around May 8, 2023, and the training pads for Luna about a month ago in April 2023.",
+  "correct": false,
+  "n_ctx": 36217
+ },
+ {
+  "question_id": "80ec1f4f_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 37466
+ },
+ {
+  "question_id": "c8090214",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended the Holiday Market on November 17, 2023, and you bought the iPhone 13 Pro on November 24, 2023. Therefore, you attended the Holiday Market 7 days before purchasing the iPhone 13 Pro.",
+  "correct": true,
+  "n_ctx": 36392
+ },
+ {
+  "question_id": "3ba21379",
+  "question_type": "knowledge-update",
+  "hypothesis": "You are currently working on a Ford F-150 pickup truck model.",
+  "correct": true,
+  "n_ctx": 33271
+ },
+ {
+  "question_id": "35a27287",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have information on specific cultural events happening around you this weekend. You might want to check local event listings or community boards for the latest updates.",
+  "correct": false,
+  "n_ctx": 33594
+ },
+ {
+  "question_id": "0e5e2d1a",
+  "question_type": "single-session-assistant",
+  "hypothesis": "I don't have that information in my memory.",
+  "correct": false,
+  "n_ctx": 37584
+ },
+ {
+  "question_id": "b46e15ee",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You participated in the \"Walk for Hunger\" charity event on March 19, 2023, walking 5 kilometers to raise money for the local food bank.",
+  "correct": true,
+  "n_ctx": 30182
+ },
+ {
+  "question_id": "fca70973",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific information about your next theme park weekend plans, but based on your interests, you might consider visiting theme parks with Halloween-themed events or exploring VIP experiences like the one at Universal Studios Hollywood. If you're looking for new suggestions, you could explore other theme parks or events that offer unique experiences or seasonal attractions.",
+  "correct": false,
+  "n_ctx": 35370
+ },
+ {
+  "question_id": "gpt4_8c8961ae",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You took the solo trip to Thailand first, as it was mentioned that you have previous experience traveling solo to Thailand last year, while the trip to Europe with your family was in April 2023.",
+  "correct": true,
+  "n_ctx": 35650
+ },
+ {
+  "question_id": "488d3006",
+  "question_type": "single-session-assistant",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 33975
+ },
+ {
+  "question_id": "778164c6",
+  "question_type": "single-session-assistant",
+  "hypothesis": "I don't have information about a Jamaican dish with snapper that includes fruit. However, you mentioned trying Escovitch Fish, a Jamaican dish with fried snapper and pickled vegetable sauce.",
+  "correct": false,
+  "n_ctx": 37016
+ },
+ {
+  "question_id": "58bf7951",
+  "question_type": "single-session-user",
+  "hypothesis": "You attended a production of \"The Glass Menagerie\" at the local community theater.",
+  "correct": true,
+  "n_ctx": 42315
+ },
+ {
+  "question_id": "9bbe84a2",
+  "question_type": "knowledge-update",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 36998
+ },
+ {
+  "question_id": "099778bb",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 36436
+ },
+ {
+  "question_id": "f9e8c073",
+  "question_type": "knowledge-update",
+  "hypothesis": "You attended three sessions of a bereavement support group.",
+  "correct": false,
+  "n_ctx": 42156
+ },
+ {
+  "question_id": "c19f7a0b",
+  "question_type": "single-session-user",
+  "hypothesis": "You usually get home from work around 6:30 pm on weekdays.",
+  "correct": true,
+  "n_ctx": 34071
+ },
+ {
+  "question_id": "gpt4_1a1dc16d",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "The pride parade happened first on May 1, 2023.",
+  "correct": false,
+  "n_ctx": 35299
+ },
+ {
+  "question_id": "118b2229",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 33709
+ },
+ {
+  "question_id": "gpt4_af6db32f",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 33812
+ },
+ {
+  "question_id": "7024f17c",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 33168
+ },
+ {
+  "question_id": "75832dbd",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific information on recent publications or conferences that might interest you. However, based on your interests in deep learning for medical image analysis, explainable AI, and environmental sustainability, you might want to explore conferences like NeurIPS, CVPR, or the International Conference on Medical Image Computing and Computer-Assisted Intervention (MICCAI). For publications, you could check journals like IEEE Transactions on Medical Imaging or the Journal of Artificial Intelligence Research.",
+  "correct": false,
+  "n_ctx": 39530
+ },
+ {
+  "question_id": "dccbc061",
+  "question_type": "single-session-user",
+  "hypothesis": "You previously identified as a staunch atheist before shifting to explore spirituality and reading about Buddhism.",
+  "correct": true,
+  "n_ctx": 36388
+ },
+ {
+  "question_id": "4bc144e2",
+  "question_type": "multi-session",
+  "hypothesis": "You spent $15 on a car wash and $50 on a parking ticket, totaling $65.",
+  "correct": true,
+  "n_ctx": 38085
+ },
+ {
+  "question_id": "0e4e4c46",
+  "question_type": "knowledge-update",
+  "hypothesis": "Your current highest score in Ticket to Ride is 132 points.",
+  "correct": true,
+  "n_ctx": 36478
+ },
+ {
+  "question_id": "6a1eabeb",
+  "question_type": "knowledge-update",
+  "hypothesis": "Your personal best time in the charity 5K run was 27:12.",
+  "correct": false,
+  "n_ctx": 30974
+ },
+ {
+  "question_id": "29f2956b_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 36993
+ },
+ {
+  "question_id": "91b15a6e",
+  "question_type": "multi-session",
+  "hypothesis": "The minimum amount you could get if you sold the vintage diamond necklace and the antique vanity is $5,150. This is based on the vintage diamond necklace being worth $5,000 and the restored antique vanity being worth at least $150.",
+  "correct": true,
+  "n_ctx": 35198
+ },
+ {
+  "question_id": "8752c811",
+  "question_type": "single-session-assistant",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 41433
+ },
+ {
+  "question_id": "2bf43736",
+  "question_type": "single-session-assistant",
+  "hypothesis": "In Tanqueray's Spiritual Life treatise, Chapter 4 of Book 1 discusses vocal prayer and meditation for beginners.",
+  "correct": true,
+  "n_ctx": 37396
+ },
+ {
+  "question_id": "gpt4_ab202e7f",
+  "question_type": "multi-session",
+  "hypothesis": "You replaced or fixed four kitchen items:\n\n1. Fixed kitchen shelves on the weekend of May 13-14, 2023.\n2. Replaced an old toaster with a new toaster oven.\n3. Replaced an old kitchen mat with a new one from IKEA.\n4. Replaced an old kitchen faucet with a new Moen touchless sensor faucet on May 21, 2023.",
+  "correct": false,
+  "n_ctx": 34069
+ },
+ {
+  "question_id": "8a2466db",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific resources for learning video editing in my memory. However, you might consider exploring online platforms like YouTube for tutorials, or websites like Udemy and Coursera for structured courses. Additionally, Adobe's official website offers tutorials and guides for Adobe Premiere Pro, which you are already using.",
+  "correct": true,
+  "n_ctx": 37805
+ },
+ {
+  "question_id": "gpt4_e072b769",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You started using the cashback app 'Ibotta' on April 16, 2023. As of today's date, May 6, 2023, it has been approximately 3 weeks since you started using it.",
+  "correct": true,
+  "n_ctx": 31923
+ },
+ {
+  "question_id": "58ef2f1c",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 34534
+ },
+ {
+  "question_id": "bc8a6e93_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 36183
+ },
+ {
+  "question_id": "38146c39",
+  "question_type": "single-session-preference",
+  "hypothesis": "You might consider adding a pinch of sea salt on top of your chocolate chip cookies before baking to enhance the flavors. Alternatively, you could incorporate some chopped nuts, like walnuts or pecans, for added texture and flavor. Another option is to experiment with different types of chocolate, such as dark or white chocolate chips, to create a more complex taste.",
+  "correct": false,
+  "n_ctx": 36376
+ },
+ {
+  "question_id": "89941a94",
+  "question_type": "knowledge-update",
+  "hypothesis": "Yes, before purchasing the gravel bike, you also had a road bike in addition to your mountain bike and commuter bike.",
+  "correct": true,
+  "n_ctx": 36592
+ },
+ {
+  "question_id": "1d4e3b97",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 33925
+ },
+ {
+  "question_id": "5c40ec5b",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have met up with Alex from Germany twice before.",
+  "correct": true,
+  "n_ctx": 37975
+ },
+ {
+  "question_id": "16c90bf4",
+  "question_type": "single-session-assistant",
+  "hypothesis": "You decided to use a Pilsner beer for the Seco de Cordero recipe.",
+  "correct": true,
+  "n_ctx": 37064
+ },
+ {
+  "question_id": "06878be2",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your current photography setup, which includes a Sony A7R IV, a Sony 24-70mm f/2.8 lens, and the Godox V1 flash, here are some accessories that could complement your setup:\n\n1. **Lens Filters**: Consider getting UV, polarizing, or ND filters to enhance your photography in different lighting conditions.\n\n2. **Camera Strap**: A comfortable and durable camera strap can make carrying your camera easier during long shoots.\n\n3. **Memory Cards**: High-speed and high-capacity memory cards are essential for storing large RAW files and 4K videos.\n\n4. **External Hard Drive**: For backing up your photos and videos, an external hard drive with ample storage is a good investment.\n\n5. **Cleaning Kit**: A lens cleaning kit with a blower, microfiber cloth, and cleaning solution will help keep your lens and camera sensor clean.\n\n6. **Remote Shutter Release**: Useful for long exposures and reducing camera shake during tripod shots.\n\n7. **Reflector**: A portable reflector can help manipulate natural light and improve portrait photography.\n\n8. **Camera Bag**: Since you're considering upgrading your camera bag, brands like Think Tank Photo, Lowepro, and Peak Design offer options designed for comfort and durability.\n\nThese accessories can enhance your photography experience and help you capture better images.",
+  "correct": true,
+  "n_ctx": 37492
+ },
+ {
+  "question_id": "f0e564bc",
+  "question_type": "multi-session",
+  "hypothesis": "You spent a total of $1,300 on the designer handbag and high-end skincare products. This includes $800 for the Coach handbag and $500 for the skincare products.",
+  "correct": true,
+  "n_ctx": 33728
+ }
+]

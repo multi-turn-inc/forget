@@ -1,0 +1,296 @@
+[
+ {
+  "question_id": "7a8d0b71",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The influencer marketing campaign for DHL Wellness Retreats has a budget of $2,000.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "gpt4_6ed717ea",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "The training pads for Luna were purchased first, in April 2023, before the dog bed for Max, which was purchased around 2023/05/08.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "80ec1f4f_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "c8090214",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended the Holiday Market 7 days before purchasing the iPhone 13 Pro.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "3ba21379",
+  "question_type": "knowledge-update",
+  "hypothesis": "You are currently working on a Ford F-150 pickup truck model.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "35a27287",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "0e5e2d1a",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The study involved 30 subjects.",
+  "correct": false,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "b46e15ee",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You participated in the \"Walk for Hunger\" charity event on March 19, 2023.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "fca70973",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific suggestions for theme parks, but I know you're interested in Halloween-themed events at theme parks. You might want to explore parks that offer special Halloween events during your visit.",
+  "correct": false,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "gpt4_8c8961ae",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "The solo trip to Thailand was taken first.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "488d3006",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The hiking trail you are planning to try in the Natural Park of Moncayo mountain in Aragón is the GR-90 trail.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "778164c6",
+  "question_type": "single-session-assistant",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "58bf7951",
+  "question_type": "single-session-user",
+  "hypothesis": "You attended a production of \"The Glass Menagerie\" at the local community theater.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "9bbe84a2",
+  "question_type": "knowledge-update",
+  "hypothesis": "Your previous goal for your Apex Legends level was to reach level 100 before the end of 2023.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "099778bb",
+  "question_type": "multi-session",
+  "hypothesis": "Women hold 20% of the leadership positions in your company.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "f9e8c073",
+  "question_type": "knowledge-update",
+  "hypothesis": "You attended three sessions of a bereavement support group.",
+  "correct": false,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "c19f7a0b",
+  "question_type": "single-session-user",
+  "hypothesis": "You usually get home from work around 6:30 pm on weekdays.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "gpt4_1a1dc16d",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "The meeting with Rachel happened first, on April 10, 2023, before the pride parade on May 1, 2023.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "118b2229",
+  "question_type": "single-session-user",
+  "hypothesis": "Your daily commute takes 45 minutes each way.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "gpt4_af6db32f",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You watched the Super Bowl 17 days ago.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "7024f17c",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "75832dbd",
+  "question_type": "single-session-preference",
+  "hypothesis": "I'm sorry, but I don't have any recent information on publications or conferences that might interest you.",
+  "correct": false,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "dccbc061",
+  "question_type": "single-session-user",
+  "hypothesis": "You were a staunch atheist before you started exploring spirituality and reading about Buddhism.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "4bc144e2",
+  "question_type": "multi-session",
+  "hypothesis": "You spent $15 on a car wash and $50 on a parking ticket.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "0e4e4c46",
+  "question_type": "knowledge-update",
+  "hypothesis": "Your current highest score in Ticket to Ride is 132 points.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "6a1eabeb",
+  "question_type": "knowledge-update",
+  "hypothesis": "Your personal best time in the charity 5K run was 27:12.",
+  "correct": false,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "29f2956b_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I'm sorry, but there is no information in the retrieved memories regarding how much time you dedicate to practicing violin every day.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "91b15a6e",
+  "question_type": "multi-session",
+  "hypothesis": "The minimum amount you could get if you sold the vintage diamond necklace and the antique vanity is $5,150.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "8752c811",
+  "question_type": "single-session-assistant",
+  "hypothesis": "I'm sorry, but I don't have that information.",
+  "correct": false,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "2bf43736",
+  "question_type": "single-session-assistant",
+  "hypothesis": "Chapter 4, Book 1 of Tanqueray's Spiritual Life treatise discusses vocal prayer and meditation for beginners.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "gpt4_ab202e7f",
+  "question_type": "multi-session",
+  "hypothesis": "You replaced or fixed five kitchen items.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "8a2466db",
+  "question_type": "single-session-preference",
+  "hypothesis": "You don't have that information.",
+  "correct": false,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "gpt4_e072b769",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You started using the cashback app 'Ibotta' approximately 2 weeks ago.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "58ef2f1c",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "bc8a6e93_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I'm sorry, but there is no information in the retrieved memories about what you baked for your uncle's birthday party.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "38146c39",
+  "question_type": "single-session-preference",
+  "hypothesis": "You might consider experimenting with different types of sugar, as you found that turbinado sugar adds a richer flavor. Additionally, you could try substituting granulated sugar with light brown sugar, using 1 1/4 cups instead of the usual amount. Adding sliced almonds on top of the cookies could also provide extra crunch and texture.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "89941a94",
+  "question_type": "knowledge-update",
+  "hypothesis": "Yes, before purchasing the gravel bike, you also had a road bike in addition to your mountain bike and commuter bike.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "1d4e3b97",
+  "question_type": "single-session-preference",
+  "hypothesis": "You plan to track your rides using a new Garmin bike computer, which could provide better data and insights into your performance, potentially leading to improvements. Additionally, your regular riding, such as the planned 20-mile ride this weekend, could contribute to enhanced performance.",
+  "correct": false,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "5c40ec5b",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have met up with Alex from Germany twice before.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "16c90bf4",
+  "question_type": "single-session-assistant",
+  "hypothesis": "You decided to use a Pilsner beer for the Seco de Cordero recipe.",
+  "correct": true,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "06878be2",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your interest in improving product photography for your candle business, here are some accessory suggestions:\n\n- **Lighting Equipment**: Softbox lights or ring lights for even and professional lighting.\n- **Tripod**: A sturdy tripod for stabilizing your camera and achieving sharper images.\n- **Reflectors**: To manipulate natural light and reduce shadows.\n- **Backdrop**: A clean, neutral backdrop for a consistent look.\n- **Macro Lens**: For detailed close-up shots if using a DSLR or mirrorless camera.\n- **Photo Editing Software**: Tools like Adobe Lightroom or Photoshop for post-shoot enhancements.",
+  "correct": false,
+  "n_ctx": 42
+ },
+ {
+  "question_id": "f0e564bc",
+  "question_type": "multi-session",
+  "hypothesis": "The total amount you spent on the designer handbag and high-end skincare products is $1,300.",
+  "correct": true,
+  "n_ctx": 42
+ }
+]

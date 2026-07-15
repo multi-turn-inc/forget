@@ -1,0 +1,23 @@
+[
+ {
+  "question_id": "dccbc061",
+  "question_type": "single-session-user",
+  "hypothesis": "You previously identified as a staunch atheist before shifting to exploring spirituality and reading about Buddhism.",
+  "correct": true,
+  "n_ctx": 36388
+ },
+ {
+  "question_id": "d6233ab6",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have information about your high school reunion or your feelings about attending it. However, attending a high school reunion can be a great opportunity to reconnect with old friends, reminisce about past experiences, and see how everyone has changed over the years. If you're feeling nostalgic, it might be worth considering.",
+  "correct": false,
+  "n_ctx": 33243
+ },
+ {
+  "question_id": "1c549ce4",
+  "question_type": "multi-session",
+  "hypothesis": "The total cost of the car cover and detailing spray you purchased is $140. The car cover was $120, and the detailing spray was $20.",
+  "correct": true,
+  "n_ctx": 32898
+ }
+]

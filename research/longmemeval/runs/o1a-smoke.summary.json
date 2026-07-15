@@ -1,0 +1,23 @@
+{
+ "experiment": "O1-observer",
+ "mode": "context",
+ "observer": "gpt-4o",
+ "reader": "gpt-4o",
+ "n": 3,
+ "overall_accuracy": 0.6667,
+ "by_type": {
+  "multi-session": {
+   "acc": 1.0,
+   "n": 1
+  },
+  "single-session-preference": {
+   "acc": 0.0,
+   "n": 1
+  },
+  "single-session-user": {
+   "acc": 1.0,
+   "n": 1
+  }
+ },
+ "elapsed_s": 55.3
+}
