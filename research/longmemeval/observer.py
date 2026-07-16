@@ -28,8 +28,8 @@ import httpx
 from openai import OpenAI
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from harness import (DATASETS, dev_ids, ingest_instance, judge, normalize_date,
-                     retrieve, stratified_sample)
+from harness import (DATASETS, READER_SYS, READER_SYS_V2, READER_SYS_V3, dev_ids, ingest_instance,
+                     judge, normalize_date, retrieve, stratified_sample)
 
 ROOT = Path(__file__).resolve().parent
 CACHE = ROOT / "observations"
@@ -105,7 +105,8 @@ def _model_slug(model: str) -> str:
     return model.replace("/", "-").replace(":", "-")
 
 
-def run_one(inst, oai, observer_model, reader_model, mode, url, top_k, obs_client=None):
+def run_one(inst, oai, observer_model, reader_model, mode, url, top_k,
+            obs_client=None, obs_k=None, reader_v2=False):
     entries = get_observations(obs_client or oai, observer_model, inst)
     if mode == "context":
         hyp = answer_context_mode(oai, reader_model, inst, entries)
@@ -146,14 +147,20 @@ def run_one(inst, oai, observer_model, reader_model, mode, url, top_k, obs_clien
                                 "user_id": raw_target, "app_id": "lme", "created_at": created,
                             }).raise_for_status()
             if mode == "dual":
-                half = top_k // 2
-                obs_mem = retrieve(client, scope, inst["question"], half)
-                raw_mem = retrieve(client, raw_scope, inst["question"], top_k - half)
+                obs_slots = obs_k if obs_k is not None else top_k // 2
+                raw_slots = top_k - (top_k // 2)
+                obs_mem = retrieve(client, scope, inst["question"], obs_slots)
+                raw_mem = retrieve(client, raw_scope, inst["question"], raw_slots)
                 memories = obs_mem + raw_mem
             else:
                 memories = retrieve(client, scope, inst["question"], top_k)
+            # drop this instance's rows once retrieved — thousands of dead
+            # scopes bloated the bench DB to 13GB and halved ingest speed
+            for s in (scope, raw_scope):
+                client.request("DELETE", "/v1/memories/", json={"user_id": s, "app_id": "lme"})
         hyp = read_answer(oai, reader_model, inst["question"], inst.get("question_date", ""),
-                          memories, two_stage=True)
+                          memories, two_stage=True,
+                          reader_sys={0: READER_SYS, 2: READER_SYS_V2, 3: READER_SYS_V3}[reader_v2])
         n_ctx = len(memories)
     correct = judge(oai, "gpt-4o", inst, hyp)
     return {"question_id": inst["question_id"], "question_type": inst["question_type"],
@@ -178,6 +185,12 @@ def main() -> int:
     ap.add_argument("--complement-of", default=None,
                     help="path to a file of question_ids (or results.json lines) already "
                          "evaluated — run only the remaining instances")
+    ap.add_argument("--only-ids", default=None,
+                    help="path to a JSON list of question_ids (or results.json) — run only these")
+    ap.add_argument("--obs-k", type=int, default=None,
+                    help="dual mode: observation-layer slots (raw keeps top_k/2)")
+    ap.add_argument("--reader-v2", type=int, default=0, choices=[0, 2, 3],
+                    help="reader prompt version: 0=v1 strict-abstain, 2=balanced, 3=balanced+guarded abstention")
     ap.add_argument("--tag", default="")
     args = ap.parse_args()
 
@@ -185,6 +198,10 @@ def main() -> int:
     if args.held_out:
         insts = stratified_sample(data, args.n, random.Random(args.seed),
                                   exclude_ids=dev_ids(data, args.n))
+    elif args.only_ids:
+        wanted = json.loads(Path(args.only_ids).read_text())
+        ids = {r["question_id"] if isinstance(r, dict) else r for r in wanted}
+        insts = [d for d in data if d["question_id"] in ids]
     elif args.complement_of:  # must precede the full-protocol check — both may match
         prior = json.loads(Path(args.complement_of).read_text())
         done = {r["question_id"] for r in prior}
@@ -200,7 +217,8 @@ def main() -> int:
     results, started = [], time.time()
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         futs = [pool.submit(run_one, inst, oai, args.observer_model, args.reader_model,
-                            args.mode, args.url, args.top_k, obs_client) for inst in insts]
+                            args.mode, args.url, args.top_k, obs_client,
+                            args.obs_k, args.reader_v2) for inst in insts]
         for i, f in enumerate(futs, 1):
             try:
                 r = f.result()

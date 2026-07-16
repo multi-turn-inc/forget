@@ -1,0 +1,35 @@
+{
+ "experiment": "O1-observer",
+ "mode": "dual",
+ "observer": "gpt-4o",
+ "reader": "gpt-4o",
+ "n": 500,
+ "overall_accuracy": 0.818,
+ "by_type": {
+  "knowledge-update": {
+   "acc": 0.9231,
+   "n": 78
+  },
+  "multi-session": {
+   "acc": 0.7068,
+   "n": 133
+  },
+  "single-session-assistant": {
+   "acc": 0.9286,
+   "n": 56
+  },
+  "single-session-preference": {
+   "acc": 0.5667,
+   "n": 30
+  },
+  "single-session-user": {
+   "acc": 0.9857,
+   "n": 70
+  },
+  "temporal-reasoning": {
+   "acc": 0.7895,
+   "n": 133
+  }
+ },
+ "elapsed_s": 7629.1
+}

@@ -1,0 +1,212 @@
+[
+ {
+  "question_id": "0862e8bf_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "15745da0_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "bc8a6e93_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "You baked a lemon blueberry cake for your niece's birthday party, not your uncle's.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "19b5f2b3_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "29f2956b_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information about your daily violin practice time.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "f4f1d8a4_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "88432d0a_abs",
+  "question_type": "multi-session",
+  "hypothesis": "There is no specific mention of you baking egg tarts in the past two weeks.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "80ec1f4f_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have information about any specific museums or galleries you visited in December.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "eeda8a6d_abs",
+  "question_type": "multi-session",
+  "hypothesis": "You don't have a 30-gallon tank. You currently have a 20-gallon tank with specific fish, including 10 neon tetras, 5 golden honey gouramis, and a small pleco catfish.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "60bf93ed_abs",
+  "question_type": "multi-session",
+  "hypothesis": "It took 9 days for your iPad case to arrive after you bought it.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "edced276_abs",
+  "question_type": "multi-session",
+  "hypothesis": "You spent a total of 10 days traveling in Hawaii. There is no information available about any days spent traveling in Seattle.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_372c3eed_abs",
+  "question_type": "multi-session",
+  "hypothesis": "You have spent a total of 8 years in formal education from high school to the completion of your Bachelor's degree. You have not yet completed a Master's degree, so the total years spent in formal education from high school to the completion of a Master's degree is currently 8 years.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2311e44b_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have the information on how many pages you have left to read in 'Sapiens'. To determine this, you would need to know the total number of pages in 'Sapiens' and how many pages you have already read. If you have this information, you can subtract the pages you've read from the total to find out how many pages you have left.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6456829e_abs",
+  "question_type": "multi-session",
+  "hypothesis": "You initially planted 5 tomato plants. There is no specific memory indicating the initial number of chili pepper plants you planted.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "e5ba910e_abs",
+  "question_type": "multi-session",
+  "hypothesis": "The total cost of your recently purchased Sony WH-1000XM4 headphones is $378. However, I don't have any information on the cost of an iPad.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a96c20ee_abs",
+  "question_type": "multi-session",
+  "hypothesis": "You presented a poster on your thesis research at your first research conference at Harvard University over the summer of 2023.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "ba358f49_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have information on Rachel's current age, so I can't determine how old she will be when you get married.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "09ba9854_abs",
+  "question_type": "multi-session",
+  "hypothesis": "You would save approximately $31 by taking the Airport Limousine Bus instead of a taxi from Narita Airport to your hotel in Shinjuku. The bus fare is around $29 USD, while the estimated taxi fare is around $60 USD.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_70e84552_abs",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You completed the task of fixing the fence first, around 2023/04/30. There is no specific date provided for the purchase of cows from Peter.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_93159ced_abs",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You have been working professionally for 9 years, and you have been at NovaTech for approximately 4 years and 3 months. Therefore, before starting your current job at NovaTech, you worked for about 4 years and 9 months.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "982b5123_abs",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c8090214_abs",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended the Holiday Market 8 days before you bought your iPad.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_c27434e8_abs",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You started the Ferrari 288 GTO model project first on 2023-04-30. There is no information about the start date of the Porsche 991 Turbo S model project.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_fe651585_abs",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "Alex became a parent first by adopting a baby girl from China in January 2023.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6aeb4375_abs",
+  "question_type": "knowledge-update",
+  "hypothesis": "You haven't mentioned trying any Italian restaurants in your city.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "031748ae_abs",
+  "question_type": "knowledge-update",
+  "hypothesis": "When you just started your new role as a Senior Software Engineer, you mentioned leading a team of four engineers.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2698e78f_abs",
+  "question_type": "knowledge-update",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2133c1b5_abs",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have been living in your current apartment in Shinjuku since March 2023.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0ddfec37_abs",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have not added any autographed footballs to your collection in the first three months of collection.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "f685340e_abs",
+  "question_type": "knowledge-update",
+  "hypothesis": "You play tennis with your friends at the local park as part of a bi-weekly routine.",
+  "correct": false,
+  "n_ctx": 102
+ }
+]

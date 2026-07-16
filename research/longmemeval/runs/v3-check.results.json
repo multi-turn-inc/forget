@@ -1,0 +1,331 @@
+[
+ {
+  "question_id": "0862e8bf_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "15745da0_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "bc8a6e93_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "19b5f2b3_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "29f2956b_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have any information about you dedicating time to practicing the violin every day.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "f4f1d8a4_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "88432d0a_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "80ec1f4f_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "eeda8a6d_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "60bf93ed_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "edced276_abs",
+  "question_type": "multi-session",
+  "hypothesis": "You spent a total of 10 days traveling in Hawaii. I don't have any information about days spent in Seattle.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_372c3eed_abs",
+  "question_type": "multi-session",
+  "hypothesis": "You spent a total of 10 years in formal education from high school to the completion of your Master's degree. This includes 4 years in high school (2010-2014), 4 years for your Bachelor's degree at UCLA (2016-2020), and an assumed 2 years for a typical Master's program.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "06878be2",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your current photography setup with the Sony A7R IV and your interest in upgrading your camera flash to the Godox V1, here are some accessories that could complement your setup:\n\n1. **Camera Flash Case or Pouch**: Since you're considering the Godox V1, look for a durable case or pouch to protect your new flash. Brands like Think Tank Photo and Lowepro offer protective cases that might suit your needs.\n\n2. **External Battery Pack**: You are interested in options like the Anker PowerCore 20000 PD and Mophie Powerstation XXL for charging your camera and other devices. These can be very useful for extended shoots.\n\n3. **Camera Bag**: You're looking to upgrade to a more comfortable and durable camera bag. Consider brands like Think Tank Photo, Lowepro, and Peak Design, which are known for their quality and compatibility with Sony cameras.\n\nThese accessories should enhance your photography experience, especially for your product photography needs in your candle business.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "75832dbd",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your interests, here are some recent publications or conferences that might interest you:\n\n1. **Explainable AI in Medical Image Analysis**:\n   - You expressed interest in research papers and articles on explainable AI in medical image analysis, specifically on techniques for visualizing and interpreting deep learning models. (2023-05-22)\n   - You are also interested in advanced topics in deep learning for medical image analysis, such as multi-modal image fusion, transfer learning, and domain adaptation. (2023-05-22)\n\n2. **Leadership Styles Across Cultures**:\n   - You are interested in understanding different leadership styles across cultures and whether there are universal qualities that make a good leader. (2023-05-29)\n\n3. **Gender Equality and Company Leadership**:\n   - You attended a workshop on gender equality and were surprised by the gender ratio and leadership position statistics in your company. (2023-05-26)\n\n4. **Deep Learning and AI**:\n   - You have a background in AI and have worked on projects involving reinforcement learning, computer vision, and NLP. You have also been involved in developing AI solutions for environmental sustainability. (2023-05-23)\n\n5. **Cultural and Social Issues**:\n   - You are interested in LGBTQ+ issues and allyship, and are seeking resources or online courses to improve your understanding. (2023-05-26)\n\nThese topics suggest that you might find conferences or publications related to AI, leadership, gender equality, and cultural studies interesting. Consider looking for conferences such as NeurIPS, CVPR, ICML, ICLR, and ICCV for AI-related content, or exploring journals and conferences focused on leadership and social issues.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0edc2aef",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have any information about hotels in Miami from your past conversations.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "35a27287",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have information about specific cultural events happening around you this weekend. However, you can explore platforms like Eventbrite and Meetup, follow local cultural organizations on social media, or reach out to local language schools and cultural centers to find events that celebrate language diversity and cultural exchange, especially those focusing on French and Spanish languages.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "32260d93",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your interests, here are some recommendations for tonight:\n\n1. **Stand-Up Comedy Special**: Since you're an aspiring stand-up comedian, you might enjoy John Mulaney's \"Kid Gorgeous\" on Netflix, known for its strong storytelling abilities.\n\n2. **Documentary on Ancient Civilizations**: Given your interest in ancient Egypt, consider watching a documentary that focuses on the construction of the pyramids and the Great Sphinx.\n\n3. **Narrative Highlighting Spiritual Teachings**: If you're in the mood for something that explores themes of personal growth and spirituality, look for movies or shows that highlight these narratives.\n\nEnjoy your viewing!",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "195a1a1b",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific memories about your evening activities, but based on your interests, you might enjoy:\n\n1. **Guided Imagery Exercises**: Since you're interested in trying these for relaxation, you could incorporate them into your evening routine.\n2. **Yoga**: Exploring new styles like Kundalini or Sivananda could be a calming way to end your day.\n3. **Journaling**: Reflect on your day or write in your dream journal to identify patterns or themes.\n4. **Gardening**: Tending to your indoor herb garden could be a peaceful evening activity.\n5. **Reading**: Dive into a book about topics you enjoy, such as ancient Rome or cultural symbols.\n\nThese activities align with your interests and can help you unwind in the evening.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "afdc33df",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific memories about your kitchen cleaning habits, but I can share some general tips for maintaining a clean kitchen based on organizing kitchen utensils and cleaning practices:\n\n1. **Organize Utensils**: Purge unnecessary utensils, categorize similar items, and assign specific spots for each group in your utensil holder. Use dividers or compartments to separate groups and store frequently used items in easy-to-reach locations.\n\n2. **Clean Regularly**: Regularly clean surfaces, including countertops and the garbage disposal, to prevent odors and buildup. Use baking soda and vinegar for deodorizing and ice cubes with salt to clean disposal blades.\n\n3. **Prevent Scratches**: Protect granite countertops by using coasters, pads, and cutting boards. Regularly clean to prevent dirt accumulation and consider sealing the countertop.\n\n4. **Address Leaks**: Inspect and maintain kitchen faucets to prevent leaks. Replace worn-out parts like O-rings or gaskets and consider replacing the faucet if it's old or frequently leaking.\n\nBy implementing these strategies, you can maintain a cleaner and more organized kitchen.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "caf03d32",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific memories of you struggling with slow cooker recipes, but I do know that you've recently learned how to use a slow cooker and made a beef stew. You've also expressed interest in trying more slow cooker recipes, including vegetarian and vegan options, and plan to make slow cooker yogurt with a cashew base. If you're looking for advice, you might consider experimenting with different ingredients and seasonings to suit your taste preferences, as well as ensuring you follow the recipe instructions closely for best results. If you have specific issues you're encountering, feel free to share them!",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "06f04340",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific information about your homegrown ingredients beyond jalapeno peppers, which you used in your Spicy Mango Margarita. However, considering your interest in unique flavor profiles and healthy meal options, you could serve a main course featuring grilled chicken or fish with roasted vegetables, incorporating your jalapeno peppers for a spicy twist. Additionally, a quinoa or brown rice bowl bar with a variety of toppings, including roasted vegetables and a homemade vinaigrette, would be a great option. If you have other homegrown ingredients, you can incorporate them into these dishes for a personalized touch.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1a1907b4",
+  "question_type": "single-session-preference",
+  "hypothesis": "You mentioned previously that you're interested in making a Pimm's Cup with a Twist cocktail using a citrus-flavored simple syrup. You considered options like grapefruit, lemon-ginger, or orange-blossom syrup to complement the Hendrick's gin and cucumber. This could be a refreshing and unique choice for your get-together. If you want to explore this option further, I can provide more details on how to prepare it.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "09d032c9",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific tips for improving your phone's battery life from our past conversations. However, if you're experiencing issues, it might be helpful to check for any apps running in the background, adjust your screen brightness, or consider replacing the battery if it's an older device. If you have any specific questions or need further assistance, feel free to ask!",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "d24813b1",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific memories of what you might bake for a small gathering with colleagues. However, based on your past baking experiences, you might consider making a batch of chocolate chip cookies, as you've been experimenting with baking and are interested in making chewy cookies. Alternatively, you could try a lemon-flavored cake, possibly incorporating lavender, as you have considered this for a friend's birthday. Both options could be delightful for your gathering.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "57f827a0",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have any specific memories about your preferences for bedroom furniture arrangement. However, considering your interest in mid-century modern design, you might want to incorporate elements like clean lines, organic shapes, and tapered legs into your bedroom furniture arrangement. Additionally, since you're experiencing Wi-Fi issues in the bedroom, you might consider arranging furniture to minimize physical obstacles between your devices and the router to improve signal strength.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "95228167",
+  "question_type": "single-session-preference",
+  "hypothesis": "I'm sorry, but I don't have any specific memories or information related to guitars or music stores.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "fca70973",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific suggestions for your upcoming theme park weekend, but I know you're interested in Halloween-themed events at theme parks. If you're planning this trip around Halloween, you might want to explore events similar to the Behind-the-Scenes Tour at Halloween Horror Nights, which offers unique insights into the creative process behind the mazes and attractions. If you have any specific preferences or locations in mind, feel free to share, and I can help further!",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a89d7624",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific suggestions for your upcoming trip to Denver, but I know you're interested in the city's music scene. You plan to return for another concert and have previously attended a concert by The Killers at Red Rocks Amphitheater. You might enjoy exploring music venues like The Ogden Theatre and festivals such as Grandoozy. Additionally, you were considering getting to Red Rocks a bit earlier to grab some dinner before a concert, so exploring local dining options could be a part of your trip.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1d4e3b97",
+  "question_type": "single-session-preference",
+  "hypothesis": "Your bike's improved performance during your Sunday group rides could be attributed to several recent upgrades and changes you've made. You upgraded your bike's chain and cassette, which can lead to better bike performance and efficiency during rides. Additionally, you plan to track your rides using a new Garmin bike computer, which can provide accurate data and insights to help improve your performance. These enhancements, along with your focus on maintaining fitness and safety, such as planning to order a new bike helmet from Specialized, could all contribute to the noticeable improvement in your bike's performance.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2311e44b_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have the information on how many pages you have left to read in \"Sapiens\" because the total number of pages in the book and how many pages you have already read are not provided in the retrieved memories.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6456829e_abs",
+  "question_type": "multi-session",
+  "hypothesis": "You initially planted 5 tomato plants. There is no specific memory indicating the initial number of chili pepper plants you planted.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "e5ba910e_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have any information about the purchase of an iPad or its cost. However, you recently purchased Sony WH-1000XM4 headphones for $378.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a96c20ee_abs",
+  "question_type": "multi-session",
+  "hypothesis": "You presented a poster on your thesis research at your first research conference at Harvard University over the summer of 2023.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "ba358f49_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have information about Rachel's current age, so I can't determine how old she will be when you get married.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "09ba9854_abs",
+  "question_type": "multi-session",
+  "hypothesis": "You would save approximately $31 by taking the Airport Limousine Bus instead of a taxi from Narita Airport to your hotel in Shinjuku. The taxi fare is estimated at around $60, while the bus fare is approximately $29.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_70e84552_abs",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You completed the task of fixing the broken fence on the east side of your property first, around 2023/04/30. There is no specific date provided for the purchase of cows from Peter.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_93159ced_abs",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "I don't have information about you working at Google. However, based on your professional history, you have been working professionally for 9 years as of May 30, 2023, and you have been at NovaTech for approximately 4 years and 3 months. Therefore, you worked for about 4 years and 9 months before starting at NovaTech.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "982b5123_abs",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c8090214_abs",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended the annual Holiday Market at the local mall around November 17, 2022, and bought an iPad on Black Friday, November 25, 2022. Therefore, you attended the Holiday Market 8 days before buying the iPad.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_c27434e8_abs",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "Based on the available information, you started the Ferrari 288 GTO model project first on 2023-04-30. There is no mention of the start date for the Porsche 991 Turbo S model.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_fe651585_abs",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "Alex became a parent first by adopting a baby girl in January 2023.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6aeb4375_abs",
+  "question_type": "knowledge-update",
+  "hypothesis": "I don't have any specific memory indicating that you have tried any Italian restaurants in your city.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "031748ae_abs",
+  "question_type": "knowledge-update",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2698e78f_abs",
+  "question_type": "knowledge-update",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2133c1b5_abs",
+  "question_type": "knowledge-update",
+  "hypothesis": "I don't have any information about you living in Shinjuku. According to the memories, you have been living in Harajuku for approximately 7 months as of October 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0ddfec37_abs",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have not added any autographed footballs to your collection in the first three months of collection.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "f685340e_abs",
+  "question_type": "knowledge-update",
+  "hypothesis": "I don't have any information about you playing table tennis with your friends at the local park.",
+  "correct": true,
+  "n_ctx": 102
+ }
+]

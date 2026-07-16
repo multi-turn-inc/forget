@@ -145,6 +145,45 @@ READER_SYS = (
     "If the evidence does not contain the answer, say you don't have that information."
 )
 
+# v2: the hard-abstention instruction made the reader refuse advice-type
+# questions it could have personalized from retrieved user context —
+# preference questions scored 43% almost entirely on "I don't have that
+# information" answers. Balanced: personalize advice, abstain only on
+# missing concrete facts.
+READER_SYS_V2 = (
+    "You are the user's assistant, answering with the help of retrieved memories "
+    "from their past conversations (each prefixed with a date and the speaker role).\n"
+    "- For factual questions (what/when/how many/how much), answer strictly from the "
+    "memories. Count and enumerate carefully across ALL relevant memories before "
+    "answering. If the specific fact is genuinely absent, say you don't have that "
+    "information.\n"
+    "- For advice or recommendation questions, give a helpful answer grounded in what "
+    "the memories reveal about the user — their background, skills, plans, ongoing "
+    "efforts, and stated preferences. Reference those specifics. Do not refuse these "
+    "just because no memory states a direct answer."
+)
+
+# v3: v2 fixed preference rescue but regressed abstention 73%->60% — the
+# advice clause licensed answering from general knowledge when memories
+# held nothing. Symmetric honesty: personalize only from retrieved
+# specifics; when the memories genuinely lack the asked fact or any
+# relevant user context, say so — never fill gaps from general knowledge.
+READER_SYS_V3 = (
+    "You are the user's assistant, answering with the help of retrieved memories "
+    "from their past conversations (each prefixed with a date and the speaker role). "
+    "Everything you claim about the user must come from these memories — never from "
+    "general knowledge or guessing.\n"
+    "- Factual questions (what/when/how many/how much): answer strictly from the "
+    "memories. Count and enumerate carefully across ALL relevant memories. If the "
+    "asked fact is not in the memories, plainly say you don't have that information — "
+    "do not substitute a plausible guess.\n"
+    "- Advice or recommendation questions: personalize your answer using the user's "
+    "background, skills, plans, ongoing efforts, and stated preferences AS FOUND in "
+    "the memories, citing those specifics. If the memories contain relevant user "
+    "context, never refuse. If they contain nothing relevant to the request, say you "
+    "don't have that history rather than giving generic advice."
+)
+
 
 def _context_lines(memories: list[dict]) -> str:
     lines = []
@@ -155,7 +194,8 @@ def _context_lines(memories: list[dict]) -> str:
 
 
 def read_answer(oai: OpenAI, model: str, question: str, qdate: str,
-                memories: list[dict], two_stage: bool = False) -> str:
+                memories: list[dict], two_stage: bool = False,
+                reader_sys: str = READER_SYS) -> str:
     # Surface each memory's date — temporal-reasoning questions are
     # unanswerable without it, and the date is already stored.
     context = _context_lines(memories)
@@ -177,7 +217,7 @@ def read_answer(oai: OpenAI, model: str, question: str, qdate: str,
         prompt = f"Today's date: {qdate}\n\nRetrieved memories (each tagged with its date):\n{context}\n\nQuestion: {question}"
     resp = oai.chat.completions.create(
         model=model, temperature=0,
-        messages=[{"role": "system", "content": READER_SYS}, {"role": "user", "content": prompt}],
+        messages=[{"role": "system", "content": reader_sys}, {"role": "user", "content": prompt}],
     )
     return resp.choices[0].message.content.strip()
 

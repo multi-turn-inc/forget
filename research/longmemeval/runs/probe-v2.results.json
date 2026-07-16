@@ -1,0 +1,310 @@
+[
+ {
+  "question_id": "118b2229",
+  "question_type": "single-session-user",
+  "hypothesis": "Your daily commute takes 45 minutes each way.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c960da58",
+  "question_type": "single-session-user",
+  "hypothesis": "You have 20 playlists on Spotify.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "3b6f954b",
+  "question_type": "single-session-user",
+  "hypothesis": "You attended a study abroad program at the University of Melbourne.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6b168ec8",
+  "question_type": "single-session-user",
+  "hypothesis": "You own three bikes: a road bike (Trek Emonda), a mountain bike, and a commuter bike.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "95bcc1c8",
+  "question_type": "single-session-user",
+  "hypothesis": "You watched 10 amateur comedians perform at the open mic night.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0862e8bf",
+  "question_type": "single-session-user",
+  "hypothesis": "Your cat's name is Luna.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a06e4cfe",
+  "question_type": "single-session-user",
+  "hypothesis": "Your preferred gin-to-vermouth ratio for a classic martini is 3:1, with a dash of citrus bitters to enhance the flavors of the gin.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "8550ddae",
+  "question_type": "single-session-user",
+  "hypothesis": "You tried a lavender gin fizz recipe last weekend.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "577d4d32",
+  "question_type": "single-session-user",
+  "hypothesis": "You stop checking work emails and messages by 7 pm.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "4fd1909e",
+  "question_type": "single-session-user",
+  "hypothesis": "You attended the Imagine Dragons concert at the Xfinity Center.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_59c863d7",
+  "question_type": "multi-session",
+  "hypothesis": "You have worked on or bought a total of five model kits:\n\n1. Recently acquired a 1/72 scale B-29 bomber model kit.\n2. Recently acquired a 1/24 scale '69 Camaro model kit.\n3. Recently finished a Tamiya 1/48 scale Spitfire Mk.V model kit.\n4. Recently finished a Revell F-15 Eagle model kit.\n5. Planning to work on the 1/72 scale B-29 bomber model next.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "3a704032",
+  "question_type": "multi-session",
+  "hypothesis": "You acquired 1 plant, a snake plant, in the last month.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "aae3761f",
+  "question_type": "multi-session",
+  "hypothesis": "You spent a combined total of 16-17 hours driving to your three road trip destinations: Outer Banks (4 hours), Tybee Island (7-8 hours), and the Tennessee mountains (5 hours).",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_f2262a51",
+  "question_type": "multi-session",
+  "hypothesis": "You planned to discuss your sinusitis diagnosis and treatment plan with Dr. Smith and also intended to schedule a follow-up appointment with your primary care physician. Therefore, you have mentioned visiting two different doctors.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "dd2973ad",
+  "question_type": "multi-session",
+  "hypothesis": "You went to bed at 2 AM on May 24, 2023, which was after your doctor's appointment on May 18, 2023. I don't have information on your bedtime the day before the appointment.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c4a1ceb8",
+  "question_type": "multi-session",
+  "hypothesis": "You have used three different types of citrus fruits in your cocktail recipes: orange, lime, and lemon.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "36b9f61e",
+  "question_type": "multi-session",
+  "hypothesis": "You spent a total of $1,300 on luxury items in the past few months, which includes $800 on a luxury evening gown and $500 on high-end Italian designer leather boots.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_2f8be40d",
+  "question_type": "multi-session",
+  "hypothesis": "You have attended three weddings in 2023:\n1. A friend's wedding on October 7-8, 2023.\n2. Your college roommate Emily's wedding.\n3. A cousin's wedding in September 2023.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2e6d26dc",
+  "question_type": "multi-session",
+  "hypothesis": "Four babies were born to friends and family members in the last few months.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_15e38248",
+  "question_type": "multi-session",
+  "hypothesis": "Based on your past conversations, you have been involved with the following pieces of furniture:\n\n1. Purchased a wooden coffee table with metal legs from West Elm, delivered on May 18, 2023.\n2. Fixed a wobbly leg on your kitchen table on the weekend of May 20-21, 2023.\n3. Assembled an IKEA bookshelf for your home office about two months ago.\n\nIn total, you have bought, assembled, or fixed 3 pieces of furniture in the past few months.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_7fce9456",
+  "question_type": "multi-session",
+  "hypothesis": "You viewed two properties before making an offer on the townhouse in the Brookside neighborhood: a 2-bedroom condo and a 3-bedroom bungalow in the Oakwood neighborhood.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "d682f1a2",
+  "question_type": "multi-session",
+  "hypothesis": "You have used three different types of food delivery services recently:\n1. Fresh Fusion for pre-made meals.\n2. Domino's Pizza for pizza delivery.\n3. Uber Eats for weekend deliveries.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "7024f17c",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have information about your jogging activities last week. Regarding yoga, while you planned to schedule sessions for Monday, Wednesday, and Friday mornings, it's unclear if these sessions were completed. Therefore, I cannot determine the exact number of hours spent on yoga last week.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_2ba83207",
+  "question_type": "multi-session",
+  "hypothesis": "You spent the most money at Thrive Market in the past month, with a total expenditure of around $150.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2318644b",
+  "question_type": "multi-session",
+  "hypothesis": "You spent over $270 more per night on accommodations in Hawaii compared to Tokyo.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2ce6a0f2",
+  "question_type": "multi-session",
+  "hypothesis": "You attended three different art-related events in the past month.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_31ff4165",
+  "question_type": "multi-session",
+  "hypothesis": "You use three health-related devices daily: a Fitbit, an Accu-Chek Aviva Nano, and a nebulizer machine.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "eeda8a6d",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2788b940",
+  "question_type": "multi-session",
+  "hypothesis": "You attend five fitness classes in a typical week:\n- BodyPump on Mondays\n- Zumba on Tuesdays and Thursdays\n- Hip Hop Abs on Saturdays\n- Yoga on Sundays",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "9d25d4e0",
+  "question_type": "multi-session",
+  "hypothesis": "You acquired 1 piece of jewelry in the last two months: a pair of emerald earrings purchased at a flea market on May 13-14, 2023.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "60472f9c",
+  "question_type": "multi-session",
+  "hypothesis": "You have been working on six projects simultaneously, excluding your thesis.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_194be4b3",
+  "question_type": "multi-session",
+  "hypothesis": "You currently own at least two musical instruments: a Korg B1 piano and a Yamaha FG800 acoustic guitar.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_ab202e7f",
+  "question_type": "multi-session",
+  "hypothesis": "You replaced or fixed a total of six kitchen items:\n\n1. Replaced your old kitchen faucet with a new Moen touchless sensor faucet.\n2. Fixed your kitchen shelves.\n3. Replaced your worn-out kitchen mat with a new one from IKEA.\n4. Replaced your old toaster with a toaster oven.\n5. Replaced your cat's food and water bowls.\n6. Donated your old coffee maker after receiving a new espresso machine.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_731e37d7",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have information on the total amount you spent on attending workshops in the last four months. However, I do know that you attended a half-day mindfulness workshop on December 12, which cost $20.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1a8a66a6",
+  "question_type": "multi-session",
+  "hypothesis": "You currently have one magazine subscription to The New Yorker.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "bf659f65",
+  "question_type": "multi-session",
+  "hypothesis": "You have purchased or downloaded at least two music albums or EPs:\n\n1. \"Happier Than Ever\" by Billie Eilish, which you downloaded on Spotify.\n2. \"Midnight Sky\" by The Whiskey Wanderers, which you purchased at a music festival.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_372c3eed",
+  "question_type": "multi-session",
+  "hypothesis": "You spent a total of 8 years in formal education from high school to the completion of your Bachelor's degree: 4 years at Arcadia High School from 2010 to 2014, and 4 years at UCLA for your Bachelor's degree in Computer Science from 2016 to 2020.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "06878be2",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your current photography setup and interests, here are some accessories that could complement your Sony A7R IV and enhance your photography experience:\n\n1. **Camera Bag**: Since you're looking to upgrade to a more comfortable and durable camera bag, consider brands like Think Tank Photo, Lowepro, and Peak Design, which are known for their quality and compatibility with Sony cameras.\n\n2. **Camera Flash**: You've decided on the Godox V1, which is a great choice. To protect your new flash, look for cases or pouches specifically designed for camera flashes.\n\n3. **External Battery Pack**: For charging your Sony A7R IV and other devices, options like the Anker PowerCore 20000 PD and Mophie Powerstation XXL are excellent choices.\n\n4. **Tripod**: A sturdy tripod can help with stability and precision in your shots, especially for product photography for your candle business.\n\n5. **Lens Filters**: Consider investing in lens filters such as polarizers or ND filters to enhance your photography, particularly in outdoor settings.\n\nThese accessories should help you improve your photography setup and support your efforts in product photography for your candle business.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "75832dbd",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your interests and background, here are some recent publications or conferences you might find interesting:\n\n1. **Explainable AI in Medical Image Analysis**: You have shown interest in research papers on explainable AI, particularly in visualizing and interpreting deep learning models. Look for conferences or journals focusing on AI in healthcare or medical imaging.\n\n2. **Leadership Styles Across Cultures**: Since you're interested in understanding leadership styles across cultures, consider conferences or publications in organizational behavior or international business.\n\n3. **Gender Equality and Company Leadership**: Given your interest in gender equality, workshops or conferences on diversity and inclusion in the workplace might be relevant.\n\n4. **Deep Learning and AI**: With your background in AI and projects involving reinforcement learning, computer vision, and NLP, conferences like NeurIPS, CVPR, or ICML would be suitable.\n\n5. **Environmental Sustainability and AI**: Your interest in using AI to address environmental challenges suggests looking into conferences or journals on AI for environmental sustainability.\n\nThese topics align with your interests in AI, leadership, gender equality, and environmental sustainability.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0edc2aef",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific information about hotels in Miami from your past conversations. However, based on your preferences for hotels with scenic views, unique room features like fireplaces or balconies, and packages that include additional services or amenities, you might consider looking for hotels in Miami that offer these features.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "35a27287",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific information about cultural events happening around you this weekend. However, you can explore platforms like Eventbrite and Meetup, follow local cultural organizations and language schools on social media, and reach out to local cultural centers or embassies for information on events celebrating language diversity and cultural exchange, especially those focusing on French and Spanish languages.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "32260d93",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your interests, I recommend watching John Mulaney's \"Kid Gorgeous\" on Netflix. As an aspiring stand-up comedian, you might appreciate its strong storytelling abilities. If you're in the mood for something different, consider a documentary on ancient Egypt, focusing on the pyramids and the Great Sphinx, which aligns with your interest in ancient civilizations. Enjoy your viewing!",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "195a1a1b",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your interests and plans, here are some evening activities you might enjoy:\n\n1. **Guided Imagery Exercises**: Since you're interested in trying guided imagery to cope with emotions, you could incorporate this into your evening routine to help relax and unwind before bed.\n\n2. **Yoga Practice**: Explore new yoga styles like Kundalini or Sivananda, or continue with your Hatha and Vinyasa flow classes. Practicing yoga in the evening can help you relax and improve flexibility.\n\n3. **Journaling**: Spend some time writing in your dream journal or reflecting on your day. This can be a calming way to process emotions and thoughts.\n\n4. **Gardening**: If you have an indoor herb garden, tending to your plants can be a soothing evening activity.\n\n5. **Meditation**: Use meditation apps or guided meditations specifically designed for sleep and relaxation to calm your mind and body before bed.\n\n6. **Reading**: Dive into a book that interests you, whether it's about ancient Rome, cultural symbols, or any other topic you enjoy.\n\nThese activities align with your interests and can help you wind down in the evening.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "afdc33df",
+  "question_type": "single-session-preference",
+  "hypothesis": "To maintain a clean kitchen, consider these tips:\n\n1. **Regular Cleaning**: Clean countertops and surfaces regularly to prevent bacteria growth.\n2. **Use Coasters and Pads**: Place coasters and pads under objects to prevent scratches.\n3. **Cutting Boards**: Always use a cutting board to avoid knife scratches on countertops.\n4. **Seal Countertops**: If you have granite countertops, consider sealing them to protect against spills and stains.\n5. **Clean Utensil Holders**: Regularly clean your utensil holder to prevent bacteria growth.\n\nImplementing these practices can help keep your kitchen tidy and hygienic.",
+  "correct": false,
+  "n_ctx": 102
+ }
+]
