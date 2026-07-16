@@ -185,12 +185,12 @@ def main() -> int:
     if args.held_out:
         insts = stratified_sample(data, args.n, random.Random(args.seed),
                                   exclude_ids=dev_ids(data, args.n))
-    elif args.n >= len(data):
-        insts = data  # full protocol — stratified per-type caps would drop 100 items
-    elif args.complement_of:
+    elif args.complement_of:  # must precede the full-protocol check — both may match
         prior = json.loads(Path(args.complement_of).read_text())
         done = {r["question_id"] for r in prior}
         insts = [d for d in data if d["question_id"] not in done]
+    elif args.n >= len(data):
+        insts = data  # full protocol — stratified per-type caps would drop 100 items
     else:
         insts = stratified_sample(data, args.n, random.Random(args.seed))
 

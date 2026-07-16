@@ -1,0 +1,135 @@
+[
+ {
+  "question_id": "gpt4_59c863d7",
+  "question_type": "multi-session",
+  "hypothesis": "You have worked on or bought a total of six model kits:\n\n1. Finished working on a Tamiya 1/48 scale Spitfire Mk.V model kit.\n2. Finished working on a Revell F-15 Eagle model kit.\n3. Bought a 1/72 scale B-29 bomber model kit.\n4. Bought a 1/24 scale '69 Camaro model kit.\n5. Planning to work on the 1/72 scale B-29 bomber model next.\n6. Working on engine wiring and fuel lines for the '69 Camaro model.",
+  "correct": false,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "3a704032",
+  "question_type": "multi-session",
+  "hypothesis": "You acquired one plant, a snake plant, from your sister in April 2023.",
+  "correct": false,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "aae3761f",
+  "question_type": "multi-session",
+  "hypothesis": "You spent a combined total of 16-17 hours driving to your three road trip destinations: Outer Banks (4 hours), Tybee Island (7-8 hours), and Tennessee mountains (5 hours).",
+  "correct": false,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "gpt4_f2262a51",
+  "question_type": "multi-session",
+  "hypothesis": "You have visited or plan to visit at least two different doctors: a primary care physician and a specialist for a colonoscopy.",
+  "correct": false,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "gpt4_b5700ca9",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended the Maundy Thursday service at the Episcopal Church 4 days ago.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "gpt4_18c2b244",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "1. I used a Buy One Get One Free coupon on Luvs diapers at Walmart (April 1, 2023).\n2. I redeemed $12 cashback for a $10 Amazon gift card from Ibotta (April 10, 2023).\n3. I signed up for the rewards program at ShopRite (April 15, 2023).",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "gpt4_4fc4f797",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "38 days passed between the day you received feedback about your car's suspension (March 17, 2023) and the day you tested your new suspension setup (April 24, 2023).",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "4dfccbf7",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "24 days had passed since you started taking ukulele lessons when you decided to take your acoustic guitar to the guitar tech for servicing.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "gpt4_d6585ce8",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "1. March 17, 2023: Billie Eilish concert at the Wells Fargo Center in Philadelphia.\n2. March 25, 2023: Free outdoor concert series in the park.\n3. April 1, 2023: Music festival in Brooklyn featuring favorite indie bands.\n4. April 8, 2023: Jazz night at a local bar.\n5. April 15, 2023: Queen concert with Adam Lambert at the Prudential Center in Newark, NJ.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "gpt4_ec93e27f",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You most recently used a train on March 3rd, 2023.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "8077ef71",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended a networking event 26 days ago.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "gpt4_f420262c",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "1. United Airlines (January 27, 2023)\n2. American Airlines (February 10, 2023)\n3. Spirit Airlines (Planning stage as of January 28, 2023)",
+  "correct": false,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "5e1b23de",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended the photography workshop approximately 3 months ago.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "gpt4_e414231e",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "4 days passed between the day you fixed your mountain bike (March 15, 2023) and the day you decided to upgrade your road bike's pedals (March 19, 2023).",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "2ebe6c92",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You finished reading \"The Song of Achilles\" by Madeline Miller a week ago.",
+  "correct": false,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "dcfa8644",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "14 days had passed between the purchase of your Adidas running shoes on January 10, 2023, and the realization of the broken shoelace on your Converse sneakers on January 24, 2023.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "gpt4_9a159967",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You flew with United Airlines the most in March and April combined. In March, you took four flights with United Airlines for a business trip to Chicago. In April, you flew with American Airlines for your trip to Hawaii.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "cc6d1ec1",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You had been bird watching for about two months when you attended the bird watching workshop in April 2023.",
+  "correct": true,
+  "n_ctx": 84
+ },
+ {
+  "question_id": "gpt4_d9af6064",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You set up the new router first, as it was purchased on January 15, 2023, before setting up the smart thermostat on February 10, 2023.",
+  "correct": true,
+  "n_ctx": 84
+ }
+]

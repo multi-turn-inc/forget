@@ -258,3 +258,40 @@ Observer를 gpt-4o에서 **Qwen2.5-14B-instruct-q4** (RTX 4090, ollama, SSH 터�
 
 **정직 캐비앗**: n=42(±13pp), held-out은 O-사다리에서 소모됨 — 이 격차의 확정치도
 full-500 필요(단, 로컬 관찰 생성은 4090 시간만 소모, API 비용 reader/judge뿐).
+
+## 9-최종. FULL-500 확정 — 80.8% (2026-07-16)
+
+층화 듀얼(관찰 42 + 원문 42) + gpt-4o Observer/reader/judge, **전체 500문항 완주**
+(400 + 보완 100 + 재실행 19 합산, 중복 0). `runs/final-dual84-FULL500.summary.json`.
+
+| question_type | acc | n |
+|---|---|---|
+| single-session-user | 98.6% | 70 |
+| single-session-assistant | 94.6% | 56 |
+| knowledge-update | 87.2% | 78 |
+| temporal-reasoning | 82.0% | 133 |
+| multi-session | 69.2% | 133 |
+| single-session-preference | 43.3% | 30 |
+| **OVERALL** | **80.8%** | **500** |
+
+### 궤적과 위치 (전부 full-500, gpt-4o reader/judge)
+
+| 단계 | 점수 |
+|---|---|
+| 순진 RAG (top_k 20, 날짜 미노출) | 64.4% |
+| + date-fix (temporal 복구) | 74.8% |
+| + 관찰 레이어 · 층화 듀얼 검색 | **80.8%** |
+| — 참조: Emergence SF (오픈 베이스라인, 자기발표 79%) | 우리 재현 78.6% (n=42) |
+| — 참조: Oracle gpt-4o (정답 세션만 제공한 천장) | 82.4% |
+| — 참조: Mastra OM (gpt-4o, 자기발표) | 84.2% |
+
+**주장 가능**: gpt-4o reader 고정 조건에서 오픈소스 베이스라인(79) 초과,
+Oracle 천장(82.4)에 1.6pp 근접. held-out 42의 90.5%는 예상대로 유리 표본이었음
+(full 80.8이 참값) — 선등록 규율이 과장 주장을 예방한 세 번째 사례.
+**남은 지렛대**: multi-session(69%)과 preference(43%)가 구조적 약점으로 확정 —
+next: 관찰 슬롯 확대/질의 확장은 여기서만 승부가 남.
+
+### Tier 판정 (선등록 기준)
+
+Tier 0 ✅ · Tier 1 ✅ · **Tier 2 ✅ (80.8)** · Tier 3(절대 SOTA 95.4) ❌ — 단 gpt-4o
+고정 비교에서는 자기발표 수치들 포함 상위권. 로컬-온리 축(게임 3)은 §10의 O2가 담당.

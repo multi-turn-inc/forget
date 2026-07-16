@@ -1,0 +1,19 @@
+{
+ "experiment": "O1-observer",
+ "mode": "dual",
+ "observer": "gpt-4o",
+ "reader": "gpt-4o",
+ "n": 81,
+ "overall_accuracy": 0.7901,
+ "by_type": {
+  "multi-session": {
+   "acc": 0.7391,
+   "n": 46
+  },
+  "temporal-reasoning": {
+   "acc": 0.8571,
+   "n": 35
+  }
+ },
+ "elapsed_s": 14200.0
+}

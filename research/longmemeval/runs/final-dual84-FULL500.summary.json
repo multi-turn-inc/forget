@@ -1,0 +1,32 @@
+{
+ "experiment": "final-dual84 FULL-500 definitive",
+ "n": 500,
+ "overall_accuracy": 0.808,
+ "config": "stratified dual retrieval 42obs+42raw, gpt-4o observer/reader/judge, fastembed bge-small, two-stage reader",
+ "by_type": {
+  "knowledge-update": {
+   "acc": 0.8718,
+   "n": 78
+  },
+  "multi-session": {
+   "acc": 0.6917,
+   "n": 133
+  },
+  "single-session-assistant": {
+   "acc": 0.9464,
+   "n": 56
+  },
+  "single-session-preference": {
+   "acc": 0.4333,
+   "n": 30
+  },
+  "single-session-user": {
+   "acc": 0.9857,
+   "n": 70
+  },
+  "temporal-reasoning": {
+   "acc": 0.8195,
+   "n": 133
+  }
+ }
+}
