@@ -251,6 +251,8 @@ def run_instance(inst, url, oai, reader_model, judge_model, top_k, two_stage=Fal
     with httpx.Client(base_url=url, timeout=180) as client:
         _with_retry(lambda: ingest_instance(client, scope, inst, granularity))
         memories = retrieve(client, scope, inst["question"], top_k, temporal_rerank)
+        # self-clean: dead scopes bloated the bench DB to 13GB and halved throughput
+        client.request("DELETE", "/v1/memories/", json={"user_id": scope, "app_id": "lme"})
     hyp = _with_retry(lambda: read_answer(oai, reader_model, inst["question"],
                                           inst.get("question_date", ""), memories, two_stage))
     correct = _with_retry(lambda: judge(oai, judge_model, inst, hyp))
