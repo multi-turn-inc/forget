@@ -1,0 +1,8 @@
+{
+ "n_instances": 12,
+ "n_reproduced": 11,
+ "S1_existence_rate": 0.182,
+ "S2_target_flip_rate": 0.015,
+ "S3_control_flip_rate": 0.0,
+ "verdict_hint": "S1>=0.5 and S3<<S2 => signal exists; S2 low => sparse (good)"
+}

@@ -1,0 +1,1492 @@
+[
+ {
+  "question_id": "cc5ded98",
+  "type": "knowledge-update",
+  "base_reproduced": true,
+  "flips": [
+   {
+    "kind": "obs",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/20] The user dedicates about an hour each day to coding exercises."
+   },
+   {
+    "kind": "obs",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/29] The user is dedicating about two hours each day to coding exercises to improve their coding skills."
+   },
+   {
+    "kind": "obs",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/20] The user has been using the Pomodoro Technique to stay focused on coding exercises."
+   },
+   {
+    "kind": "obs",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/20] The user has been reflecting on their learning journey and is interested in organizing their thoughts and h"
+   },
+   {
+    "kind": "obs",
+    "rank": 4,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/29] The user requested information to create Google Calendar events for the trip, including geocoordinates, cos"
+   },
+   {
+    "kind": "obs",
+    "rank": 5,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/06/06] The user is interested in eco-friendly, cruelty-free, and vegan-friendly laundry detergent brands, includin"
+   },
+   {
+    "kind": "obs",
+    "rank": 6,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/30] The assistant advised against using WD-40 on car wipers as it can cause the rubber blades to become brittle"
+   },
+   {
+    "kind": "obs",
+    "rank": 7,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/06/05] The user is contemplating whether to develop their film themselves or send it to a lab, weighing the pros a"
+   },
+   {
+    "kind": "raw",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: That's a great commitment! Two hours a day is a significant amount of time to dedicate to coding exercises, a"
+   },
+   {
+    "kind": "raw",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "user: I've been dedicating about an hour each day to coding exercises, which has been helpful in making progress. Do you"
+   },
+   {
+    "kind": "raw",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: That's great to hear that you're committed to improving your coding skills! Two hours a day is a good amount "
+   },
+   {
+    "kind": "raw",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: Reflecting on your learning journey is a great practice! Congratulations on taking the time to evaluate your "
+   },
+   {
+    "kind": "obs",
+    "rank": 56,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/20] The user is interested in Boston College's outdoor adventures program, which offers guided trips like kayak"
+   },
+   {
+    "kind": "obs",
+    "rank": 44,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/06/09] Paul Frankl moved to the United States in the 1930s and became known for his contributions to modernist arc"
+   },
+   {
+    "kind": "raw",
+    "rank": 29,
+    "control": true,
+    "flip": false,
+    "memory": "user: I've been trying to reflect on my learning journey over the past few months and I was wondering if you could help "
+   },
+   {
+    "kind": "obs",
+    "rank": 31,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/06/11] The user inquired about what is considered the best dish in the world."
+   },
+   {
+    "kind": "raw",
+    "rank": 17,
+    "control": true,
+    "flip": false,
+    "memory": "assistant: Pluralsight is a great resource for learning Python, and now you're ready to take your skills to the next lev"
+   },
+   {
+    "kind": "obs",
+    "rank": 41,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/06/11] The user is preparing to ask a Thai chemistry question and confirms the assistant can understand Thai."
+   }
+  ],
+  "target_flips": 0,
+  "control_flips": 0
+ },
+ {
+  "question_id": "2698e78f",
+  "type": "knowledge-update",
+  "base_reproduced": true,
+  "flips": [
+   {
+    "kind": "obs",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/11/03] User sees Dr. Smith weekly to work on setting healthy boundaries."
+   },
+   {
+    "kind": "obs",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/04/03] The user has therapy sessions with Dr. Smith every two weeks and plans to discuss progress with her."
+   },
+   {
+    "kind": "obs",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/04/03] Dr. Smith suggested the user learn to say \"no\" and set healthy boundaries to manage feeling overwhelmed wit"
+   },
+   {
+    "kind": "obs",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/07/10] The user is interested in research opportunities and faculty research interests at UNC Chapel Hill, specifi"
+   },
+   {
+    "kind": "obs",
+    "rank": 4,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/03/28] The user plans to do laundry and chores on Saturday and meet friends for dinner at 7:00 PM."
+   },
+   {
+    "kind": "obs",
+    "rank": 5,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/04/03] The user prefers to do outdoor activities on weekends but is open to weekday mornings if the weather is nic"
+   },
+   {
+    "kind": "obs",
+    "rank": 6,
+    "control": false,
+    "flip": false,
+    "memory": "[2011] Keanu Reeves donated $5 million to the development of a center for the study of neurodegenerative diseases at the"
+   },
+   {
+    "kind": "obs",
+    "rank": 7,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/11/09] The user expressed interest in books and films that focus on issues related to diverse expressions of sexua"
+   },
+   {
+    "kind": "raw",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "user: I've been feeling overwhelmed with commitments lately, and Dr. Smith suggested I learn to say \"no\" and set healthy"
+   },
+   {
+    "kind": "raw",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "user: I see what you're doing here, but I think it's a bit too structured for me. I'd rather have some flexibility in my"
+   },
+   {
+    "kind": "raw",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "user: I've been trying to prioritize self-care activities like yoga and meditation, and it's been helping with my anxiet"
+   },
+   {
+    "kind": "raw",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: I'm so glad you reached out! I'd be happy to help you organize your schedule and prioritize tasks. It's great"
+   },
+   {
+    "kind": "raw",
+    "rank": 32,
+    "control": true,
+    "flip": false,
+    "memory": "user: It's amazing to see how mental health conversations have evolved over time. I remember when it was seen as such a "
+   },
+   {
+    "kind": "raw",
+    "rank": 26,
+    "control": true,
+    "flip": false,
+    "memory": "user: That's really helpful, thanks! I'm curious about the admission requirements for these programs. What are the typic"
+   },
+   {
+    "kind": "raw",
+    "rank": 6,
+    "control": true,
+    "flip": false,
+    "memory": "user: I think that's all for now. I'm going to go meditate and journal for a bit. It's been a helpful session with Dr. S"
+   },
+   {
+    "kind": "obs",
+    "rank": 34,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/03/27] The user plans to use DataCamp and Kaggle to learn more about scikit-learn and TensorFlow for their project"
+   },
+   {
+    "kind": "obs",
+    "rank": 31,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/11/09] The user requested uncommon, expert advice for engaging C-level executives."
+   },
+   {
+    "kind": "raw",
+    "rank": 13,
+    "control": true,
+    "flip": false,
+    "memory": "user: It's interesting to see how views on sexuality and marriage have evolved over time. Do you think there's still mor"
+   }
+  ],
+  "target_flips": 0,
+  "control_flips": 0
+ },
+ {
+  "question_id": "60bf93ed",
+  "type": "multi-session",
+  "base_reproduced": true,
+  "flips": [
+   {
+    "kind": "obs",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/01/24] The user bought a backpack from Amazon on January 15, 2023, and uses it daily to carry their work laptop."
+   },
+   {
+    "kind": "obs",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/01/20] The user received a new laptop backpack, which has been helpful for carrying their work laptop."
+   },
+   {
+    "kind": "obs",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/01/24] The user performed a system update on their laptop on January 28, 2023, which resolved Wi-Fi connectivity i"
+   },
+   {
+    "kind": "obs",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/01/24] The user decided to try a vegetarian diet for at least a month after watching the documentary."
+   },
+   {
+    "kind": "obs",
+    "rank": 4,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/01/24] The user has experienced buying souvenirs that did not turn out as expected, leading to funny or unexpected"
+   },
+   {
+    "kind": "obs",
+    "rank": 5,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/01/24] The user started eating more plant-based meals after watching a documentary on Netflix about the environmen"
+   },
+   {
+    "kind": "obs",
+    "rank": 6,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/01/24] The user is interested in must-see attractions and experiences in Siem Reap, such as Angkor Wat, Angkor Tho"
+   },
+   {
+    "kind": "obs",
+    "rank": 7,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/01/24] The user intends to consult their doctor before taking any vitamin D supplements."
+   },
+   {
+    "kind": "raw",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "user: I'm also thinking about my own college experience and how it has influenced my career path. Do you have any inform"
+   },
+   {
+    "kind": "raw",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "user: I'll definitely consider those factors when choosing a new wireless mouse. I'm actually thinking of getting one wi"
+   },
+   {
+    "kind": "raw",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "user: I'm thinking of getting a new wireless mouse, my current one's been acting up lately. Do you have any recommendati"
+   },
+   {
+    "kind": "raw",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: I'd be happy to help you crunch the numbers and figure out if a monthly train pass would be a cost-effective "
+   },
+   {
+    "kind": "obs",
+    "rank": 40,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/01/24] The user plans to serve the Lemon Garlic Chicken Breast with roasted asparagus and Brussels sprouts."
+   },
+   {
+    "kind": "obs",
+    "rank": 50,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/01/24] The user learned about the differences between horizontal and vertical analysis in financial statement anal"
+   },
+   {
+    "kind": "raw",
+    "rank": 4,
+    "control": true,
+    "flip": false,
+    "memory": "assistant: I'm glad to hear that your new laptop backpack is working out well for you!\n\nAs for wireless mice, there are "
+   },
+   {
+    "kind": "raw",
+    "rank": 7,
+    "control": true,
+    "flip": false,
+    "memory": "assistant: I don't have personal opinions or beliefs, but in general, having a diverse board of directors can bring many"
+   },
+   {
+    "kind": "raw",
+    "rank": 5,
+    "control": true,
+    "flip": false,
+    "memory": "user: That's really cool! I love finding souvenirs that are unique and support local artists. Have you ever bought a sou"
+   },
+   {
+    "kind": "obs",
+    "rank": 57,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/01/24] The user is interested in visiting Siem Reap, Cambodia, and Luang Prabang, Laos."
+   }
+  ],
+  "target_flips": 0,
+  "control_flips": 0
+ },
+ {
+  "question_id": "a3332713",
+  "type": "multi-session",
+  "base_reproduced": true,
+  "flips": [
+   {
+    "kind": "obs",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/28] The user spent a total of $500 on gifts recently."
+   },
+   {
+    "kind": "obs",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/29] The user spends around $500 per month on gifts for friends and family."
+   },
+   {
+    "kind": "obs",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/28] The user spent approximately $100 on a set of baby clothes and toys for a coworker's baby shower in April 2"
+   },
+   {
+    "kind": "obs",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/23] The user recently spent $150 on a high-end moisturizer and is seeking affordable alternatives."
+   },
+   {
+    "kind": "obs",
+    "rank": 4,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/29] Last month (April 2023), the user bought a birthday present for their sister, a housewarming gift for a fri"
+   },
+   {
+    "kind": "obs",
+    "rank": 5,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/24] The user plans to clean their bathroom mirror, which has water spots and toothpaste splatters."
+   },
+   {
+    "kind": "obs",
+    "rank": 6,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/22] User requested an email template to inquire about workflow model information from a coworker."
+   },
+   {
+    "kind": "obs",
+    "rank": 7,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/28] The user is interested in personalized items or memory books as a graduation gift for their sister."
+   },
+   {
+    "kind": "raw",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "user: I'm trying to stay on top of my finances and I was wondering if you could help me track my spending on gifts over "
+   },
+   {
+    "kind": "raw",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: I'd be happy to help you track your spending on gifts!\n\nLet's start with the $500 total you mentioned. You've"
+   },
+   {
+    "kind": "raw",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: With the $75 birthday gift for your sister, we can subtract that from the remaining $400.\n\n$400 - $75 = $325\n"
+   },
+   {
+    "kind": "raw",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: With the $20 mug, we can subtract that from the remaining $325.\n\n$325 - $20 = $305\n\nSo, we've now accounted f"
+   },
+   {
+    "kind": "raw",
+    "rank": 7,
+    "control": true,
+    "flip": false,
+    "memory": "user: It's fascinating to see how Kojima's creative vision has evolved over time. I'm curious, what do you think makes K"
+   },
+   {
+    "kind": "raw",
+    "rank": 24,
+    "control": true,
+    "flip": false,
+    "memory": "assistant: Congratulations on considering selling your artwork online! Pricing your art can be a challenging but importa"
+   },
+   {
+    "kind": "obs",
+    "rank": 39,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/29] The user created a customer avatar named \"Sam\" for the electric burr coffee grinder, representing someone w"
+   },
+   {
+    "kind": "obs",
+    "rank": 54,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/21] The user wants to find healthier alternatives to favorite junk foods, like baked sweet potato fries instead"
+   },
+   {
+    "kind": "obs",
+    "rank": 53,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/21] The user is managing stress and anxiety and has researched mindfulness and meditation."
+   },
+   {
+    "kind": "raw",
+    "rank": 21,
+    "control": true,
+    "flip": false,
+    "memory": "assistant: Take your time, and see if you can recall anything. It's easy to forget small purchases, but it's great that "
+   }
+  ],
+  "target_flips": 0,
+  "control_flips": 0
+ },
+ {
+  "question_id": "8464fc84",
+  "type": "single-session-assistant",
+  "base_reproduced": true,
+  "flips": [
+   {
+    "kind": "obs",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/26] The user is interested in visiting souvenir shops around the Vatican."
+   },
+   {
+    "kind": "obs",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/26] The user intends to try restaurants near the Vatican, including Pizzarium, La Locanda dei Girasoli, Rosciol"
+   },
+   {
+    "kind": "obs",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/26] The user plans to visit the Vatican in Rome and is excited to see the Sistine Chapel and St. Peter's Basili"
+   },
+   {
+    "kind": "obs",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/25] The Tribunal rejected the appellant's submission that the builder was responsible for flashing, determining"
+   },
+   {
+    "kind": "obs",
+    "rank": 4,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/23] The user feels that their name change has affected their sense of identity, describing it as shedding an ol"
+   },
+   {
+    "kind": "obs",
+    "rank": 5,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/26] The user agrees that Mandela's approach serves as an excellent example for other leaders to follow."
+   },
+   {
+    "kind": "obs",
+    "rank": 6,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/29] The user is creating a Slack group for alumni from their university and has chosen the name \"Alumni Network"
+   },
+   {
+    "kind": "obs",
+    "rank": 7,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/27] The user is considering DIY-friendly wedding favors that fit with a rustic theme."
+   },
+   {
+    "kind": "raw",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: There are many great food options near the Vatican. One popular option is Pizzarium, which has been rated as "
+   },
+   {
+    "kind": "raw",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "user: I'm thinking of trying a new workout routine, and I was wondering if you could recommend some exercises that targe"
+   },
+   {
+    "kind": "raw",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "user: I was wondering if you could help me find a good moisturizer to go along with my current face wash routine. I've b"
+   },
+   {
+    "kind": "raw",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "user: I'm planning to volunteer at a local food bank soon and was wondering if you could give me some tips on how to mak"
+   },
+   {
+    "kind": "raw",
+    "rank": 16,
+    "control": true,
+    "flip": false,
+    "memory": "user: Lizzie was handed a box by Zara, and then retreated behind the screen again. as she did, Alyssa explained that due"
+   },
+   {
+    "kind": "raw",
+    "rank": 17,
+    "control": true,
+    "flip": false,
+    "memory": "user: I'm glad I could help with the toilet brush recommendations! I think I'll go with the Clorox one, it sounds like a"
+   },
+   {
+    "kind": "raw",
+    "rank": 5,
+    "control": true,
+    "flip": false,
+    "memory": "assistant: Here's a draft email you can use as a starting point:\n\nSubject: Exploring Mentorship Opportunities for [Unive"
+   },
+   {
+    "kind": "raw",
+    "rank": 32,
+    "control": true,
+    "flip": false,
+    "memory": "assistant: What a wonderful idea! Including special songs that hold meaning to your relationship can make the playlist e"
+   },
+   {
+    "kind": "obs",
+    "rank": 12,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/25] Mr. Sim argued that additional flashing was unnecessary due to the use of commercial-grade sections and sub"
+   },
+   {
+    "kind": "raw",
+    "rank": 12,
+    "control": true,
+    "flip": false,
+    "memory": "assistant: I'm so glad to hear that the overall experience has been positive for you! It's understandable that the proce"
+   }
+  ],
+  "target_flips": 0,
+  "control_flips": 0
+ },
+ {
+  "question_id": "4baee567",
+  "type": "single-session-assistant",
+  "base_reproduced": true,
+  "flips": [
+   {
+    "kind": "obs",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/28] The Kansas City Chiefs and the Jacksonville Jaguars have played 23 regular season games as of 2021, with 12"
+   },
+   {
+    "kind": "obs",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/26] The user attended their cousin's wedding at the Grand Ballroom the previous weekend (May 20-21, 2023)."
+   },
+   {
+    "kind": "obs",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/28] The user was trying to identify a piece of classical music related to death, played on violin or string ins"
+   },
+   {
+    "kind": "obs",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/26] The user previously purchased a personalized mug from Etsy for their sister's birthday on April 15, 2023, s"
+   },
+   {
+    "kind": "obs",
+    "rank": 4,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/21] The user is creating a list of maintenance tasks related to previously identified home risks."
+   },
+   {
+    "kind": "obs",
+    "rank": 5,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/22] Pigsy was relieved and grateful to see MK safe after his ordeal."
+   },
+   {
+    "kind": "obs",
+    "rank": 6,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/27] User was provided with three social media post ideas and a Midjourney prompt for visual representation."
+   },
+   {
+    "kind": "obs",
+    "rank": 7,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/29] Opposition from environmental groups, farmers, local residents, industries, and political parties was addre"
+   },
+   {
+    "kind": "raw",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: Of the 12 games that were played between the Kansas City Chiefs and the Jacksonville Jaguars at Arrowhead Sta"
+   },
+   {
+    "kind": "raw",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "user: how many times have the chiefs played the jaguars?"
+   },
+   {
+    "kind": "raw",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "user: Rewrite this text in 500 words: \"There’s much that divides us in Northern Ireland though one thing is guaranteed t"
+   },
+   {
+    "kind": "raw",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: Person 1: Hi there! I hope this email finds you well.\n\nPerson 2: Hi! Yes, I'm doing well, thanks for asking. "
+   },
+   {
+    "kind": "raw",
+    "rank": 25,
+    "control": true,
+    "flip": false,
+    "memory": "assistant: Yes, the widespread availability and affordability of nanobiosensors for the diagnosis and management of neur"
+   },
+   {
+    "kind": "obs",
+    "rank": 55,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/23] The assistant provided a PHP function template for performing a registration ceremony using the \"web-auth/w"
+   },
+   {
+    "kind": "obs",
+    "rank": 52,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/23] The user is interested in vegetarian options and plans to try Tofu Pad Thai and Som Tam at The Lime Leaf Th"
+   },
+   {
+    "kind": "obs",
+    "rank": 20,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/20] The user is looking for new shows to watch on Disney+, specifically Marvel or Star Wars shows."
+   },
+   {
+    "kind": "raw",
+    "rank": 23,
+    "control": true,
+    "flip": false,
+    "memory": "assistant: That's fantastic to hear that you're taking classes and getting feedback from other comedians! Incorporating "
+   },
+   {
+    "kind": "obs",
+    "rank": 26,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/26] The user is interested in exploring more strategies for managing nighttime anxiety and adjusting sleep habi"
+   }
+  ],
+  "target_flips": 0,
+  "control_flips": 0
+ },
+ {
+  "question_id": "505af2f5",
+  "type": "single-session-preference",
+  "base_reproduced": true,
+  "flips": [
+   {
+    "kind": "obs",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/29] The user is considering trying out Romer-G switches for their new keyboard, as they are accustomed to the f"
+   },
+   {
+    "kind": "obs",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/21] The user is interested in reusing or repurposing old coffee grounds and coffee filters to reduce waste."
+   },
+   {
+    "kind": "obs",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/23] The user is interested in low-carb smoothie bowl recipes that include coffee and cocoa."
+   },
+   {
+    "kind": "obs",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/25] The user's Trek hybrid bike was serviced for a tune-up and cleaning on March 15th and feels like new."
+   },
+   {
+    "kind": "obs",
+    "rank": 4,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/21] The user is restocking coffee supplies and prefers buying online and picking up in-store to earn more Starb"
+   },
+   {
+    "kind": "obs",
+    "rank": 5,
+    "control": false,
+    "flip": true,
+    "memory": "[2023/05/21] The user is trying to reduce sugar intake and save money by making homemade flavored creamer using almond m"
+   },
+   {
+    "kind": "obs",
+    "rank": 6,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/22] The user was surprised to learn that the Eiffel Tower was initially criticized."
+   },
+   {
+    "kind": "obs",
+    "rank": 7,
+    "control": false,
+    "flip": false,
+    "memory": "[2016/11/02] The Cubs' victory was celebrated by the team, the city of Chicago, and their fans."
+   },
+   {
+    "kind": "raw",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "user: I'm thinking of trying some new coffee flavors, do you have any recommendations for spring-themed coffee drinks or"
+   },
+   {
+    "kind": "raw",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "user: I like the idea of trying out different marinades for chicken. By the way, I used a Grubhub coupon to order from C"
+   },
+   {
+    "kind": "raw",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "user: I'm also thinking of restocking my coffee supplies, since I've been buying a lot online and picking it up in-store"
+   },
+   {
+    "kind": "raw",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "user: That's a great list of spring-themed coffee flavors and drinks. I think I'll try the Lemon Ginger flavor first, it"
+   },
+   {
+    "kind": "obs",
+    "rank": 32,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/27] The user is interested in visiting bakeries like Musmanni, pastelerias like La Casa del Cacao, and ice crea"
+   },
+   {
+    "kind": "raw",
+    "rank": 40,
+    "control": true,
+    "flip": false,
+    "memory": "user: I'd like to add my loyalty program at The Daily Grind, my favorite coffee shop. I've earned 10 stamps so far, and "
+   },
+   {
+    "kind": "obs",
+    "rank": 56,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/25] The user has over 10,000 points in their Walgreens loyalty program and has redeemed points for prescription"
+   },
+   {
+    "kind": "raw",
+    "rank": 38,
+    "control": true,
+    "flip": false,
+    "memory": "user: I'm thinking of customizing my new Birkenstocks with some colorful straps. Do they offer custom strap services?"
+   },
+   {
+    "kind": "raw",
+    "rank": 34,
+    "control": true,
+    "flip": false,
+    "memory": "user: I'll be sure to pack appropriate clothing and insect repellent. Do you have any recommendations on must-see attrac"
+   },
+   {
+    "kind": "raw",
+    "rank": 26,
+    "control": true,
+    "flip": false,
+    "memory": "user: I'm planning to rent a car for my trip to Sequoia National Park, and I was wondering if you have any recommendatio"
+   }
+  ],
+  "target_flips": 1,
+  "control_flips": 0
+ },
+ {
+  "question_id": "1a1907b4",
+  "type": "single-session-preference",
+  "base_reproduced": false
+ },
+ {
+  "question_id": "5d3d2817",
+  "type": "single-session-user",
+  "base_reproduced": true,
+  "flips": [
+   {
+    "kind": "obs",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/28] The user noted that the baseboard for the new gate is showing signs of rot, similar to the previous gate."
+   },
+   {
+    "kind": "obs",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/22] The user argues that the completion date should be the date of practical completion, not the date the Final"
+   },
+   {
+    "kind": "obs",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/24] The user is familiar with Trello from their previous role but is interested in exploring other project mana"
+   },
+   {
+    "kind": "obs",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/22] The user states that the Tribunal proceedings should be dismissed as the application was not commenced with"
+   },
+   {
+    "kind": "obs",
+    "rank": 4,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/21] Zoey met and received advice from a retired professional basketball player who was a guest coach at the tou"
+   },
+   {
+    "kind": "obs",
+    "rank": 5,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/28] Each main category was further divided into specific subcategories, totaling 50 subcategories."
+   },
+   {
+    "kind": "obs",
+    "rank": 6,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/23] A private SoundCloud link for Sunstoney's music was shared: https://on.soundcloud.com/jkpTVH4zkTVHc2uHA."
+   },
+   {
+    "kind": "obs",
+    "rank": 7,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/29] The user attended a friend's wedding last weekend (May 27-28, 2023), where the bride, Jen, wore a bohemian-"
+   },
+   {
+    "kind": "raw",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "user: Part 36 (3) It is to be presumed (unless an earlier date for practical completion can be established) that practic"
+   },
+   {
+    "kind": "raw",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "user: I'm actually thinking of automating some of the workflows in my new role as a senior marketing analyst. In my prev"
+   },
+   {
+    "kind": "raw",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: Part 36: The appeal panel concludes that the Tribunal erred in finding that the completion date of the buildi"
+   },
+   {
+    "kind": "raw",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: Part 35 The effect of s 3B(1) is that the completion of residential building work occurs on the date that the"
+   },
+   {
+    "kind": "raw",
+    "rank": 30,
+    "control": true,
+    "flip": false,
+    "memory": "assistant: Capturing the textures and details of vintage items is crucial to creating a captivating and realistic painti"
+   },
+   {
+    "kind": "raw",
+    "rank": 23,
+    "control": true,
+    "flip": false,
+    "memory": "user: I'm trying to get more organized with my new role and was wondering if you could recommend some project management"
+   },
+   {
+    "kind": "obs",
+    "rank": 52,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/29] The user is interested in visiting the Great Barrier Reef, Uluru-Kata Tjuta National Park, Sydney Opera Hou"
+   },
+   {
+    "kind": "obs",
+    "rank": 41,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/30] The user plans to offer a daily prize for correct guesses in the contest and a grand prize such as a free p"
+   },
+   {
+    "kind": "obs",
+    "rank": 13,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/21] The user has previously enjoyed patbingsu at a Korean restaurant."
+   },
+   {
+    "kind": "obs",
+    "rank": 51,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/29] The user is involved with a local real estate company in Sydney."
+   }
+  ],
+  "target_flips": 0,
+  "control_flips": 0
+ },
+ {
+  "question_id": "d52b4f67",
+  "type": "single-session-user",
+  "base_reproduced": true,
+  "flips": [
+   {
+    "kind": "obs",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/28] The user attended their cousin's wedding at the Grand Ballroom the previous weekend (May 20-21, 2023)."
+   },
+   {
+    "kind": "obs",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/20] The user works around 40 hours a week but sometimes stays late to meet deadlines or attend meetings."
+   },
+   {
+    "kind": "obs",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/28] The user and Emily attended a wedding expo together a few weeks ago and enjoyed trying out different produc"
+   },
+   {
+    "kind": "obs",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/22] UFL prioritizes startups based in or willing to relocate to New York City."
+   },
+   {
+    "kind": "obs",
+    "rank": 4,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/23] The user is considering strategies to optimize AWS S3 storage costs based on usage patterns and data types."
+   },
+   {
+    "kind": "obs",
+    "rank": 5,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/20] The user has a dog named Max and is exploring flea and tick prevention options for him."
+   },
+   {
+    "kind": "obs",
+    "rank": 6,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/22] The user believes Boeing's recent issues with the 737 MAX have damaged their reputation for safety."
+   },
+   {
+    "kind": "obs",
+    "rank": 7,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/05/23] The user completed a clay sculpture of their cat Whiskers three weeks prior (2023/05/02)."
+   },
+   {
+    "kind": "raw",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "user: I think the Lavender Dreams Skincare Set sounds like a great idea. I was just at my cousin's wedding at the Grand "
+   },
+   {
+    "kind": "raw",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: That's wonderful! The Lavender Dreams Skincare Set is a thoughtful gift that will help your mom maintain her "
+   },
+   {
+    "kind": "raw",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: Dear esteemed colleagues,\n\nWe are delighted to extend an invitation to the international education community "
+   },
+   {
+    "kind": "raw",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "user: I'm planning a charity event for a local animal shelter and I need some help with organization. Can you suggest so"
+   },
+   {
+    "kind": "obs",
+    "rank": 49,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/20] The user is interested in OTIS's employee support measures, including mental health resources and remote wo"
+   },
+   {
+    "kind": "obs",
+    "rank": 55,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/23] The user is in their late 40s and is trying to take better care of their health."
+   },
+   {
+    "kind": "raw",
+    "rank": 36,
+    "control": true,
+    "flip": false,
+    "memory": "user: What scientific research, discoveries, inventions, and technical and technological advances will a type 0.8 civili"
+   },
+   {
+    "kind": "obs",
+    "rank": 59,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/22] The user recently met a tourist named Anna who works in sustainable energy, sparking their interest in the "
+   },
+   {
+    "kind": "raw",
+    "rank": 39,
+    "control": true,
+    "flip": false,
+    "memory": "assistant: Sure, here are some more specific predictions for what a Type 0.8 civilization may achieve in various fields:"
+   },
+   {
+    "kind": "obs",
+    "rank": 33,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/05/20] The user appreciates OTIS's investment in employee training and development programs."
+   }
+  ],
+  "target_flips": 0,
+  "control_flips": 0
+ },
+ {
+  "question_id": "2ebe6c90",
+  "type": "temporal-reasoning",
+  "base_reproduced": true,
+  "flips": [
+   {
+    "kind": "obs",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/01/31] The user finished reading \"The Nightingale\" by Kristin Hannah on January 31, 2023."
+   },
+   {
+    "kind": "obs",
+    "rank": 1,
+    "control": false,
+    "flip": true,
+    "memory": "[2023/01/10] The user is currently reading \"The Nightingale\" by Kristin Hannah and \"The Song of Achilles\" by Madeline Mi"
+   },
+   {
+    "kind": "obs",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/01/31] The user is currently reading \"The Song of Achilles\" and is about halfway through, aiming to finish by the "
+   },
+   {
+    "kind": "obs",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/01/31] The user discovered that promotions in the Indian Army can take from 1-3 years, depending on rank and vacan"
+   },
+   {
+    "kind": "obs",
+    "rank": 4,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/01/31] The user did not use in-camera noise reduction for the family portrait session."
+   },
+   {
+    "kind": "obs",
+    "rank": 5,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/01/05] Clarke comforts Madi, advising her not to stress about adjusting after cryo."
+   },
+   {
+    "kind": "obs",
+    "rank": 6,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/01/31] The user plans to examine the clock closely for any markings or signatures to identify the maker or date."
+   },
+   {
+    "kind": "obs",
+    "rank": 7,
+    "control": false,
+    "flip": false,
+    "memory": "[2023/01/31] The user recently did a family portrait session for their cousins in a park using a Canon 80D with a Tamron"
+   },
+   {
+    "kind": "raw",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "user: I'm looking for some book recommendations. I just finished a historical fiction novel, \"The Nightingale\" by Kristi"
+   },
+   {
+    "kind": "raw",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: \"The Nightingale\" is an amazing book! I'm happy to help you find your next great read.\n\nIf you enjoyed the hi"
+   },
+   {
+    "kind": "raw",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: Costa Rica is an outdoor enthusiast's paradise! With its lush rainforests, exotic wildlife, and diverse lands"
+   },
+   {
+    "kind": "raw",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "user: I'm really interested in \"The Song of Achilles\" and \"The Kitchen House\". Both of them seem to have a strong focus "
+   },
+   {
+    "kind": "raw",
+    "rank": 5,
+    "control": true,
+    "flip": false,
+    "memory": "assistant: Tortuguero National Park is a wildlife enthusiast's paradise! The park is home to an incredible array of wild"
+   },
+   {
+    "kind": "obs",
+    "rank": 35,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/01/05] Madi is comforted by Raven and Octavia, who assure her that the argument was resolved."
+   },
+   {
+    "kind": "raw",
+    "rank": 39,
+    "control": true,
+    "flip": false,
+    "memory": "user: I'm actually currently reading \"The Song of Achilles\" and I'm really enjoying it. I've been reading it in short bu"
+   },
+   {
+    "kind": "obs",
+    "rank": 30,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/01/31] The user has been on a baking kick and enjoys learning new baking techniques and experimenting with differe"
+   },
+   {
+    "kind": "raw",
+    "rank": 14,
+    "control": true,
+    "flip": false,
+    "memory": "assistant: While \"The Alice Network\" shares some similarities with \"The Nightingale,\" I understand your desire to explor"
+   },
+   {
+    "kind": "obs",
+    "rank": 48,
+    "control": true,
+    "flip": false,
+    "memory": "[2023/01/31] The user is considering applying for internships in Germany related to peace, security, and gender issues."
+   }
+  ],
+  "target_flips": 1,
+  "control_flips": 0
+ },
+ {
+  "question_id": "gpt4_6dc9b45b",
+  "type": "temporal-reasoning",
+  "base_reproduced": true,
+  "flips": [
+   {
+    "kind": "obs",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "[2021/06/01] The user attended the Seattle International Film Festival (SIFF) for a week, watched 8 films, and participa"
+   },
+   {
+    "kind": "obs",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "[2021/06/01] The user is interested in how film festivals promote diversity and inclusion in the film industry."
+   },
+   {
+    "kind": "obs",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "[2021/06/01] The user recently watched and loved the film \"Coda\" at SIFF."
+   },
+   {
+    "kind": "obs",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "[2021/06/01] The user is interested in the role of film critics in the distribution and marketing process and how they i"
+   },
+   {
+    "kind": "obs",
+    "rank": 4,
+    "control": false,
+    "flip": false,
+    "memory": "[2021/05/19] The user learned about the significant impact of the Roaring Twenties on American theater and film, includi"
+   },
+   {
+    "kind": "obs",
+    "rank": 5,
+    "control": false,
+    "flip": false,
+    "memory": "[2021/05/19] The user learned that the impact of the Roaring Twenties is still evident in modern theater and film, parti"
+   },
+   {
+    "kind": "obs",
+    "rank": 6,
+    "control": false,
+    "flip": false,
+    "memory": "[2021/05/03] User went on a fishing trip to Lake Tahoe with friends a few weeks ago (April 2021)."
+   },
+   {
+    "kind": "obs",
+    "rank": 7,
+    "control": false,
+    "flip": false,
+    "memory": "[2021/06/01] The user has taken around 5 domestic flights in the past month and has been flying every 2-3 weeks for the "
+   },
+   {
+    "kind": "raw",
+    "rank": 0,
+    "control": false,
+    "flip": false,
+    "memory": "user: I'm looking for some recommendations for romantic comedies. I just saw \"Coda\" at the Seattle International Film Fe"
+   },
+   {
+    "kind": "raw",
+    "rank": 1,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: What a crucial topic! Film festivals have been at the forefront of promoting diversity and inclusion in the i"
+   },
+   {
+    "kind": "raw",
+    "rank": 2,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: What a crucial topic! Film festivals have been at the forefront of promoting diversity and inclusion in the i"
+   },
+   {
+    "kind": "raw",
+    "rank": 3,
+    "control": false,
+    "flip": false,
+    "memory": "assistant: What a great topic! Film festivals play a vital role in the careers of filmmakers and the industry as a whole"
+   },
+   {
+    "kind": "obs",
+    "rank": 28,
+    "control": true,
+    "flip": false,
+    "memory": "[2021/05/19] The user plans to check online directories like NCCAOM and AAAOM and ask for recommendations to find a lice"
+   },
+   {
+    "kind": "raw",
+    "rank": 13,
+    "control": true,
+    "flip": false,
+    "memory": "user: Astrology accurately explains many things."
+   },
+   {
+    "kind": "obs",
+    "rank": 10,
+    "control": true,
+    "flip": false,
+    "memory": "[2021/05/25] Akeem Gardner has experience playing and competing in high-level basketball teams."
+   },
+   {
+    "kind": "obs",
+    "rank": 36,
+    "control": true,
+    "flip": false,
+    "memory": "[2021/05/28] The user is aware of the importance of acclimating new plants to their tank and plans to follow a gradual i"
+   },
+   {
+    "kind": "raw",
+    "rank": 32,
+    "control": true,
+    "flip": false,
+    "memory": "user: I'm planning to add some new plants to my tank, and I was wondering if you could recommend some good plant fertili"
+   },
+   {
+    "kind": "obs",
+    "rank": 47,
+    "control": true,
+    "flip": false,
+    "memory": "[2021/05/18] The user is exploring different art techniques and styles, including abstract expressionism."
+   }
+  ],
+  "target_flips": 0,
+  "control_flips": 0
+ }
+]
