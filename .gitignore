@@ -12,3 +12,6 @@ dist/
 
 # private GTM material — never ship with the public repo
 gtm/
+
+# β raw corpus — private data, only anonymized derivatives may be committed
+research/beta/corpus/
