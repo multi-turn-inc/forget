@@ -90,9 +90,14 @@ def main() -> int:
         (CACHE / "pool_synthetic.texts.json").write_text(json.dumps(texts))
         print("synthetic pool: 6000 embedded", flush=True)
 
+    import os
+    shard = int(os.environ.get("SHARD", "0"))
+    nshards = int(os.environ.get("NSHARDS", "1"))
     data = json.loads(DATASETS["s"].read_text())
     started = time.time()
     for idx, inst in enumerate(data, 1):
+        if idx % nshards != shard:
+            continue
         out = CACHE / f"{inst['question_id']}.npz"
         if out.exists():
             continue
