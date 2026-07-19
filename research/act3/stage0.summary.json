@@ -1,0 +1,7 @@
+{
+ "baseline": 0.9952,
+ "treatment": 0.9952,
+ "placebo": 1.0,
+ "n": 42,
+ "verdict": "KILL"
+}
