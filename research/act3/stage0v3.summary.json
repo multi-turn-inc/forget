@@ -1,0 +1,111 @@
+{
+ "n": 40,
+ "k4": {
+  "baseline": {
+   "hit": 0.875,
+   "recall": 0.7063
+  },
+  "placebo": {
+   "hit": 0.525,
+   "recall": 0.4667,
+   "vs_baseline": "+0/-14 p=0.000"
+  },
+  "cue_prior": {
+   "hit": 0.85,
+   "recall": 0.7396,
+   "vs_baseline": "+1/-2 p=1.000"
+  },
+  "read_expand": {
+   "hit": 0.875,
+   "recall": 0.7188,
+   "vs_baseline": "+1/-1 p=1.000"
+  },
+  "combo": {
+   "hit": 0.85,
+   "recall": 0.7312,
+   "vs_baseline": "+1/-2 p=1.000"
+  },
+  "cue_error_reduction": -0.2
+ },
+ "k8": {
+  "baseline": {
+   "hit": 0.925,
+   "recall": 0.8125
+  },
+  "placebo": {
+   "hit": 0.8,
+   "recall": 0.6312,
+   "vs_baseline": "+0/-5 p=0.062"
+  },
+  "cue_prior": {
+   "hit": 0.925,
+   "recall": 0.8812,
+   "vs_baseline": "+1/-1 p=1.000"
+  },
+  "read_expand": {
+   "hit": 0.95,
+   "recall": 0.8375,
+   "vs_baseline": "+1/-0 p=1.000"
+  },
+  "combo": {
+   "hit": 0.975,
+   "recall": 0.9104,
+   "vs_baseline": "+2/-0 p=0.500"
+  },
+  "cue_error_reduction": 0.0
+ },
+ "k16": {
+  "baseline": {
+   "hit": 0.95,
+   "recall": 0.8812
+  },
+  "placebo": {
+   "hit": 0.85,
+   "recall": 0.7625,
+   "vs_baseline": "+0/-4 p=0.125"
+  },
+  "cue_prior": {
+   "hit": 0.95,
+   "recall": 0.9292,
+   "vs_baseline": "+1/-1 p=1.000"
+  },
+  "read_expand": {
+   "hit": 0.95,
+   "recall": 0.8938,
+   "vs_baseline": "+0/-0 p=1.000"
+  },
+  "combo": {
+   "hit": 0.975,
+   "recall": 0.9667,
+   "vs_baseline": "+1/-0 p=1.000"
+  },
+  "cue_error_reduction": 0.0
+ },
+ "k42": {
+  "baseline": {
+   "hit": 1.0,
+   "recall": 0.9604
+  },
+  "placebo": {
+   "hit": 1.0,
+   "recall": 0.9542,
+   "vs_baseline": "+0/-0 p=1.000"
+  },
+  "cue_prior": {
+   "hit": 1.0,
+   "recall": 1.0,
+   "vs_baseline": "+0/-0 p=1.000"
+  },
+  "read_expand": {
+   "hit": 1.0,
+   "recall": 0.9792,
+   "vs_baseline": "+0/-0 p=1.000"
+  },
+  "combo": {
+   "hit": 1.0,
+   "recall": 1.0,
+   "vs_baseline": "+0/-0 p=1.000"
+  },
+  "cue_error_reduction": null
+ }
+}

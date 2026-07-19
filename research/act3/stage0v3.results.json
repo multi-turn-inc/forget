@@ -1,0 +1,3802 @@
+[
+ {
+  "question_id": "a89d7624",
+  "type": "single-session-preference",
+  "n_ans_turns": 2,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "50635ada",
+  "type": "knowledge-update",
+  "n_ans_turns": 2,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "26bdc477",
+  "type": "knowledge-update",
+  "n_ans_turns": 2,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "gpt4_731e37d7",
+  "type": "multi-session",
+  "n_ans_turns": 4,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 0.25
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.75
+   },
+   "k42": {
+    "hit": true,
+    "recall": 0.75
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k16": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 0.5
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 0.25
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.75
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 0.25
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.75
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 0.25
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.75
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "gpt4_7fce9456",
+  "type": "multi-session",
+  "n_ans_turns": 6,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 0.16666666666666666
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.3333333333333333
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 0.16666666666666666
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.16666666666666666
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.16666666666666666
+   },
+   "k42": {
+    "hit": true,
+    "recall": 0.6666666666666666
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 0.3333333333333333
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.6666666666666666
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 0.16666666666666666
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.3333333333333333
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.6666666666666666
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 0.3333333333333333
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.3333333333333333
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "2ebe6c92",
+  "type": "temporal-reasoning",
+  "n_ans_turns": 2,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "00ca467f",
+  "type": "multi-session",
+  "n_ans_turns": 2,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k16": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "ceb54acb",
+  "type": "single-session-assistant",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "57f827a0",
+  "type": "single-session-preference",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "f523d9fe",
+  "type": "single-session-assistant",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "0bc8ad93",
+  "type": "temporal-reasoning",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k16": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k16": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k16": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k16": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k16": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "6ae235be",
+  "type": "single-session-assistant",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "8464fc84",
+  "type": "single-session-assistant",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "001be529",
+  "type": "single-session-user",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "4388e9dd",
+  "type": "single-session-assistant",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "7a87bd0c",
+  "type": "knowledge-update",
+  "n_ans_turns": 2,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "60d45044",
+  "type": "single-session-user",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "07b6f563",
+  "type": "single-session-preference",
+  "n_ans_turns": 2,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "2ebe6c90",
+  "type": "temporal-reasoning",
+  "n_ans_turns": 2,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "gpt4_e05b82a6",
+  "type": "multi-session",
+  "n_ans_turns": 4,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.25
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "36580ce8",
+  "type": "single-session-user",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "75f70248",
+  "type": "single-session-preference",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "gpt4_1e4a8aeb",
+  "type": "temporal-reasoning",
+  "n_ans_turns": 2,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k42": {
+    "hit": true,
+    "recall": 0.5
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k42": {
+    "hit": true,
+    "recall": 0.5
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "b29f3365",
+  "type": "temporal-reasoning",
+  "n_ans_turns": 2,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "ce6d2d27",
+  "type": "knowledge-update",
+  "n_ans_turns": 2,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k42": {
+    "hit": true,
+    "recall": 0.5
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k42": {
+    "hit": true,
+    "recall": 0.5
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k42": {
+    "hit": true,
+    "recall": 0.5
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "gpt4_59149c78",
+  "type": "temporal-reasoning",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k16": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k16": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k16": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "a06e4cfe",
+  "type": "single-session-user",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "bf659f65",
+  "type": "multi-session",
+  "n_ans_turns": 3,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 0.3333333333333333
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.3333333333333333
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.6666666666666666
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.3333333333333333
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.3333333333333333
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.3333333333333333
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.6666666666666666
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.3333333333333333
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.6666666666666666
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.3333333333333333
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.6666666666666666
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "a40e080f",
+  "type": "single-session-assistant",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "6b7dfb22",
+  "type": "single-session-preference",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "f685340e",
+  "type": "knowledge-update",
+  "n_ans_turns": 2,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "gpt4_4929293a",
+  "type": "temporal-reasoning",
+  "n_ans_turns": 2,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "b0479f84",
+  "type": "single-session-preference",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "81507db6",
+  "type": "multi-session",
+  "n_ans_turns": 3,
+  "baseline": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.3333333333333333
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.3333333333333333
+   },
+   "k42": {
+    "hit": true,
+    "recall": 0.6666666666666666
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k16": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 0.3333333333333333
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.3333333333333333
+   },
+   "k16": {
+    "hit": true,
+    "recall": 0.6666666666666666
+   },
+   "k42": {
+    "hit": true,
+    "recall": 0.6666666666666666
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 0.6666666666666666
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "ad7109d1",
+  "type": "single-session-user",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "66f24dbb",
+  "type": "single-session-user",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "affe2881",
+  "type": "knowledge-update",
+  "n_ans_turns": 2,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 0.5
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "06f04340",
+  "type": "single-session-preference",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k16": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k16": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "cc5ded98",
+  "type": "knowledge-update",
+  "n_ans_turns": 2,
+  "baseline": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ },
+ {
+  "question_id": "e8a79c70",
+  "type": "single-session-assistant",
+  "n_ans_turns": 1,
+  "baseline": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "placebo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "cue_prior": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "read_expand": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  },
+  "combo": {
+   "k4": {
+    "hit": false,
+    "recall": 0.0
+   },
+   "k8": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k16": {
+    "hit": true,
+    "recall": 1.0
+   },
+   "k42": {
+    "hit": true,
+    "recall": 1.0
+   }
+  }
+ }
+]
