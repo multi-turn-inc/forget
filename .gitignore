@@ -15,3 +15,4 @@ gtm/
 
 # β raw corpus — private data, only anonymized derivatives may be committed
 research/beta/corpus/
+research/beta/cache/
