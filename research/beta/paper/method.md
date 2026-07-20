@@ -160,6 +160,12 @@ and per-query outputs are released.
 1. *Substrate circularity*: LongMemEval questions are themselves derived from
    sessions; retrieval difficulty may be understated. Mitigation: harm is a
    *difference* at fixed queries, differencing out absolute easiness.
+1b. *Crosstalk timing realism*: transplant timestamps are resampled uniformly
+   over the recipient's date range; real scope bleed is likely burstier. The
+   injection protocol treats timing as a nuisance variable, not a modeled one.
+1c. *Test specification*: paired comparisons reported as "sign test" are
+   two-sided exact binomial tests on discordant pairs; ranges (e.g.,
+   p=0.003–0.043) span the listed cells.
 2. *Single embedder in Tier 1 reference variants*: displacement dynamics may
    differ across embedding spaces; we replicate the C1 surface with a second
    embedder on a subsample.

@@ -9,30 +9,21 @@ Target: arXiv → NeurIPS 2026 D&B / ICLR 2027.*
 ## Abstract
 
 Agent memory systems are evaluated on clean stores; production stores are
-mostly junk. Auditing two stores we operated, 88% of a personal store (8
-months, N=106) and 92.6% of an agent-workload store (N=3,130) consisted of
-records no future query needs. We introduce **DirtyStores**, a protocol that
-contaminates a public memory substrate (LongMemEval-S) under controlled
-pressure $p$ and retrieval budget $k$ with three contamination families:
-synthetic templates (prior practice), translated production exhaust (real
-junk), and *crosstalk* — real conversations belonging to other users. We
-expected junk to be the threat. It was not: at ninefold contamination
-($p{=}0.9$), synthetic and organic junk cost at most 1.5pp of evidence
-delivery, while crosstalk cost up to 14.7pp — a 15–25× gap. **The dangerous
-contamination is not garbage but other people's context**: in-distribution
-records that compete for the same retrieval slots. Harm follows a
-displacement mechanism — monotone in budget everywhere we measured (14.7pp at
-$k{=}4$ shrinking to 6.6pp at $k{=}42$) — and evidence multiplicity carries
-two signs: redundant copies protect disjunctive queries (12.2pp vs 8.4pp harm,
-low vs high $r$), while aggregation queries invert (10.8pp vs 17.5pp),
-because needing more pieces means more ways to lose one. Deduplication,
-marketed as hygiene, cost 2.3pp even on clean stores by destroying legitimate
-copies (p<0.05) and amplified contamination harm at generous budgets
-(27W/2L, p<10⁻⁴). Clean-store scores at customary budgets thus measure the
-regime where none of this is visible. We release the protocol, corpora, and
-per-query results, with a community track for regenerating the benchmark from
-any operator's own store — and a design conclusion: the defense that matters
-is scope isolation, not junk filtering.
+mostly junk — 88% and 92.6% of two stores we audited. We introduce
+**DirtyStores**, a protocol that contaminates a public memory substrate
+(LongMemEval-S) under controlled pressure and retrieval budget with three
+contamination families: synthetic templates, translated production exhaust,
+and *crosstalk* — real conversations belonging to other users. We expected
+junk to be the threat. It was not: junk, synthetic or real, cost almost
+nothing even at ninefold contamination, while crosstalk cost 15–25× more.
+The operative variable is the **similarity margin** between a query's
+evidence and its contamination: across margin quartiles, harm falls
+monotonically from 33.9pp to zero. Contamination harms by *displacement* —
+competing for fixed retrieval slots — which makes **scope bleed, not
+garbage, the failure mode that matters, and scope isolation, not junk
+filtering, the defense**. We release the protocol, corpora, and per-query
+results, with a community track for regenerating the benchmark from any
+operator's own store.
 
 ## 1. Introduction
 
@@ -88,9 +79,11 @@ write/read paths.
 - A displacement theory of contamination harm with three pre-registered,
   falsified-or-confirmed predictions (§5): budget dependence [C1: ..],
   redundancy concentration [C2: ..], and the deduplication paradox [C3: ..].
-- Evidence that evaluation practice measures the wrong regime: clean-store
-  rankings reshuffle under contamination [C5: τ=..], and synthetic-noise
-  robustness overestimates real-world robustness [C4: ..].
+- Evidence that synthetic-noise robustness overestimates real-world
+  robustness, and that the operative variable is the evidence-contaminant
+  similarity margin (33.9pp→0 across quartiles). (Cross-system rank
+  stability under contamination [C5] is deferred to the system-panel study;
+  no result is claimed here.)
 - A methodological finding shaped like a constraint: systems that discard
   provenance cannot be audited for evidence delivery at all (§3.3).
 
@@ -185,12 +178,24 @@ At $p{=}0.9$, $k{=}4$ (single-representation reference): synthetic 0.0pp,
 organic exhaust 0.6pp, **crosstalk 14.7pp** of evidence-hit harm. The pattern
 holds at every budget (at $k{=}8$: 0.0 / 1.1 / 11.7pp). The pre-registered
 form of C4 ("organic > synthetic") is *refuted for exhaust and confirmed
-overwhelmingly for crosstalk*: the operative dimension is not organic-ness
-but distributional proximity — contamination harms in proportion to how well
-it competes for the same retrieval slots. Real-world referent: scope-misrouted
-writes and multi-context bleed, not accumulated garbage. (This also explains
-two earlier null results in our program: unique-token synthetic junk at small
-scale, and out-of-domain exhaust, both fail to compete.)
+overwhelmingly for crosstalk*.
+
+**Proximity is a measurement, not a narrative.** Embedding similarity to
+recipient queries: synthetic (mean .437, max .544), translated exhaust
+(.404, max .603), crosstalk (.450, **max .701**) against an evidence band
+of .456 — only crosstalk's tail reaches into and above where evidence lives.
+And the per-query *margin law* makes the mechanism direct: regressing harm on
+the gap between a query's top evidence similarity and its top contaminant
+similarities, harm falls monotonically across margin quartiles —
+**33.9pp → 11.1 → 1.7 → 0.0** (point-biserial $\rho = -.32$). Contamination
+harms exactly insofar as it invades the evidence's similarity band; family
+labels (synthetic/organic/crosstalk) are merely where each family's tail
+sits. This subsumes the translation-confound concern: whatever translation
+did to the exhaust corpus, its measured position in similarity space — not
+its provenance label — carries its (small) harm. Real-world referent of the
+dangerous band: scope-misrouted writes and multi-context bleed, not
+accumulated garbage. (The same law retro-explains two earlier nulls in our
+program: unique-token junk and out-of-domain exhaust never enter the band.)
 
 ### 5.2 The harm surface (C1)
 
@@ -204,6 +209,16 @@ Harm is monotone in budget in every family×pressure row measured. Crosstalk:
 The pre-registered gap bar ($H(0.9,4)-H(0.9,42) \geq 15$pp) is **not met**
 (8.1pp); the direction is unambiguous. [GLM interaction test: paper pass]
 
+**Scale disclosure (headroom).** Clean baselines differ across budgets
+($M(0,4){=}.779$ vs $M(0,42){=}.972$), so absolute pp comparisons across $k$
+carry a scale confound. Both scales are reported: absolute harm *decreases*
+with $k$ (14.7→6.6pp) while the multiplicative error ratio *increases*
+(×1.66 at $k{=}4$ → ×3.38 at $k{=}42$, i.e., error 2.8%→9.4%). The honest
+statement of C1 is therefore: small budgets lose more answers outright;
+generous budgets lose a larger *fraction of their previously-solved* cases.
+Contamination is not invisible at generous budgets for the dangerous family —
+it is invisible there only for junk.
+
 ### 5.3 Evidence multiplicity has two signs (C2, revised by data)
 
 Our $r$-proxy conflated two kinds of multiplicity. Splitting by query type:
@@ -213,8 +228,11 @@ Our $r$-proxy conflated two kinds of multiplicity. Splitting by query type:
 - *Conjunctive* evidence (multi-session, temporal — pieces are needed
   jointly): the sign inverts, 10.8pp vs 17.5pp — more required pieces mean
   more ways to lose one.
-The theory gains a distinction ($r_{\mathrm{OR}}$ vs $n_{\mathrm{AND}}$,
-§3.1 revision) and both branches now confirm it.
+This split was made *after* seeing Tier-1 data: we report it as an
+exploratory finding, not a confirmed prediction. The $r_{\mathrm{OR}}$ /
+$n_{\mathrm{AND}}$ distinction (§3.1 revision) is pre-registered for
+held-out confirmation on the second-embedder subsample and Tier-2 cells (W2)
+before any confirmatory language is used.
 
 ### 5.4 The deduplication paradox (C3, nuanced)
 
