@@ -263,10 +263,30 @@ cosine-threshold removal at 0.92; production pipelines like Mem0's
 update/dedup are LLM-mediated and may be more conservative — the cross-system
 panel measures the shipped behavior directly.)
 
-### 5.5 Leaderboard stability (C5) — pending cross-system panel (W2)
+### 5.5 Leaderboard stability (C5) — pending cross-system panel
 
-### 5.6 Bridge validation — pending Tier-2 cells (W2); includes
-knowledge-update sub-analysis (supersession resistance under contamination).
+### 5.6 Retrieval harm propagates to answers (bridge)
+
+End-to-end QA on strategic cells (200 stratified queries, frozen two-stage
+reader + benchmark judge, GPT-4o) confirms that Tier-1 harm is not an
+artifact of the judge-free metric. Under crosstalk contamination ($p{=}0.9$),
+single-representation QA falls 6.7pp at $k{=}8$ and 12.3pp at $k{=}42$; the
+dual variant falls from .862 to .738. The mechanism is explicit in the
+hit→correct contingency: when evidence survives to the context, the reader
+answers correctly 72.4% of the time; when contamination displaces it, only
+**18.6%** — a 54-point cliff. Contamination does not confuse the reader; it
+starves it. The residual 18.6% is the reader reconstructing from partial or
+parametric knowledge, and the 72.4% ceiling is ordinary reader error on
+delivered evidence — bounding how much any reader-side fix could recover.
+
+**Supersession resistance (knowledge-update sub-analysis).** Queries whose
+answers depend on a fact having *changed* are the case where displacing the
+current version is most dangerous. Non-destructive supersession — keeping old
+and new versions as separate copies — should raise redundancy for exactly
+these queries. Under contamination, knowledge-update accuracy holds: 0.606→
+0.606 at $k{=}8$, 0.758→0.727 at $k{=}42$ (−0.0 / −3.0pp) versus the 6.7–12.3pp
+drop on the general pool. Copy preservation is contamination insurance where
+it matters most.
 
 *Measurement note: Tier-1 strict credit undercounts dual-representation
 variants (observation slots earn no turn-credit); within-pair comparisons are
