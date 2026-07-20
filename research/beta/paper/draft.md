@@ -235,11 +235,13 @@ Our $r$-proxy conflated two kinds of multiplicity. Splitting by query type:
 - *Conjunctive* evidence (multi-session, temporal — pieces are needed
   jointly): the sign inverts, 10.8pp vs 17.5pp — more required pieces mean
   more ways to lose one.
-This split was made *after* seeing Tier-1 data: we report it as an
-exploratory finding, not a confirmed prediction. The $r_{\mathrm{OR}}$ /
-$n_{\mathrm{AND}}$ distinction (§3.1 revision) is pre-registered for
-held-out confirmation on the second-embedder subsample and Tier-2 cells (W2)
-before any confirmatory language is used.
+This split was made *after* seeing Tier-1 data, and we pre-registered a
+held-out confirmation before using confirmatory language. **That confirmation
+has now run**: on an independent embedder (MiniLM; the split was derived on
+bge-small), both signs replicate — disjunctive types: low-$r$ 14.4pp vs
+high-$r$ 9.6pp; aggregation types: 18.9pp vs 22.2pp (inverted). The
+distinction stands as a replicated finding; Tier-2 cell confirmation is the
+remaining check.
 
 ### 5.4 The deduplication paradox (C3, nuanced)
 
