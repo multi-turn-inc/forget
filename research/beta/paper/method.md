@@ -171,3 +171,16 @@ and per-query outputs are released.
 5. *Organic-corpus provenance*: our production corpora reflect two users'
    workloads; the released protocol lets any operator regenerate the benchmark
    from their own store (community track).
+
+---
+
+**§3.1 revision (2026-07-20, post-Tier-1).** The single redundancy quantity
+$r(q)$ conflates two structures the data forced us to separate: *disjunctive*
+multiplicity $r_{\mathrm{OR}}(q)$ — the number of items any one of which
+suffices — and *conjunctive* size $n_{\mathrm{AND}}(q)$ — the number of items
+jointly required. Displacement predicts opposite monotonicity: harm falls
+with $r_{\mathrm{OR}}$ (more fallback copies) and rises with
+$n_{\mathrm{AND}}$ (more single points of failure). Both branches are
+confirmed in §5.3. Query types map cleanly: single-session and
+knowledge-update queries are $r_{\mathrm{OR}}$-dominated; multi-session and
+temporal-reasoning queries are $n_{\mathrm{AND}}$-dominated.

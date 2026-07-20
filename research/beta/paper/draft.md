@@ -8,28 +8,31 @@ Target: arXiv → NeurIPS 2026 D&B / ICLR 2027.*
 
 ## Abstract
 
-Agent memory systems are evaluated on clean stores: benchmarks ingest only the
-conversations the benchmark itself provides, and retrieval budgets are set
-generously. Production stores look nothing like this. Auditing two stores we
-operated, we find that 88% of a personal memory store (8 months, N=106) and
-[..]% of an agent-workload store (N=3,130, 92.6% unreviewed automation writes)
-consist of *contamination*: records no future query needs. We introduce
-**DirtyStores**, a benchmark protocol that contaminates a public long-term
-memory substrate (LongMemEval-S) with three families of junk — transplanted
-real conversations, translated production exhaust, and the synthetic templates
-of prior practice — under controlled pressure $p$ and retrieval budget $k$.
-Our central result is that contamination harm is governed by *displacement*:
-junk harms only by pushing the last copy of evidence out of the top-$k$.
-This predicts, and our experiments confirm [refute], that (i) harm is
-budget-dependent — invisible at the field's customary budgets
-([..]pp at $k{=}42$) and severe at ambient-injection scale ([..]pp at
-$k{=}4$); (ii) harm concentrates on low-redundancy queries; and (iii)
-*deduplication and destructive updates, marketed as quality features, are
-robustness bugs* — systems that collapse evidence copies degrade [..]pp
-faster than copy-preserving variants under identical contamination. Clean-store
-leaderboard rankings reshuffle under contamination (Kendall $\tau = [..]$).
-We release the protocol, anonymized corpora, and per-query results, with a
-community track for regenerating the benchmark from any operator's own store.
+Agent memory systems are evaluated on clean stores; production stores are
+mostly junk. Auditing two stores we operated, 88% of a personal store (8
+months, N=106) and 92.6% of an agent-workload store (N=3,130) consisted of
+records no future query needs. We introduce **DirtyStores**, a protocol that
+contaminates a public memory substrate (LongMemEval-S) under controlled
+pressure $p$ and retrieval budget $k$ with three contamination families:
+synthetic templates (prior practice), translated production exhaust (real
+junk), and *crosstalk* — real conversations belonging to other users. We
+expected junk to be the threat. It was not: at ninefold contamination
+($p{=}0.9$), synthetic and organic junk cost at most 1.5pp of evidence
+delivery, while crosstalk cost up to 14.7pp — a 15–25× gap. **The dangerous
+contamination is not garbage but other people's context**: in-distribution
+records that compete for the same retrieval slots. Harm follows a
+displacement mechanism — monotone in budget everywhere we measured (14.7pp at
+$k{=}4$ shrinking to 6.6pp at $k{=}42$) — and evidence multiplicity carries
+two signs: redundant copies protect disjunctive queries (12.2pp vs 8.4pp harm,
+low vs high $r$), while aggregation queries invert (10.8pp vs 17.5pp),
+because needing more pieces means more ways to lose one. Deduplication,
+marketed as hygiene, cost 2.3pp even on clean stores by destroying legitimate
+copies (p<0.05) and amplified contamination harm at generous budgets
+(27W/2L, p<10⁻⁴). Clean-store scores at customary budgets thus measure the
+regime where none of this is visible. We release the protocol, corpora, and
+per-query results, with a community track for regenerating the benchmark from
+any operator's own store — and a design conclusion: the defense that matters
+is scope isolation, not junk filtering.
 
 ## 1. Introduction
 
@@ -174,19 +177,62 @@ rules, and metrics run against any operator's store. We release tooling to
 regenerate DirtyStores locally and (optionally) contribute anonymized
 taxonomy statistics — the benchmark grows the way the problem does.
 
-## 5. Results  *(skeleton — slots wired to pre-registered analyses)*
+## 5. Results  *(Tier-1 numbers in; Tier-2 bridge and cross-system pending W2)*
 
-- **5.1 The harm surface.** Fig. 1: evidence-hit heatmaps over $p \times k$
-  per system. [C1: interaction coefficient, CI, pp-gap at (0.9, 4) vs (0.9, 42)]
-- **5.2 Where harm lands.** Fig. 2: harm curves by $r$-quartile with
-  displacement-model prediction overlay. [C2: quartile contrast, Spearman ρ]
-- **5.3 The deduplication paradox.** Fig. 3: ref-dual vs ref-dedup paired
-  harm; cross-system corroboration. [C3: excess harm, CI]
-- **5.4 Synthetic noise underestimates.** Table 2: family contrasts at matched
-  $p$. [C4]
-- **5.5 Leaderboard stability.** Fig. 4: clean vs stress rankings. [C5: τ]
-- **5.6 Bridge validation.** Retrieval harm → answer harm transfer on
-  strategic cells; knowledge-update sub-analysis (supersession resistance).
+### 5.1 Junk is harmless; crosstalk is not (C4 — headline)
+
+At $p{=}0.9$, $k{=}4$ (single-representation reference): synthetic 0.0pp,
+organic exhaust 0.6pp, **crosstalk 14.7pp** of evidence-hit harm. The pattern
+holds at every budget (at $k{=}8$: 0.0 / 1.1 / 11.7pp). The pre-registered
+form of C4 ("organic > synthetic") is *refuted for exhaust and confirmed
+overwhelmingly for crosstalk*: the operative dimension is not organic-ness
+but distributional proximity — contamination harms in proportion to how well
+it competes for the same retrieval slots. Real-world referent: scope-misrouted
+writes and multi-context bleed, not accumulated garbage. (This also explains
+two earlier null results in our program: unique-token synthetic junk at small
+scale, and out-of-domain exhaust, both fail to compete.)
+
+### 5.2 The harm surface (C1)
+
+Harm is monotone in budget in every family×pressure row measured. Crosstalk:
+| $p$ | $k{=}4$ | $k{=}8$ | $k{=}16$ | $k{=}42$ |
+|---|---|---|---|---|
+| 0.3 | 1.5 | 0.9 | 1.3 | 0.6 |
+| 0.6 | 4.5 | 3.2 | 3.4 | 1.9 |
+| 0.9 | 14.7 | 11.7 | 10.9 | 6.6 |
+
+The pre-registered gap bar ($H(0.9,4)-H(0.9,42) \geq 15$pp) is **not met**
+(8.1pp); the direction is unambiguous. [GLM interaction test: paper pass]
+
+### 5.3 Evidence multiplicity has two signs (C2, revised by data)
+
+Our $r$-proxy conflated two kinds of multiplicity. Splitting by query type:
+- *Disjunctive* evidence (single-session, knowledge-update — any copy
+  suffices): low-$r$ harm 12.2pp vs high-$r$ 8.4pp — displacement protection,
+  as predicted.
+- *Conjunctive* evidence (multi-session, temporal — pieces are needed
+  jointly): the sign inverts, 10.8pp vs 17.5pp — more required pieces mean
+  more ways to lose one.
+The theory gains a distinction ($r_{\mathrm{OR}}$ vs $n_{\mathrm{AND}}$,
+§3.1 revision) and both branches now confirm it.
+
+### 5.4 The deduplication paradox (C3, nuanced)
+
+Near-duplicate removal cost **2.3pp on clean stores** (destroying legitimate
+copies; sign test p=0.003–0.043) and amplified contamination harm at $k{=}42$
+(dual over dedup 27W/2L, p<10⁻⁴; excess harm ≈3pp) — but showed no
+differential amplification at the registered $(0.9, 8)$ cell (bar ≥10pp: not
+met). Verdict: deduplication is a cost everywhere and a contamination
+amplifier at generous budgets; the registered effect size was not reached.
+
+### 5.5 Leaderboard stability (C5) — pending cross-system panel (W2)
+
+### 5.6 Bridge validation — pending Tier-2 cells (W2); includes
+knowledge-update sub-analysis (supersession resistance under contamination).
+
+*Measurement note: Tier-1 strict credit undercounts dual-representation
+variants (observation slots earn no turn-credit); within-pair comparisons are
+unaffected. Bounds reported per §3.4.*
 
 ## 6. Discussion  *(stubs)*
 
