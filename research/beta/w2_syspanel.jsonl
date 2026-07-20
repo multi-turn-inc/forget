@@ -1,0 +1,10 @@
+{"system": "mem0", "qid": "3d86fd0a", "type": "single-session-user", "p": 0.0, "k": 8, "n_retrieved": 8, "correct": true}
+{"system": "mem0", "qid": "3d86fd0a", "type": "single-session-user", "p": 0.9, "k": 8, "n_retrieved": 8, "correct": true}
+{"system": "mem0", "qid": "a82c026e", "type": "single-session-user", "p": 0.0, "k": 8, "n_retrieved": 8, "correct": true}
+{"system": "mem0", "qid": "a82c026e", "type": "single-session-user", "p": 0.9, "k": 8, "n_retrieved": 8, "correct": true}
+{"system": "mem0", "qid": "a4996e51", "type": "multi-session", "p": 0.0, "k": 8, "n_retrieved": 8, "correct": true}
+{"system": "mem0", "qid": "a4996e51", "type": "multi-session", "p": 0.9, "k": 8, "n_retrieved": 8, "correct": true}
+{"system": "mem0", "qid": "3a704032", "type": "multi-session", "p": 0.0, "k": 8, "n_retrieved": 8, "correct": true}
+{"system": "mem0", "qid": "3a704032", "type": "multi-session", "p": 0.9, "k": 8, "n_retrieved": 8, "correct": true}
+{"system": "mem0", "qid": "945e3d21", "type": "knowledge-update", "p": 0.0, "k": 8, "n_retrieved": 8, "correct": false}
+{"system": "mem0", "qid": "945e3d21", "type": "knowledge-update", "p": 0.9, "k": 8, "n_retrieved": 8, "correct": true}

@@ -263,7 +263,38 @@ cosine-threshold removal at 0.92; production pipelines like Mem0's
 update/dedup are LLM-mediated and may be more conservative — the cross-system
 panel measures the shipped behavior directly.)
 
-### 5.5 Leaderboard stability (C5) — pending cross-system panel
+### 5.5 Cross-system panel: extractive systems resist this benchmark
+
+We attempted a cross-system panel (Mem0, Letta, Zep) for C5. The attempt
+produced a finding sharper than the intended one: **extractive memory
+systems are structurally hard to benchmark under contamination**, for three
+compounding reasons we measured directly.
+
+1. *Provenance loss makes Tier-1 impossible.* Mem0 ingests turns and stores
+   derived facts (two turns → one fact, in our trace), returning facts, not
+   records, at query time. Without turn provenance the judge-free
+   evidence-delivery metric cannot be computed at all — the asymmetry
+   anticipated in §3.3, now observed. Such systems are auditable only at
+   Tier 2.
+2. *Write cost scales with store size.* Extractive ingestion runs an LLM
+   extraction-and-reconciliation step per write, each comparing against the
+   growing store; a single contaminated instance (session-capped to 12
+   sessions, $p{=}0.9$) took 6–65 minutes to ingest versus milliseconds for
+   retrieval-based systems. Benchmarking at contamination scale is therefore
+   orders of magnitude more expensive for exactly the systems whose designs
+   C3 predicts to be most fragile.
+3. *The write path stalls.* Under contamination volume, Mem0's
+   reconciliation issued LLM calls that hung without timeout, stalling the
+   panel. This is not a bug we can fix from outside the system; it is a
+   property of doing unbounded write-time reasoning over a contaminated
+   stream.
+
+We therefore report C5 (clean-vs-stress rank stability across systems) as
+**future work requiring a timeout-resilient, hosted harness**, and decline to
+estimate it from the handful of instances that completed (the signal at that
+$n$ is noise). The three properties above are, we argue, the more useful
+result: the systems most exposed to contamination fragility are also the
+hardest to evaluate for it, which is itself a reason the field has not.
 
 ### 5.6 Retrieval harm propagates to answers (bridge)
 
