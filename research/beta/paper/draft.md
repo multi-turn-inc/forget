@@ -192,7 +192,14 @@ harms exactly insofar as it invades the evidence's similarity band; family
 labels (synthetic/organic/crosstalk) are merely where each family's tail
 sits. This subsumes the translation-confound concern: whatever translation
 did to the exhaust corpus, its measured position in similarity space — not
-its provenance label — carries its (small) harm. Real-world referent of the
+its provenance label — carries its (small) harm.
+
+**Causal confirmation (donor-stratified dose-response).** Manipulating the
+dose directly — contaminating each store from *near*, *mid*, or *far* donor
+terciles ranked by similarity to the recipient query — produces the same law
+under intervention: at $k{=}4$, harm is 26.8pp (near, dose .685), 4.0pp
+(mid, .638), 1.1pp (far, .607). A .08 shift in donor similarity swings harm
+by 25pp: the evidence band is narrow, and crossing into it is what harms. Real-world referent of the
 dangerous band: scope-misrouted writes and multi-context bleed, not
 accumulated garbage. (The same law retro-explains two earlier nulls in our
 program: unique-token junk and out-of-domain exhaust never enter the band.)
@@ -237,11 +244,22 @@ before any confirmatory language is used.
 ### 5.4 The deduplication paradox (C3, nuanced)
 
 Near-duplicate removal cost **2.3pp on clean stores** (destroying legitimate
-copies; sign test p=0.003–0.043) and amplified contamination harm at $k{=}42$
-(dual over dedup 27W/2L, p<10⁻⁴; excess harm ≈3pp) — but showed no
-differential amplification at the registered $(0.9, 8)$ cell (bar ≥10pp: not
-met). Verdict: deduplication is a cost everywhere and a contamination
-amplifier at generous budgets; the registered effect size was not reached.
+copies; two-sided exact binomial on discordant pairs, p=0.003–0.043) and
+amplified contamination harm at $k{=}42$ (dual over dedup 27W/2L, p<10⁻⁴;
+excess harm ≈3pp) — but showed no differential amplification at the
+registered $(0.9, 8)$ cell (bar ≥10pp: not met).
+
+**Cause accounting.** On clean stores, deduplication's deletions are 99.55%
+legitimate near-duplicates (evidence false-positive rate 0.45%) — and yet it
+destroys **12.0% of all evidence copies** (13.7% per query under
+contamination). Both facts hold at once: dedup is *precise* and still
+*erosive*, because evidence naturally repeats and every collapsed repetition
+is one fewer fallback under displacement. Verdict: deduplication is a cost
+everywhere and a contamination amplifier at generous budgets; the registered
+effect size was not reached. (Representativeness caveat: our dedup variant is
+cosine-threshold removal at 0.92; production pipelines like Mem0's
+update/dedup are LLM-mediated and may be more conservative — the cross-system
+panel measures the shipped behavior directly.)
 
 ### 5.5 Leaderboard stability (C5) — pending cross-system panel (W2)
 
