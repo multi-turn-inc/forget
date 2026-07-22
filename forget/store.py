@@ -8843,6 +8843,37 @@ def _context_action_plan_display_text(action_plan: dict[str, Any]) -> str:
     return f"{intent_labels.get(intent, intent)} / {action_labels.get(first_action_kind, first_action_kind)}"
 
 
+def _parallel_track_lines(project_id: str, current_task_id: str, limit: int = 2) -> list[str]:
+    """Other in-flight tasks, so the newest epoch can't hijack the capsule.
+
+    Dogfooding taste-test 2026-07-23: an evening of system work made the
+    morning capsule open with engine internals while the actual critical
+    path (the YC deadline task) went unmentioned — the capsule showed only
+    the most recently written task. One line of parallel tracks keeps every
+    active thread visible without widening the budget.
+    """
+    try:
+        listing = get_task_state({"limit": 8}, project_id=project_id)
+    except Exception:
+        return []
+    lines: list[str] = []
+    for item in listing.get("results") or []:
+        if not isinstance(item, dict):
+            continue
+        task_id = str(item.get("task_id") or "")
+        status = str(item.get("status") or "").lower()
+        if not task_id or task_id == current_task_id:
+            continue
+        if status not in ("in_progress", "active", "running", "blocked", "pending"):
+            continue
+        next_actions = item.get("next_actions") or []
+        first = str(next_actions[0])[:90] if next_actions else ""
+        lines.append(f"{task_id} — {first}" if first else task_id)
+        if len(lines) >= limit:
+            break
+    return lines
+
+
 def _open_loop_postits(project_id: str, limit: int = 3) -> list[dict[str, Any]]:
     """Unverified agent-reported action claims that have stayed open too long.
 
@@ -8903,6 +8934,12 @@ def _render_context_capsule_text(capsule: dict[str, Any]) -> str:
         f"현재 상태: {_autopilot_short_text(capsule.get('status'), 120)}",
         f"다음 행동: {_autopilot_short_text(next_action.get('action'), 220)}",
     ]
+    parallel_tracks = [str(item) for item in capsule.get("parallel_tracks") or [] if str(item)]
+    if parallel_tracks:
+        # placed above the droppable tail: under budget pressure the render
+        # loop pops from the end, and a shadowed deadline costs more than
+        # source-route detail
+        lines.append("병행 트랙: " + " | ".join(parallel_tracks[:2]))
     if source_route:
         lines.append(f"정보 소스: {_context_source_route_display_text(source_route)}")
     if action_plan:
@@ -9158,7 +9195,10 @@ def _attach_context_autopilot(
         fallback_cascade=fallback_cascade,
         compiled_at=compiled_at,
     )
-    capsule["open_loops"] = _open_loop_postits(str(result.get("project_id") or current_project_id()))
+    capsule_project_id = str(result.get("project_id") or current_project_id())
+    capsule["open_loops"] = _open_loop_postits(capsule_project_id)
+    current_task_id = str((workspace_current or {}).get("task_id") or "")
+    capsule["parallel_tracks"] = _parallel_track_lines(capsule_project_id, current_task_id)
     capsule_text = _render_context_capsule_text(capsule)
     final_model_context = str(result.get("context") or "")
     result["context_status"] = context_status

@@ -133,6 +133,29 @@ def test_korean_negation_sets_negative_polarity() -> None:
     assert row["polarity"] == "negative"
 
 
+def test_parallel_tracks_keep_shadowed_task_visible() -> None:
+    # Taste-test finding 2026-07-23: the newest task epoch hijacked the
+    # morning capsule; other in-flight tasks (the actual deadline) vanished.
+    client = _client()
+    _call(client, "record_task_state", {
+        "task_id": "deadline-task",
+        "status": "in_progress",
+        "summary": "마감 태스크",
+        "next_actions": ["수요일 아침: 계정 생성"],
+    })
+    _call(client, "record_task_state", {
+        "task_id": "late-night-task",
+        "status": "in_progress",
+        "summary": "밤샘 기술 태스크",
+        "next_actions": ["다음 조각 구현"],
+    }, request_id=2)
+    capsule = _capsule_text(client)
+    # 불변식: 어느 쪽이 "현재 목표"로 뽑히든, 다른 활성 스레드가 병행 트랙으로 보인다
+    assert "병행 트랙" in capsule, capsule
+    assert "마감 태스크" in capsule or "deadline-task" in capsule, capsule
+    assert "밤샘 기술 태스크" in capsule or "late-night-task" in capsule, capsule
+
+
 def test_no_reported_claims_means_no_postit_line() -> None:
     client = _client()
     _call(client, "add_memory", {"text": "사용자는 로컬-퍼스트 아키텍처를 선호함.", "infer": False})
