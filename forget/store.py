@@ -8940,16 +8940,16 @@ def _render_context_capsule_text(capsule: dict[str, Any]) -> str:
         # loop pops from the end, and a shadowed deadline costs more than
         # source-route detail
         lines.append("병행 트랙: " + " | ".join(parallel_tracks[:2]))
-    if source_route:
-        lines.append(f"정보 소스: {_context_source_route_display_text(source_route)}")
-    if action_plan:
-        lines.append(f"첫 행동 계획: {_context_action_plan_display_text(action_plan)}")
     if constraints:
         lines.append("중요 제약: " + "; ".join(constraints[:3]))
     if targets:
-        lines.append("관련 대상: " + "; ".join(targets[:4]))
-    if uncertainties:
-        lines.append("불확실성: " + "; ".join(uncertainties[:3]))
+        # full paths cost ~60 tokens of noise per capsule; basenames carry
+        # the signal (token audit 2026-07-23: 41% of the capsule was
+        # machine-template leakage — source_route, action_plan, raw
+        # uncertainty enums, absolute paths. The structured capsule dict
+        # keeps everything; the injected text is for a reader.)
+        short_targets = [os.path.basename(target.rstrip("/")) or target for target in targets]
+        lines.append("관련 대상: " + "; ".join(short_targets[:4]))
     open_loops = [item for item in capsule.get("open_loops") or [] if isinstance(item, dict)]
     if open_loops:
         lines.append(
