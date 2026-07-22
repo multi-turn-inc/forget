@@ -96,6 +96,43 @@ def test_aged_reported_claim_surfaces_and_correction_clears_it() -> None:
     assert STALE_CLAIM[:20] not in capsule_after, capsule_after
 
 
+def test_confirm_clears_postit_and_promotes_to_green() -> None:
+    # A TRUE unverified claim must not require supersede (="it was wrong") to
+    # silence its post-it — confirm attaches the receipt and promotes it.
+    client = _client()
+    _call(client, "add_memory", {"text": STALE_CLAIM, "infer": False})
+    _backdate_reported_claim(STALE_CLAIM, days=5)
+    assert "열린 루프" in _capsule_text(client)
+
+    results = _call(client, "search_memories", {"query": "오버엣지 문의 발송", "top_k": 1}, request_id=3)["results"]
+    memory_id = results[0]["id"]
+
+    # no receipt, no confirmation
+    response = client.post(
+        MCP_PATH,
+        json={"jsonrpc": "2.0", "id": 4, "method": "tools/call",
+              "params": {"name": "confirm_memory", "arguments": {"memory_id": memory_id}}},
+    )
+    assert "evidence" in response.text
+
+    _call(client, "confirm_memory", {"memory_id": memory_id, "evidence": "발송 메일이 보낸편지함에서 확인됨"}, request_id=5)
+    assert STALE_CLAIM[:20] not in _capsule_text(client)
+    confirmed = _call(client, "search_memories", {"query": "오버엣지 문의 발송", "top_k": 1}, request_id=6)["results"][0]
+    assert confirmed["trust"]["light"] == "green"
+    assert "verified" in confirmed["trust"]["note"]
+    with get_db() as conn:
+        row = conn.execute("SELECT modality FROM claims WHERE memory_id = ?", (memory_id,)).fetchone()
+    assert row["modality"] == "asserted"
+
+
+def test_korean_negation_sets_negative_polarity() -> None:
+    client = _client()
+    _call(client, "add_memory", {"text": "오버엣지 문의는 발송된 적 없음.", "infer": False})
+    with get_db() as conn:
+        row = conn.execute("SELECT polarity FROM claims ORDER BY created_at DESC LIMIT 1").fetchone()
+    assert row["polarity"] == "negative"
+
+
 def test_no_reported_claims_means_no_postit_line() -> None:
     client = _client()
     _call(client, "add_memory", {"text": "사용자는 로컬-퍼스트 아키텍처를 선호함.", "infer": False})

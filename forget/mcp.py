@@ -32,6 +32,7 @@ from .store import (
     record_context_observation,
     record_context_outcome,
     record_task_state,
+    confirm_memory,
     current_project_id,
     search_memories,
     self_improvement_status,
@@ -580,8 +581,21 @@ TOOLS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "confirm_memory",
+        "description": "Close an open loop the honest way: a reported/unverified action claim turned out TRUE — attach the evidence and promote it to verified (green). Use this instead of supersede_memory when the claim was right: supersede means 'it was wrong', confirm means 'it was right, here is the receipt'. Evidence is required.",
+        "inputSchema": {
+            "type": "object",
+            "required": ["memory_id", "evidence"],
+            "properties": {
+                "memory_id": {"type": "string"},
+                "evidence": {"type": "string", "description": "What verifies the claim (observation, test result, user statement)"},
+                "evidence_ref": {"type": "string", "description": "Optional pointer: commit hash, file path, event id"},
+            },
+        },
+    },
+    {
         "name": "supersede_memory",
-        "description": "Mark a memory as superseded by a newer fact. Non-destructive: it stays retrievable but is demoted in every future search and annotated as superseded. Use when a stored fact is outdated (a completed todo, a changed decision). Pass superseded_by to link the replacing memory.",
+        "description": "Mark a memory as superseded by a newer fact. Non-destructive: it stays retrievable but is demoted in every future search and annotated as superseded. Use when a stored fact is outdated (a completed todo, a changed decision). ALWAYS pass superseded_by to link the replacing memory — the link powers conflict-zone alerts. For a claim that was TRUE but unverified, use confirm_memory instead.",
         "inputSchema": {
             "type": "object",
             "required": ["memory_id"],
@@ -1173,6 +1187,11 @@ def _dispatch_tool(name: str, arguments: dict[str, Any] | None, context: dict[st
         scoped = {k: args[k] for k in ("top_n", "min_similarity", "min_days") if k in args}
         scoped["filters"] = _mcp_scoped_filters(args, context)
         return _text_result(stale_candidate_pairs(scoped))
+    if name == "confirm_memory":
+        memory_id = str(args.get("memory_id") or "")
+        if not memory_id:
+            raise HTTPException(status_code=400, detail="memory_id is required")
+        return _text_result(confirm_memory(memory_id, args))
     if name == "supersede_memory":
         memory_id = args.pop("memory_id")
         return _text_result(supersede_memory(memory_id, args))
@@ -1221,6 +1240,7 @@ _CORE_TOOL_NAMES = {
     "list_memories",
     "update_memory",
     "supersede_memory",
+    "confirm_memory",
     "review_stale_candidates",
     "delete_memory",
     "delete_memories",

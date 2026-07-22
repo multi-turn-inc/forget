@@ -710,7 +710,14 @@ RELATION_RE = re.compile(
     r"(?P<detail>.+?)\.?$",
     re.IGNORECASE,
 )
-NEGATION_RE = re.compile(r"\b(no longer|not|does not|doesn't|stopped|changed|instead)\b", re.IGNORECASE)
+# Korean negation has no word boundaries usable by \b, so those patterns
+# match bare. Found via incident #1's retro-scoring: "발송된 적 없음" was
+# stored polarity="positive" because this regex was English-only.
+NEGATION_RE = re.compile(
+    r"\b(no longer|not|does not|doesn't|stopped|changed|instead)\b"
+    r"|않|없(?:다|음|는|었|어|고)|아니(?:다|야|었|고|며)|못\s|안\s|말았",
+    re.IGNORECASE,
+)
 DELETE_INTENT_RE = re.compile(r"\b(forget|delete|remove|erase)\b", re.IGNORECASE)
 MERGE_PREDICATES = {"prefers", "likes", "loves", "avoids", "uses", "wants", "needs", "has"}
 UPDATE_PREDICATES = {"lives", "works", "teaches", "moved", "is"}
@@ -11297,6 +11304,85 @@ def supersede_memory(memory_id: str, payload: dict[str, Any] | None = None, proj
         "superseded_by": successor_id,
         "reason": reason or None,
         "still_retrievable": True,
+    }
+
+
+def confirm_memory(memory_id: str, payload: dict[str, Any] | None = None, project_id: str | None = None) -> dict[str, Any]:
+    """Close an open loop the honest way: a reported claim was true — attach
+    the receipt and promote it.
+
+    supersede says "it was wrong"; confirm says "it was right, verified".
+    Without this, a TRUE unverified action claim can only be silenced by
+    superseding it — making the ledger lie. Evidence is mandatory: no
+    receipt, no confirmation.
+    """
+    payload = payload or {}
+    project_id = payload.get("project_id") or project_id or current_project_id()
+    evidence = str(payload.get("evidence") or "").strip()
+    if not evidence:
+        raise HTTPException(status_code=400, detail="evidence is required — no receipt, no confirmation")
+    current = get_memory(memory_id, project_id=project_id, include_expired=True)
+    metadata = dict(current.get("metadata") or {})
+    if metadata.get("superseded_at"):
+        raise HTTPException(status_code=409, detail="Memory is superseded — confirm its successor instead")
+
+    now = utc_now()
+    metadata["verified_at"] = now
+    metadata["verified_evidence"] = evidence[:500]
+    if payload.get("evidence_ref"):
+        metadata["verified_evidence_ref"] = str(payload["evidence_ref"])[:300]
+    trust = dict(metadata.get("trust") or {})
+    trust["light"] = "green"
+    trust.setdefault("source", "assistant")
+    trust.setdefault("kind", "action_report")
+    trust["note"] = f"verified {now[:10]}: {evidence[:120]}"
+    metadata["trust"] = trust
+
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE memories SET metadata = ?, updated_at = ? WHERE id = ? AND project_id = ? AND deleted = 0",
+            (json_dumps(metadata), now, memory_id, project_id),
+        )
+        conn.execute(
+            "UPDATE claims SET modality = 'asserted', updated_at = ? "
+            "WHERE memory_id = ? AND project_id = ? AND modality = 'reported' AND status = 'active'",
+            (now, memory_id, project_id),
+        )
+        conn.execute(
+            """
+            INSERT INTO memory_history (
+                id, memory_id, project_id, event, input, old_memory, new_memory,
+                user_id, agent_id, app_id, run_id, metadata, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(new_id()),
+                memory_id,
+                project_id,
+                "CONFIRM",
+                json_dumps([payload]),
+                current["memory"],
+                current["memory"],
+                current.get("user_id"),
+                current.get("agent_id"),
+                current.get("app_id"),
+                current.get("run_id"),
+                json_dumps(metadata),
+                now,
+                now,
+            ),
+        )
+    emit_webhook_event(
+        "memory_confirm",
+        {"id": memory_id, "data": {"evidence": evidence[:200]}},
+        project_id=project_id,
+    )
+    return {
+        "schema_version": "mem1-confirm-v1",
+        "id": memory_id,
+        "verified_at": now,
+        "evidence": evidence[:200],
+        "trust_light": "green",
     }
 
 

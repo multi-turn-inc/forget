@@ -176,10 +176,13 @@ def main() -> None:
         _capture(hook_input, digest, transcript_path, session_id)
     except Exception:
         pass
-    try:
-        _outcome(digest, session_id)
-    except Exception:
-        pass
+    # Outcome is a session-final label: a mid-session compact must not consume
+    # the offer ledger, or usage after the compact goes unmeasured.
+    if str(hook_input.get("hook_event_name") or "") == "SessionEnd":
+        try:
+            _outcome(digest, session_id)
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
