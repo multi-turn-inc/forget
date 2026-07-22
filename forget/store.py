@@ -8828,6 +8828,50 @@ def _context_action_plan_display_text(action_plan: dict[str, Any]) -> str:
     return f"{intent_labels.get(intent, intent)} / {action_labels.get(first_action_kind, first_action_kind)}"
 
 
+def _open_loop_postits(project_id: str, limit: int = 3) -> list[dict[str, Any]]:
+    """Unverified agent-reported action claims that have stayed open too long.
+
+    Incident #0's shape: an agent-side "action was completed" claim that
+    nobody confirms or corrects just sits in the ledger looking like a fact.
+    Surface the oldest few at session start until the loop is closed —
+    today closing means supersede/correct or delete; attaching verification
+    evidence is the W1+ upgrade.
+    """
+    try:
+        min_age_days = float(os.environ.get("MEM1_OPEN_LOOP_DAYS", "2"))
+    except ValueError:
+        min_age_days = 2.0
+    with get_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT c.claim_text, c.created_at, m.metadata
+            FROM claims c JOIN memories m ON m.id = c.memory_id AND m.project_id = c.project_id
+            WHERE c.project_id = ? AND c.modality = 'reported' AND c.status = 'active'
+              AND c.retired_at IS NULL AND m.deleted = 0
+            ORDER BY c.created_at ASC
+            """,
+            (project_id,),
+        ).fetchall()
+    now_dt = datetime.now(timezone.utc)
+    postits: list[dict[str, Any]] = []
+    for row in rows:
+        metadata = json_loads(row["metadata"], {})
+        if isinstance(metadata, dict) and metadata.get("superseded_at"):
+            continue  # corrected — the loop is closed
+        created = parse_datetime(row["created_at"])
+        if not created:
+            continue
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        age_days = (now_dt - created).total_seconds() / 86400
+        if age_days < min_age_days:
+            continue
+        postits.append({"claim": str(row["claim_text"])[:80], "age_days": round(age_days, 1)})
+        if len(postits) >= limit:
+            break
+    return postits
+
+
 def _render_context_capsule_text(capsule: dict[str, Any]) -> str:
     next_action = capsule.get("next_action") if isinstance(capsule.get("next_action"), dict) else {}
     source_route = capsule.get("source_route") if isinstance(capsule.get("source_route"), dict) else {}
@@ -8854,6 +8898,15 @@ def _render_context_capsule_text(capsule: dict[str, Any]) -> str:
         lines.append("관련 대상: " + "; ".join(targets[:4]))
     if uncertainties:
         lines.append("불확실성: " + "; ".join(uncertainties[:3]))
+    open_loops = [item for item in capsule.get("open_loops") or [] if isinstance(item, dict)]
+    if open_loops:
+        lines.append(
+            "열린 루프(미검증 완료 주장): "
+            + " | ".join(
+                f"'{item.get('claim')}' — {item.get('age_days')}일째, 증거 확인 또는 정정 필요"
+                for item in open_loops[:3]
+            )
+        )
     text = "\n".join(line for line in lines if line.strip())
     while token_estimate(text) > CONTEXT_CAPSULE_TOKEN_BUDGET and len(lines) > 3:
         lines.pop()
@@ -9090,6 +9143,7 @@ def _attach_context_autopilot(
         fallback_cascade=fallback_cascade,
         compiled_at=compiled_at,
     )
+    capsule["open_loops"] = _open_loop_postits(str(result.get("project_id") or current_project_id()))
     capsule_text = _render_context_capsule_text(capsule)
     final_model_context = str(result.get("context") or "")
     result["context_status"] = context_status
