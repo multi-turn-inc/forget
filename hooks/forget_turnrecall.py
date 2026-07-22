@@ -91,6 +91,8 @@ def main() -> None:
         memory_id = str(item.get("id") or "")
         if not memory_id or memory_id in seen:
             continue
+        if (item.get("metadata") or {}).get("hook"):
+            continue  # session-capture pointers are for rehydration, not recall
         trust = item.get("trust") or {}
         light = str(trust.get("light") or "yellow")
         picks.append((memory_id, light, str(item.get("memory") or "")[:MEMORY_CHAR_LIMIT]))
@@ -103,6 +105,26 @@ def main() -> None:
     print("\n".join(lines))
     if session_id and turns_path:
         _remember_injected(turns_path, [memory_id for memory_id, _, _ in picks])
+        _extend_offer_ledger(session_id, picks)
+
+
+def _extend_offer_ledger(session_id: str, picks: list) -> None:
+    """Feed turn recalls into the outcome flywheel: append their probes and
+    ids to the session's offer ledger so the capture hook measures them too.
+    (Discovered gap 07-22: a session answered purely from a turn recall and
+    the capsule-only labeler scored it "not used".)"""
+    ledger_path = os.path.join(STATE_DIR, f"{session_id}.json")
+    if not os.path.exists(ledger_path):
+        return  # no capsule trace this session — nothing to record against
+    try:
+        with open(ledger_path, encoding="utf-8") as fh:
+            state = json.load(fh)
+        state["memory_ids"] = list({*(state.get("memory_ids") or []), *(memory_id for memory_id, _, _ in picks)})
+        state["capsule_lines"] = (state.get("capsule_lines") or []) + [memory[:80] for _, _, memory in picks]
+        with open(ledger_path, "w", encoding="utf-8") as fh:
+            json.dump(state, fh, ensure_ascii=False)
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

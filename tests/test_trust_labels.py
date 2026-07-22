@@ -114,6 +114,27 @@ def test_agent_action_claim_modality_is_reported() -> None:
     assert row["source_role"] == "assistant"
 
 
+def test_session_capture_pointers_rank_below_real_facts() -> None:
+    # Dogfooding finding 2026-07-22: capture entries quote user utterances
+    # verbatim, so they outranked the real facts those utterances asked about.
+    client = _client()
+    _call(client, "add_memory", {"text": "오버엣지 문의는 보류하기로 결정함.", "infer": False})
+    _call(
+        client,
+        "add_memory",
+        {
+            "text": "세션 캡처 (SessionEnd/exit): 세션 xyz — 최근 사용자 발화: 오버엣지 문의 보냈었나? 보류 결정 확인. 전문: /tmp/x.jsonl",
+            "infer": False,
+            "source_role": "tool",
+            "metadata": {"hook": "SessionEnd", "session_id": "xyz"},
+        },
+        request_id=2,
+    )
+    results = _search(client, "오버엣지 문의 보류")
+    assert results
+    assert not (results[0].get("metadata") or {}).get("hook"), results[0]["memory"]
+
+
 def test_plain_agent_fact_is_yellow_without_action_note() -> None:
     client = _client()
     _call(client, "add_memory", {"text": "사용자는 로컬-퍼스트 아키텍처를 선호함.", "infer": False})

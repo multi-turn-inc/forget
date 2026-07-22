@@ -4149,6 +4149,14 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
             score = round(score * _superseded_score_multiplier(), 4)
             score_breakdown["superseded"] = True
             superseded_ids.add(memory["id"])
+        if (memory.get("metadata") or {}).get("hook"):
+            # Session-capture entries are pointers for rehydration, not facts.
+            # They quote user utterances verbatim (green/tool), so left at full
+            # weight they outrank real memories for the very queries those
+            # utterances asked about. Demote; lexical match still surfaces
+            # them when the session itself is what's being hunted.
+            score = round(score * 0.5, 4)
+            score_breakdown["session_capture"] = True
         if not in_primary_scope:
             # Shared-scope knowledge blends in slightly discounted, so a
             # strong primary-scope hit always outranks an equal fallback one.
