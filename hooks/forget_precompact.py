@@ -59,7 +59,9 @@ def _digest(transcript_path: str) -> dict:
             last_ts = ts
         if kind == "user":
             text = _text_of((entry.get("message") or {}).get("content")).strip()
-            if text and not text.startswith(("<local-command", "<command-name", "[SYSTEM")):
+            # skill expansions and system payloads arrive as user-role messages;
+            # real typed utterances are short — length is the cheapest tell
+            if text and len(text) <= 600 and not text.startswith(("<local-command", "<command-name", "[SYSTEM", "#")):
                 user_snippets.append(text[:SNIPPET_LIMIT])
     return {
         "counts": counts,
