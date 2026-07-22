@@ -65,7 +65,7 @@ def main() -> None:
         state = {
             "trace_id": trace_id,
             "memory_ids": (result.get("evidence") or {}).get("memory_ids", []),
-            "capsule_lines": [line.strip() for line in shown.splitlines() if len(line.strip()) >= 15][:12],
+            "capsule_lines": [line.strip() for line in shown.splitlines() if len(line.strip()) >= 12][:12],
         }
         with open(os.path.join(STATE_DIR, f"{session_id}.json"), "w", encoding="utf-8") as fh:
             json.dump(state, fh, ensure_ascii=False)
