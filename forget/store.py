@@ -670,7 +670,7 @@ def _fact_records(
     if not any(isinstance(message, dict) and str(message.get("name") or "").strip() for message in messages):
         scopes = _scope_variants(payload)
         return [
-            {"fact": fact, "scopes": scopes, "input": messages}
+            {"fact": fact, "scopes": scopes, "input": messages, "source_role": payload.get("source_role")}
             for fact in extract_facts(
                 messages,
                 infer=infer,
@@ -700,7 +700,7 @@ def _fact_records(
             if key in seen:
                 continue
             seen.add(key)
-            records.append({"fact": fact, "scopes": scopes, "input": [message]})
+            records.append({"fact": fact, "scopes": scopes, "input": [message], "source_role": payload.get("source_role")})
     return records
 
 
@@ -714,6 +714,30 @@ NEGATION_RE = re.compile(r"\b(no longer|not|does not|doesn't|stopped|changed|ins
 DELETE_INTENT_RE = re.compile(r"\b(forget|delete|remove|erase)\b", re.IGNORECASE)
 MERGE_PREDICATES = {"prefers", "likes", "loves", "avoids", "uses", "wants", "needs", "has"}
 UPDATE_PREDICATES = {"lives", "works", "teaches", "moved", "is"}
+
+# A claim that an action was *completed* is the dangerous class: agents act on
+# it in the real world (send the follow-up, skip the "already done" step). When
+# such a claim comes from an agent-side summary rather than the user or a tool,
+# it must not read as settled fact — plans routinely get recorded as done.
+ACTION_COMPLETION_RE = re.compile(
+    r"(?:발송|전송|제출|송부|배포|출시|런칭|등록|생성|작성|삭제|머지|커밋|푸시|결제|예약|신청|완료)(?:했|됐|함|됨|\b)"
+    r"|(?:보냈|보냄|마쳤|끝냈|올렸|만들었|지웠|고쳤|합쳤)"
+    r"|\b(?:sent|submitted|shipped|deployed|launched|merged|committed|pushed|filed|emailed|paid|booked|completed|finished|done)\b",
+    re.IGNORECASE,
+)
+
+
+def _action_completion(fact: str) -> bool:
+    return bool(ACTION_COMPLETION_RE.search(str(fact or "")))
+
+
+def _memory_trust(source_role: str, fact: str) -> dict[str, str]:
+    light = "green" if source_role in ("user", "tool") else "yellow"
+    kind = "action_report" if _action_completion(fact) else "fact"
+    trust = {"light": light, "source": source_role, "kind": kind}
+    if light == "yellow" and kind == "action_report":
+        trust["note"] = "unverified action claim from an agent-side summary — confirm with the user before acting on it"
+    return trust
 
 
 def _fact_relation(text: str) -> dict[str, str] | None:
@@ -732,6 +756,11 @@ def _claim_scope(scope: dict[str, Any]) -> dict[str, Any]:
 
 
 def _claim_source_role(record: dict[str, Any]) -> str:
+    # An explicit declaration wins: MCP text-writes are agent-authored even
+    # though they arrive wrapped as role "user" for extraction compatibility.
+    declared = str(record.get("source_role") or "").strip().lower() if isinstance(record, dict) else ""
+    if declared in {"user", "assistant", "tool", "system", "imported"}:
+        return declared
     messages = record.get("input") if isinstance(record, dict) else []
     roles = {
         str(message.get("role") or "").strip().lower()
@@ -871,6 +900,11 @@ def _write_observation_and_claim(
         ),
     )
     shape = _claim_shape(fact, scope)
+    # "asserted" is reserved for claims whose source can vouch for them (the
+    # user said it, a tool observed it). An agent-side report that an action
+    # was completed is testimony, not observation — it stays "reported" until
+    # evidence closes it.
+    modality = "reported" if source_role not in ("user", "tool") and _action_completion(fact) else "asserted"
     conn.execute(
         """
         INSERT INTO claims (
@@ -895,7 +929,7 @@ def _write_observation_and_claim(
             json_dumps(shape["object_value"]),
             shape["assertion_kind"],
             "negative" if NEGATION_RE.search(fact) else "positive",
-            "asserted",
+            modality,
             now,
             None,
             now,
@@ -3426,6 +3460,8 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
     with get_db() as conn:
         for record in fact_records:
             fact = record["fact"]
+            source_role = _claim_source_role(record)
+            record_metadata = {**metadata, "trust": _memory_trust(source_role, fact)}
             categories = categorize(fact, metadata)
             for scope in record["scopes"]:
                 primary_type = next((field for field in ("user_id", "agent_id", "app_id", "run_id") if scope.get(field)), None)
@@ -3458,7 +3494,7 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
                         scope.get("run_id"),
                         primary_type,
                         scope.get(primary_type) if primary_type else None,
-                        json_dumps(metadata),
+                        json_dumps(record_metadata),
                         json_dumps(categories),
                         encode_embedding(embedding),
                         digest,
@@ -3485,7 +3521,7 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
                         scope.get("agent_id"),
                         scope.get("app_id"),
                         scope.get("run_id"),
-                        json_dumps(metadata),
+                        json_dumps(record_metadata),
                         now,
                         now,
                     ),
@@ -3498,7 +3534,7 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
                     fact=fact,
                     record=record,
                     scope=scope,
-                    metadata=metadata,
+                    metadata=record_metadata,
                     now=now,
                 )
                 entities = link_memory_entities(memory_id, fact, project_id, conn=conn)
@@ -3507,7 +3543,7 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
                     "memory": fact,
                     "project_id": project_id,
                     **scope,
-                    "metadata": metadata,
+                    "metadata": record_metadata,
                     "categories": categories,
                     "expiration_date": metadata.get("expiration_date"),
                     "immutable": metadata.get("immutable") is True,
@@ -4122,6 +4158,12 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
         if score >= threshold:
             item = strip_internal(memory)
             item["score"] = score
+            memory_meta = memory.get("metadata") or {}
+            trust = memory_meta.get("trust")
+            if memory_meta.get("superseded_at"):
+                trust = {**(trust or {}), "light": "red", "note": "superseded — reference only, prefer the newer fact"}
+            if trust:
+                item["trust"] = trust
             if not in_primary_scope:
                 item["scope"] = "fallback"
                 item["scope_source"] = next(

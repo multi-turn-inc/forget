@@ -189,12 +189,17 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "add_memory",
-        "description": "Save a durable fact the user states about themselves, their work, or their decisions — so future conversations remember it. Call this whenever the user shares a decision, preference, or lasting fact worth recalling later. The server extracts only what is durable.",
+        "description": "Save a durable fact the user states about themselves, their work, or their decisions — so future conversations remember it. Call this whenever the user shares a decision, preference, or lasting fact worth recalling later. The server extracts only what is durable. Provenance: `text` saves are recorded as agent-reported (yellow trust) by default; pass source_role=\"user\" ONLY when relaying the user's own words verbatim. Never record a planned action as completed — completion claims without evidence stay unverified.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "messages": {"type": "array"},
                 "text": {"type": "string"},
+                "source_role": {
+                    "type": "string",
+                    "enum": ["user", "assistant", "tool", "system", "imported"],
+                    "description": "Who vouches for this fact. Default for text saves: assistant (agent-authored summary).",
+                },
                 "user_id": {"type": "string"},
                 "agent_id": {"type": "string"},
                 "app_id": {"type": "string"},
@@ -219,7 +224,7 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "search_memories",
-        "description": "The user's authoritative long-term memory. ALWAYS call this FIRST — before answering from your own knowledge — whenever the user refers to their own past decisions, preferences, plans, projects, people, or anything that may have been discussed before (e.g. \"what did I decide\", \"do you remember\", \"which X did I pick\"). Returns durable facts newest-first; trust recent over old. Omit filters to use the current session scope.",
+        "description": "The user's authoritative long-term memory. ALWAYS call this FIRST — before answering from your own knowledge — whenever the user refers to their own past decisions, preferences, plans, projects, people, or anything that may have been discussed before (e.g. \"what did I decide\", \"do you remember\", \"which X did I pick\"). Returns durable facts newest-first; trust recent over old. Omit filters to use the current session scope. Results may carry a `trust` label — treat it as a permission, not a decoration: green (user-stated or tool-observed) = safe to act on; yellow (agent-inferred or self-summarized) = CONFIRM WITH THE USER before taking real-world action based on it, especially kind=action_report (an unverified claim that something was already done); red (superseded) = reference only. Results without `trust` predate provenance stamping — treat as yellow.",
         "inputSchema": {
             "type": "object",
             "required": ["query"],
@@ -1059,9 +1064,19 @@ def _dispatch_tool(name: str, arguments: dict[str, Any] | None, context: dict[st
             text = payload.pop("text", None)
             if not text:
                 raise HTTPException(status_code=400, detail="messages or text is required")
+            # Role "user" is kept for extraction compatibility, but a text
+            # save arrives through an agent-operated channel: unless the
+            # caller explicitly vouches otherwise, its provenance is the
+            # agent's own summary, not the user's words.
             payload["messages"] = [{"role": "user", "content": str(text)}]
-        if not any(payload.get(field) for field in ("user_id", "agent_id", "app_id", "run_id")):
-            payload.update(_mcp_default_scope(args, context))
+            payload.setdefault("source_role", "assistant")
+        if not any(payload.get(field) for field in ("user_id", "agent_id", "run_id")):
+            # app_id alone is client provenance, not ownership: an app_id-only
+            # write would store user_id=NULL while default-scoped reads search
+            # the session user_id — stored but never found by any search.
+            for key, value in _mcp_default_scope(args, context).items():
+                if not payload.get(key):
+                    payload[key] = value
         return _text_result(add_memories(payload))
     if name == "add_memories":
         scope = _require_openmemory_scope(args, context)
@@ -1079,6 +1094,7 @@ def _dispatch_tool(name: str, arguments: dict[str, Any] | None, context: dict[st
                     "app_id": scope["app_id"],
                     "metadata": metadata,
                     "infer": args.get("infer", True),
+                    "source_role": "assistant",
                 }
             )
         )
