@@ -27,6 +27,11 @@ import urllib.request
 FORGET_URL = os.environ.get("FORGET_MCP_URL", "http://127.0.0.1:8000/mcp/forget/http/junghunkim")
 STATE_DIR = os.path.expanduser("~/.forget/hooks/state")
 SCORE_THRESHOLD = float(os.environ.get("FORGET_TURNRECALL_THRESHOLD", "0.45"))
+# Conflict-zone members get a looser gate: missing a plain recall costs
+# silence, but missing a corrected-zone alert is how incident #1 happened —
+# and being part of a supersede pair is itself strong prior evidence the
+# zone matters. Recalibrate both when the embedder switches to e5.
+CONFLICT_THRESHOLD = float(os.environ.get("FORGET_CONFLICT_THRESHOLD", "0.32"))
 MAX_RECALLS = 3
 MEMORY_CHAR_LIMIT = 160
 MIN_PROMPT_LEN = 8
@@ -41,6 +46,27 @@ def _rpc(name: str, arguments: dict, timeout: int = 5) -> dict:
     )
     body = json.loads(urllib.request.urlopen(request, timeout=timeout).read())
     return json.loads(body["result"]["content"][0]["text"])
+
+
+def _conflict_pair(item: dict) -> tuple[str, str] | None:
+    """(old_id, new_id) if this memory sits in a supersede pair, else None.
+
+    Retro-scoring incident #1 (2026-07-23) showed direction is not measurable
+    in embedding space — old and corrected versions sit nearly parallel
+    (negation-blindness). But *territory* separates perfectly (100% vs 3%
+    false positives). So geometry only detects entry into a corrected zone;
+    judging which version to act on is delegated to the reading LLM, which
+    handles negation natively.
+    """
+    metadata = item.get("metadata") or {}
+    memory_id = str(item.get("id") or "")
+    successor = str(metadata.get("superseded_by") or "")
+    if successor:
+        return (memory_id, successor)
+    supersedes = metadata.get("supersedes")
+    if isinstance(supersedes, list) and supersedes:
+        return (str(supersedes[0]), memory_id)
+    return None
 
 
 def _seen_ids(session_id: str) -> tuple[set[str], str]:
@@ -85,27 +111,58 @@ def main() -> None:
     seen, turns_path = _seen_ids(session_id) if session_id else (set(), "")
     result = _rpc("search_memories", {"query": prompt[:300], "top_k": MAX_RECALLS + 2})
     picks = []
+    conflict_pairs: dict[tuple[str, str], None] = {}
     for item in result.get("results") or []:
-        if float(item.get("score") or 0.0) < SCORE_THRESHOLD:
-            continue
+        score = float(item.get("score") or 0.0)
         memory_id = str(item.get("id") or "")
         if not memory_id or memory_id in seen:
             continue
         if (item.get("metadata") or {}).get("hook"):
             continue  # session-capture pointers are for rehydration, not recall
+        pair = _conflict_pair(item)
+        if pair:
+            if score >= CONFLICT_THRESHOLD:
+                conflict_pairs.setdefault(pair)
+            continue  # presented as a pair below, not as a plain recall
+        if score < SCORE_THRESHOLD:
+            continue
         trust = item.get("trust") or {}
         light = str(trust.get("light") or "yellow")
         picks.append((memory_id, light, str(item.get("memory") or "")[:MEMORY_CHAR_LIMIT]))
         if len(picks) >= MAX_RECALLS:
             break
-    if not picks:
+
+    conflicts = []
+    for old_id, new_id in list(conflict_pairs)[:2]:
+        if old_id in seen and new_id in seen:
+            continue
+        try:
+            old = _rpc("get_memory", {"memory_id": old_id})
+            new = _rpc("get_memory", {"memory_id": new_id})
+        except Exception:
+            continue
+        conflicts.append((old_id, new_id, str(old.get("memory") or "")[:MEMORY_CHAR_LIMIT], str(new.get("memory") or "")[:MEMORY_CHAR_LIMIT]))
+
+    if not picks and not conflicts:
         return  # below threshold or nothing new → silence
-    lines = ["[forget 회상 — 이 턴과 관련된 기억 제안. green=행동 근거 OK, yellow=행동 전 확인, red=참고만]"]
-    lines += [f"- ({light}) {memory}" for _, light, memory in picks]
+    lines = []
+    if conflicts:
+        lines.append("[forget 충돌지대 — 이 주제엔 정정 이력이 있음. 현재본 기준으로 행동하고, 구본 위에서 행동하지 말 것]")
+        for _, _, old_text, new_text in conflicts:
+            lines.append(f"- (현재) {new_text}")
+            lines.append(f"- (red/구본) {old_text}")
+    if picks:
+        lines.append("[forget 회상 — 이 턴과 관련된 기억 제안. green=행동 근거 OK, yellow=행동 전 확인, red=참고만]")
+        lines += [f"- ({light}) {memory}" for _, light, memory in picks]
     print("\n".join(lines))
     if session_id and turns_path:
-        _remember_injected(turns_path, [memory_id for memory_id, _, _ in picks])
-        _extend_offer_ledger(session_id, picks)
+        injected = [memory_id for memory_id, _, _ in picks]
+        ledger_picks = list(picks)
+        for old_id, new_id, old_text, new_text in conflicts:
+            injected += [old_id, new_id]
+            ledger_picks.append((new_id, "green", new_text))  # 메아리 측정은 현재본 기준
+        _remember_injected(turns_path, injected)
+        _extend_offer_ledger(session_id, ledger_picks)
 
 
 def _extend_offer_ledger(session_id: str, picks: list) -> None:
