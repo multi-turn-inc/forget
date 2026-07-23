@@ -184,6 +184,19 @@ def mine(repo_path: Path) -> list[Decision]:
     return decisions
 
 
+def _imported_shas(client: httpx.Client, user_id: str, app_id: str, repo_name: str) -> set[str]:
+    response = client.get("/v1/memories/", params={"user_id": user_id, "app_id": app_id})
+    response.raise_for_status()
+    shas = set()
+    for memory in response.json():
+        metadata = memory.get("metadata") or {}
+        if metadata.get("source") == "git" and metadata.get("repo") == repo_name:
+            sha = metadata.get("commit")
+            if sha:
+                shas.add(str(sha))
+    return shas
+
+
 def store(
     decisions: list[Decision],
     *,
@@ -191,10 +204,21 @@ def store(
     user_id: str,
     app_id: str,
     repo_name: str,
-) -> int:
+) -> tuple[int, int]:
+    """Store decisions, skipping commits already imported into this scope.
+
+    Re-running the importer is the normal workflow (new commits landed);
+    without sha-level dedup every rerun would double the store and pollute
+    recall with identical results.
+    """
     stored = 0
+    skipped = 0
     with httpx.Client(base_url=base_url, timeout=30) as client:
+        seen = _imported_shas(client, user_id, app_id, repo_name)
         for decision in decisions:
+            if decision.sha[:12] in seen:
+                skipped += 1
+                continue
             response = client.post("/v1/memories/", json={
                 "text": decision.text,
                 "infer": False,
@@ -211,7 +235,7 @@ def store(
             })
             response.raise_for_status()
             stored += 1
-    return stored
+    return stored, skipped
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -233,14 +257,15 @@ def main(argv: list[str] | None = None) -> int:
             print(f"[{decision.date[:10]} {decision.sha[:8]}] {decision.text}")
         print(f"\n{len(decisions)} decision(s) found (dry run)")
         return 0
-    count = store(
+    count, skipped = store(
         decisions,
         base_url=args.url,
         user_id=args.user_id,
         app_id=args.app_id or repo.name,
         repo_name=repo.name,
     )
-    print(f"imported {count} decision(s) from {repo.name}")
+    suffix = f" ({skipped} already imported)" if skipped else ""
+    print(f"imported {count} decision(s) from {repo.name}{suffix}")
     return 0
 
 

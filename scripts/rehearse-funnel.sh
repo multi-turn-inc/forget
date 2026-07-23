@@ -57,6 +57,37 @@ assert top.get("trust", {}).get("light"), top
 print(f"add -> search OK (trust: {top['trust']['light']})")
 EOF
 
+step "git importer: mine, backdate, recall, idempotent rerun"
+FIXREPO="$SANDBOX/gitrepo"
+mkdir -p "$FIXREPO"
+git -C "$FIXREPO" init -q
+git -C "$FIXREPO" config user.email r@r.r
+git -C "$FIXREPO" config user.name rehearsal
+echo a >"$FIXREPO/a.txt" && git -C "$FIXREPO" add . && GIT_AUTHOR_DATE="2025-03-15T10:00:00" GIT_COMMITTER_DATE="2025-03-15T10:00:00" \
+  git -C "$FIXREPO" commit -qm "switched storage from JSON files to SQLite because concurrent writers corrupted the store"
+echo b >"$FIXREPO/b.txt" && git -C "$FIXREPO" add . && git -C "$FIXREPO" commit -qm "chore: bump deps"
+IMPORT_URL="http://127.0.0.1:$PORT"
+"$SANDBOX/venv/bin/python" -m forget.importers.git "$FIXREPO" \
+  --url "$IMPORT_URL" --user-id rehearsal-user --app-id rehearsal-app | tee "$SANDBOX/import1.out"
+grep -q "imported 1 decision" "$SANDBOX/import1.out"
+"$SANDBOX/venv/bin/python" -m forget.importers.git "$FIXREPO" \
+  --url "$IMPORT_URL" --user-id rehearsal-user --app-id rehearsal-app | tee "$SANDBOX/import2.out"
+grep -q "imported 0 decision(s).*1 already imported" "$SANDBOX/import2.out"
+python3 - "$PORT" <<'EOF'
+import json, sys, urllib.request
+url = f"http://127.0.0.1:{sys.argv[1]}/mcp/rehearsal-app/http/rehearsal-user"
+req = urllib.request.Request(url, data=json.dumps({
+    "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+    "params": {"name": "search_memories",
+               "arguments": {"query": "why did we choose SQLite for storage?", "top_k": 1}}}).encode(),
+    headers={"Content-Type": "application/json"})
+top = json.loads(json.loads(urllib.request.urlopen(req, timeout=15).read())["result"]["content"][0]["text"])["results"][0]
+assert "SQLite" in top["memory"], top
+assert top["created_at"].startswith("2025-03-15"), f"not backdated: {top['created_at']}"
+assert (top.get("metadata") or {}).get("commit"), top
+print(f"importer OK (backdated {top['created_at'][:10]}, commit {top['metadata']['commit'][:8]})")
+EOF
+
 step "npm tarball connect / bare doctor / disconnect round-trip"
 TGZ="$SANDBOX/pack"
 mkdir -p "$TGZ"

@@ -80,3 +80,49 @@ def test_bare_rename_without_reason_is_dropped():
     ) is not None
     # renames with surrounding context still pass the normal path
     assert extract_decision("Slave removal: slave -> replica in redis.conf", "") is not None
+
+
+def test_rerun_skips_already_imported_commits(monkeypatch):
+    # Re-running after new commits land is the normal workflow; without
+    # sha-level dedup every rerun doubles the store (found in the 2026-07-24
+    # wheel rehearsal: 3 decisions -> 8 memories after one rerun).
+    import httpx
+
+    from forget.importers.git import Decision, store
+
+    existing = [
+        {"metadata": {"source": "git", "repo": "myrepo", "commit": "aaaaaaaaaaaa"}},
+        {"metadata": {"source": "git", "repo": "otherrepo", "commit": "bbbbbbbbbbbb"}},
+        {"metadata": {"source": "manual"}},
+        {"metadata": None},
+    ]
+    posted = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET":
+            return httpx.Response(200, json=existing)
+        posted.append(request)
+        return httpx.Response(200, json={"id": "new"})
+
+    transport = httpx.MockTransport(handler)
+    original_init = httpx.Client.__init__
+
+    def patched_init(self, *args, **kwargs):
+        kwargs["transport"] = transport
+        original_init(self, *args, **kwargs)
+
+    monkeypatch.setattr(httpx.Client, "__init__", patched_init)
+    stored, skipped = store(
+        [
+            Decision(sha="aaaaaaaaaaaa" + "0" * 28, author="a", date="2026-01-01T00:00:00+00:00", text="dup"),
+            Decision(sha="bbbbbbbbbbbb" + "0" * 28, author="a", date="2026-01-02T00:00:00+00:00", text="same sha, other repo"),
+            Decision(sha="cccccccccccc" + "0" * 28, author="a", date="2026-01-03T00:00:00+00:00", text="fresh"),
+        ],
+        base_url="http://testserver",
+        user_id="u",
+        app_id="a",
+        repo_name="myrepo",
+    )
+
+    assert (stored, skipped) == (2, 1)
+    assert len(posted) == 2
