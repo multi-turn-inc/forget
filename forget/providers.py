@@ -879,7 +879,21 @@ def _extract_with_aws_bedrock_provider(
     return _facts_from_json_text(text)
 
 
-def embed_text(text: str, project_id: str = "proj_local") -> list[float]:
+def e5_prefixed(text: str, model: str, role: str) -> str:
+    """Apply the asymmetric instruction prefix e5-family models were trained on.
+
+    The 2026-07 contrast-set validation showed the e5 switch only delivers
+    (paraphrase rank 92→2) WITH "query:"/"passage:" prefixes — flipping the
+    model config without them silently forfeits the gain. Token-match so
+    "gte-large" or a hypothetical "base5" never false-positives.
+    """
+    tokens = re.split(r"[/\-_.]", str(model).lower())
+    if "e5" not in tokens:
+        return text
+    return f"{'query' if role == 'query' else 'passage'}: {text}"
+
+
+def embed_text(text: str, project_id: str = "proj_local", role: str = "passage") -> list[float]:
     settings = get_project_settings(project_id)
     provider = (os.getenv("MEM1_EMBEDDING_PROVIDER") or str(settings.get("embedding_provider", "local"))).lower()
     if provider in OPENAI_COMPATIBLE_EMBEDDING_PROVIDERS and _provider_credentials_available(settings, "embedding"):
@@ -904,12 +918,12 @@ def embed_text(text: str, project_id: str = "proj_local") -> list[float]:
             pass
     if provider in FASTEMBED_EMBEDDING_PROVIDERS:
         try:
-            return _embed_with_fastembed_provider(text, settings)
+            return _embed_with_fastembed_provider(text, settings, role=role)
         except Exception:
             pass
     if provider in HUGGINGFACE_EMBEDDING_PROVIDERS:
         try:
-            return _embed_with_huggingface_provider(text, settings)
+            return _embed_with_huggingface_provider(text, settings, role=role)
         except Exception:
             pass
     if provider in VERTEXAI_EMBEDDING_PROVIDERS:
@@ -997,21 +1011,23 @@ def _embed_with_aws_bedrock_provider(text: str, settings: dict[str, Any]) -> lis
     return [float(value) for value in (embedding or [])]
 
 
-def _embed_with_fastembed_provider(text: str, settings: dict[str, Any]) -> list[float]:
+def _embed_with_fastembed_provider(text: str, settings: dict[str, Any], role: str = "passage") -> list[float]:
     from fastembed import TextEmbedding
 
     model = settings.get("embedding_model") or os.getenv("FASTEMBED_MODEL") or "thenlper/gte-large"
+    text = e5_prefixed(text, str(model), role)
     embeddings = list(TextEmbedding(model_name=str(model)).embed(text.replace("\n", " ")))
     return [float(value) for value in embeddings[0]]
 
 
-def _embed_with_huggingface_provider(text: str, settings: dict[str, Any]) -> list[float]:
+def _embed_with_huggingface_provider(text: str, settings: dict[str, Any], role: str = "passage") -> list[float]:
     base_url = str(settings.get("embedding_base_url") or os.getenv("HUGGINGFACE_EMBEDDING_BASE_URL") or "").rstrip("/")
     if base_url:
         return _embed_with_provider(text, settings)
     from sentence_transformers import SentenceTransformer
 
     model = settings.get("embedding_model") or os.getenv("HUGGINGFACE_EMBEDDING_MODEL") or "multi-qa-MiniLM-L6-cos-v1"
+    text = e5_prefixed(text, str(model), role)
     embedding = SentenceTransformer(str(model)).encode(text, convert_to_numpy=True).tolist()
     return [float(value) for value in embedding]
 

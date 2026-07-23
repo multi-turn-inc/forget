@@ -4104,7 +4104,7 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
     ).strip()
     reference_date = payload.get("reference_date") or memory_as_of or None
     scope_fallback = _scope_fallback_enabled(payload)
-    query_embedding = embed_text(query, project_id=project_id)
+    query_embedding = embed_text(query, project_id=project_id, role="query")
     vector_hits = vector_search_memories(query_embedding, filters, top_k, project_id)
     vector_scores = {hit["id"]: float(hit.get("score") or 0.0) for hit in vector_hits}
     aliases = _entity_alias_map(project_id)
