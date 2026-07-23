@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>forget — tell Claude Code once, Cursor remembers</title>
-<meta name="description" content="One memory for your AI across Claude Code, Cursor, and Codex — open source, in a SQLite file on your machine. Nobody can read it but you.">
+<meta name="description" content="One memory for your AI across Claude Code, Cursor, and Codex — open source, 100% local, 81.8% on LongMemEval. Nobody can read it but you.">
 <link rel="canonical" href="https://forget.sh/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23e5122e'/%3E%3Ctext x='32' y='45' font-family='-apple-system,sans-serif' font-size='38' font-weight='800' fill='%23fff' text-anchor='middle'%3Ef%3C/text%3E%3Crect x='12' y='30' width='40' height='5' rx='2.5' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,13 +14,13 @@
 <meta property="og:url" content="https://forget.sh/">
 <meta property="og:site_name" content="forget">
 <meta property="og:title" content="forget — tell Claude Code once, Cursor remembers">
-<meta property="og:description" content="One memory for your AI across Claude Code, Cursor, and Codex — open source, in a SQLite file on your machine. Nobody can read it but you.">
+<meta property="og:description" content="One memory for your AI across Claude Code, Cursor, and Codex — open source, 100% local, 81.8% on LongMemEval. Nobody can read it but you.">
 <meta property="og:image" content="https://forget.sh/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="forget — tell Claude Code once, Cursor remembers">
-<meta name="twitter:description" content="One memory for your AI across Claude Code, Cursor, and Codex — open source, in a SQLite file on your machine. Nobody can read it but you.">
+<meta name="twitter:description" content="One memory for your AI across Claude Code, Cursor, and Codex — open source, 100% local, 81.8% on LongMemEval. Nobody can read it but you.">
 <meta name="twitter:image" content="https://forget.sh/og.png">
 <script type="application/ld+json">
 {
@@ -33,7 +33,7 @@
   "operatingSystem": "macOS, Linux",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
   "license": "https://www.apache.org/licenses/LICENSE-2.0",
-  "sameAs": ["https://github.com/junghunkim/forget"]
+  "sameAs": ["https://github.com/multi-turn-inc/forget"]
 }
 </script>
 <style>
@@ -297,10 +297,10 @@
     <header>
       <a class="brand" href="/"><span class="mark">f</span><s>forget</s></a>
       <nav>
-        <a class="link" href="https://github.com/junghunkim/forget/blob/main/MANIFESTO.md">Manifesto</a>
+        <a class="link" href="https://github.com/multi-turn-inc/forget/blob/main/MANIFESTO.md">Manifesto</a>
         <a class="link" href="/llms.txt">llms.txt</a>
-        <a class="btn blush" href="https://github.com/junghunkim/forget">GitHub</a>
-        <a class="btn red" href="#waitlist">Get early access</a>
+        <a class="btn blush" href="https://github.com/multi-turn-inc/forget">GitHub</a>
+        <a class="btn red" href="#install">Install the beta</a>
       </nav>
     </header>
   </div>
@@ -324,6 +324,7 @@
     <p class="sub">One memory for your AI — decisions, preferences, project
     context — in a <code>SQLite</code> file on your machine. We couldn't
     read it if we tried.</p>
+    <p style="margin:16px auto 0; font-size:15px; font-weight:600; color:var(--red-dark); background:var(--blush); display:inline-block; padding:7px 16px; border-radius:999px;">81.8% on LongMemEval&ensp;·&ensp;above Mem0 &amp; Zep&ensp;·&ensp;100% local</p>
 
     <form class="waitlist-form" action="https://formspree.io/f/mbdnjvjn" method="POST">
       <input type="email" name="email" required placeholder="you@example.com" aria-label="Email address">
@@ -332,7 +333,7 @@
     <p class="form-note" hidden>You're on the list. We'll write when sync ships. ✓</p>
     <p class="form-hint">For the end-to-end encrypted sync beta. No spam — launch news only.</p>
 
-    <div class="term">
+    <div class="term" id="install">
       <div class="term-bar">
         <span class="d r"></span><span class="d y"></span><span class="d g"></span>
         <button class="copy" id="copyBtn" type="button">copy</button>
@@ -342,8 +343,8 @@
 
 <span class="c"># then, against any repo:</span>
 <span class="p">$</span> <span id="typeTarget"></span><span class="caret" id="caret"></span><span id="answer" hidden>
-<span class="a">A: forget-connect 0.2.0: local-first default, --hosted legacy opt-in</span>
-<span class="a">   [repo@7c8f0683 · 2026-07-13]</span>  <span class="c">← every answer carries a receipt</span></span></div>
+<span class="a">A: forget-connect 0.3.0: local-first default; hooks push memory into sessions</span>
+<span class="a">   [repo@7c8f0683 · 2026-07-23]</span>  <span class="c">← every answer carries a receipt</span></span></div>
     </div>
     <p class="ai-note">Using an AI agent? forget's <a href="/llms.txt">llms.txt</a> has setup instructions for LLMs.</p>
 
@@ -386,6 +387,10 @@
             <p>Decisions surface from your conversations and your git history. The observation gate keeps facts and forgets junk — nobody writes documentation.</p>
           </li>
           <li class="hot rv"><span class="dot"></span>
+            <h3>It speaks up before you ask</h3>
+            <p>A context capsule opens every session with your open work. Relevant memories are pushed mid-conversation — and if you're about to act on a fact that was later corrected, a conflict alert shows both versions.</p>
+          </li>
+          <li class="rv"><span class="dot"></span>
             <h3>Ask "why" from any tool</h3>
             <p>Claude Code, Cursor, or Codex — the answer comes back with the commit or conversation that decided it.</p>
           </li>
@@ -412,8 +417,12 @@
       <div class="rv" style="transition-delay:.07s">
         <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h6M9 16h4"/></svg></div>
         <h3>Answers with receipts</h3>
-        <p>Ask <code>why did we choose X?</code> — the answer links back to
-        the commit or conversation that decided it.</p>
+        <p>Every memory knows who vouches for it and carries a trust label —
+        <strong style="color:#15803d">green</strong> to act on,
+        <strong style="color:#a16207">yellow</strong> to verify first,
+        <strong style="color:var(--red-dark)">red</strong> superseded. Ask
+        <code>why did we choose X?</code> and the answer links back to the
+        conversation that decided it.</p>
       </div>
       <div class="rv" style="transition-delay:.14s">
         <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="M8.4 10.8l7.2-3.6M8.4 13.2l7.2 3.6"/></svg></div>
@@ -476,6 +485,8 @@
         <span class="chip ok">SHIPPED · OPEN SOURCE</span>
         <h3>Runs on your machine today</h3>
         <ul>
+          <li>81.8% on LongMemEval (full 500 questions, local-only)</li>
+          <li>Hooks push memory into sessions — capsule, recall, conflict alerts</li>
           <li>One SQLite file you own — offline included</li>
           <li>Mines your repo's decision history from git</li>
           <li>Observation gate keeps facts, forgets junk</li>
@@ -529,7 +540,7 @@
     <div class="cmd"><span class="k">pip</span> install forget-ai[server] &amp;&amp; <span class="k">npx</span> forget-connect</div>
     <div class="ctas">
       <a class="btn red" href="#waitlist">Join the sync waitlist</a>
-      <a class="btn ghost-dark" href="https://github.com/junghunkim/forget">Star on GitHub</a>
+      <a class="btn ghost-dark" href="https://github.com/multi-turn-inc/forget">Star on GitHub</a>
     </div>
   </div>
 </section>
@@ -544,8 +555,8 @@
       <div class="foot-links">
         <div>
           <h4>Project</h4>
-          <a href="https://github.com/junghunkim/forget">GitHub</a>
-          <a href="https://github.com/junghunkim/forget/blob/main/MANIFESTO.md">Manifesto</a>
+          <a href="https://github.com/multi-turn-inc/forget">GitHub</a>
+          <a href="https://github.com/multi-turn-inc/forget/blob/main/MANIFESTO.md">Manifesto</a>
           <a href="/llms.txt">llms.txt</a>
         </div>
         <div>
