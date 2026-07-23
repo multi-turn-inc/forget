@@ -2,6 +2,12 @@
 
 **Memory for your AI. It forgets the junk, keeps what matters.**
 
+On [LongMemEval](https://github.com/xiaowu0162/LongMemEval), the standard
+long-term-memory benchmark, Forget scores **81.8%** on the full 500-question
+set — above Mem0 (49%) and Zep (63.8%), within 0.6pp of a GPT-4o oracle
+ceiling — with memory building and retrieval running **100% local**.
+Knowledge-update questions, where memory products usually fail: **92.3%**.
+
 Every LLM session starts from zero. Forget gives your AI a long-term memory
 that it actually maintains: an observation gate decides what is worth keeping
 at all, stale facts get retired non-destructively when new ones supersede
@@ -12,6 +18,9 @@ forgetting well.
 
 - **Forget re-explaining.** Your AI remembers your decisions, preferences,
   and context across sessions and across tools.
+- **Forget asking.** Memory arrives on its own: a context capsule opens each
+  session, relevant memories are pushed mid-conversation, and a conflict
+  alert fires if you're about to act on a fact that was later corrected.
 - **Forget context limits.** Durable facts live outside the window and come
   back only when relevant.
 - **Forget trusting us.** Everything runs on your machine, in one SQLite
@@ -32,8 +41,13 @@ conversation ──▶ observation gate ──▶ durable facts (SQLite)
 
 - **Observation gate** — extraction keeps only durable, useful facts.
   Questions, chit-chat, and assistant filler never become "memories".
-- **Supersede** — when a fact changes ("we switched payment providers"),
-  the old memory is demoted, not deleted. History stays auditable.
+- **Supersede / confirm** — when a fact changes, the old memory is demoted
+  and linked to its replacement, not deleted; when an unverified claim gets
+  its receipt, `confirm_memory` promotes it. History stays auditable.
+- **Trust labels** — every memory carries provenance (who vouches for it)
+  and recall returns a permission: **green** (user-stated or tool-observed)
+  = safe to act on, **yellow** (agent-inferred) = verify first, **red**
+  (superseded) = reference only.
 - **Temporal rerank** — recent facts outrank stale ones at recall time.
 - **Consolidation** — a background pass merges, dedupes, and retires.
 - **Single file** — everything lives in one SQLite database. No vector DB,
@@ -60,8 +74,9 @@ curl -X POST localhost:8000/v1/memories/search/ \
 
 ## Connect your AI (MCP)
 
-Forget speaks MCP over streamable HTTP at `/mcp` — 41 tools including
-`search_memories`, `add_memory`, `supersede_memory`, and `assemble_context`.
+Forget speaks MCP over streamable HTTP at `/mcp` — 42 tools including
+`search_memories`, `add_memory`, `supersede_memory`, `confirm_memory`, and
+`prepare_context_autopilot`.
 
 Connect the local server started above without hand-editing config files:
 
@@ -69,9 +84,16 @@ Connect the local server started above without hand-editing config files:
 npx forget-connect
 ```
 
-The CLI preserves other MCP servers, backs up existing files once, and installs
-the marked Claude Code/Codex instruction layer described below. The legacy
-hosted service is still reachable with
+The CLI preserves other MCP servers, backs up existing files once, installs
+the marked instruction layer (Claude Code / Codex / Claude Desktop), and —
+for Claude Code — installs the **hooks layer**: a session-start context
+capsule, per-turn push recall with conflict-zone alerts, and session capture
+feeding a usage-outcome flywheel. Hooks are fail-open (a stopped server
+never blocks a session), preserve any foreign hooks byte-for-byte, and are
+skippable with `--no-hooks`. `npx forget-connect doctor` diagnoses config,
+rules, hooks, and the MCP connection; `disconnect` reverses everything.
+
+The legacy hosted service remains reachable with
 `npx forget-connect --hosted --user-id <memory-user> --app-id <project>`
 while it is phased out in favor of local-first.
 
@@ -97,9 +119,10 @@ url = "http://localhost:8000/mcp"
   "args": ["-y", "mcp-remote@latest", "http://localhost:8000/mcp"] } } }
 ```
 
-> **Tip — make agents actually use it.** Clients with a shell (Claude Code,
-> Codex) tend to grep the repo instead of calling memory tools. Add a rule to
-> your global instruction file (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`):
+> **Tip — make agents actually use it.** `npx forget-connect` handles this:
+> it installs both the instruction rules *and* the hooks that push memory
+> into sessions unasked. If you configure manually instead, at minimum add
+> to your global instruction file (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`):
 > *"ALWAYS call `search_memories` on `forget` FIRST — before any shell
 > command — whenever the user refers to their own past decisions."*
 
