@@ -4,6 +4,13 @@
 **npm forget-connect는 0.1.0 (7/10, 훅 이전)** — 실사용자는 구버전 인스톨러를 받음.
 아티팩트는 빌드·검사 완료 (`dist/`, twine PASSED · npm pack 11 files, assets 포함).
 
+## 0. 출시 전 게이트 — 깔때기 리허설 (2분, 자동)
+```bash
+bash scripts/rehearse-funnel.sh   # 마지막 줄이 "funnel rehearsal: ALL GREEN"이어야 출시
+```
+빌드된 아티팩트 그대로, 격리 샌드박스(HOME+CODEX_HOME)에서 베타 사용자의 동선을 밟는다:
+wheel 설치 → 서버 기동 → MCP add/search → tarball connect → 맨손 doctor → disconnect 잔존물 0.
+
 ## 1. PyPI — forget-ai 0.2.0
 ```bash
 cd <repo>
