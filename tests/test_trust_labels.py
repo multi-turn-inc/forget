@@ -143,3 +143,28 @@ def test_plain_agent_fact_is_yellow_without_action_note() -> None:
     trust = results[0]["trust"]
     assert trust["light"] == "yellow" and trust["kind"] == "fact"
     assert "note" not in trust
+
+
+def test_task_ledger_search_results_carry_a_trust_label() -> None:
+    # Dogfood find 2026-07-24: claim_ledger rows surfaced in search_memories
+    # with no trust key at all — unlabeled reads as yellow by contract, but a
+    # missing label next to labeled memories looks like an oversight and gives
+    # the reader nothing to act on. Ledger rows are agent-authored summaries:
+    # label them yellow explicitly.
+    client = _client()
+    _call(client, "record_task_state", {
+        "task_id": "ledger-trust-task",
+        "status": "in_progress",
+        "summary": "임베딩 스위치는 outcome 측정 게이트 뒤로 미룸",
+        "next_actions": ["주말 메아리 라벨 품질 비교"],
+    })
+    results = _call(
+        client, "search_memories",
+        {"query": "임베딩 스위치 결정", "top_k": 5},
+        request_id=2,
+    )["results"]
+    ledger = [r for r in results if (r.get("metadata") or {}).get("source") == "claim_ledger"]
+    assert ledger, results
+    for item in ledger:
+        assert item.get("trust", {}).get("light") == "yellow", item
+        assert item["trust"]["kind"] == "task_state", item

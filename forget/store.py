@@ -1127,6 +1127,15 @@ def _task_state_result_from_row(row: Any, score: float | None = None) -> dict[st
             "source_hashes": json_loads(row["source_hashes"], []),
         },
         "categories": ["task_state", "work"],
+        # Task states are agent-authored self-summaries; the traffic-light
+        # contract says unlabeled reads as yellow, but relying on the default
+        # makes ledger rows look like an oversight next to labeled memories.
+        "trust": {
+            "light": "yellow",
+            "source": "assistant",
+            "kind": "task_state",
+            "note": "agent-recorded task ledger — verify completion claims against evidence",
+        },
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
         "expiration_date": None,
