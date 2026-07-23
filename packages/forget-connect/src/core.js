@@ -30,8 +30,10 @@ export const MEMORY_RULES = [
   "# Memory (Forget)",
   "You have the user's long-term memory via the `forget` MCP server.",
   "ALWAYS call `search_memories` on `forget` FIRST — before any shell command or file search — whenever the user refers to their own past decisions, preferences, plans, or anything previously discussed. Trust recent memories over old ones.",
-  "For resume or continue requests, then call `get_task_state` and `prepare_context_autopilot` with the current working directory before searching files.",
-  "When the user states a durable decision, preference, or lasting fact, save it with `add_memory`.",
+  "At session start and on resume/continue requests, call `prepare_context_autopilot` once and treat its capsule as a suggestion (open tasks, next actions, constraints); call `get_task_state` for active work.",
+  "Results may carry a `trust` label — treat it as a permission, not a decoration: green (user-stated or tool-observed) = safe to act on; yellow (agent-inferred or self-summarized) = confirm with the user before real-world action; red (superseded) = reference only; unlabeled = treat as yellow.",
+  "When the user states a durable decision, preference, or lasting fact, save it with `add_memory`. Never record a planned action as completed — completion claims without evidence stay unverified.",
+  "To retire a fact that turned out wrong, use `supersede_memory` and always pass `superseded_by` to link the replacement. When a true-but-unverified claim gets its receipt, use `confirm_memory` with evidence instead.",
   RULES_END,
 ].join("\n");
 
@@ -630,7 +632,7 @@ async function sourceMode(filePath, fallback) {
   }
 }
 
-async function atomicWrite(filePath, content, mode) {
+export async function atomicWrite(filePath, content, mode) {
   const target = await resolvedWritePath(filePath);
   await mkdir(path.dirname(target), { recursive: true });
   const temp = `${target}.forget-connect-${process.pid}-${randomBytes(5).toString("hex")}`;

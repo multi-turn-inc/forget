@@ -1,6 +1,6 @@
 {
   "name": "forget-connect",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Safely connect Claude Code, Codex, and Claude Desktop to Forget memory.",
   "type": "module",
   "bin": {
@@ -10,11 +10,12 @@
     "bin",
     "src",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "assets"
   ],
   "scripts": {
     "test": "node --test",
-    "lint": "node --check bin/forget-connect.js && node --check src/cli.js && node --check src/core.js && node --check src/doctor.js"
+    "lint": "node --check bin/forget-connect.js && node --check src/cli.js && node --check src/core.js && node --check src/doctor.js && node --check src/hooks.js"
   },
   "engines": {
     "node": ">=18"

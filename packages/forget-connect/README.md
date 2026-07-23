@@ -107,3 +107,19 @@ npm test
 npm run lint
 npm pack --dry-run
 ```
+
+## Hooks (Claude Code)
+
+`forget-connect` installs four harness hooks so memory arrives without being asked:
+
+- **SessionStart** — injects a context capsule (open tasks, next actions, constraints)
+- **UserPromptSubmit** — pushes memories relevant to the current turn, with trust lights
+  (green = act on it, yellow = confirm first, red = superseded), and raises a
+  conflict-zone alert when the conversation enters territory with a correction history
+- **PreCompact / SessionEnd** — captures the session into the ledger and records
+  whether offered memories were actually used (the outcome flywheel)
+
+Hooks are judgment-free and fail-open: if the Forget server is down they exit
+silently and never block your session. They need `python3` on PATH.
+Skip them with `--no-hooks`; `disconnect` always removes them. Foreign hooks
+registered by other tools are preserved byte-for-byte.

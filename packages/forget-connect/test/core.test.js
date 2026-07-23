@@ -379,6 +379,14 @@ test("disconnect never creates a new backup containing the managed credential", 
 
 test("exported rule text teaches the required first-memory behavior", () => {
   assert.match(MEMORY_RULES, /ALWAYS call `search_memories` on `forget` FIRST/);
-  assert.match(MEMORY_RULES, /`get_task_state` and `prepare_context_autopilot`/);
+  assert.match(MEMORY_RULES, /call `prepare_context_autopilot` once/);
+  assert.match(MEMORY_RULES, /call `get_task_state` for active work/);
   assert.match(MEMORY_RULES, /save it with `add_memory`/);
+  // the traffic-light permission contract must travel with every client
+  assert.match(MEMORY_RULES, /green \(user-stated or tool-observed\) = safe to act on/);
+  assert.match(MEMORY_RULES, /unlabeled = treat as yellow/);
+  // and so must the ledger's closing semantics
+  assert.match(MEMORY_RULES, /`supersede_memory` and always pass `superseded_by`/);
+  assert.match(MEMORY_RULES, /`confirm_memory` with evidence/);
+  assert.match(MEMORY_RULES, /Never record a planned action as completed/);
 });

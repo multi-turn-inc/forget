@@ -17,6 +17,14 @@ import {
   validateApiKey,
 } from "./core.js";
 import { doctorRemote } from "./doctor.js";
+import {
+  connectHooksSettings,
+  disconnectHooksSettings,
+  hooksDirFor,
+  installHookScripts,
+  removeHookScripts,
+  settingsPathFor,
+} from "./hooks.js";
 
 const CLIENT_IDS = new Set(["claude-code", "codex", "claude-desktop"]);
 
@@ -37,6 +45,8 @@ Options:
   --app-id <id>        Project/app scope (pair with --user-id)
   --no-auth            Connect without a Bearer token
   --no-rules           Do not manage CLAUDE.md or AGENTS.md instruction blocks
+  --no-hooks           Do not install Claude Code memory hooks (session capsule,
+                       per-turn recall, conflict alerts, session capture)
   --no-migrate-enacta  Keep matching legacy config and rules blocks
   --dry-run            Show the files that would change without writing them
   --timeout <seconds>  Doctor network timeout (default: 10)
@@ -96,6 +106,7 @@ export function parseArgs(argv, env = process.env) {
     appId: env.FORGET_APP_ID?.trim() || "",
     auth: true,
     rules: true,
+    hooks: true,
     migrateLegacy: true,
     dryRun: false,
     yes: false,
@@ -139,6 +150,8 @@ export function parseArgs(argv, env = process.env) {
       options.auth = false;
     } else if (arg === "--no-rules") {
       options.rules = false;
+    } else if (arg === "--no-hooks") {
+      options.hooks = false;
     } else if (arg === "--no-migrate-enacta") {
       options.migrateLegacy = false;
     } else if (arg === "--dry-run") {
@@ -472,27 +485,75 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
     legacyUrls: [...new Set([options.url, options.baseUrl, HOSTED_MCP_URL])],
   });
 
+  // Claude Code is the only client with a hook system today; the hooks are
+  // what make memory arrive without being asked. Disconnect always cleans
+  // them up, even when the install used --no-hooks.
+  const claudeCode = clients.find((client) => client.id === "claude-code");
+  const manageHooks = Boolean(claudeCode)
+    && (options.action === "disconnect" || options.hooks);
+  const hooksDir = manageHooks ? hooksDirFor({ env }) : "";
+  if (manageHooks) {
+    const settingsPath = settingsPathFor({ env });
+    let settingsRaw = "";
+    try {
+      settingsRaw = await readFile(settingsPath, "utf8");
+    } catch (error) {
+      if (!error || error.code !== "ENOENT") throw error;
+    }
+    const settingsNext = options.action === "connect"
+      ? connectHooksSettings(settingsRaw, { hooksDir, url: options.url })
+      : disconnectHooksSettings(settingsRaw);
+    if (settingsRaw !== settingsNext) {
+      changes.push({
+        client: claudeCode,
+        filePath: settingsPath,
+        before: settingsRaw,
+        after: settingsNext,
+        kind: "hooks",
+        sensitive: false,
+        backup: options.action === "connect",
+      });
+    }
+  }
+
   if (options.dryRun) {
-    if (!changes.length) {
+    if (!changes.length && !manageHooks) {
       stdout.write("No changes needed.\n");
       return;
     }
     for (const change of changes) {
       stdout.write(`Would update ${change.filePath} (${change.client.name} ${change.kind})\n`);
     }
+    if (manageHooks && options.action === "connect") {
+      stdout.write(`Would install hook scripts into ${hooksDir}\n`);
+    }
+    if (manageHooks && options.action === "disconnect") {
+      stdout.write(`Would remove hook scripts from ${hooksDir}\n`);
+    }
     return;
   }
 
   const result = await applyPlan(changes);
+  let hookScriptPaths = [];
+  if (manageHooks) {
+    hookScriptPaths = options.action === "connect"
+      ? await installHookScripts(hooksDir)
+      : await removeHookScripts(hooksDir);
+  }
   const verb = options.action === "connect" ? "Connected" : "Disconnected";
-  if (!result.changed.length) {
+  if (!result.changed.length && !hookScriptPaths.length) {
     stdout.write("No changes needed.\n");
   } else {
     stdout.write(`${verb} ${clients.map((client) => client.name).join(", ")}.\n`);
     for (const filePath of result.changed) stdout.write(`  updated ${filePath}\n`);
     for (const filePath of result.backups) stdout.write(`  backup  ${filePath}\n`);
+    const hookVerb = options.action === "connect" ? "installed" : "removed";
+    for (const filePath of hookScriptPaths) stdout.write(`  ${hookVerb} ${filePath}\n`);
   }
   if (options.action === "connect") {
+    if (manageHooks) {
+      stdout.write("  hooks: session capsule, per-turn recall, conflict alerts, session capture (needs python3 on PATH)\n");
+    }
     if (options.hosted && !options.scope) {
       stdout.write(
         "\nWarning: hosted continuity scope is not configured. Reconnect with --user-id and --app-id before relying on cross-client recall.\n",
