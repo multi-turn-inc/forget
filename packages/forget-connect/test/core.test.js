@@ -390,3 +390,60 @@ test("exported rule text teaches the required first-memory behavior", () => {
   assert.match(MEMORY_RULES, /`confirm_memory` with evidence/);
   assert.match(MEMORY_RULES, /Never record a planned action as completed/);
 });
+
+test("scopeFromUrl recovers the scope a connect wrote, and rejects non-scoped URLs", async () => {
+  const { scopeFromUrl } = await import("../src/core.js");
+  const scoped = scopedMcpUrl("http://localhost:8000/mcp", { userId: "reh-user", appId: "reh-app" });
+  assert.deepEqual(scopeFromUrl(scoped), {
+    userId: "reh-user",
+    appId: "reh-app",
+    baseUrl: "http://localhost:8000/mcp",
+  });
+  assert.equal(scopeFromUrl("http://localhost:8000/mcp"), null);
+  assert.equal(scopeFromUrl(""), null);
+  assert.equal(scopeFromUrl("not a url"), null);
+  // percent-encoded components round-trip through validation
+  const encoded = scopedMcpUrl("https://api.multi-turn.ai/mcp", { userId: "u.1", appId: "a-2" });
+  assert.deepEqual(scopeFromUrl(encoded), {
+    userId: "u.1",
+    appId: "a-2",
+    baseUrl: "https://api.multi-turn.ai/mcp",
+  });
+});
+
+test("configuredServerUrl reads the installed forget URL per client kind", async () => {
+  const { configuredServerUrl } = await import("../src/core.js");
+  const jsonRaw = JSON.stringify({
+    mcpServers: { forget: { type: "http", url: "http://localhost:8000/mcp/a/http/u" } },
+  });
+  assert.equal(
+    configuredServerUrl({ id: "claude-code", kind: "json" }, jsonRaw),
+    "http://localhost:8000/mcp/a/http/u",
+  );
+  const tomlRaw = '[mcp_servers.forget]\nurl = "http://localhost:8000/mcp/a/http/u"\n';
+  assert.equal(
+    configuredServerUrl({ id: "codex", kind: "toml" }, tomlRaw),
+    "http://localhost:8000/mcp/a/http/u",
+  );
+  assert.equal(configuredServerUrl({ id: "claude-code", kind: "json" }, ""), "");
+  assert.equal(configuredServerUrl({ id: "claude-code", kind: "json" }, "{}"), "");
+});
+
+test("detectInstalledScope finds the first scoped client config", async (t) => {
+  const { detectInstalledScope } = await import("../src/core.js");
+  const dir = await mkdtemp(path.join(os.tmpdir(), "forget-scope-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const configPath = path.join(dir, ".claude.json");
+  await writeFile(configPath, JSON.stringify({
+    mcpServers: { forget: { type: "http", url: "http://localhost:8000/mcp/my-app/http/my-user" } },
+  }));
+  const scope = await detectInstalledScope([
+    { id: "claude-code", kind: "json", configPath: path.join(dir, "missing.json") },
+    { id: "claude-code", kind: "json", configPath },
+  ]);
+  assert.deepEqual(scope, {
+    userId: "my-user",
+    appId: "my-app",
+    baseUrl: "http://localhost:8000/mcp",
+  });
+});

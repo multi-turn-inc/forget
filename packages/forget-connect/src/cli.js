@@ -8,6 +8,7 @@ import {
   applyPlan,
   buildPlan,
   detectClients,
+  detectInstalledScope,
   getClients,
   inspectClients,
   normalizeUrl,
@@ -437,6 +438,23 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
   if (options.action === "status") {
     printStatus(await inspectClients(clients));
     return;
+  }
+
+  if (options.action === "doctor" && !options.scope && !options.urlExplicit && !options.hostedFlag) {
+    // A user who connected with --user-id/--app-id will run a bare
+    // `forget-connect doctor` next; comparing their scoped install against the
+    // unscoped default URL would report false failures. Adopt the scope the
+    // installed config already carries.
+    const installed = await detectInstalledScope(clients);
+    if (installed) {
+      options.scope = { userId: installed.userId, appId: installed.appId };
+      options.baseUrl = installed.baseUrl;
+      options.hosted = isHostedBaseUrl(options.baseUrl);
+      options.url = scopedMcpUrl(options.baseUrl, options.scope);
+      stdout.write(
+        `Scope detected from installed config: user ${installed.userId} · app ${installed.appId}\n`,
+      );
+    }
   }
 
   const apiKey = await apiKeyFor(options, env);

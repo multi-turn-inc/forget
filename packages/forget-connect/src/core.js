@@ -394,6 +394,64 @@ async function readOptional(filePath) {
   }
 }
 
+export function configuredServerUrl(client, raw) {
+  if (!raw) return "";
+  if (client.kind === "toml") {
+    const bounds = sectionBounds(raw, SERVER_KEY);
+    if (bounds.start === -1 || bounds.count !== 1) return "";
+    const section = bounds.lines.slice(bounds.start, bounds.end).join("\n");
+    const match = section.match(/^\s*url\s*=\s*("(?:[^"\\]|\\.)*")\s*$/m);
+    if (!match) return "";
+    try {
+      return JSON.parse(match[1]);
+    } catch {
+      return "";
+    }
+  }
+  try {
+    const config = parseJsonStrict(raw, client.configPath);
+    const server = isObject(config.mcpServers) ? config.mcpServers[SERVER_KEY] : null;
+    if (!isObject(server)) return "";
+    if (client.id === "claude-desktop") {
+      return Array.isArray(server.args) && typeof server.args[2] === "string"
+        ? server.args[2]
+        : "";
+    }
+    return typeof server.url === "string" ? server.url : "";
+  } catch {
+    return "";
+  }
+}
+
+export function scopeFromUrl(value) {
+  if (!value) return null;
+  let parsed;
+  try {
+    parsed = new URL(normalizeUrl(value));
+  } catch {
+    return null;
+  }
+  const match = parsed.pathname.match(/^(.*\/mcp)\/([^/]+)\/http\/([^/]+)\/?$/);
+  if (!match) return null;
+  try {
+    const appId = validateScopeId(decodeURIComponent(match[2]), "app_id");
+    const userId = validateScopeId(decodeURIComponent(match[3]), "user_id");
+    parsed.pathname = match[1];
+    return { userId, appId, baseUrl: parsed.toString().replace(/\/$/, "") };
+  } catch {
+    return null;
+  }
+}
+
+export async function detectInstalledScope(clients) {
+  for (const client of clients) {
+    const raw = await readOptional(client.configPath);
+    const scope = scopeFromUrl(configuredServerUrl(client, raw));
+    if (scope) return scope;
+  }
+  return null;
+}
+
 export async function detectClients(clients) {
   const detected = [];
   for (const client of clients) {
