@@ -156,6 +156,28 @@ def test_parallel_tracks_keep_shadowed_task_visible() -> None:
     assert "밤샘 기술 태스크" in capsule or "late-night-task" in capsule, capsule
 
 
+def test_goals_render_as_why_layer_not_parallel_tracks() -> None:
+    # goal: 접두 task_state는 "상위 목표" 줄로 — 병행 트랙(작업 항목)과 분리
+    client = _client()
+    _call(client, "record_task_state", {
+        "task_id": "goal:yc-fall-2026",
+        "status": "in_progress",
+        "summary": "YC Fall 2026 합격",
+        "next_actions": ["7/27 제출"],
+    })
+    _call(client, "record_task_state", {
+        "task_id": "work-task",
+        "status": "in_progress",
+        "summary": "실무 태스크",
+        "next_actions": ["다음 조각"],
+    }, request_id=2)
+    capsule = _capsule_text(client)
+    assert "상위 목표" in capsule and "YC Fall 2026 합격" in capsule and "7/27 제출" in capsule, capsule
+    # 병행 트랙에 goal:이 섞이면 안 됨
+    parallel_line = next((line for line in capsule.splitlines() if line.startswith("병행 트랙")), "")
+    assert "goal:" not in parallel_line, capsule
+
+
 def test_no_reported_claims_means_no_postit_line() -> None:
     client = _client()
     _call(client, "add_memory", {"text": "사용자는 로컬-퍼스트 아키텍처를 선호함.", "infer": False})

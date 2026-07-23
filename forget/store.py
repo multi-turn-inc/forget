@@ -8843,6 +8843,39 @@ def _context_action_plan_display_text(action_plan: dict[str, Any]) -> str:
     return f"{intent_labels.get(intent, intent)} / {action_labels.get(first_action_kind, first_action_kind)}"
 
 
+GOAL_TASK_PREFIX = "goal:"
+
+
+def _goal_lines(project_id: str, limit: int = 2) -> list[str]:
+    """Active goals — the "why" layer above tasks.
+
+    Convention: a goal is a task_state whose task_id starts with "goal:".
+    Tasks link to goals via goal_id. Goals render as their own capsule line
+    and are excluded from parallel tracks (they are not work items).
+    """
+    try:
+        listing = get_task_state({"limit": 12}, project_id=project_id)
+    except Exception:
+        return []
+    lines: list[str] = []
+    for item in listing.get("results") or []:
+        if not isinstance(item, dict):
+            continue
+        task_id = str(item.get("task_id") or "")
+        status = str(item.get("status") or "").lower()
+        if not task_id.startswith(GOAL_TASK_PREFIX):
+            continue
+        if status not in ("in_progress", "active", "running", "blocked", "pending"):
+            continue
+        summary = str(item.get("summary") or "").split("\n")[0][:110]
+        next_actions = item.get("next_actions") or []
+        milestone = f" → {str(next_actions[0])[:60]}" if next_actions else ""
+        lines.append(f"{task_id.removeprefix(GOAL_TASK_PREFIX)}: {summary}{milestone}")
+        if len(lines) >= limit:
+            break
+    return lines
+
+
 def _parallel_track_lines(project_id: str, current_task_id: str, limit: int = 2) -> list[str]:
     """Other in-flight tasks, so the newest epoch can't hijack the capsule.
 
@@ -8864,6 +8897,8 @@ def _parallel_track_lines(project_id: str, current_task_id: str, limit: int = 2)
         status = str(item.get("status") or "").lower()
         if not task_id or task_id == current_task_id:
             continue
+        if task_id.startswith(GOAL_TASK_PREFIX):
+            continue  # goals are the why-layer, rendered on their own line
         if status not in ("in_progress", "active", "running", "blocked", "pending"):
             continue
         next_actions = item.get("next_actions") or []
@@ -8934,6 +8969,9 @@ def _render_context_capsule_text(capsule: dict[str, Any]) -> str:
         f"현재 상태: {_autopilot_short_text(capsule.get('status'), 120)}",
         f"다음 행동: {_autopilot_short_text(next_action.get('action'), 220)}",
     ]
+    goal_lines = [str(item) for item in capsule.get("goal_lines") or [] if str(item)]
+    if goal_lines:
+        lines.append("상위 목표: " + " | ".join(goal_lines[:2]))
     parallel_tracks = [str(item) for item in capsule.get("parallel_tracks") or [] if str(item)]
     if parallel_tracks:
         # placed above the droppable tail: under budget pressure the render
@@ -9199,6 +9237,7 @@ def _attach_context_autopilot(
     capsule["open_loops"] = _open_loop_postits(capsule_project_id)
     current_task_id = str((workspace_current or {}).get("task_id") or "")
     capsule["parallel_tracks"] = _parallel_track_lines(capsule_project_id, current_task_id)
+    capsule["goal_lines"] = _goal_lines(capsule_project_id)
     capsule_text = _render_context_capsule_text(capsule)
     final_model_context = str(result.get("context") or "")
     result["context_status"] = context_status
@@ -10649,6 +10688,29 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
     else:
         resume_workspace = _resume_workspace_for_context(payload, project_id)
     workspace_current = resume_workspace.get("current") if isinstance(resume_workspace, dict) else None
+    if (
+        not isinstance(workspace_current, dict)
+        or str(workspace_current.get("task_id") or "").startswith(GOAL_TASK_PREFIX)
+    ):
+        # Goals are the why-layer, not work items: a goal must never hijack
+        # the capsule's "current task". Fall back to the newest active
+        # non-goal task so the capsule keeps pointing at real work.
+        workspace_current = None
+        try:
+            listing = get_task_state({"limit": 12}, project_id=project_id)
+            for item in listing.get("results") or []:
+                task_id = str(item.get("task_id") or "")
+                status = str(item.get("status") or "").lower()
+                if task_id and not task_id.startswith(GOAL_TASK_PREFIX) and status in (
+                    "in_progress", "active", "running", "blocked", "pending",
+                ):
+                    workspace_current = {"task_id": task_id, "status": item.get("status"),
+                                         "summary": item.get("summary"),
+                                         "next_actions": item.get("next_actions") or [],
+                                         "blockers": item.get("blockers") or []}
+                    break
+        except Exception:
+            workspace_current = None
     workspace_line = _workspace_context_line(workspace_current) if isinstance(workspace_current, dict) else ""
     workspace_tokens = min(token_estimate(workspace_line), budget_tokens) if workspace_line else 0
     search = search_memories(search_payload, project_id=project_id)
