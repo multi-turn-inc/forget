@@ -56,9 +56,14 @@ conversation ──▶ observation gate ──▶ durable facts (SQLite)
 ## Quickstart
 
 ```bash
-pip install forget-ai[server]
-uvicorn forget.server:app --port 8000
+pip install 'forget-ai[server]'
+forget-server install-service   # login service (launchd/systemd) — survives reboots
+# or, to try it in the foreground first:
+forget-server run
 ```
+
+`forget-server status` tells you what's true; `forget-server uninstall-service`
+removes it. The server binds to localhost only.
 
 Store and recall:
 

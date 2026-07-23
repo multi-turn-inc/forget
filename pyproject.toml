@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "forget-ai"
-version = "0.1.0"
+version = "0.2.0"
 description = "Memory for your AI. It forgets the junk, keeps what matters."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -20,6 +20,9 @@ dependencies = [
 server = ["uvicorn>=0.29"]
 vault = ["pynacl>=1.5"]
 fast = ["numpy>=1.24"]  # optional speedup for rerank/consolidation; pure-Python fallback otherwise
+
+[project.scripts]
+forget-server = "forget.cli:main"
 
 [project.urls]
 Homepage = "https://multi-turn.ai"

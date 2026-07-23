@@ -500,8 +500,14 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
   // what make memory arrive without being asked. Disconnect always cleans
   // them up, even when the install used --no-hooks.
   const claudeCode = clients.find((client) => client.id === "claude-code");
-  const manageHooks = Boolean(claudeCode)
+  let manageHooks = Boolean(claudeCode)
     && (options.action === "disconnect" || options.hooks);
+  if (manageHooks && process.platform === "win32" && options.action === "connect") {
+    // The hook commands are POSIX shell strings and the scripts need
+    // python3 — installing them on Windows would register broken hooks.
+    stderr.write("Note: memory hooks are not yet supported on Windows; skipping hook install.\n");
+    manageHooks = false;
+  }
   const hooksDir = manageHooks ? hooksDirFor({ env }) : "";
   if (manageHooks) {
     const settingsPath = settingsPathFor({ env });

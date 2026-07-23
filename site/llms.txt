@@ -11,8 +11,8 @@
 
 Run, in order:
 
-    pip install forget-ai[server]
-    uvicorn forget.server:app --port 8000
+    pip install 'forget-ai[server]'
+    forget-server install-service   # login service; or `forget-server run` for foreground
     npx forget-connect --user-id <user> --app-id <project>
 
 `forget-connect` (0.3.0) merges a `forget` MCP server (http://localhost:8000/mcp,
