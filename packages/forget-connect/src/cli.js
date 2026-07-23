@@ -21,6 +21,7 @@ import {
   connectHooksSettings,
   disconnectHooksSettings,
   hooksDirFor,
+  inspectHooks,
   installHookScripts,
   removeHookScripts,
   settingsPathFor,
@@ -373,6 +374,12 @@ function localDoctorResults(statuses, { requireRules = true } = {}) {
 
 function printDoctor(result) {
   stdout.write("Forget connection doctor\n");
+  if (result.hooks) {
+    const hooksDetail = result.hooks.registered
+      ? `registered, scripts ${result.hooks.scripts_present ? "present" : "missing"}, python3 ${result.hooks.python3 ? "ok" : "missing"}`
+      : "not installed (use connect without --no-hooks)";
+    stdout.write(`${result.hooks.ok ? "✓" : "✗"} Hooks: ${hooksDetail}\n`);
+  }
   for (const client of result.clients) {
     const details = [
       client.config ? "config found" : "config missing",
@@ -465,11 +472,15 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
           skipped: true,
         },
       };
+    const hooksStatus = clients.some((client) => client.id === "claude-code")
+      ? await inspectHooks({ env })
+      : null;
     const result = {
-      ok: local.every((client) => client.ok) && remote.ok,
+      ok: local.every((client) => client.ok) && remote.ok && (hooksStatus?.ok ?? true),
       url: redactUrlForDisplay(options.url),
       scope: { configured: Boolean(options.scope) },
       clients: local,
+      hooks: hooksStatus,
       remote,
     };
     if (options.json) stdout.write(`${JSON.stringify(result)}\n`);

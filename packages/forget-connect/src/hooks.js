@@ -9,6 +9,7 @@
 // reconnect, and disconnect byte-for-byte. Ownership is recognized by the
 // command path marker, never by position.
 
+import { execFile } from "node:child_process";
 import { readFile, unlink } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -201,6 +202,37 @@ export async function installHookScripts(hooksDir) {
     written.push(target);
   }
   return written;
+}
+
+export async function inspectHooks({ env } = {}) {
+  const hooksDir = hooksDirFor({ env });
+  const settingsPath = settingsPathFor({ env });
+  let settingsRaw = "";
+  try {
+    settingsRaw = await readFile(settingsPath, "utf8");
+  } catch {
+    settingsRaw = "";
+  }
+  const registered = hooksInstalled(settingsRaw, { hooksDir });
+  let scriptsPresent = true;
+  for (const script of HOOK_SCRIPTS) {
+    try {
+      await readFile(path.join(hooksDir, script), "utf8");
+    } catch {
+      scriptsPresent = false;
+    }
+  }
+  const python3 = await new Promise((resolve) => {
+    execFile("python3", ["--version"], (error) => resolve(!error));
+  });
+  return {
+    registered,
+    scripts_present: scriptsPresent,
+    python3,
+    // registered-but-broken is a failure; absent hooks are a legitimate
+    // choice (--no-hooks), so they don't fail the check
+    ok: !registered || (scriptsPresent && python3),
+  };
 }
 
 export async function removeHookScripts(hooksDir) {

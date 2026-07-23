@@ -266,3 +266,44 @@ test("scoped CLI writes the same encoded endpoint for every client", async (t) =
     assert.match(config, new RegExp(endpoint.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
 });
+
+test("clean-room: connect installs the full memory experience, disconnect removes it", async () => {
+  const home = await mkdtemp(path.join(os.tmpdir(), "forget-cleanroom-"));
+  try {
+    const connect = invoke(home, ["connect", "--client", "claude-code", "-y"]);
+    assert.equal(connect.status, 0, connect.stderr);
+
+    const config = JSON.parse(await readFile(path.join(home, ".claude.json"), "utf8"));
+    assert.ok(config.mcpServers.forget, "MCP server registered");
+    const rules = await readFile(path.join(home, ".claude", "CLAUDE.md"), "utf8");
+    assert.match(rules, /trust/, "traffic-light contract installed");
+    const settingsPath = path.join(home, ".claude", "settings.json");
+    const settings = JSON.parse(await readFile(settingsPath, "utf8"));
+    for (const event of ["SessionStart", "UserPromptSubmit", "PreCompact", "SessionEnd"]) {
+      assert.ok(settings.hooks[event], `${event} hook registered`);
+    }
+    for (const script of ["forget_sessionstart.py", "forget_turnrecall.py", "forget_capture.py"]) {
+      const body = await readFile(path.join(home, ".forget", "hooks", script), "utf8");
+      assert.ok(body.startsWith("#!/usr/bin/env python3"), `${script} installed`);
+    }
+
+    const again = invoke(home, ["connect", "--client", "claude-code", "-y"]);
+    assert.equal(again.status, 0, again.stderr);
+    const settingsAgain = JSON.parse(await readFile(settingsPath, "utf8"));
+    assert.equal(settingsAgain.hooks.SessionStart.length, 1, "reconnect is idempotent");
+
+    const off = invoke(home, ["disconnect", "--client", "claude-code"]);
+    assert.equal(off.status, 0, off.stderr);
+    const settingsOff = JSON.parse(await readFile(settingsPath, "utf8"));
+    assert.equal(settingsOff.hooks, undefined, "hooks fully removed");
+    await assert.rejects(
+      readFile(path.join(home, ".forget", "hooks", "forget_capture.py")),
+      /ENOENT/,
+      "scripts removed",
+    );
+    const configOff = JSON.parse(await readFile(path.join(home, ".claude.json"), "utf8"));
+    assert.ok(!configOff.mcpServers?.forget, "MCP server removed");
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
