@@ -6,6 +6,7 @@ import hmac
 import importlib.util
 import os
 import re
+import sqlite3
 import shutil
 import time
 from contextvars import ContextVar
@@ -660,6 +661,7 @@ def _fact_records(
     payload: dict[str, Any],
     project_id: str,
     infer: bool,
+    gate_log: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     messages = payload["messages"]
     custom_instructions = payload.get("custom_instructions")
@@ -678,6 +680,7 @@ def _fact_records(
                 custom_instructions=custom_instructions,
                 extraction_policy=extraction_policy,
                 assistant_is_subject=assistant_is_subject,
+                gate_log=gate_log,
             )
         ]
 
@@ -694,6 +697,7 @@ def _fact_records(
             custom_instructions=custom_instructions,
             extraction_policy=extraction_policy,
             assistant_is_subject=assistant_is_subject,
+            gate_log=gate_log,
         ):
             scope_key = tuple(tuple(scope.get(field) for field in ENTITY_FIELDS) for scope in scopes)
             key = (fact.lower(), scope_key)
@@ -3438,6 +3442,79 @@ def complete_event(event_id: str, status: str, results: list[Any], started_at: s
         )
 
 
+def _record_gate_drops(
+    drops: list[dict[str, Any]],
+    payload: dict[str, Any],
+    *,
+    project_id: str,
+    event_id: str | None = None,
+) -> None:
+    """Persist what the gate refused, so forgetting stays auditable.
+
+    The gate is an editor and editors are power; a memory product whose
+    forgetting leaves no trace asks for blind trust. The log itself must
+    forget too: MEM1_GATE_LOG_DAYS (default 30, "0" disables logging).
+    """
+    if not drops:
+        return
+    days = float(os.environ.get("MEM1_GATE_LOG_DAYS", "30") or 0)
+    if days <= 0:
+        return
+    now = utc_now()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    scope = {field: payload.get(field) for field in ENTITY_FIELDS}
+    try:
+        with get_db() as conn:
+            for drop in drops[:50]:
+                conn.execute(
+                    """INSERT INTO gate_log (id, project_id, user_id, agent_id, app_id, run_id,
+                                             dropped_text, role, reason, source_event_id, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (new_id("gate"), project_id, scope.get("user_id"), scope.get("agent_id"),
+                     scope.get("app_id"), scope.get("run_id"), str(drop.get("text") or "")[:300],
+                     str(drop.get("role") or ""), str(drop.get("reason") or "unknown"),
+                     event_id, now),
+                )
+            conn.execute("DELETE FROM gate_log WHERE created_at < ?", (cutoff,))
+    except sqlite3.Error:
+        pass  # the log must never block the write path
+
+
+def list_gate_log(payload: dict[str, Any] | None = None, project_id: str | None = None) -> dict[str, Any]:
+    """What the observation gate dropped recently, newest first."""
+    payload = payload or {}
+    project_id = payload.get("project_id") or project_id or current_project_id()
+    limit = max(1, min(int(payload.get("limit") or 20), 100))
+    days = payload.get("days")
+    filters = payload.get("filters") if isinstance(payload.get("filters"), dict) else {}
+    where = ["project_id = ?"]
+    params: list[Any] = [project_id]
+    for field in ENTITY_FIELDS:
+        value = filters.get(field)
+        if value:
+            where.append(f"{field} = ?")
+            params.append(value)
+    if days:
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=float(days))).strftime("%Y-%m-%dT%H:%M:%SZ")
+        where.append("created_at >= ?")
+        params.append(cutoff)
+    with get_db() as conn:
+        rows = conn.execute(
+            f"""SELECT dropped_text, role, reason, created_at FROM gate_log
+                WHERE {' AND '.join(where)} ORDER BY created_at DESC LIMIT ?""",
+            (*params, limit),
+        ).fetchall()
+    return {
+        "results": [
+            {"text": row["dropped_text"], "role": row["role"],
+             "reason": row["reason"], "created_at": row["created_at"]}
+            for row in rows
+        ],
+        "note": "what the gate refused to remember, and why — retention "
+                + os.environ.get("MEM1_GATE_LOG_DAYS", "30") + " days",
+    }
+
+
 def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict[str, Any]:
     project_id = payload.get("project_id") or project_id or current_project_id()
     if not payload.get("messages") or not isinstance(payload["messages"], list):
@@ -3453,7 +3530,8 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
     start_time = time.perf_counter()
     infer = bool(payload.get("infer", True))
     sanitize = _add_sanitize_enabled(payload)
-    fact_records = _fact_records(payload, project_id=project_id, infer=infer)
+    gate_drops: list[dict[str, Any]] = []
+    fact_records = _fact_records(payload, project_id=project_id, infer=infer, gate_log=gate_drops)
     skipped_junk: dict[str, int] = {}
     skipped_duplicate = 0
     if sanitize:
@@ -3462,9 +3540,12 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
             reason = low_value_memory_reason(str(record.get("fact") or ""))
             if reason:
                 skipped_junk[reason] = skipped_junk.get(reason, 0) + 1
+                gate_drops.append({"text": str(record.get("fact") or "")[:300],
+                                   "role": "fact", "reason": f"sanitize:{reason}"})
             else:
                 kept_records.append(record)
         fact_records = kept_records
+    _record_gate_drops(gate_drops, payload, project_id=project_id, event_id=event_id)
     created: list[dict[str, Any]] = []
     vector_upserts: list[tuple[dict[str, Any], list[float]]] = []
     # Normalize client-supplied timestamps (mem0 v3 clients send unix ints) to

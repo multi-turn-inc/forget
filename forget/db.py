@@ -55,6 +55,21 @@ def get_db() -> Iterator[sqlite3.Connection]:
 
 
 SCHEMA = """
+CREATE TABLE IF NOT EXISTS gate_log (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    user_id TEXT,
+    agent_id TEXT,
+    app_id TEXT,
+    run_id TEXT,
+    dropped_text TEXT NOT NULL,
+    role TEXT,
+    reason TEXT NOT NULL,
+    source_event_id TEXT,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_gate_log_project_created ON gate_log(project_id, created_at);
+
 CREATE TABLE IF NOT EXISTS organizations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     org_id TEXT UNIQUE NOT NULL,

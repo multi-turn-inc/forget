@@ -485,9 +485,16 @@ def extract_memories(
     infer: bool = True,
     extraction_policy: str | None = None,
     assistant_is_subject: bool = False,
+    gate_log: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     facts: list[str] = []
     gate = observation_gate_enabled()
+
+    def _log_drop(text: str, role: str, reason: str) -> None:
+        # The gate is an editor, and editors are power: what was dropped and
+        # why must stay auditable ("잊은 것의 목록조차 네 것이어야 한다").
+        if gate_log is not None:
+            gate_log.append({"text": text.strip()[:300], "role": role, "reason": reason})
     for message in messages:
         role = str(message.get("role", "user"))
         speaker = str(message.get("name", "")).strip() or None
@@ -500,6 +507,7 @@ def extract_memories(
         if role == "assistant":
             lowered = content.lower()
             if lowered.startswith(("got it", "logged", "i'll", "i will", "thanks", "sure")):
+                _log_drop(content, role, "assistant_ack")
                 continue
         for sentence in _merge_cjk_fragments(split_sentences(content)):
             if len(sentence.split()) < 3 and role == "assistant":
@@ -514,8 +522,10 @@ def extract_memories(
                 and not assistant_is_subject
                 and not _assistant_sentence_records_user_state(sentence)
             ):
+                _log_drop(sentence, role, "assistant_advice_or_knowledge")
                 continue
             if gate and role == "user" and _user_sentence_is_smalltalk(sentence):
+                _log_drop(sentence, role, "user_smalltalk")
                 continue
             for clause in split_memory_clauses(sentence, role=role, extraction_policy=extraction_policy):
                 if len(clause.split()) < 3 and role == "assistant":

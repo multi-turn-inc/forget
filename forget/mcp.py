@@ -9,6 +9,7 @@ from . import __version__
 from .provider_matrix import provider_parity_payload
 from .provider_runtime import configure_provider_payload, provider_catalog_payload, provider_health_payload
 from .store import (
+    list_gate_log,
     add_memories,
     assemble_context,
     create_claim_evaluation,
@@ -222,6 +223,18 @@ TOOLS: list[dict[str, Any]] = [
             "type": "object",
             "required": ["text"],
             "properties": {"text": {"type": "string"}, "infer": {"type": "boolean"}},
+        },
+    },
+    {
+        "name": "list_gate_log",
+        "description": "What the observation gate refused to remember, and why — the audit trail of forgetting. Use when the user asks \"why wasn't X saved?\" or to review what the editor dropped. Entries expire (default 30 days); the log itself forgets.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer"},
+                "days": {"type": "number"},
+                "filters": _FILTERS_PROPERTY,
+            },
         },
     },
     {
@@ -1030,6 +1043,8 @@ def call_tool(name: str, arguments: dict[str, Any] | None, context: dict[str, st
 
 def _dispatch_tool(name: str, arguments: dict[str, Any] | None, context: dict[str, str] | None = None) -> dict[str, Any]:
     args = dict(arguments or {})
+    if name == "list_gate_log":
+        return _text_result(list_gate_log({**args, "filters": _mcp_scoped_filters(args, context)}))
     if name == "recall_episode":
         from .episodes import recall_episodes_payload
 

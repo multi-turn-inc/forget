@@ -199,6 +199,7 @@ def extract_facts(
     custom_instructions: str | None = None,
     extraction_policy: str | None = None,
     assistant_is_subject: bool = False,
+    gate_log: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     settings = get_project_settings(project_id)
     instructions = custom_instructions or settings.get("custom_instructions")
@@ -254,6 +255,7 @@ def extract_facts(
             infer=infer,
             extraction_policy=extraction_policy,
             assistant_is_subject=assistant_is_subject,
+            gate_log=gate_log,
         ),
         instructions,
     )
