@@ -166,20 +166,30 @@ def being_vitals(path: Path) -> dict[str, Any] | None:
             """SELECT COUNT(*) AS memories,
                       SUM(CASE WHEN metadata LIKE '%superseded_at%' THEN 1 ELSE 0 END) AS shed,
                       SUM(CASE WHEN metadata LIKE '%verified_at%' THEN 1 ELSE 0 END) AS verified,
+                      MIN(created_at) AS oldest,
                       MAX(COALESCE(updated_at, created_at)) AS last_fed
                FROM memories WHERE deleted = 0"""
         ).fetchone()
-        born = conn.execute("SELECT MIN(created_at) AS t FROM memory_history").fetchone()
         conn.close()
     except sqlite3.Error:
         return None
     if not row or not row["memories"]:
         return None
+    # Birth is PHYSICAL (when this store file came to exist), not logical:
+    # imported memories carry backdated created_at — inherited memory that
+    # must not move the birthday. First taste of this very feature reported
+    # "alive 2785 days" off a 12-day-old store; the beautiful number is the
+    # one to distrust.
+    stat_result = path.stat()
+    born_ts = getattr(stat_result, "st_birthtime", None) or stat_result.st_mtime
+    born = datetime.fromtimestamp(born_ts, timezone.utc).strftime("%Y-%m-%d")
+    oldest = str(row["oldest"] or "")[:10]
     return {
         "memories": int(row["memories"]),
         "shed": int(row["shed"] or 0),
         "verified": int(row["verified"] or 0),
-        "born": str(born["t"] or "")[:10] if born and born["t"] else "",
+        "born": born,
+        "inherited_to": oldest if oldest and oldest < born else "",
         "last_fed": str(row["last_fed"] or ""),
     }
 
@@ -210,10 +220,11 @@ def format_being_line(vitals: dict[str, Any] | None, today: datetime | None = No
             age = f"alive {max(0, (now - born).days)} days · "
         except ValueError:
             age = ""
+    inherited = f" · roots to {vitals['inherited_to'][:4]}" if vitals.get("inherited_to") else ""
     shed = f" · {vitals['shed']} shed" if vitals.get("shed") else ""
     verified = f" · {vitals['verified']} verified" if vitals.get("verified") else ""
     fed = f" · last fed {_humanize_since(vitals['last_fed'])}" if vitals.get("last_fed") else ""
-    return f"being:  {age}{vitals['memories']} memories{shed}{verified}{fed}"
+    return f"being:  {age}{vitals['memories']} memories{shed}{verified}{inherited}{fed}"
 
 
 def cmd_status(args: argparse.Namespace) -> None:
