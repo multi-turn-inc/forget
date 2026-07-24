@@ -5,6 +5,7 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from . import __version__
 from .provider_matrix import provider_parity_payload
 from .provider_runtime import configure_provider_payload, provider_catalog_payload, provider_health_payload
 from .store import (
@@ -1274,7 +1275,7 @@ def handle_mcp_rpc(payload: dict[str, Any], context: dict[str, str] | None = Non
                 request_id,
                 {
                     "protocolVersion": params.get("protocolVersion") or "2025-06-18",
-                    "serverInfo": {"name": "forget-mcp", "version": "0.1.0"},
+                    "serverInfo": {"name": "forget-mcp", "version": __version__},
                     "capabilities": {"tools": {"listChanged": False}},
                 },
             )
