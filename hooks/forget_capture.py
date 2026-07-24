@@ -96,6 +96,7 @@ def _digest(transcript_path: str) -> dict:
         "last_ts": last_ts,
         "user_snippets": user_snippets[-USER_SNIPPETS:],
         "assistant_blob": _normalize(" ".join(assistant_parts)),
+        "last_assistant": _normalize(assistant_parts[-1])[-240:] if assistant_parts else "",
         "tail_only": size > TAIL_BYTES,
     }
 
@@ -124,6 +125,25 @@ def _capture(hook_input: dict, digest: dict, transcript_path: str, session_id: s
             },
         },
     )
+
+
+def _handoff(digest: dict, transcript_path: str, session_id: str) -> None:
+    """Shift-change note: compaction is an accident mid-sentence, not a death.
+
+    PreCompact writes what the cut hand was holding — the last human ask and
+    the last assistant sentence — so the post-compact SessionStart can hand
+    the thread back once, then burn the note. Judgment-free, fail-open.
+    """
+    os.makedirs(STATE_DIR, exist_ok=True)
+    note = {
+        "session_id": session_id,
+        "cut_at": digest.get("last_ts") or "",
+        "last_user": (digest.get("user_snippets") or [""])[-1],
+        "last_assistant": digest.get("last_assistant") or "",
+        "transcript_path": transcript_path,
+    }
+    with open(os.path.join(STATE_DIR, "handoff.json"), "w", encoding="utf-8") as fh:
+        json.dump(note, fh, ensure_ascii=False)
 
 
 def _outcome(digest: dict, session_id: str) -> None:
@@ -176,6 +196,11 @@ def main() -> None:
         _capture(hook_input, digest, transcript_path, session_id)
     except Exception:
         pass
+    if str(hook_input.get("hook_event_name") or "") == "PreCompact":
+        try:
+            _handoff(digest, transcript_path, session_id)
+        except Exception:
+            pass
     # Outcome is a session-final label: a mid-session compact must not consume
     # the offer ledger, or usage after the compact goes unmeasured.
     if str(hook_input.get("hook_event_name") or "") == "SessionEnd":

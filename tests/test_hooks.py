@@ -181,3 +181,65 @@ def test_sessionstart_prints_capsule_and_writes_offer_ledger(monkeypatch, tmp_pa
     ledger = json.loads((tmp_path / "s7.json").read_text(encoding="utf-8"))
     assert ledger["trace_id"] == "trace-7" and ledger["memory_ids"] == ["m-1", "m-2"]
     assert any("현재 목표" in line for line in ledger["capsule_lines"])
+
+
+# --- 교대 인수인계 (PreCompact → SessionStart) --------------------------------
+
+def test_precompact_writes_handoff_note(monkeypatch, tmp_path):
+    module = _load("forget_capture")
+    monkeypatch.setattr(module, "STATE_DIR", str(tmp_path))
+    monkeypatch.setattr(module, "_rpc", lambda *a, **k: None)
+    transcript = _write_transcript(tmp_path)
+    _run_main(module, {"session_id": "s8", "transcript_path": str(transcript),
+                       "hook_event_name": "PreCompact", "trigger": "auto"}, monkeypatch)
+    note = json.loads((tmp_path / "handoff.json").read_text(encoding="utf-8"))
+    assert note["last_user"] == "돌다리를 두드리자"
+    assert "현재 목표: X" in note["last_assistant"]
+    assert note["transcript_path"] == str(transcript)
+    # SessionEnd는 인수장을 쓰지 않는다 — 자연 종료는 사고사가 아님
+    (tmp_path / "handoff.json").unlink()
+    _run_main(module, {"session_id": "s8", "transcript_path": str(transcript),
+                       "hook_event_name": "SessionEnd", "reason": "exit"}, monkeypatch)
+    assert not (tmp_path / "handoff.json").exists()
+
+
+def _sessionstart_with_fake_server(monkeypatch, tmp_path, capsule_text=""):
+    module = _load("forget_sessionstart")
+    monkeypatch.setattr(module, "STATE_DIR", str(tmp_path))
+    payload = {"capsule_text": capsule_text, "context_trace_id": "", "evidence": {}}
+
+    class FakeResponse:
+        def read(self):
+            return json.dumps({"result": {"content": [{"type": "text", "text": json.dumps(payload)}]}}).encode()
+
+    monkeypatch.setattr(module.urllib.request, "urlopen", lambda req, timeout=8: FakeResponse())
+    return module
+
+
+def test_sessionstart_delivers_handoff_once_then_burns_it(monkeypatch, tmp_path, capsys):
+    module = _sessionstart_with_fake_server(monkeypatch, tmp_path, capsule_text="현재 목표: 이어가기")
+    (tmp_path / "handoff.json").write_text(json.dumps({
+        "session_id": "s9", "cut_at": "2026-07-25T10:00:00Z",
+        "last_user": "루프를 넘겨줄게", "last_assistant": "게이트 로그를 시공하는 중이었",
+        "transcript_path": "/tmp/t.jsonl",
+    }), encoding="utf-8")
+    _run_main(module, {"session_id": "s10", "source": "compact", "cwd": "/tmp"}, monkeypatch)
+    out = capsys.readouterr().out
+    assert "교대 인수인계" in out and "루프를 넘겨줄게" in out and "잘린 손의 마지막 문장" in out
+    assert (tmp_path / "handoff.json.done").exists()
+    # 두 번째 손은 인수장을 받지 않는다 — 일회성
+    _run_main(module, {"session_id": "s11", "source": "startup", "cwd": "/tmp"}, monkeypatch)
+    assert "교대 인수인계" not in capsys.readouterr().out
+
+
+def test_stale_handoff_is_burned_silently(monkeypatch, tmp_path, capsys):
+    import os as _os
+    module = _sessionstart_with_fake_server(monkeypatch, tmp_path, capsule_text="현재 목표: 새 일")
+    path = tmp_path / "handoff.json"
+    path.write_text(json.dumps({"last_user": "옛날 실", "transcript_path": "/tmp/t.jsonl"}), encoding="utf-8")
+    old = 60 * 60 * 24 * 3  # 3일 전
+    _os.utime(path, (path.stat().st_atime - old, path.stat().st_mtime - old))
+    _run_main(module, {"session_id": "s12", "source": "startup", "cwd": "/tmp"}, monkeypatch)
+    out = capsys.readouterr().out
+    assert "교대 인수인계" not in out and "현재 목표: 새 일" in out
+    assert (tmp_path / "handoff.json.done").exists()

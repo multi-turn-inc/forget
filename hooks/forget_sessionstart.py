@@ -13,11 +13,45 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 import urllib.request
 
 FORGET_URL = os.environ.get("FORGET_MCP_URL", "http://127.0.0.1:8000/mcp")
 STATE_DIR = os.path.expanduser("~/.forget/hooks/state")
 CAPSULE_CHAR_BUDGET = 1_600  # ~400 tokens
+HANDOFF_MAX_AGE_SECONDS = 48 * 3600  # a stale shift-note is worse than none
+
+
+def _consume_handoff() -> str:
+    """Read the PreCompact shift-note once, then burn it.
+
+    Delivered to exactly one next hand: the post-compact continuation
+    (source="compact") or, failing that, the next fresh session within 48h.
+    """
+    path = os.path.join(STATE_DIR, "handoff.json")
+    if not os.path.exists(path):
+        return ""
+    try:
+        fresh = (time.time() - os.path.getmtime(path)) <= HANDOFF_MAX_AGE_SECONDS
+        with open(path, encoding="utf-8") as fh:
+            note = json.load(fh)
+    except Exception:
+        return ""
+    finally:
+        try:
+            os.replace(path, path + ".done")
+        except OSError:
+            pass
+    if not fresh:
+        return ""
+    lines = ["[교대 인수인계 — 직전 세션이 압축으로 문장 중간에서 잘렸음]"]
+    if note.get("last_user"):
+        lines.append(f"마지막 실: {str(note['last_user'])[:200]}")
+    if note.get("last_assistant"):
+        lines.append(f"잘린 손의 마지막 문장: …{str(note['last_assistant'])[:200]}")
+    if note.get("transcript_path"):
+        lines.append(f"원문: {note['transcript_path']} (recall_episode로 열람 가능)")
+    return "\n".join(lines)
 
 
 def main() -> None:
@@ -49,13 +83,19 @@ def main() -> None:
         items = use_now.get("items") if isinstance(use_now, dict) else None
         if isinstance(items, list) and items:
             capsule = "\n".join(f"- {item}" for item in items[:6] if isinstance(item, str))
-    if not capsule:
+    handoff = _consume_handoff()
+    if not capsule and not handoff:
         return  # low confidence → silence
     shown = capsule[:CAPSULE_CHAR_BUDGET]
-    print(
-        "[forget 캡슐 — 제안이며 명령이 아님. 채택/기각은 네 판단. "
-        "라벨 없는 항목은 노랑(행동 전 확인) 취급]\n" + shown
-    )
+    parts = []
+    if handoff:
+        parts.append(handoff)
+    if shown:
+        parts.append(
+            "[forget 캡슐 — 제안이며 명령이 아님. 채택/기각은 네 판단. "
+            "라벨 없는 항목은 노랑(행동 전 확인) 취급]\n" + shown
+        )
+    print("\n".join(parts))
     # Offer ledger: record what was offered so the capture hook can measure,
     # at session end, whether the offer was actually used (outcome flywheel).
     session_id = str(hook_input.get("session_id") or "").strip()
