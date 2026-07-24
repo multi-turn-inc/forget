@@ -1,7 +1,7 @@
 # forget-connect
 
 Connect Claude Code, Codex, and Claude Desktop to a local
-[Forget](https://github.com/junghunkim/forget) memory server without
+[Forget](https://github.com/multi-turn-inc/forget) memory server without
 overwriting the MCP servers or global instructions you already have.
 
 ```bash

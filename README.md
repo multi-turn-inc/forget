@@ -2,6 +2,13 @@
 
 **Memory for your AI. It forgets the junk, keeps what matters.**
 
+[![PyPI](https://img.shields.io/pypi/v/forget-ai?style=flat-square&color=d31126&label=forget-ai)](https://pypi.org/project/forget-ai/)
+[![npm](https://img.shields.io/npm/v/forget-connect?style=flat-square&color=d31126&label=forget-connect)](https://www.npmjs.com/package/forget-connect)
+[![LongMemEval](https://img.shields.io/badge/LongMemEval-81.8%25_·_100%25_local-1a1c20?style=flat-square)](https://forget.sh/#benchmark)
+[![License](https://img.shields.io/badge/license-Apache--2.0-71767d?style=flat-square)](LICENSE)
+
+<a href="https://forget.sh"><img src="https://forget.sh/og.png" alt="forget — tell Claude Code once, Cursor remembers. 81.8% on LongMemEval, 100% local." width="100%"></a>
+
 On [LongMemEval](https://github.com/xiaowu0162/LongMemEval), the standard
 long-term-memory benchmark, Forget scores **81.8%** on the full 500-question
 set — above Mem0 (49%) and Zep (63.8%), within 0.6pp of a GPT-4o oracle
