@@ -225,6 +225,19 @@ TOOLS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "recall_episode",
+        "description": "Episodic recall — search raw local session transcripts for the SCENE behind a conclusion (who said it, in what words, when). Use when a memory or summary feels too thin and you need the original moment: founding incidents, the exact phrasing of a decision, an idea's first appearance. Returns dated excerpts with file:line receipts. Local-only; reads transcripts on this machine, copies nothing.",
+        "inputSchema": {
+            "type": "object",
+            "required": ["query"],
+            "properties": {
+                "query": {"type": "string", "description": "terms that must ALL appear in the scene (dumb-and-precise matching; iterate on queries)"},
+                "limit": {"type": "integer"},
+                "days": {"type": "number", "description": "only scan transcripts modified in the last N days"},
+            },
+        },
+    },
+    {
         "name": "search_memories",
         "description": "The user's authoritative long-term memory. ALWAYS call this FIRST — before answering from your own knowledge — whenever the user refers to their own past decisions, preferences, plans, projects, people, or anything that may have been discussed before (e.g. \"what did I decide\", \"do you remember\", \"which X did I pick\"). Returns durable facts newest-first; trust recent over old. Omit filters to use the current session scope. Results may carry a `trust` label — treat it as a permission, not a decoration: green (user-stated or tool-observed) = safe to act on; yellow (agent-inferred or self-summarized) = CONFIRM WITH THE USER before taking real-world action based on it, especially kind=action_report (an unverified claim that something was already done); red (superseded) = reference only. Results without `trust` predate provenance stamping — treat as yellow.",
         "inputSchema": {
@@ -1017,6 +1030,10 @@ def call_tool(name: str, arguments: dict[str, Any] | None, context: dict[str, st
 
 def _dispatch_tool(name: str, arguments: dict[str, Any] | None, context: dict[str, str] | None = None) -> dict[str, Any]:
     args = dict(arguments or {})
+    if name == "recall_episode":
+        from .episodes import recall_episodes_payload
+
+        return _text_result(recall_episodes_payload(args))
     if name == "get_mem1_capabilities":
         return _text_result(mem1_capabilities_payload())
     if name == "get_provider_parity":
