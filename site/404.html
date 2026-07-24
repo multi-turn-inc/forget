@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>404 — superseded · forget</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23e5122e'/%3E%3Ctext x='32' y='45' font-family='-apple-system,sans-serif' font-size='38' font-weight='800' fill='%23fff' text-anchor='middle'%3Ef%3C/text%3E%3Crect x='12' y='30' width='40' height='5' rx='2.5' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf9f7; --ink: #1a1c20; --body: #4e5359; --muted: #71767d;
+    --faint: #9b9fa6; --hair: #e5e2dc; --red: #d31126;
+    --serif: "Instrument Serif", Georgia, serif;
+    --sans: "Inter", -apple-system, "Noto Sans KR", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--paper); color: var(--ink);
+    font: 16px/1.7 var(--sans); -webkit-font-smoothing: antialiased;
+    min-height: 100vh; display: grid; place-items: center; padding: 32px;
+  }
+  ::selection { background: var(--red); color: #fff; }
+  .card { max-width: 560px; text-align: center; }
+  h1 {
+    font-family: var(--serif); font-weight: 400;
+    font-size: clamp(40px, 8vw, 64px); line-height: 1.05; letter-spacing: -0.01em;
+  }
+  h1 em { font-style: italic; color: var(--red); }
+  .ledger {
+    margin: 40px auto 0; max-width: 420px; text-align: left;
+    font: 13.5px/2 var(--mono); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair);
+    padding: 18px 4px;
+  }
+  .ledger .row { display: flex; justify-content: space-between; gap: 16px; }
+  .ledger .gone { color: var(--red); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+  .ledger .ok { color: #22753a; }
+  .ledger .tag { color: var(--faint); font-size: 12px; }
+  p.note { margin-top: 28px; color: var(--muted); font-size: 15px; }
+  a.btn {
+    display: inline-block; margin-top: 28px; text-decoration: none;
+    background: var(--ink); color: var(--paper); font: 600 14.5px var(--sans);
+    padding: 11px 22px; border-radius: 6px;
+  }
+  a.btn:hover { background: #000; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>This page was <em>superseded.</em></h1>
+    <div class="ledger">
+      <div class="row"><span class="gone" id="path">✗ this address</span><span class="tag">superseded · just now</span></div>
+      <div class="row"><span class="ok">✓ forget.sh</span><span class="tag">current · receipt attached</span></div>
+    </div>
+    <p class="note">Non-destructive retirement: the old fact keeps its history,
+    the new one links back. Pages, unfortunately, just 404.</p>
+    <a class="btn" href="/">Back to the current version</a>
+  </div>
+  <script>
+    document.getElementById("path").textContent = "✗ " + location.pathname;
+  </script>
+</body>
+</html>

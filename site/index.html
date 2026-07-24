@@ -1,4 +1,14 @@
 <!doctype html>
+<!--
+  f̶orget — the memory layer that can forget.
+
+  You're reading the source. Correct instinct.
+  The product is built the same way: one SQLite file at ~/.forget,
+  readable by you, not by us. No account. No telemetry. This page
+  sets zero cookies.
+
+  https://github.com/multi-turn-inc/forget
+-->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -9,7 +19,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23e5122e'/%3E%3Ctext x='32' y='45' font-family='-apple-system,sans-serif' font-size='38' font-weight='800' fill='%23fff' text-anchor='middle'%3Ef%3C/text%3E%3Crect x='12' y='30' width='40' height='5' rx='2.5' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://forget.sh/">
 <meta property="og:site_name" content="forget">
@@ -22,6 +32,8 @@
 <meta name="twitter:title" content="forget — tell Claude Code once, Cursor remembers">
 <meta name="twitter:description" content="One memory for your AI across Claude Code, Cursor, and Codex — open source, 100% local, 81.8% on LongMemEval. Nobody can read it but you.">
 <meta name="twitter:image" content="https://forget.sh/og.png">
+<meta name="theme-color" content="#faf9f7">
+<link rel="alternate" type="text/plain" title="llms.txt" href="/llms.txt">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -36,258 +48,415 @@
   "sameAs": ["https://github.com/multi-turn-inc/forget"]
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is my memory really local?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Everything lives in one SQLite file at ~/.forget — storage, search, and memory building all run on the user's machine, offline included. The 81.8% LongMemEval score was measured with building and retrieval running 100% on-device. No account, no telemetry." }
+    },
+    {
+      "@type": "Question",
+      "name": "How is forget different from ChatGPT or Claude's built-in memory?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Built-in memory lives on provider servers, works only inside one vendor's products, and shows conclusions without provenance. forget stores memory on your machine, works across Claude Code, Cursor, Codex, and Claude Desktop via MCP, and every answer carries a receipt plus a trust label." }
+    },
+    {
+      "@type": "Question",
+      "name": "What happens when a fact changes?",
+      "acceptedAnswer": { "@type": "Answer", "text": "The old fact is superseded, not deleted — it keeps its history and turns red (reference only), linked to its replacement. A conflict alert shows both versions if you are about to act on the stale one." }
+    },
+    {
+      "@type": "Question",
+      "name": "What does forget cost?",
+      "acceptedAnswer": { "@type": "Answer", "text": "The local product is free and Apache-2.0 open source, permanently. End-to-end encrypted sync across devices will be the paid layer when it ships." }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I uninstall forget?",
+      "acceptedAnswer": { "@type": "Answer", "text": "npx forget-connect disconnect restores original configs from backups and removes the hooks; deleting ~/.forget removes all memories. No account to close and no retention window." }
+    }
+  ]
+}
+</script>
 <style>
   :root {
-    --ink: #111827;        /* gray-900 */
-    --body: #4b5563;       /* gray-600 */
-    --muted: #6b7280;      /* gray-500 */
-    --faint: #9ca3af;      /* gray-400 */
-    --line: #e5e7eb;       /* gray-200 */
-    --bg-soft: #f9fafb;    /* gray-50 */
-    --red: #e5122e;
-    --red-dark: #c00f27;
-    --blush: #fdf0ee;
-    --blush-2: #fbe3e0;
-    --blush-3: #f6cfc9;
-    --code-bg: #1f2430;
+    --paper: #faf9f7;
+    --paper-2: #f4f2ee;
+    --ink: #1a1c20;
+    --body: #4e5359;
+    --muted: #71767d;
+    --faint: #9b9fa6;
+    --hair: #e5e2dc;
+    --hair-2: #d7d3cb;
+    --red: #d31126;
+    --red-soft: #f8e9e7;
+    --term: #14161c;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --cyan: #39b8d8;
+    --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
     --sans: "Inter", -apple-system, "Noto Sans KR", "Segoe UI", Roboto, sans-serif;
     --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body {
-    background: #fff; color: var(--ink);
-    font: 16.5px/1.65 var(--sans);
-    font-feature-settings: "cv11";
+    background: var(--paper); color: var(--ink);
+    font: 16px/1.7 var(--sans);
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
   ::selection { background: var(--red); color: #fff; }
   a { color: inherit; text-decoration: none; }
-  :focus-visible { outline: 2px solid var(--red); outline-offset: 3px; border-radius: 4px; }
-  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 32px; position: relative; }
+  :focus-visible { outline: 2px solid var(--red); outline-offset: 3px; border-radius: 3px; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 32px; position: relative; }
 
   .rv { opacity: 0; transform: translateY(10px); transition: opacity .55s ease, transform .55s ease; }
   .rv.in { opacity: 1; transform: none; }
   @media (prefers-reduced-motion: reduce) {
     .rv { opacity: 1; transform: none; transition: none; }
     * { animation: none !important; transition: none !important; }
+    .brand s::after { transform: scaleX(1); }
   }
-
-  /* ---------- whisper blobs ---------- */
-  .blob { position: absolute; z-index: -1; pointer-events: none; }
-  .blob.tl { top: -140px; left: -220px; transform: rotate(-16deg); }
-  .blob.tr { top: 260px; right: -300px; transform: rotate(14deg); }
-  .blob.bl { top: 1120px; left: -320px; transform: rotate(-8deg); }
 
   /* ---------- header ---------- */
   .topbar {
-    position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,0.92);
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(250,249,247,0.88);
     -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
-    transition: box-shadow .25s ease;
+    border-bottom: 1px solid transparent;
+    transition: border-color .25s ease;
   }
-  .topbar.scrolled { box-shadow: 0 1px 0 var(--line), 0 6px 20px rgba(17,24,39,0.05); }
+  .topbar.scrolled { border-bottom-color: var(--hair); }
   header { display: flex; justify-content: space-between; align-items: center; padding: 18px 0; }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 19px; letter-spacing: -0.02em; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 19px; letter-spacing: -0.02em; }
   .brand .mark {
-    width: 28px; height: 28px; border-radius: 7px; background: var(--red);
+    width: 27px; height: 27px; border-radius: 7px; background: var(--red);
     color: #fff; display: inline-flex; align-items: center; justify-content: center;
-    font-size: 16px; font-weight: 800; position: relative;
+    font-size: 15px; font-weight: 800; position: relative;
   }
-  .brand .mark::after { content: ""; position: absolute; left: 5px; right: 5px; top: 13px; height: 2px; background: #fff; border-radius: 2px; }
-  .brand s { text-decoration-color: var(--red); text-decoration-thickness: 2.5px; }
-  nav { display: flex; align-items: center; gap: 8px; }
-  nav a.link { font-size: 15px; font-weight: 600; color: var(--ink); padding: 8px 12px; border-radius: 6px; }
-  nav a.link:hover { color: var(--red-dark); }
+  .brand .mark::after { content: ""; position: absolute; left: 5px; right: 5px; top: 12.5px; height: 2px; background: #fff; border-radius: 2px; }
+  /* The strikethrough draws itself — the brand performs the product's
+     supersede mechanic every time the page loads. */
+  .brand s { text-decoration: none; position: relative; }
+  .brand s::after {
+    content: ""; position: absolute; left: -1px; right: -1px; top: 54%; height: 2px;
+    background: var(--red); border-radius: 2px;
+    transform: scaleX(0); transform-origin: left center;
+    animation: strike .5s .5s cubic-bezier(.2,.7,.2,1) forwards;
+  }
+  @keyframes strike { to { transform: scaleX(1); } }
+  nav { display: flex; align-items: center; gap: 4px; }
+  nav a.link { font-size: 14.5px; font-weight: 500; color: var(--body); padding: 8px 12px; }
+  nav a.link:hover { color: var(--ink); }
   .btn {
     display: inline-block; border: 0; cursor: pointer; font-family: var(--sans);
-    font-size: 15px; font-weight: 600; padding: 11px 20px; border-radius: 6px;
-    transition: background .15s ease;
+    font-size: 14.5px; font-weight: 600; padding: 10px 18px; border-radius: 6px;
+    transition: background .15s ease, border-color .15s ease;
   }
-  .btn.red { background: var(--red); color: #fff; }
-  .btn.red:hover { background: var(--red-dark); }
-  .btn.blush { background: var(--blush); color: var(--red); }
-  .btn.blush:hover { background: var(--blush-2); }
-  @media (max-width: 640px) { nav a.link { display: none; } }
+  .btn.red { background: var(--ink); color: var(--paper); }
+  .btn.red:hover { background: #000; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--hair-2); }
+  .btn.ghost:hover { border-color: var(--ink); }
+  @media (max-width: 700px) { nav a.link { display: none; } }
 
   /* ---------- hero ---------- */
-  .hero { text-align: center; padding: 108px 0 40px; }
+  .hero { padding: 96px 0 0; }
+  .eyebrow {
+    display: inline-block; font: 500 13px var(--mono); letter-spacing: 0.02em;
+    color: var(--red); border-bottom: 1px solid var(--red-soft); padding-bottom: 2px;
+  }
+  .eyebrow:hover { border-bottom-color: var(--red); }
   h1 {
-    font-size: clamp(38px, 5.6vw, 60px);
-    line-height: 1.08; letter-spacing: -0.035em; font-weight: 800;
-    max-width: 22ch; margin: 0 auto; text-wrap: balance;
+    font-family: var(--serif); font-weight: 400;
+    font-size: clamp(46px, 7vw, 82px);
+    line-height: 1.02; letter-spacing: -0.015em;
+    max-width: 18ch; margin: 26px 0 0;
   }
+  h1 em { font-style: italic; color: var(--red); }
   .sub {
-    max-width: 52ch; margin: 22px auto 0;
-    font-size: 19px; line-height: 1.65; color: var(--muted); text-wrap: balance;
+    max-width: 54ch; margin: 26px 0 0;
+    font-size: 18px; line-height: 1.7; color: var(--body);
   }
-  .sub code {
-    font: 600 0.86em var(--mono); color: var(--red-dark);
-    background: var(--blush); padding: 2px 7px; border-radius: 5px;
+  .sub code { font: 600 0.85em var(--mono); color: var(--ink); background: var(--paper-2); padding: 2px 7px; border-radius: 4px; }
+
+  .hero-ctas { margin-top: 34px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .cmd-pill {
+    display: inline-flex; align-items: center; gap: 14px;
+    font: 500 13.5px var(--mono); color: var(--ink);
+    background: #fff; border: 1px solid var(--hair-2);
+    padding: 11px 16px; border-radius: 7px;
+  }
+  .cmd-pill .k { color: var(--red); font-weight: 600; }
+  .cmd-pill button {
+    font: 600 11.5px var(--mono); color: var(--muted); background: var(--paper-2);
+    border: 0; padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: background .15s;
+  }
+  .cmd-pill button:hover { background: var(--hair); color: var(--ink); }
+
+  /* ---------- hero product window ---------- */
+  .stage { margin: 64px auto 0; max-width: 860px; text-align: left; }
+  .stage-inner {
+    background: var(--term);
+    border-radius: 12px; overflow: hidden;
+    box-shadow: 0 1px 2px rgba(26,28,32,0.08), 0 24px 60px -16px rgba(26,28,32,0.35);
+  }
+  .stage-bar { display: flex; align-items: center; gap: 7px; padding: 13px 18px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  .stage-bar .d { width: 11px; height: 11px; border-radius: 50%; background: rgba(255,255,255,0.14); }
+  .stage-bar .title { margin: 0 auto; font: 500 12.5px var(--mono); color: #7c8494; transform: translateX(-20px); }
+  .stage-bar .live {
+    font: 600 10px var(--mono); letter-spacing: 0.12em; color: var(--green);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .stage-bar .live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 1.8s ease infinite; }
+  @keyframes pulse { 50% { opacity: 0.25; } }
+  .stage-body {
+    padding: 20px 26px 26px; font: 13.5px/1.85 var(--mono); color: #d6dae2;
+    overflow-x: auto; white-space: pre; min-height: 380px;
+  }
+  @media (max-width: 640px) { .stage-body { font-size: 12px; padding: 16px 18px 20px; min-height: 340px; } }
+  .stage .step { display: block; }
+  .stage .step.hide { display: none; }
+  .stage .dim { color: #5b626e; }
+  .stage .lbl { color: #8a92a0; }
+  .stage .g { color: #6fdd8b; } .stage .yl { color: #e3b341; }
+  .stage .rd { color: #ff7b72; } .stage .cy { color: #79c0ff; }
+  .stage .pk { color: #ff7b72; }
+  .stage .you { color: #fff; font-weight: 600; }
+  .caret { display: inline-block; width: 8px; height: 15px; background: #d6dae2; vertical-align: -2px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0 } }
+  .stage-note { text-align: center; margin-top: 18px; font-size: 13.5px; color: var(--muted); }
+  .stage-note b { color: var(--body); font-weight: 600; }
+  .replay {
+    background: none; border: 0; cursor: pointer; color: var(--faint);
+    font: 600 12px var(--mono); margin-left: 10px;
+  }
+  .replay:hover { color: var(--body); }
+  .ai-note { margin-top: 20px; font-size: 14px; color: var(--muted); text-align: center; }
+  .ai-note a { color: var(--red); border-bottom: 1px solid var(--red-soft); }
+  .ai-note a:hover { border-bottom-color: var(--red); }
+
+  /* ---------- works-with band ---------- */
+  .band {
+    border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair);
+    margin-top: 88px; padding: 24px 0;
+    display: flex; align-items: center; justify-content: center;
+    flex-wrap: wrap; gap: 14px 44px;
+  }
+  .band .label { font: 500 11px var(--mono); letter-spacing: 0.16em; color: var(--faint); }
+  .band .logo { color: var(--body); font-weight: 600; font-size: 15.5px; letter-spacing: -0.01em; }
+  .band .logo span { color: var(--faint); font-weight: 400; }
+
+  /* ---------- sections (editorial) ---------- */
+  section { padding: 108px 0; }
+  .sec-head { display: grid; grid-template-columns: 180px 1fr; gap: 28px; align-items: baseline; margin-bottom: 8px; }
+  @media (max-width: 800px) { .sec-head { grid-template-columns: 1fr; gap: 10px; } }
+  .sec-no { font: 500 12.5px var(--mono); letter-spacing: 0.14em; color: var(--red); text-transform: uppercase; }
+  .sec-title {
+    font-family: var(--serif); font-weight: 400;
+    font-size: clamp(32px, 4.2vw, 46px); line-height: 1.1; letter-spacing: -0.01em;
+    max-width: 24ch;
+  }
+  .sec-title em { font-style: italic; color: var(--red); }
+  .sec-sub { color: var(--muted); font-size: 16.5px; max-width: 58ch; margin: 16px 0 0; }
+  .sec-body { margin-left: 208px; }
+  @media (max-width: 800px) { .sec-body { margin-left: 0; } }
+  .divide { border-top: 1px solid var(--hair); }
+
+  /* benchmark */
+  .bench { max-width: 720px; margin: 52px 0 0; }
+  .bench .row { display: grid; grid-template-columns: 130px 1fr 80px; align-items: center; gap: 18px; padding: 11px 0; }
+  .bench .name { font-weight: 500; font-size: 15px; color: var(--body); text-align: right; }
+  .bench .row.us .name { color: var(--ink); font-weight: 700; }
+  .bench .track { background: var(--paper-2); border-radius: 4px; height: 30px; position: relative; overflow: hidden; }
+  .bench .bar { position: absolute; top: 0; bottom: 0; left: 0; width: 0; border-radius: 4px; background: var(--hair-2); transition: width 1.1s cubic-bezier(.2,.7,.2,1); }
+  .bench.in .bar { width: var(--w); }
+  .bench .row.us .bar { background: var(--red); }
+  .bench .row.ceil .bar { background: repeating-linear-gradient(135deg, var(--hair) 0 6px, var(--paper-2) 6px 12px); }
+  .bench .bar .in-label { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font: 600 10px var(--mono); color: #fff; letter-spacing: 0.1em; white-space: nowrap; }
+  .bench .val { font: 600 14.5px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .bench .row.us .val { color: var(--red); font-size: 16.5px; font-weight: 700; }
+  .bench-note { margin-top: 26px; font-size: 13.5px; color: var(--faint); max-width: 62ch; line-height: 1.7; }
+  .bench-note a { color: var(--red); font-weight: 600; }
+  .bench-note a:hover { text-decoration: underline; }
+  .bench-kicker { display: block; margin: 28px 0 0; font-size: 15.5px; color: var(--body); }
+  .bench-kicker strong { color: var(--red); font-family: var(--mono); }
+  @media (max-width: 640px) { .bench .row { grid-template-columns: 80px 1fr 58px; gap: 10px; } .bench .name { font-size: 12.5px; } }
+
+  /* product surfaces */
+  .surfaces { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; margin-top: 56px; }
+  @media (max-width: 900px) { .surfaces { grid-template-columns: 1fr; } }
+  .surface h3 { font-size: 16.5px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 6px; }
+  .surface > p { font-size: 14.5px; color: var(--body); margin-bottom: 16px; min-height: 48px; }
+  @media (max-width: 900px) { .surface > p { min-height: 0; } }
+  .surface .shell {
+    background: var(--term); border-radius: 10px;
+    padding: 16px 18px 18px;
+    color: #d6dae2; font: 12.5px/1.8 var(--mono); overflow-x: auto; white-space: pre;
+    box-shadow: 0 1px 2px rgba(26,28,32,0.06), 0 14px 32px -14px rgba(26,28,32,0.3);
+  }
+  .surface .tag { color: #5b626e; letter-spacing: 0.06em; }
+  .surface .g { color: #6fdd8b; } .surface .yl { color: #e3b341; }
+  .surface .rd { color: #ff7b72; } .surface .dim { color: #5b626e; }
+  .surface .cy { color: #79c0ff; } .surface .pk { color: #ff7b72; }
+
+  /* how it works */
+  .steps-list { margin-top: 48px; max-width: 720px; }
+  .steps-list li { list-style: none; display: grid; grid-template-columns: 64px 1fr; gap: 24px; padding: 26px 0; border-bottom: 1px solid var(--hair); }
+  .steps-list li:first-child { border-top: 1px solid var(--hair); }
+  .steps-list .no { font: 500 13px var(--mono); color: var(--red); padding-top: 3px; }
+  .steps-list h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 6px; }
+  .steps-list p { font-size: 15px; color: var(--body); max-width: 58ch; }
+  .steps-list code { font: 600 0.86em var(--mono); color: var(--ink); background: var(--paper-2); padding: 2px 6px; border-radius: 4px; }
+  .soon-tag { font: 600 10.5px var(--mono); color: var(--red); background: var(--red-soft); border-radius: 4px; padding: 2px 8px; margin-left: 8px; vertical-align: 2px; }
+
+  /* facts */
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin-top: 56px; border-top: 1px solid var(--hair); }
+  .fact { padding: 32px 28px 32px 0; border-bottom: 1px solid var(--hair); }
+  .fact + .fact { border-left: 1px solid var(--hair); padding-left: 28px; }
+  .fact .no { font: 500 12.5px var(--mono); color: var(--red); margin-bottom: 14px; }
+  .fact h3 { font-family: var(--serif); font-weight: 400; font-size: 22px; margin-bottom: 10px; line-height: 1.25; }
+  .fact p { font-size: 14.5px; color: var(--body); }
+  .fact .src { display: block; margin-top: 16px; font: 500 12px var(--mono); color: var(--faint); }
+  @media (max-width: 860px) {
+    .facts { grid-template-columns: 1fr; }
+    .fact + .fact { border-left: 0; padding-left: 0; }
   }
 
-  .waitlist-form { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 36px; }
+  /* quote */
+  .quote { background: var(--paper-2); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); }
+  blockquote {
+    font-family: var(--serif); font-weight: 400;
+    text-align: center; font-size: clamp(26px, 3.4vw, 40px);
+    line-height: 1.3; letter-spacing: -0.01em; max-width: 34ch; margin: 0 auto; text-wrap: balance;
+  }
+  blockquote .r { font-style: italic; color: var(--red); }
+
+  /* comparison */
+  .cmp { margin-top: 52px; overflow-x: auto; }
+  .cmp table { width: 100%; border-collapse: collapse; min-width: 680px; }
+  .cmp th, .cmp td { padding: 14px 18px; text-align: center; font-size: 14.5px; border-bottom: 1px solid var(--hair); color: var(--body); font-variant-numeric: tabular-nums; }
+  .cmp th:first-child, .cmp td:first-child { text-align: left; font-weight: 500; color: var(--ink); }
+  .cmp thead th { font: 500 11.5px var(--mono); color: var(--faint); letter-spacing: 0.08em; text-transform: uppercase; border-bottom: 1px solid var(--hair-2); }
+  .cmp thead th.us-h { color: var(--red); }
+  .cmp td.us { background: #fff; font-weight: 600; color: var(--ink); box-shadow: inset 1px 0 0 var(--hair), inset -1px 0 0 var(--hair); }
+  .cmp .yes { color: var(--green); font-weight: 700; }
+  .cmp .dash { color: var(--faint); }
+  .cmp-note { margin-top: 18px; font-size: 13px; color: var(--faint); }
+  .cmp-note a { color: var(--red); font-weight: 600; }
+
+  /* today / next */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 52px; border: 1px solid var(--hair); border-radius: 10px; overflow: hidden; background: #fff; }
+  @media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
+  .col { padding: 36px; }
+  .col + .col { border-left: 1px solid var(--hair); }
+  @media (max-width: 860px) { .col + .col { border-left: 0; border-top: 1px solid var(--hair); } }
+  .col .chip {
+    display: inline-block; font: 600 11px var(--mono); letter-spacing: 0.06em;
+    padding: 4px 10px; border-radius: 4px; margin-bottom: 20px;
+  }
+  .col .chip.ok { background: #eaf6ec; color: #22753a; }
+  .col .chip.soon { background: var(--red-soft); color: var(--red); }
+  .col h3 { font-family: var(--serif); font-weight: 400; font-size: 24px; margin-bottom: 16px; }
+  .col ul { list-style: none; }
+  .col li { padding: 7px 0 7px 26px; position: relative; font-size: 15px; color: var(--body); }
+  .col li::before { content: "→"; position: absolute; left: 0; color: var(--faint); }
+  .col.today li::before { content: "✓"; color: var(--green); font-weight: 700; }
+
+  /* honesty */
+  .honest { max-width: 680px; margin: 44px 0 0; }
+  .honest li { list-style: none; padding: 24px 0; font-size: 15px; color: var(--body); border-bottom: 1px solid var(--hair); }
+  .honest li:first-child { border-top: 1px solid var(--hair); }
+  .honest li strong { color: var(--ink); display: block; margin-bottom: 5px; font-size: 16px; font-weight: 600; }
+
+  /* faq */
+  .faq { max-width: 720px; margin: 44px 0 0; }
+  .faq details { border-bottom: 1px solid var(--hair); }
+  .faq details:first-child { border-top: 1px solid var(--hair); }
+  .faq summary {
+    cursor: pointer; list-style: none; padding: 22px 36px 22px 0;
+    font-size: 16.5px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink);
+    position: relative;
+  }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after {
+    content: "+"; position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    font: 400 22px var(--mono); color: var(--faint); transition: transform .2s ease, color .15s ease;
+  }
+  .faq details[open] summary::after { transform: translateY(-50%) rotate(45deg); color: var(--red); }
+  .faq summary:hover::after { color: var(--body); }
+  .faq .a { padding: 0 36px 24px 0; font-size: 15px; color: var(--body); line-height: 1.75; }
+  .faq .a code { font: 600 0.88em var(--mono); color: var(--ink); background: var(--paper-2); padding: 2px 6px; border-radius: 4px; }
+  .faq .a a { color: var(--red); font-weight: 600; }
+  .faq .a a:hover { text-decoration: underline; }
+
+  /* changelog */
+  .log { max-width: 640px; margin: 44px 0 0; list-style: none; }
+  .log li { display: flex; gap: 24px; padding: 15px 0; border-bottom: 1px solid var(--hair); font-size: 15px; color: var(--body); }
+  .log li:first-child { border-top: 1px solid var(--hair); }
+  .log .d { font: 500 13px var(--mono); color: var(--red); white-space: nowrap; min-width: 58px; padding-top: 3px; }
+  .log strong { color: var(--ink); font-weight: 600; }
+  .log-more { display: inline-block; margin-top: 26px; font-size: 14.5px; font-weight: 600; color: var(--red); }
+  .log-more:hover { text-decoration: underline; }
+
+  /* the name */
+  .namebeat { text-align: center; }
+  .namebeat p {
+    font-family: var(--serif); font-weight: 400;
+    font-size: clamp(24px, 3.2vw, 36px); line-height: 1.35;
+    max-width: 30ch; margin: 0 auto; text-wrap: balance;
+  }
+  .namebeat .why { display: block; font: 500 12.5px var(--mono); letter-spacing: 0.14em; color: var(--red); text-transform: uppercase; margin-bottom: 26px; }
+  .namebeat .sup { position: relative; white-space: nowrap; }
+  .namebeat .sup::after {
+    content: ""; position: absolute; left: -2px; right: -2px; top: 55%; height: 2.5px;
+    background: var(--red); border-radius: 2px;
+    transform: scaleX(0); transform-origin: left center;
+    transition: transform .5s .3s cubic-bezier(.2,.7,.2,1);
+  }
+  .namebeat .rv.in .sup::after { transform: scaleX(1); }
+  @media (prefers-reduced-motion: reduce) { .namebeat .sup::after { transform: scaleX(1); } }
+  .namebeat .fine { font-family: var(--sans); font-size: 15px; color: var(--muted); max-width: 52ch; margin: 26px auto 0; line-height: 1.75; }
+
+  /* waitlist / partners */
+  .waitlist-form { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 28px; }
   .waitlist-form input {
-    padding: 12px 16px; font-size: 15.5px; min-width: 280px;
-    border: 1px solid #d1d5db; border-radius: 6px;
+    padding: 11px 15px; font-size: 15px; min-width: 250px;
+    border: 1px solid var(--hair-2); border-radius: 6px;
     color: var(--ink); outline: none; font-family: var(--sans); background: #fff;
     transition: border-color .15s, box-shadow .15s;
   }
   .waitlist-form input::placeholder { color: var(--faint); }
-  .waitlist-form input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(229,18,46,0.12); }
-  .form-note { margin-top: 18px; font-weight: 600; color: var(--red-dark); }
-  .form-hint { margin-top: 13px; font-size: 13px; color: var(--faint); }
+  .waitlist-form input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(211,17,38,0.08); }
+  .form-note { margin-top: 16px; font-weight: 600; color: #22753a; }
+  .form-hint { margin-top: 12px; font-size: 13px; color: var(--faint); }
+  .partners { background: var(--paper-2); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); text-align: center; }
+  .partners .sec-title { margin: 0 auto; }
+  .partners p { color: var(--muted); max-width: 52ch; margin: 18px auto 30px; font-size: 16.5px; }
+  .partners .btn.red { background: var(--red); }
+  .partners .btn.red:hover { background: #b70e21; }
 
-  /* ---------- terminal ---------- */
-  .term {
-    background: var(--code-bg); border-radius: 18px;
-    margin: 60px auto 0; max-width: 780px; text-align: left;
-    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-    overflow: hidden;
+  /* closer */
+  .closer { text-align: center; padding: 130px 0; }
+  .closer h2 {
+    font-family: var(--serif); font-weight: 400;
+    font-size: clamp(36px, 5vw, 58px); letter-spacing: -0.01em; line-height: 1.1; text-wrap: balance;
   }
-  .term-bar { display: flex; align-items: center; gap: 7px; padding: 13px 18px; }
-  .term-bar .d { width: 11px; height: 11px; border-radius: 50%; }
-  .term-bar .d.r { background: #ff5f57; } .term-bar .d.y { background: #febc2e; } .term-bar .d.g { background: #28c840; }
-  .term-bar .copy {
-    margin-left: auto; font: 12px var(--mono); color: #9aa4b2;
-    background: rgba(255,255,255,0.06); border: 0;
-    padding: 5px 12px; border-radius: 5px; cursor: pointer; transition: background .15s;
-  }
-  .term-bar .copy:hover { background: rgba(255,255,255,0.12); }
-  .term-body {
-    padding: 6px 26px 26px; font: 14px/1.8 var(--mono); color: #e6e9ef;
-    overflow-x: auto; white-space: pre; min-height: 244px;
-  }
-  .term .k { color: #f92672; }
-  .term .s { color: #e6db74; }
-  .term .c { color: #778090; }
-  .term .a { color: #a6e22e; }
-  .term .p { color: #66d9ef; }
-  .caret { display: inline-block; width: 8px; height: 16px; background: #e6e9ef; vertical-align: -3px; animation: blink 1s steps(1) infinite; }
-  @keyframes blink { 50% { opacity: 0 } }
-  .ai-note { margin-top: 20px; font-size: 14.5px; color: var(--body); font-weight: 600; text-align: center; }
-  .ai-note a { color: var(--red); }
-  .ai-note a:hover { text-decoration: underline; }
+  .closer h2 em { font-style: italic; color: var(--red); }
+  .closer .cmd-pill { margin-top: 34px; }
+  .closer .ctas { margin-top: 28px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
-  /* ---------- sections ---------- */
-  section { padding: 110px 0; }
-  .sec-title { text-align: center; font-size: clamp(28px, 3.6vw, 38px); font-weight: 800; letter-spacing: -0.03em; text-wrap: balance; }
-  .sec-sub { text-align: center; color: var(--muted); font-size: 17.5px; max-width: 56ch; margin: 14px auto 0; }
-
-  /* trio — Formspree-style: left-aligned, bare icons */
-  .trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 56px; margin-top: 64px; }
-  .trio .icon { color: var(--red); margin-bottom: 16px; height: 34px; display: flex; align-items: flex-end; }
-  .trio h3 { font-size: 17.5px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.01em; }
-  .trio p { font-size: 15.5px; color: var(--body); }
-  .trio code { font: 600 0.85em var(--mono); color: var(--red-dark); background: var(--blush); padding: 2px 6px; border-radius: 5px; }
-  @media (max-width: 860px) { .trio { grid-template-columns: 1fr; gap: 40px; } }
-
-  /* facts */
-  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 64px; }
-  .fact { border: 1px solid var(--line); border-radius: 12px; padding: 30px 28px; background: #fff; }
-  .fact .no { font: 700 12.5px var(--mono); color: var(--red); margin-bottom: 14px; }
-  .fact h3 { font-size: 17.5px; margin-bottom: 10px; letter-spacing: -0.015em; line-height: 1.35; }
-  .fact p { font-size: 15px; color: var(--body); }
-  .fact .src { display: block; margin-top: 16px; font: 500 12.5px var(--mono); color: var(--faint); }
-  @media (max-width: 860px) { .facts { grid-template-columns: 1fr; } }
-
-  /* quote */
-  .quote { background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-  blockquote {
-    text-align: center; font-size: clamp(21px, 2.8vw, 29px); font-weight: 700;
-    line-height: 1.45; letter-spacing: -0.02em; max-width: 36ch; margin: 0 auto; text-wrap: balance;
-  }
-  blockquote .r { color: var(--red); }
-
-  /* today / next */
-  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 64px; }
-  @media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
-  .col { border: 1px solid var(--line); border-radius: 12px; padding: 32px; }
-  .col .chip {
-    display: inline-block; font: 600 12px var(--mono); letter-spacing: 0.05em;
-    padding: 4px 10px; border-radius: 5px; margin-bottom: 20px;
-  }
-  .col .chip.ok { background: #ecfdf5; color: #047857; }
-  .col .chip.soon { background: var(--blush); color: var(--red-dark); }
-  .col h3 { font-size: 19px; margin-bottom: 16px; letter-spacing: -0.015em; }
-  .col ul { list-style: none; }
-  .col li { padding: 8px 0 8px 26px; position: relative; font-size: 15.5px; color: var(--body); }
-  .col li::before { content: "→"; position: absolute; left: 0; color: var(--faint); font-weight: 600; }
-  .col.today li::before { content: "✓"; color: #059669; }
-
-  /* honesty */
-  .honest { max-width: 720px; margin: 56px auto 0; }
-  .honest li { list-style: none; padding: 24px 0; font-size: 15.5px; color: var(--body); border-bottom: 1px solid var(--line); }
-  .honest li:first-child { border-top: 1px solid var(--line); }
-  .honest li strong { color: var(--ink); display: block; margin-bottom: 5px; font-size: 16.5px; }
-
-  /* partners */
-  .partners { text-align: center; background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-  .partners p { color: var(--muted); max-width: 52ch; margin: 16px auto 30px; font-size: 17px; }
-
-  /* ---------- works-with band ---------- */
-  .band {
-    background: var(--code-bg); border-radius: 18px;
-    padding: 30px 44px; margin: 84px auto 0; max-width: 980px;
-    display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap; gap: 18px 36px;
-  }
-  .band .label { font: 600 12px var(--mono); letter-spacing: 0.14em; color: #8a93a3; }
-  .band .logo { color: #e6e9ef; font-weight: 700; font-size: 16.5px; letter-spacing: -0.01em; opacity: .92; }
-  .band .logo span { opacity: .55; font-weight: 500; }
-
-  /* ---------- how it works ---------- */
-  .hiw { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 72px; align-items: center; }
-  @media (max-width: 900px) { .hiw { grid-template-columns: 1fr; gap: 48px; } }
-  .hiw h2 { text-align: left; font-size: clamp(28px, 3.6vw, 38px); font-weight: 800; letter-spacing: -0.03em; }
-  .hiw .lead { color: var(--muted); font-size: 17px; margin-top: 12px; max-width: 46ch; }
-  .mock {
-    background: var(--code-bg); border-radius: 16px; padding: 22px 24px 26px;
-    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); color: #e6e9ef;
-    font-size: 14.5px; line-height: 1.65;
-  }
-  .mock .mock-bar { display: flex; gap: 7px; margin-bottom: 18px; }
-  .mock .d { width: 11px; height: 11px; border-radius: 50%; }
-  .mock .d.r { background: #ff5f57; } .mock .d.y { background: #febc2e; } .mock .d.g { background: #28c840; }
-  .mock .u { color: #9aa4b2; font-family: var(--mono); font-size: 13px; }
-  .mock .msg { margin: 10px 0 16px; font-weight: 500; }
-  .mock .tool { font: 12.5px var(--mono); color: #66d9ef; margin-bottom: 14px; }
-  .mock .ans { background: rgba(255,255,255,0.05); border-left: 3px solid #a6e22e; border-radius: 6px; padding: 12px 16px; }
-  .mock .receipt { display: inline-block; margin-top: 10px; font: 600 12px var(--mono); color: #a6e22e; background: rgba(166,226,46,0.1); padding: 3px 10px; border-radius: 5px; }
-  .steps { list-style: none; position: relative; margin-top: 36px; }
-  .steps::before { content: ""; position: absolute; left: 11px; top: 14px; bottom: 14px; width: 2px; background: var(--line); border-radius: 2px; }
-  .steps li { position: relative; padding: 0 0 30px 44px; }
-  .steps li:last-child { padding-bottom: 0; }
-  .steps .dot {
-    position: absolute; left: 4px; top: 5px; width: 16px; height: 16px;
-    border-radius: 50%; background: #fff; border: 2px solid #d1d5db;
-  }
-  .steps li.hot .dot { border-color: var(--red); background: var(--red); box-shadow: 0 0 0 4px rgba(229,18,46,0.12); }
-  .steps h3 { font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
-  .steps p { font-size: 15px; color: var(--body); }
-  .steps .soon-tag { font: 600 11px var(--mono); color: var(--red-dark); background: var(--blush); border-radius: 4px; padding: 2px 8px; margin-left: 8px; vertical-align: 2px; }
-
-  /* ---------- dark closer ---------- */
-  .closer { background: var(--code-bg); text-align: center; padding: 110px 0; }
-  .closer h2 { color: #fff; font-size: clamp(30px, 4.2vw, 44px); font-weight: 800; letter-spacing: -0.03em; text-wrap: balance; }
-  .closer .cmd {
-    display: inline-block; margin: 28px auto 0; font: 500 15px var(--mono);
-    color: #e6e9ef; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
-    padding: 12px 22px; border-radius: 8px;
-  }
-  .closer .cmd .k { color: #f92672; }
-  .closer .ctas { margin-top: 32px; display: flex; gap: 12px; justify-content: center; }
-  .closer .btn.ghost-dark { background: rgba(255,255,255,0.08); color: #fff; }
-  .closer .btn.ghost-dark:hover { background: rgba(255,255,255,0.15); }
-
-  footer { padding: 48px 0 64px; }
+  footer { padding: 48px 0 64px; border-top: 1px solid var(--hair); }
   .foot-grid { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
-  .foot-brand .line { color: var(--muted); font-size: 14.5px; margin-top: 12px; max-width: 34ch; }
+  .foot-brand .line { font-family: var(--serif); font-style: italic; color: var(--muted); font-size: 17px; margin-top: 12px; max-width: 34ch; }
   .foot-links { display: flex; gap: 64px; }
-  .foot-links h4 { font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--faint); margin-bottom: 12px; font-weight: 600; }
-  .foot-links a { display: block; font-size: 14.5px; font-weight: 500; color: var(--body); padding: 4px 0; }
-  .foot-links a:hover { color: var(--red-dark); }
-  .legal { margin-top: 40px; font-size: 13px; color: var(--faint); border-top: 1px solid var(--line); padding-top: 24px; }
+  .foot-links h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); margin-bottom: 12px; font-weight: 600; }
+  .foot-links a { display: block; font-size: 14px; font-weight: 500; color: var(--body); padding: 4px 0; }
+  .foot-links a:hover { color: var(--ink); }
+  .legal { margin-top: 40px; font-size: 13px; color: var(--faint); border-top: 1px solid var(--hair); padding-top: 24px; }
 </style>
 </head>
 <body>
@@ -297,9 +466,11 @@
     <header>
       <a class="brand" href="/"><span class="mark">f</span><s>forget</s></a>
       <nav>
+        <a class="link" href="#benchmark">Benchmark</a>
+        <a class="link" href="#how">How it works</a>
+        <a class="link" href="#faq">FAQ</a>
         <a class="link" href="https://github.com/multi-turn-inc/forget/blob/main/MANIFESTO.md">Manifesto</a>
-        <a class="link" href="/llms.txt">llms.txt</a>
-        <a class="btn blush" href="https://github.com/multi-turn-inc/forget">GitHub</a>
+        <a class="btn ghost" href="https://github.com/multi-turn-inc/forget">GitHub</a>
         <a class="btn red" href="#install">Install the beta</a>
       </nav>
     </header>
@@ -307,129 +478,187 @@
 </div>
 
 <div class="wrap">
-  <div class="blob tl"><svg width="520" height="420" viewBox="0 0 520 420" fill="none">
-    <rect width="520" height="420" rx="90" fill="#fdf0ee"/>
-    <rect x="44" y="40" width="432" height="340" rx="72" stroke="#fbe3e0" stroke-width="3"/>
-    <rect x="92" y="84" width="336" height="252" rx="56" stroke="#f6cfc9" stroke-width="3"/>
-    <rect x="140" y="128" width="240" height="164" rx="40" stroke="#f2bcb4" stroke-width="3"/>
-  </svg></div>
-  <div class="blob tr"><svg width="560" height="440" viewBox="0 0 560 440" fill="none">
-    <rect width="560" height="440" rx="96" fill="#fdf0ee"/>
-    <rect x="48" y="42" width="464" height="356" rx="76" stroke="#fbe3e0" stroke-width="3"/>
-    <rect x="100" y="88" width="360" height="264" rx="58" stroke="#f6cfc9" stroke-width="3"/>
-  </svg></div>
-
-  <div class="hero" id="waitlist">
-    <h1>Tell Claude Code once. Cursor remembers.</h1>
+  <div class="hero">
+    <a class="eyebrow" href="#benchmark">81.8% on LongMemEval — above Mem0 &amp; Zep, 100% local →</a>
+    <h1>Tell Claude Code once.<br><em>Cursor remembers.</em></h1>
     <p class="sub">One memory for your AI — decisions, preferences, project
     context — in a <code>SQLite</code> file on your machine. We couldn't
     read it if we tried.</p>
-    <p style="margin:16px auto 0; font-size:15px; font-weight:600; color:var(--red-dark); background:var(--blush); display:inline-block; padding:7px 16px; border-radius:999px;">81.8% on LongMemEval&ensp;·&ensp;above Mem0 &amp; Zep&ensp;·&ensp;100% local</p>
 
-    <form class="waitlist-form" action="https://formspree.io/f/mbdnjvjn" method="POST">
-      <input type="email" name="email" required placeholder="you@example.com" aria-label="Email address">
-      <button class="btn red" type="submit">Join the sync waitlist</button>
-    </form>
-    <p class="form-note" hidden>You're on the list. We'll write when sync ships. ✓</p>
-    <p class="form-hint">For the end-to-end encrypted sync beta. No spam — launch news only.</p>
+    <div class="hero-ctas" id="install">
+      <span class="cmd-pill"><span><span class="k">pip</span> install 'forget-ai[server]' &amp;&amp; <span class="k">npx</span> forget-connect</span><button id="copyBtn" type="button">copy</button></span>
+    </div>
 
-    <div class="term" id="install">
-      <div class="term-bar">
-        <span class="d r"></span><span class="d y"></span><span class="d g"></span>
-        <button class="copy" id="copyBtn" type="button">copy</button>
+    <div class="stage" id="stage">
+      <div class="stage-inner">
+        <div class="stage-bar">
+          <span class="d"></span><span class="d"></span><span class="d"></span>
+          <span class="title">~/your-repo — claude</span>
+          <span class="live">MEMORY ON</span>
+        </div>
+        <div class="stage-body" id="stageBody"><span class="step"><span class="pk">$</span> claude</span><span class="step">
+<span class="lbl">▸ forget · session capsule</span>
+  <span class="cy">Current goal:</span> beta-launch — Show HN
+  <span class="cy">Next:</span> record the demo video
+  <span class="yl">Open loop:</span> "sent the pricing inquiry" <span class="dim">— 6 days, unverified</span></span><span class="step">
+<span class="you">&gt; </span><span class="you" id="type1"></span><span class="caret" id="caret1" hidden></span></span><span class="step">
+<span class="lbl">⏺ forget · search_memories</span></span><span class="step"><span class="g">✓</span> Paddle was chosen as merchant of record — KYB review
+  passed, and it handles global tax remittance for you.
+  <span class="dim">[decision · Jul 13 · via Claude Code]</span></span><span class="step">
+<span class="you">&gt; </span><span class="you" id="type2"></span><span class="caret" id="caret2" hidden></span></span><span class="step">
+<span class="yl">⚠ conflict zone — a later fact supersedes this</span>
+  <span class="rd">✗ "payments provider is Stripe"</span>   <span class="dim">Jul 2 · superseded</span>
+  <span class="g">✓ "Paddle is merchant of record"</span>  <span class="dim">Jul 13 · receipt</span></span></div>
       </div>
-      <div class="term-body"><span class="k">pip</span> install 'forget-ai[server]' &amp;&amp; forget-server install-service
-<span class="k">npx</span> forget-connect        <span class="c"># wires Claude Code, Codex, Claude Desktop</span>
-
-<span class="c"># then, against any repo:</span>
-<span class="p">$</span> <span id="typeTarget"></span><span class="caret" id="caret"></span><span id="answer" hidden>
-<span class="a">A: forget-connect 0.3.0: local-first default; hooks push memory into sessions</span>
-<span class="a">   [repo@7c8f0683 · 2026-07-23]</span>  <span class="c">← every answer carries a receipt</span></span></div>
     </div>
+    <p class="stage-note"><b>This is the product.</b> The capsule, the receipt, and the
+    conflict alert are real hook output.<button class="replay" id="replayBtn" type="button" hidden>↺ replay</button></p>
     <p class="ai-note">Using an AI agent? forget's <a href="/llms.txt">llms.txt</a> has setup instructions for LLMs.</p>
+  </div>
 
-    <div class="band rv">
-      <span class="label">WORKS WITH</span>
-      <span class="logo">Claude <span>Code</span></span>
-      <span class="logo">Cursor</span>
-      <span class="logo">Codex</span>
-      <span class="logo">Claude <span>Desktop</span></span>
-      <span class="logo"><span>via</span> MCP</span>
-    </div>
+  <div class="band rv">
+    <span class="label">WORKS WITH</span>
+    <span class="logo">Claude <span>Code</span></span>
+    <span class="logo">Cursor</span>
+    <span class="logo">Codex</span>
+    <span class="logo">Claude <span>Desktop</span></span>
+    <span class="logo"><span>via</span> MCP</span>
   </div>
 </div>
 
-<section>
+<section id="benchmark">
   <div class="wrap">
-    <div class="hiw">
-      <div class="mock rv">
-        <div class="mock-bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span></div>
-        <div class="u">you — in Cursor, three weeks later</div>
-        <p class="msg">why is the payment provider Paddle and not Stripe?</p>
-        <div class="tool">⏺ forget · search_memories</div>
-        <div class="ans">
-          Paddle was chosen as merchant of record on&nbsp;July&nbsp;13 — KYB
-          review passed, and it handles global tax remittance so you don't
-          have to.
-          <span class="receipt">[decision · 2026-07-13 · via Claude Code]</span>
+    <div class="sec-head rv">
+      <span class="sec-no">01 · Proof</span>
+      <div>
+        <h2 class="sec-title">Don't take our word for it.<br><em>Take the benchmark's.</em></h2>
+        <p class="sec-sub">LongMemEval, the standard long-term-memory benchmark.
+        Full 500-question set, GPT-4o reader for every system.</p>
+      </div>
+    </div>
+    <div class="sec-body">
+      <div class="bench rv">
+        <div class="row">
+          <span class="name">Mem0</span>
+          <div class="track"><div class="bar" style="--w:49%"></div></div>
+          <span class="val">49.0%</span>
+        </div>
+        <div class="row">
+          <span class="name">Zep</span>
+          <div class="track"><div class="bar" style="--w:63.8%"></div></div>
+          <span class="val">63.8%</span>
+        </div>
+        <div class="row us">
+          <span class="name">forget</span>
+          <div class="track"><div class="bar" style="--w:81.8%"><span class="in-label">100% LOCAL</span></div></div>
+          <span class="val">81.8%</span>
+        </div>
+        <div class="row ceil">
+          <span class="name">GPT-4o oracle</span>
+          <div class="track"><div class="bar" style="--w:82.4%"></div></div>
+          <span class="val">82.4%</span>
         </div>
       </div>
+      <p class="bench-kicker rv">Knowledge-update questions — where memory products
+      usually fail because stale facts survive: <strong>92.3%</strong></p>
+      <p class="bench-note rv">The oracle row is GPT-4o reading the full transcript —
+      the ceiling for any memory system on this protocol. Mem0 and Zep as published;
+      forget measured on the identical question set, with memory building and retrieval
+      running entirely on-device.
+      <a href="https://github.com/multi-turn-inc/forget">Methodology and raw runs →</a></p>
+    </div>
+  </div>
+</section>
+
+<section class="divide">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="sec-no">02 · The product</span>
       <div>
-        <h2 class="rv">How it works</h2>
-        <p class="lead rv">Here's what happens after <code style="font:600 .85em var(--mono); color:var(--red-dark); background:var(--blush); padding:2px 6px; border-radius:5px;">npx forget-connect</code> — with no behavior change asked of you.</p>
-        <ol class="steps">
-          <li class="rv"><span class="dot"></span>
-            <h3>Install once, in sixty seconds</h3>
-            <p>One local server, one connect command. Your existing MCP setup is preserved and backed up.</p>
-          </li>
-          <li class="rv"><span class="dot"></span>
-            <h3>It remembers quietly</h3>
-            <p>Decisions surface from your conversations and your git history. The observation gate keeps facts and forgets junk — nobody writes documentation.</p>
-          </li>
-          <li class="hot rv"><span class="dot"></span>
-            <h3>It speaks up before you ask</h3>
-            <p>A context capsule opens every session with your open work. Relevant memories are pushed mid-conversation — and if you're about to act on a fact that was later corrected, a conflict alert shows both versions.</p>
-          </li>
-          <li class="rv"><span class="dot"></span>
-            <h3>Ask "why" from any tool</h3>
-            <p>Claude Code, Cursor, or Codex — the answer comes back with the commit or conversation that decided it.</p>
-          </li>
-          <li class="rv"><span class="dot"></span>
-            <h3>Sync arrives sealed <span class="soon-tag">IN DESIGN</span></h3>
-            <p>End-to-end encrypted, device keys, no passwords. The server — ours included — only ever holds ciphertext.</p>
-          </li>
-        </ol>
+        <h2 class="sec-title">You don't ask it to remember.<br><em>It speaks up.</em></h2>
+        <p class="sec-sub">Three surfaces the hooks put in front of you — real output, not concept art.</p>
+      </div>
+    </div>
+    <div class="surfaces">
+      <div class="surface rv">
+        <h3>Every session opens briefed</h3>
+        <p>The capsule: your goal, next action, parallel work, and any claim that's gone stale.</p>
+        <div class="shell"><span class="tag">▸ SessionStart · capsule</span>
+<span class="cy">Current goal:</span> beta-launch — Show HN
+<span class="cy">Next:</span> record the demo video
+<span class="cy">Parallel:</span> yc-application — due Sun
+<span class="yl">Open loop:</span> "sent pricing inquiry"
+  <span class="dim">recorded 6 days ago, unverified</span></div>
+      </div>
+      <div class="surface rv" style="transition-delay:.07s">
+        <h3>It catches contradictions</h3>
+        <p>About to act on a fact that was later corrected? Both versions, labeled, before you commit.</p>
+        <div class="shell"><span class="tag">▸ mid-conversation · push recall</span>
+<span class="yl">⚠ conflict zone — two versions</span>
+<span class="rd">✗ payments provider is Stripe</span>
+  <span class="dim">Jul 2 · superseded</span>
+<span class="g">✓ Paddle is merchant of record</span>
+  <span class="dim">Jul 13 · decision · receipt</span></div>
+      </div>
+      <div class="surface rv" style="transition-delay:.14s">
+        <h3>One command tells the truth</h3>
+        <p>Config, rules, hooks, scope, and a live MCP round-trip — checked end to end.</p>
+        <div class="shell"><span class="pk">$</span> npx forget-connect doctor
+<span class="g">✓</span> Hooks: registered, python3 ok
+<span class="g">✓</span> Claude Code: rules current
+<span class="g">✓</span> Codex: rules current
+<span class="g">✓</span> Scope: verified
+<span class="g">✓</span> MCP: forget-mcp · 42 tools</div>
       </div>
     </div>
   </div>
 </section>
 
-<section>
+<section class="divide" id="how">
   <div class="wrap">
-    <h2 class="sec-title rv">Your memory, your machine</h2>
-    <div class="trio">
-      <div class="rv">
-        <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
-        <h3>Local by construction</h3>
-        <p>Everything lives in one <code>~/.forget</code> SQLite file on your
-        machine. Search, extraction, everything — offline included.</p>
+    <div class="sec-head rv">
+      <span class="sec-no">03 · How it works</span>
+      <div>
+        <h2 class="sec-title">Sixty seconds to install.<br><em>Zero behavior change.</em></h2>
       </div>
-      <div class="rv" style="transition-delay:.07s">
-        <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h6M9 16h4"/></svg></div>
-        <h3>Answers with receipts</h3>
-        <p>Every memory knows who vouches for it and carries a trust label —
-        <strong style="color:#15803d">green</strong> to act on,
-        <strong style="color:#a16207">yellow</strong> to verify first,
-        <strong style="color:var(--red-dark)">red</strong> superseded. Ask
-        <code>why did we choose X?</code> and the answer links back to the
-        conversation that decided it.</p>
-      </div>
-      <div class="rv" style="transition-delay:.14s">
-        <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="M8.4 10.8l7.2-3.6M8.4 13.2l7.2 3.6"/></svg></div>
-        <h3>Portable via MCP</h3>
-        <p>The same memory in Claude Code, Cursor, and Codex. Your context
-        follows you, not the tool.</p>
-      </div>
+    </div>
+    <div class="sec-body">
+      <ul class="steps-list">
+        <li class="rv">
+          <span class="no">01</span>
+          <div>
+            <h3>Install once</h3>
+            <p>One local server, one connect command. Your existing MCP setup is
+            preserved and backed up; <code>disconnect</code> reverses everything.</p>
+          </div>
+        </li>
+        <li class="rv">
+          <span class="no">02</span>
+          <div>
+            <h3>It remembers quietly</h3>
+            <p>Decisions surface from your conversations and your git history. The
+            observation gate keeps facts and forgets junk — nobody writes documentation.</p>
+          </div>
+        </li>
+        <li class="rv">
+          <span class="no">03</span>
+          <div>
+            <h3>It speaks up before you ask</h3>
+            <p>A context capsule opens every session with your open work. Relevant
+            memories are pushed mid-conversation — and a conflict alert shows both
+            versions when a fact was later corrected.</p>
+          </div>
+        </li>
+        <li class="rv">
+          <span class="no">04</span>
+          <div>
+            <h3>Ask "why" from any tool</h3>
+            <p>Claude Code, Cursor, or Codex — the answer comes back with the commit
+            or conversation that decided it. Sync arrives sealed
+            <span class="soon-tag">E2EE · IN DESIGN</span></p>
+          </div>
+        </li>
+      </ul>
     </div>
   </div>
 </section>
@@ -444,8 +673,13 @@
 
 <section>
   <div class="wrap">
-    <h2 class="sec-title rv">Three facts about AI memory</h2>
-    <p class="sec-sub rv">Memory is not a chat log. It is a compounding profile of you — and today it lives on other people's servers.</p>
+    <div class="sec-head rv">
+      <span class="sec-no">04 · Why local</span>
+      <div>
+        <h2 class="sec-title">Memory is not a chat log.<br><em>It is a profile of you.</em></h2>
+        <p class="sec-sub">A compounding one — and today it lives on other people's servers.</p>
+      </div>
+    </div>
     <div class="facts">
       <div class="fact rv">
         <div class="no">01</div>
@@ -477,11 +711,93 @@
   </div>
 </section>
 
-<section class="quote">
+<section class="divide">
   <div class="wrap">
-    <h2 class="sec-title rv">Works now. Sealed next.</h2>
+    <div class="sec-head rv">
+      <span class="sec-no">05 · The field</span>
+      <div>
+        <h2 class="sec-title">Where forget stands</h2>
+      </div>
+    </div>
+    <div class="cmp rv">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th class="us-h">forget</th>
+            <th>Mem0</th>
+            <th>Zep</th>
+            <th>Native memory</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>LongMemEval, full 500</td>
+            <td class="us">81.8%</td>
+            <td>49.0%</td>
+            <td>63.8%</td>
+            <td class="dash">unpublished</td>
+          </tr>
+          <tr>
+            <td>Where your memory lives</td>
+            <td class="us">your machine, always</td>
+            <td>cloud (self-host option)</td>
+            <td>their cloud</td>
+            <td>provider servers</td>
+          </tr>
+          <tr>
+            <td>Trust label on every read</td>
+            <td class="us"><span class="yes">✓</span></td>
+            <td class="dash">—</td>
+            <td class="dash">—</td>
+            <td class="dash">—</td>
+          </tr>
+          <tr>
+            <td>Decision receipts from git</td>
+            <td class="us"><span class="yes">✓</span></td>
+            <td class="dash">—</td>
+            <td class="dash">—</td>
+            <td class="dash">—</td>
+          </tr>
+          <tr>
+            <td>Session hooks: capsule · push recall · conflict alerts</td>
+            <td class="us"><span class="yes">✓</span></td>
+            <td class="dash">—</td>
+            <td class="dash">—</td>
+            <td class="dash">—</td>
+          </tr>
+          <tr>
+            <td>Follows you across tools</td>
+            <td class="us">Claude Code · Cursor · Codex</td>
+            <td>via MCP</td>
+            <td>via SDK</td>
+            <td class="dash">one vendor's silo</td>
+          </tr>
+          <tr>
+            <td>Open source</td>
+            <td class="us">Apache-2.0</td>
+            <td><span class="yes">✓</span></td>
+            <td>core only</td>
+            <td class="dash">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="cmp-note rv">Competitor properties as publicly documented, July 2026. Corrections welcome —
+    <a href="https://github.com/multi-turn-inc/forget/issues">open an issue</a>.</p>
+  </div>
+</section>
+
+<section class="divide">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="sec-no">06 · Roadmap</span>
+      <div>
+        <h2 class="sec-title">Works now. <em>Sealed next.</em></h2>
+      </div>
+    </div>
     <div class="cols">
-      <div class="col today rv" style="background:#fff">
+      <div class="col today rv">
         <span class="chip ok">SHIPPED · OPEN SOURCE</span>
         <h3>Runs on your machine today</h3>
         <ul>
@@ -493,7 +809,7 @@
           <li>MCP: Claude Code, Cursor, Codex, Claude Desktop</li>
         </ul>
       </div>
-      <div class="col rv" style="background:#fff; transition-delay:.07s">
+      <div class="col rv" style="transition-delay:.07s">
         <span class="chip soon">IN DESIGN · E2EE SYNC</span>
         <h3>Sync that cannot betray you</h3>
         <ul>
@@ -502,25 +818,151 @@
           <li>Scoped layers: grant a session your work memory only</li>
           <li>No passwords — device keys plus a recovery code</li>
         </ul>
+        <form class="waitlist-form" action="https://formspree.io/f/mbdnjvjn" method="POST">
+          <input type="email" name="email" required placeholder="you@example.com" aria-label="Email address">
+          <button class="btn red" type="submit" style="background:var(--red)">Join the sync waitlist</button>
+        </form>
+        <p class="form-note" hidden>You're on the list. We'll write when sync ships. ✓</p>
+        <p class="form-hint">No spam — launch news only.</p>
       </div>
     </div>
   </div>
 </section>
 
-<section>
+<section class="divide">
   <div class="wrap">
-    <h2 class="sec-title rv">What we won't pretend</h2>
-    <ul class="honest">
-      <li class="rv"><strong>The model you use still sees plaintext.</strong> It has to,
-      to use your memories. Encryption protects you from storage providers —
-      including us — not from the AI you deliberately hand a memory to.</li>
-      <li class="rv"><strong>Cloud extraction is a disclosed trade-off.</strong> We
-      default to local processing and label the alternative instead of
-      hiding it.</li>
-      <li class="rv"><strong>Lost devices plus lost recovery code means lost
-      memories.</strong> We can't reset what we can't read. That is the
-      price of the guarantee.</li>
-    </ul>
+    <div class="sec-head rv">
+      <span class="sec-no">07 · Honesty</span>
+      <div>
+        <h2 class="sec-title">What we won't pretend</h2>
+      </div>
+    </div>
+    <div class="sec-body">
+      <ul class="honest">
+        <li class="rv"><strong>The model you use still sees plaintext.</strong> It has to,
+        to use your memories. Encryption protects you from storage providers —
+        including us — not from the AI you deliberately hand a memory to.</li>
+        <li class="rv"><strong>Cloud extraction is a disclosed trade-off.</strong> We
+        default to local processing and label the alternative instead of
+        hiding it.</li>
+        <li class="rv"><strong>Lost devices plus lost recovery code means lost
+        memories.</strong> We can't reset what we can't read. That is the
+        price of the guarantee.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="divide" id="faq">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="sec-no">08 · FAQ</span>
+      <div>
+        <h2 class="sec-title">Questions, answered straight</h2>
+      </div>
+    </div>
+    <div class="sec-body">
+      <div class="faq rv">
+        <details>
+          <summary>Is my memory really local, or "local until it isn't"?</summary>
+          <div class="a">Everything lives in one SQLite file at <code>~/.forget</code> —
+          storage, search, and memory building all run on your machine, offline
+          included. The 81.8% LongMemEval score was measured with building and
+          retrieval running 100% on-device, so local isn't a demo mode; it's the
+          configuration we benchmark. There is no account, no telemetry, and no
+          server of ours in the loop.</div>
+        </details>
+        <details>
+          <summary>How is this different from ChatGPT or Claude's built-in memory?</summary>
+          <div class="a">Built-in memory lives on the provider's servers, works only
+          inside that vendor's products, and shows you conclusions without
+          provenance. forget is the opposite on all three: your machine, every tool
+          that speaks MCP (Claude Code, Cursor, Codex, Claude Desktop), and every
+          answer carries a receipt — the commit or conversation that decided it,
+          plus a trust label telling your agent whether it's safe to act on.</div>
+        </details>
+        <details>
+          <summary>What happens when a fact changes?</summary>
+          <div class="a">The old fact isn't deleted — it's superseded, keeping its
+          history and turning <strong style="color:var(--red)">red</strong> (reference
+          only). The new fact links back to what it replaced. And if you're about to
+          act on the stale version mid-session, the conflict alert shows you both,
+          labeled, before you commit. Memory that silently overwrites itself is how
+          agents confidently do the wrong thing.</div>
+        </details>
+        <details>
+          <summary>What are the trust labels for?</summary>
+          <div class="a">Provenance, made actionable. <strong style="color:#22753a">Green</strong>:
+          you said it or a tool observed it — safe to act on.
+          <strong style="color:#a16207">Yellow</strong>: an agent inferred or
+          self-reported it — verify before acting on it in the real world.
+          <strong style="color:var(--red)">Red</strong>: superseded. Agents treat
+          their own summaries as gospel; the labels are what stop an unverified
+          "I sent that email" from becoming a follow-up to an email that never existed.</div>
+        </details>
+        <details>
+          <summary>Does anything ever leave my machine?</summary>
+          <div class="a">Not by default, and never silently. Local processing is the
+          default; pointing extraction at a cloud model is an explicit, labeled
+          opt-in. When E2EE sync ships, memories will be encrypted on your device
+          before touching any server — ours included — so even then, what leaves
+          your machine is ciphertext.</div>
+        </details>
+        <details>
+          <summary>What does it cost?</summary>
+          <div class="a">The local product is free and Apache-2.0 open source — that's
+          permanent, not a promotional period. End-to-end encrypted sync across your
+          devices will be the paid layer when it ships. You never pay for your own
+          machine remembering things.</div>
+        </details>
+        <details>
+          <summary>How do I get rid of it?</summary>
+          <div class="a">Completely, in two steps: <code>npx forget-connect disconnect</code>
+          restores your original configs from backups and removes the hooks — third-party
+          settings are preserved byte-for-byte. Then delete <code>~/.forget</code> and
+          your memories are gone. No account to close, no export request, no retention
+          window. It's your file.</div>
+        </details>
+        <details>
+          <summary>What's supported today, honestly?</summary>
+          <div class="a">macOS and Linux; Claude Code, Cursor, Codex, and Claude Desktop
+          via MCP. The hooks layer (session capsule, push recall, conflict alerts) runs
+          on Claude Code today. Not shipped yet: Windows, E2EE sync, hosted anything —
+          the same list we publish in <a href="/llms.txt">llms.txt</a>.</div>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="divide">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="sec-no">09 · Trajectory</span>
+      <div>
+        <h2 class="sec-title">Shipping in the open</h2>
+      </div>
+    </div>
+    <div class="sec-body">
+      <ul class="log">
+        <li class="rv"><span class="d">Jul 24</span><span><strong>Public beta.</strong> forget-ai 0.2.0 on PyPI, forget-connect 0.3.0 on npm — with a login service that survives reboots.</span></li>
+        <li class="rv"><span class="d">Jul 22</span><span><strong>Hooks + trust labels.</strong> Session capsule, per-turn push recall, conflict-zone alerts; every read carries green / yellow / red.</span></li>
+        <li class="rv"><span class="d">Jul 16</span><span><strong>LongMemEval full-500: 81.8%.</strong> Memory building and retrieval 100% local, within 0.6pp of the GPT-4o full-context ceiling.</span></li>
+        <li class="rv"><span class="d">Jul 13</span><span><strong>Git decision miner.</strong> A repo's history becomes memory — "why did we choose X?" answered with commit receipts.</span></li>
+      </ul>
+      <a class="log-more rv" href="https://github.com/multi-turn-inc/forget/commits/main">Follow along on GitHub →</a>
+    </div>
+  </div>
+</section>
+
+<section class="divide namebeat">
+  <div class="wrap rv">
+    <span class="why">Why name a memory product "forget"?</span>
+    <p>Because memory that <span class="sup">cannot be deleted</span> is
+    surveillance. Ours forgets on command.</p>
+    <p class="fine">Supersede, retire, delete — every fact in forget can be
+    struck through, and the strikethrough keeps the history. The logo is not
+    a joke about the product. It is the product.</p>
   </div>
 </section>
 
@@ -536,11 +978,11 @@
 
 <section class="closer">
   <div class="wrap rv">
-    <h2>Give your AI a memory in sixty seconds.</h2>
-    <div class="cmd"><span class="k">pip</span> install 'forget-ai[server]' &amp;&amp; <span class="k">npx</span> forget-connect</div>
+    <h2>Give your AI a memory<br><em>in sixty seconds.</em></h2>
+    <div class="cmd-pill"><span><span class="k">pip</span> install 'forget-ai[server]' &amp;&amp; <span class="k">npx</span> forget-connect</span><button id="copyBtn2" type="button">copy</button></div>
     <div class="ctas">
-      <a class="btn red" href="#waitlist">Join the sync waitlist</a>
-      <a class="btn ghost-dark" href="https://github.com/multi-turn-inc/forget">Star on GitHub</a>
+      <a class="btn red" href="https://github.com/multi-turn-inc/forget">Star on GitHub</a>
+      <a class="btn ghost" href="/llms.txt">llms.txt for your agent</a>
     </div>
   </div>
 </section>
@@ -560,17 +1002,25 @@
           <a href="/llms.txt">llms.txt</a>
         </div>
         <div>
-          <h4>Contact</h4>
+          <h4>Founder</h4>
+          <a href="https://blog.multi-turn.ai">Junghun Kim — blog</a>
+          <a href="https://github.com/hebo1221">GitHub</a>
           <a href="mailto:founder@multi-turn.ai">Email</a>
-          <a href="#waitlist">Waitlist</a>
         </div>
       </div>
     </div>
-    <p class="legal">© 2026 Multi-turn Inc. · Apache-2.0</p>
+    <p class="legal">© 2026 Multi-turn Inc. · Apache-2.0 · forget-ai 0.2.0 · forget-connect 0.3.0<br>
+    This site sets zero cookies and runs zero analytics. We can't see you reading it — that's the idea.</p>
   </footer>
 </div>
 
 <script>
+  console.log(
+    "%c f̶orget %c\n\nOpening the console on a memory product. Correct instinct.\nYour memory would be one SQLite file at ~/.forget — readable by you, not by us.\n\n  pip install 'forget-ai[server]' && npx forget-connect\n  github.com/multi-turn-inc/forget\n",
+    "background:#d31126;color:#fff;font:700 16px monospace;padding:4px 10px;border-radius:4px",
+    "font:13px monospace;color:#71767d"
+  );
+
   const topbar = document.getElementById("topbar");
   addEventListener("scroll", () => topbar.classList.toggle("scrolled", scrollY > 8), { passive: true });
 
@@ -583,41 +1033,93 @@
       if (el.classList.contains("in")) continue;
       if (el.getBoundingClientRect().top < innerHeight * 0.9) el.classList.add("in");
     }
-    maybeType();
+    const bench = document.querySelector(".bench");
+    if (bench && !bench.classList.contains("in")
+        && bench.getBoundingClientRect().top < innerHeight * 0.85) {
+      bench.classList.add("in");
+    }
   };
   addEventListener("scroll", reveal, { passive: true });
   addEventListener("resize", reveal, { passive: true });
-
-  const QUESTION = 'forget demo . "why did the default change to local?"';
-  const target = document.getElementById("typeTarget");
-  const answer = document.getElementById("answer");
-  const caret = document.getElementById("caret");
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let typed = false;
-  const typeIt = () => {
-    if (typed) return; typed = true;
-    if (reduced) { target.textContent = QUESTION; answer.hidden = false; caret.remove(); return; }
-    let i = 0;
-    const tick = () => {
-      target.textContent = QUESTION.slice(0, ++i);
-      if (i < QUESTION.length) setTimeout(tick, 24 + Math.random() * 38);
-      else setTimeout(() => { answer.hidden = false; caret.remove(); }, 420);
-    };
-    setTimeout(tick, 500);
-  };
-  const term = document.querySelector(".term");
-  const maybeType = () => {
-    if (!typed && term.getBoundingClientRect().top < innerHeight * 0.9) typeIt();
-  };
   reveal();
 
-  document.getElementById("copyBtn").addEventListener("click", async (event) => {
-    try {
-      await navigator.clipboard.writeText("pip install forget-ai[server] && npx forget-connect");
-      event.target.textContent = "copied ✓";
-      setTimeout(() => (event.target.textContent = "copy"), 1600);
-    } catch {}
-  });
+  // ---- hero stage: play the session once, honestly paced ----
+  const steps = Array.from(document.querySelectorAll("#stageBody .step"));
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const replayBtn = document.getElementById("replayBtn");
+  const PROMPT1 = "why is the payment provider Paddle, not Stripe?";
+  const PROMPT2 = "ok — switch the checkout branch to Stripe then";
+
+  const typeInto = (id, caretId, text, done) => {
+    const target = document.getElementById(id);
+    const caret = document.getElementById(caretId);
+    caret.hidden = false;
+    let i = 0;
+    const tick = () => {
+      target.textContent = text.slice(0, ++i);
+      if (i < text.length) setTimeout(tick, 22 + Math.random() * 34);
+      else { caret.hidden = true; done(); }
+    };
+    tick();
+  };
+
+  const SEQ = [
+    { i: 0, wait: 500 },                       // $ claude
+    { i: 1, wait: 1100 },                      // capsule
+    { i: 2, wait: 0, type: ["type1", "caret1", PROMPT1] },
+    { i: 3, wait: 650 },                       // tool call
+    { i: 4, wait: 1400 },                      // answer + receipt
+    { i: 5, wait: 0, type: ["type2", "caret2", PROMPT2] },
+    { i: 6, wait: 0 },                         // conflict alert
+  ];
+
+  let playing = false;
+  const play = () => {
+    if (playing) return; playing = true;
+    replayBtn.hidden = true;
+    document.getElementById("type1").textContent = "";
+    document.getElementById("type2").textContent = "";
+    steps.forEach((s) => s.classList.add("hide"));
+    let idx = 0;
+    const next = () => {
+      if (idx >= SEQ.length) { playing = false; replayBtn.hidden = false; return; }
+      const st = SEQ[idx++];
+      steps[st.i].classList.remove("hide");
+      if (st.type) typeInto(st.type[0], st.type[1], st.type[2], () => setTimeout(next, 450));
+      else setTimeout(next, st.wait);
+    };
+    next();
+  };
+
+  if (reduced) {
+    document.getElementById("type1").textContent = PROMPT1;
+    document.getElementById("type2").textContent = PROMPT2;
+    document.querySelectorAll(".caret").forEach((c) => c.remove());
+  } else {
+    steps.forEach((s) => s.classList.add("hide"));
+    let started = false;
+    const maybePlay = () => {
+      if (started) return;
+      const stage = document.getElementById("stage");
+      if (stage.getBoundingClientRect().top < innerHeight * 0.85) { started = true; play(); }
+    };
+    addEventListener("scroll", maybePlay, { passive: true });
+    maybePlay();
+    replayBtn.addEventListener("click", play);
+  }
+
+  const wireCopy = (id) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText("pip install 'forget-ai[server]' && npx forget-connect");
+        btn.textContent = "copied ✓";
+        setTimeout(() => (btn.textContent = "copy"), 1600);
+      } catch {}
+    });
+  };
+  wireCopy("copyBtn"); wireCopy("copyBtn2");
 
   const form = document.querySelector(".waitlist-form");
   form.addEventListener("submit", async (event) => {
