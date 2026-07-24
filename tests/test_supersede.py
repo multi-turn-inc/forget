@@ -98,3 +98,36 @@ def test_supersede_leaves_human_feedback_untouched() -> None:
 
     feedback = memory_feedback_map(current_project_id()).get(memory_id) or {}
     assert feedback.get("feedback") == "POSITIVE", "explicit human feedback must survive supersession"
+
+
+def test_assemble_context_excludes_superseded_memories() -> None:
+    # Issue #3 (dogfood repro on 0.2.0): supersede demoted the old fact in
+    # search, but assemble_context still selected BOTH versions into action
+    # context — a struck-through fact re-entering the acting prompt defeats
+    # the whole supersede contract. Search keeps it (history/audit); the
+    # action capsule must not.
+    from uuid import uuid4
+
+    from forget.store import assemble_context
+
+    user = f"supersede-context-user-{uuid4().hex[:8]}"
+    old_id = _add("the deployment target is staging", user)
+    new_id = _add("the deployment target is production", user)
+
+    response = client.post(
+        f"/v1/memories/{old_id}/supersede/",
+        json={"superseded_by": new_id, "reason": "production rollout completed"},
+    )
+    assert response.status_code == 200, response.text
+
+    capsule = assemble_context(
+        {
+            "query": "where should I deploy?",
+            "filters": {"user_id": user},
+            "threshold": 0,
+        }
+    )
+    selected_ids = {str(memory["id"]) for memory in capsule["memories"]}
+    assert new_id in selected_ids
+    assert old_id not in selected_ids
+    assert "staging" not in capsule.get("context", "")
