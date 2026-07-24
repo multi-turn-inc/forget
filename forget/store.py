@@ -6121,6 +6121,10 @@ def _context_diversity_tradeoffs(
     }
 
 
+def _context_memory_is_superseded(memory: dict[str, Any]) -> bool:
+    return bool((memory.get("metadata") or {}).get("superseded_at"))
+
+
 def _context_role_backfill_candidates(
     *,
     search_payload: dict[str, Any],
@@ -6177,6 +6181,7 @@ def _context_role_backfill_candidates(
     payload["top_k"] = max(_int_or(search_payload.get("top_k"), 10), max_backfill * 4, 12)
     search = search_memories(payload, project_id=project_id)
     raw_candidates = search.get("results") or []
+    current_candidates = [memory for memory in raw_candidates if not _context_memory_is_superseded(memory)]
     backfill_state["applied"] = True
     backfill_state["reason"] = "relaxed_task_scope_for_non_task_state_roles"
     backfill_state["raw_candidate_count"] = len(raw_candidates)
@@ -6186,7 +6191,7 @@ def _context_role_backfill_candidates(
     ]
 
     eligible: list[dict[str, Any]] = []
-    for memory in raw_candidates:
+    for memory in current_candidates:
         memory_id = str(memory.get("id") or "")
         if not memory_id or memory_id in existing_memory_ids:
             continue
@@ -10478,18 +10483,19 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
     workspace_line = _workspace_context_line(workspace_current) if isinstance(workspace_current, dict) else ""
     workspace_tokens = min(token_estimate(workspace_line), budget_tokens) if workspace_line else 0
     search = search_memories(search_payload, project_id=project_id)
-    raw_candidates = search["results"]
+    search_candidates = search["results"]
+    current_candidates = [memory for memory in search_candidates if not _context_memory_is_superseded(memory)]
     requested_task_id = _context_requested_task_id(payload)
     requested_related_task_ids = _context_requested_related_task_ids(payload, workspace_current)
     requested_task_scope_ids = _context_requested_task_scope_ids(requested_task_id, requested_related_task_ids)
     task_scoped_candidates = [
         memory
-        for memory in raw_candidates
+        for memory in current_candidates
         if _context_matches_requested_task(memory, requested_task_id, requested_task_scope_ids)
     ]
     task_scope_filtered_memory_ids = [
         str(memory.get("id"))
-        for memory in raw_candidates
+        for memory in current_candidates
         if memory.get("id")
         and not _context_matches_requested_task(memory, requested_task_id, requested_task_scope_ids)
     ]
@@ -10504,7 +10510,7 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
         for memory in task_scoped_candidates
         if not workspace_duplicate_memory_id or str(memory.get("id")) != workspace_duplicate_memory_id
     ]
-    existing_memory_ids = {str(memory.get("id")) for memory in raw_candidates if memory.get("id")}
+    existing_memory_ids = {str(memory.get("id")) for memory in search_candidates if memory.get("id")}
     role_backfill: dict[str, Any] = {
         "applied": False,
         "reason": "not_needed",
@@ -10534,7 +10540,7 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
         "rejected_samples": [],
         "filters": {},
     }
-    if requested_task_id and not candidates and raw_candidates:
+    if requested_task_id and not candidates and search_candidates:
         backfill_candidates, role_backfill = _context_role_backfill_candidates(
             search_payload=search_payload,
             project_id=project_id,
@@ -10583,7 +10589,7 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
         "budget_tokens": budget_tokens,
         "used_tokens": used_tokens + workspace_tokens,
         "total_candidates": len(candidates),
-        "raw_candidate_count": len(raw_candidates),
+        "raw_candidate_count": len(search_candidates),
         "task_scope_filtered_count": len(task_scope_filtered_memory_ids),
         "task_scope_filtered_memory_ids": task_scope_filtered_memory_ids,
         "workspace_duplicate_filtered_count": len(workspace_duplicate_filtered_memory_ids),
@@ -10598,7 +10604,7 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
         "query_evidence": {
             "search": {
                 "total_candidates": len(candidates),
-                "raw_candidate_count": len(raw_candidates),
+                "raw_candidate_count": len(search_candidates),
                 "selected_count": len(selected),
                 "omitted_count": len(omitted_memory_ids),
                 "task_scope_filtered_count": len(task_scope_filtered_memory_ids),
@@ -10629,7 +10635,7 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
             }
         },
         "context_hygiene": _context_hygiene_summary(
-            raw_candidate_count=len(raw_candidates),
+            raw_candidate_count=len(search_candidates),
             task_scoped_candidate_count=len(candidates),
             selected_count=len(selected),
             omitted_count=len(omitted_memory_ids),
@@ -10681,7 +10687,7 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
     result = _attach_context_autopilot(
         result=result,
         payload=payload,
-        raw_candidates=raw_candidates,
+        raw_candidates=current_candidates,
         selected=selected,
         task_scope_filtered_memory_ids=task_scope_filtered_memory_ids,
         workspace_duplicate_filtered_memory_ids=workspace_duplicate_filtered_memory_ids,
@@ -10696,7 +10702,7 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
         project_id=project_id,
         payload=payload,
         search_payload=search_payload,
-        raw_candidates=raw_candidates,
+        raw_candidates=current_candidates,
         candidates=candidates,
         budgeted=budgeted,
         selected=selected,

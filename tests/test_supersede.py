@@ -6,10 +6,12 @@ immutable memories refuse, and explicit human feedback rows are untouched.
 """
 
 import time
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
 from forget.server import app
+from forget.store import assemble_context
 
 
 client = TestClient(app)
@@ -64,6 +66,30 @@ def test_supersede_demotes_but_keeps_retrievable() -> None:
 
     new_hit = next(r for r in after if r["id"] == new_id)
     assert old_id in (new_hit["metadata"].get("supersedes") or []), "reciprocal link on the successor"
+
+
+def test_assemble_context_excludes_superseded_memories() -> None:
+    user = f"supersede-context-user-{uuid4()}"
+    old_id = _add("the deployment target is staging", user)
+    new_id = _add("the deployment target is production", user)
+
+    response = client.post(
+        f"/v1/memories/{old_id}/supersede/",
+        json={"superseded_by": new_id, "reason": "production rollout completed"},
+    )
+    assert response.status_code == 200, response.text
+
+    capsule = assemble_context(
+        {
+            "query": "where should I deploy?",
+            "filters": {"user_id": user},
+            "threshold": 0,
+        }
+    )
+    selected_ids = {str(memory["id"]) for memory in capsule["memories"]}
+    assert new_id in selected_ids
+    assert old_id not in selected_ids
+    assert "staging" not in capsule["context"]
 
 
 def test_supersede_guards() -> None:
