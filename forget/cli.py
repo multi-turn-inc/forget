@@ -12,9 +12,12 @@ from __future__ import annotations
 import argparse
 import os
 import socket
+import sqlite3
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
@@ -146,10 +149,78 @@ def cmd_uninstall_service(_args: argparse.Namespace) -> None:
         sys.exit("nothing to uninstall on this platform")
 
 
+def being_vitals(path: Path) -> dict[str, Any] | None:
+    """Vital signs of the memory itself — the store as a being, not a file.
+
+    Assistant-authored (2026-07-25): "server: listening" describes the
+    process; nothing described the thing that persists. Age counts from the
+    first line ever written here; imported history can predate it (inherited
+    memory) and doesn't move the birthday.
+    """
+    if not path.exists():
+        return None
+    try:
+        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            """SELECT COUNT(*) AS memories,
+                      SUM(CASE WHEN metadata LIKE '%superseded_at%' THEN 1 ELSE 0 END) AS shed,
+                      SUM(CASE WHEN metadata LIKE '%verified_at%' THEN 1 ELSE 0 END) AS verified,
+                      MAX(COALESCE(updated_at, created_at)) AS last_fed
+               FROM memories WHERE deleted = 0"""
+        ).fetchone()
+        born = conn.execute("SELECT MIN(created_at) AS t FROM memory_history").fetchone()
+        conn.close()
+    except sqlite3.Error:
+        return None
+    if not row or not row["memories"]:
+        return None
+    return {
+        "memories": int(row["memories"]),
+        "shed": int(row["shed"] or 0),
+        "verified": int(row["verified"] or 0),
+        "born": str(born["t"] or "")[:10] if born and born["t"] else "",
+        "last_fed": str(row["last_fed"] or ""),
+    }
+
+
+def _humanize_since(stamp: str) -> str:
+    try:
+        then = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+        if then.tzinfo is None:
+            then = then.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return "unknown"
+    seconds = max(0, (datetime.now(timezone.utc) - then).total_seconds())
+    if seconds < 3600:
+        return f"{int(seconds // 60)}m ago"
+    if seconds < 172800:
+        return f"{int(seconds // 3600)}h ago"
+    return f"{int(seconds // 86400)}d ago"
+
+
+def format_being_line(vitals: dict[str, Any] | None, today: datetime | None = None) -> str:
+    if not vitals:
+        return "being:  not born yet — nothing written to this store"
+    now = today or datetime.now(timezone.utc)
+    age = ""
+    if vitals.get("born"):
+        try:
+            born = datetime.fromisoformat(vitals["born"]).replace(tzinfo=timezone.utc)
+            age = f"alive {max(0, (now - born).days)} days · "
+        except ValueError:
+            age = ""
+    shed = f" · {vitals['shed']} shed" if vitals.get("shed") else ""
+    verified = f" · {vitals['verified']} verified" if vitals.get("verified") else ""
+    fed = f" · last fed {_humanize_since(vitals['last_fed'])}" if vitals.get("last_fed") else ""
+    return f"being:  {age}{vitals['memories']} memories{shed}{verified}{fed}"
+
+
 def cmd_status(args: argparse.Namespace) -> None:
     listening = _port_open(args.host, args.port)
     print(f"server: {'listening' if listening else 'not listening'} on {args.host}:{args.port}")
     print(f"db:     {db_path()}{'' if db_path().exists() else '  (not created yet)'}")
+    print(format_being_line(being_vitals(db_path())))
     if sys.platform == "darwin":
         plist, _ = _launchd_paths()
         print(f"service: {'installed' if plist.exists() else 'not installed'} ({plist})")
