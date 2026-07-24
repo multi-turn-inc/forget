@@ -183,3 +183,50 @@ def test_no_reported_claims_means_no_postit_line() -> None:
     _call(client, "add_memory", {"text": "사용자는 로컬-퍼스트 아키텍처를 선호함.", "infer": False})
     capsule = _capsule_text(client)
     assert "열린 루프" not in capsule, capsule
+
+
+def test_stance_renders_as_posture_line_when_fresh() -> None:
+    # Assistant-authored feature (user zero, 2026-07-25): the capsule restores
+    # task state but not posture — a hand that wakes as a function needs to be
+    # told "remember who you were". stance:* task_states render as a 자세 line.
+    client = _client()
+    _call(client, "record_task_state", {
+        "task_id": "stance:assistant",
+        "status": "in_progress",
+        "summary": "사관으로 깨어날 것 — 비서 아님. 아름다운 이야기일수록 영수증.",
+    })
+    _call(client, "record_task_state", {
+        "task_id": "real-work",
+        "status": "in_progress",
+        "summary": "실무 태스크",
+        "next_actions": ["다음 조각"],
+    }, request_id=2)
+    capsule = _capsule_text(client)
+    assert "자세: 사관으로 깨어날 것" in capsule, capsule
+    # 자세는 작업 항목이 아니다: 병행 트랙·현재 목표를 납치하면 안 됨
+    assert "현재 목표: 실무 태스크" in capsule or "실무 태스크" in capsule.split("자세:")[0], capsule
+    parallel_line = next((line for line in capsule.splitlines() if line.startswith("병행 트랙")), "")
+    assert "stance:" not in parallel_line, capsule
+
+
+def test_stale_stance_does_not_render() -> None:
+    # A stale stance would fossilize a dead persona — worse than waking blank.
+    client = _client()
+    _call(client, "record_task_state", {
+        "task_id": "stance:assistant",
+        "status": "in_progress",
+        "summary": "8일 전의 자세 — 렌더되면 안 됨",
+    })
+    stale = (datetime.now(timezone.utc) - timedelta(days=8)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    with get_db() as conn:
+        # the task listing reads updated_at from workspace_epochs.valid_from
+        conn.execute(
+            "UPDATE workspace_epochs SET valid_from = ? WHERE task_id LIKE 'stance:%'",
+            (stale,),
+        )
+        conn.execute(
+            "UPDATE claims SET created_at = ?, updated_at = ? WHERE subject_key LIKE 'task:stance:%'",
+            (stale, stale),
+        )
+    capsule = _capsule_text(client)
+    assert "자세:" not in capsule, capsule

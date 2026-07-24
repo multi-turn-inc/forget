@@ -8862,6 +8862,45 @@ def _context_action_plan_display_text(action_plan: dict[str, Any]) -> str:
 
 
 GOAL_TASK_PREFIX = "goal:"
+STANCE_TASK_PREFIX = "stance:"
+
+
+def _stance_line(project_id: str) -> str:
+    """The assistant's self-recorded stance — who it was being, not what it did.
+
+    Assistant-authored (user zero, 2026-07-25): the capsule restores task
+    state but not posture; a hand that wakes as a function needs a human to
+    say "remember who you were" before it acts like the one who lived the
+    last session. Convention: a task_state whose task_id starts with
+    "stance:", written by the assistant at natural session closes. Renders
+    only while fresh (MEM1_STANCE_MAX_AGE_DAYS, default 7) — a stale stance
+    would fossilize a dead persona, which is worse than waking blank.
+    """
+    try:
+        listing = get_task_state({"limit": 12}, project_id=project_id)
+    except Exception:
+        return ""
+    max_age_days = float(os.environ.get("MEM1_STANCE_MAX_AGE_DAYS", "7"))
+    for item in listing.get("results") or []:
+        if not isinstance(item, dict):
+            continue
+        task_id = str(item.get("task_id") or "")
+        if not task_id.startswith(STANCE_TASK_PREFIX):
+            continue
+        if str(item.get("status") or "").lower() not in ("in_progress", "active"):
+            continue
+        stamp = str(item.get("updated_at") or item.get("created_at") or "")
+        try:
+            recorded = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+            age_days = (datetime.now(timezone.utc) - recorded).total_seconds() / 86400
+        except ValueError:
+            continue
+        if age_days > max_age_days:
+            continue
+        summary = str(item.get("summary") or "").split("\n")[0][:200]
+        if summary:
+            return summary
+    return ""
 
 
 def _goal_lines(project_id: str, limit: int = 2) -> list[str]:
@@ -8917,6 +8956,8 @@ def _parallel_track_lines(project_id: str, current_task_id: str, limit: int = 2)
             continue
         if task_id.startswith(GOAL_TASK_PREFIX):
             continue  # goals are the why-layer, rendered on their own line
+        if task_id.startswith(STANCE_TASK_PREFIX):
+            continue  # the stance is posture, not a work item
         if status not in ("in_progress", "active", "running", "blocked", "pending"):
             continue
         next_actions = item.get("next_actions") or []
@@ -8990,6 +9031,9 @@ def _render_context_capsule_text(capsule: dict[str, Any]) -> str:
     goal_lines = [str(item) for item in capsule.get("goal_lines") or [] if str(item)]
     if goal_lines:
         lines.append("상위 목표: " + " | ".join(goal_lines[:2]))
+    stance_line = str(capsule.get("stance_line") or "")
+    if stance_line:
+        lines.append("자세: " + stance_line)
     parallel_tracks = [str(item) for item in capsule.get("parallel_tracks") or [] if str(item)]
     if parallel_tracks:
         # placed above the droppable tail: under budget pressure the render
@@ -9256,6 +9300,7 @@ def _attach_context_autopilot(
     current_task_id = str((workspace_current or {}).get("task_id") or "")
     capsule["parallel_tracks"] = _parallel_track_lines(capsule_project_id, current_task_id)
     capsule["goal_lines"] = _goal_lines(capsule_project_id)
+    capsule["stance_line"] = _stance_line(capsule_project_id)
     capsule_text = _render_context_capsule_text(capsule)
     final_model_context = str(result.get("context") or "")
     result["context_status"] = context_status
@@ -10709,6 +10754,7 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
     if (
         not isinstance(workspace_current, dict)
         or str(workspace_current.get("task_id") or "").startswith(GOAL_TASK_PREFIX)
+        or str(workspace_current.get("task_id") or "").startswith(STANCE_TASK_PREFIX)
     ):
         # Goals are the why-layer, not work items: a goal must never hijack
         # the capsule's "current task". Fall back to the newest active
@@ -10719,8 +10765,11 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
             for item in listing.get("results") or []:
                 task_id = str(item.get("task_id") or "")
                 status = str(item.get("status") or "").lower()
-                if task_id and not task_id.startswith(GOAL_TASK_PREFIX) and status in (
-                    "in_progress", "active", "running", "blocked", "pending",
+                if (
+                    task_id
+                    and not task_id.startswith(GOAL_TASK_PREFIX)
+                    and not task_id.startswith(STANCE_TASK_PREFIX)
+                    and status in ("in_progress", "active", "running", "blocked", "pending")
                 ):
                     workspace_current = {"task_id": task_id, "status": item.get("status"),
                                          "summary": item.get("summary"),
