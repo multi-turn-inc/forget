@@ -451,7 +451,8 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
       options.baseUrl = installed.baseUrl;
       options.hosted = isHostedBaseUrl(options.baseUrl);
       options.url = scopedMcpUrl(options.baseUrl, options.scope);
-      stdout.write(
+      const scopeNoticeStream = options.json ? stderr : stdout;
+      scopeNoticeStream.write(
         `Scope detected from installed config: user ${installed.userId} · app ${installed.appId}\n`,
       );
     }
