@@ -267,6 +267,31 @@ test("scoped CLI writes the same encoded endpoint for every client", async (t) =
   }
 });
 
+test("doctor --json keeps an auto-detected scope notice off stdout", async (t) => {
+  const home = await mkdtemp(path.join(os.tmpdir(), "forget-connect-doctor-json-"));
+  t.after(() => rm(home, { recursive: true, force: true }));
+  const configPath = path.join(home, ".codex", "config.toml");
+  await mkdir(path.dirname(configPath), { recursive: true });
+  await writeFile(
+    configPath,
+    '[mcp_servers.forget]\nurl = "http://127.0.0.1:1/mcp/project-one/http/user-one"\n',
+  );
+
+  const result = invoke(home, [
+    "doctor",
+    "--client",
+    "codex",
+    "--timeout",
+    "1",
+    "--json",
+  ]);
+
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.scope.configured, true);
+  assert.match(result.stderr, /Scope detected from installed config/);
+  assert.doesNotMatch(result.stdout, /Scope detected from installed config/);
+});
+
 test("clean-room: connect installs the full memory experience, disconnect removes it", async () => {
   const home = await mkdtemp(path.join(os.tmpdir(), "forget-cleanroom-"));
   try {
