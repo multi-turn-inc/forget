@@ -8946,7 +8946,7 @@ GOAL_TASK_PREFIX = "goal:"
 STANCE_TASK_PREFIX = "stance:"
 
 
-def _stance_line(project_id: str) -> str:
+def _stance_line(project_id: str, scope_filters: dict[str, Any] | None = None) -> str:
     """The assistant's self-recorded stance — who it was being, not what it did.
 
     Assistant-authored (user zero, 2026-07-25): the capsule restores task
@@ -8964,6 +8964,10 @@ def _stance_line(project_id: str) -> str:
     max_age_days = float(os.environ.get("MEM1_STANCE_MAX_AGE_DAYS", "7"))
     for item in listing.get("results") or []:
         if not isinstance(item, dict):
+            continue
+        if scope_filters and not _task_claim_scope_matches_filters(
+            item.get("scope") if isinstance(item.get("scope"), dict) else {}, scope_filters
+        ):
             continue
         task_id = str(item.get("task_id") or "")
         if not task_id.startswith(STANCE_TASK_PREFIX):
@@ -8984,7 +8988,22 @@ def _stance_line(project_id: str) -> str:
     return ""
 
 
-def _goal_lines(project_id: str, limit: int = 2) -> list[str]:
+def _capsule_scope_filters(payload: dict[str, Any] | None) -> dict[str, Any]:
+    """The requesting scope, for capsule layers that list task state.
+
+    Demo-taste find (2026-07-26, pre-0.3.1): goal/stance/parallel/postit
+    helpers listed the whole project, so a demo-user capsule rendered the
+    real user's goals and the assistant's stance — a cross-scope leak that
+    would have put private strategy on a screen recording. Every capsule
+    layer that reads the ledger must honor the requesting scope.
+    """
+    filters = (payload or {}).get("filters")
+    if not isinstance(filters, dict):
+        filters = {}
+    return {field: filters.get(field) for field in ENTITY_FIELDS if filters.get(field)}
+
+
+def _goal_lines(project_id: str, scope_filters: dict[str, Any] | None = None, limit: int = 2) -> list[str]:
     """Active goals — the "why" layer above tasks.
 
     Convention: a goal is a task_state whose task_id starts with "goal:".
@@ -8998,6 +9017,10 @@ def _goal_lines(project_id: str, limit: int = 2) -> list[str]:
     lines: list[str] = []
     for item in listing.get("results") or []:
         if not isinstance(item, dict):
+            continue
+        if scope_filters and not _task_claim_scope_matches_filters(
+            item.get("scope") if isinstance(item.get("scope"), dict) else {}, scope_filters
+        ):
             continue
         task_id = str(item.get("task_id") or "")
         status = str(item.get("status") or "").lower()
@@ -9014,7 +9037,7 @@ def _goal_lines(project_id: str, limit: int = 2) -> list[str]:
     return lines
 
 
-def _parallel_track_lines(project_id: str, current_task_id: str, limit: int = 2) -> list[str]:
+def _parallel_track_lines(project_id: str, current_task_id: str, scope_filters: dict[str, Any] | None = None, limit: int = 2) -> list[str]:
     """Other in-flight tasks, so the newest epoch can't hijack the capsule.
 
     Dogfooding taste-test 2026-07-23: an evening of system work made the
@@ -9030,6 +9053,10 @@ def _parallel_track_lines(project_id: str, current_task_id: str, limit: int = 2)
     lines: list[str] = []
     for item in listing.get("results") or []:
         if not isinstance(item, dict):
+            continue
+        if scope_filters and not _task_claim_scope_matches_filters(
+            item.get("scope") if isinstance(item.get("scope"), dict) else {}, scope_filters
+        ):
             continue
         task_id = str(item.get("task_id") or "")
         status = str(item.get("status") or "").lower()
@@ -9049,7 +9076,7 @@ def _parallel_track_lines(project_id: str, current_task_id: str, limit: int = 2)
     return lines
 
 
-def _open_loop_postits(project_id: str, limit: int = 3) -> list[dict[str, Any]]:
+def _open_loop_postits(project_id: str, scope_filters: dict[str, Any] | None = None, limit: int = 3) -> list[dict[str, Any]]:
     """Unverified agent-reported action claims that have stayed open too long.
 
     Incident #0's shape: an agent-side "action was completed" claim that
@@ -9065,7 +9092,7 @@ def _open_loop_postits(project_id: str, limit: int = 3) -> list[dict[str, Any]]:
     with get_db() as conn:
         rows = conn.execute(
             """
-            SELECT c.claim_text, c.created_at, m.metadata
+            SELECT c.claim_text, c.created_at, c.scope, m.metadata
             FROM claims c JOIN memories m ON m.id = c.memory_id AND m.project_id = c.project_id
             WHERE c.project_id = ? AND c.modality = 'reported' AND c.status = 'active'
               AND c.retired_at IS NULL AND m.deleted = 0
@@ -9076,6 +9103,10 @@ def _open_loop_postits(project_id: str, limit: int = 3) -> list[dict[str, Any]]:
     now_dt = datetime.now(timezone.utc)
     postits: list[dict[str, Any]] = []
     for row in rows:
+        if scope_filters and not _task_claim_scope_matches_filters(
+            json_loads(row["scope"], {}) or {}, scope_filters
+        ):
+            continue
         metadata = json_loads(row["metadata"], {})
         if isinstance(metadata, dict) and metadata.get("superseded_at"):
             continue  # corrected — the loop is closed
@@ -9377,11 +9408,12 @@ def _attach_context_autopilot(
         compiled_at=compiled_at,
     )
     capsule_project_id = str(result.get("project_id") or current_project_id())
-    capsule["open_loops"] = _open_loop_postits(capsule_project_id)
+    capsule_scope = _capsule_scope_filters(payload)
+    capsule["open_loops"] = _open_loop_postits(capsule_project_id, capsule_scope)
     current_task_id = str((workspace_current or {}).get("task_id") or "")
-    capsule["parallel_tracks"] = _parallel_track_lines(capsule_project_id, current_task_id)
-    capsule["goal_lines"] = _goal_lines(capsule_project_id)
-    capsule["stance_line"] = _stance_line(capsule_project_id)
+    capsule["parallel_tracks"] = _parallel_track_lines(capsule_project_id, current_task_id, capsule_scope)
+    capsule["goal_lines"] = _goal_lines(capsule_project_id, capsule_scope)
+    capsule["stance_line"] = _stance_line(capsule_project_id, capsule_scope)
     capsule_text = _render_context_capsule_text(capsule)
     final_model_context = str(result.get("context") or "")
     result["context_status"] = context_status
@@ -10842,8 +10874,13 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
         # non-goal task so the capsule keeps pointing at real work.
         workspace_current = None
         try:
+            fallback_scope = _capsule_scope_filters(payload)
             listing = get_task_state({"limit": 12}, project_id=project_id)
             for item in listing.get("results") or []:
+                if fallback_scope and not _task_claim_scope_matches_filters(
+                    item.get("scope") if isinstance(item.get("scope"), dict) else {}, fallback_scope
+                ):
+                    continue
                 task_id = str(item.get("task_id") or "")
                 status = str(item.get("status") or "").lower()
                 if (

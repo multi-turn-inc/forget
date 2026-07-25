@@ -230,3 +230,43 @@ def test_stale_stance_does_not_render() -> None:
         )
     capsule = _capsule_text(client)
     assert "자세:" not in capsule, capsule
+
+
+def test_capsule_layers_honor_requesting_scope() -> None:
+    # Demo-taste find (2026-07-26, pre-0.3.1): a demo-user capsule rendered
+    # the real user's goals and the assistant's stance — cross-scope leak
+    # that would have put private strategy on a screen recording. Every
+    # capsule layer that lists the ledger must honor the requesting scope.
+    client = _client()
+    # 실사용자 스코프의 목표·자세·병행·열린루프
+    _call(client, "record_task_state", {
+        "task_id": "goal:private-strategy", "status": "in_progress",
+        "summary": "비공개 전략 목표", "next_actions": ["비밀 이정표"],
+    })
+    _call(client, "record_task_state", {
+        "task_id": "stance:assistant", "status": "in_progress",
+        "summary": "비공개 자세 — 유출 금지",
+    }, request_id=2)
+    _call(client, "record_task_state", {
+        "task_id": "private-work", "status": "in_progress",
+        "summary": "비공개 병행 작업", "next_actions": ["다음 조각"],
+    }, request_id=3)
+    _call(client, "add_memory", {"text": "보고서 발송했음.", "infer": False}, request_id=4)
+    _backdate_reported_claim("보고서 발송했음.", days=5)
+
+    # 다른 스코프(demo)에서 캡슐 요청
+    other_path = f"/mcp/other-app/http/other-user-{uuid.uuid4().hex[:6]}"
+    response = client.post(other_path, json={
+        "jsonrpc": "2.0", "id": 9, "method": "tools/call",
+        "params": {"name": "prepare_context_autopilot",
+                   "arguments": {"query": "session startup", "include_debug": False}},
+    })
+    capsule = json.loads(response.json()["result"]["content"][0]["text"]).get("capsule_text") or ""
+    assert "비공개 전략 목표" not in capsule, capsule
+    assert "비공개 자세" not in capsule, capsule
+    assert "비공개 병행 작업" not in capsule, capsule
+    assert "보고서 발송했음" not in capsule, capsule
+
+    # 원 스코프에서는 전부 보여야 함 (회귀 방지)
+    own = _capsule_text(client)
+    assert "비공개 전략 목표" in own and "자세: 비공개 자세" in own, own
