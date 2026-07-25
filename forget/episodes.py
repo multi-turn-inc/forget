@@ -22,15 +22,31 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-DEFAULT_ROOTS = ("~/.claude/projects",)
+# Harness-agnostic by construction: episodic memory that only reads one
+# vendor's transcripts would contradict the product's own claim (one memory
+# across every tool). Codex keeps rollout JSONL under its own home.
+DEFAULT_ROOTS = ("~/.claude/projects", "~/.codex/sessions")
+# Codex event records duplicate response_item content; the roles map keeps the
+# ones that carry an utterance and drops token-count/tool noise.
+CODEX_EVENT_ROLES = {"user_message": "user", "agent_message": "assistant"}
+TEXT_BLOCK_SUFFIX = "text"  # "text" (Claude) · "input_text"/"output_text" (Codex)
 MAX_FILES_SCANNED = 40
 MAX_BYTES_PER_FILE = 64 * 1024 * 1024
 
 
 def transcript_roots() -> list[Path]:
     raw = os.environ.get("MEM1_EPISODE_ROOTS", "")
-    roots = [part for part in raw.split(os.pathsep) if part.strip()] or list(DEFAULT_ROOTS)
-    return [Path(root).expanduser() for root in roots]
+    if raw.strip():
+        return [Path(part).expanduser() for part in raw.split(os.pathsep) if part.strip()]
+    candidates = [Path(root).expanduser() for root in DEFAULT_ROOTS]
+    codex_home = os.environ.get("CODEX_HOME", "").strip()
+    if codex_home:
+        candidates.append(Path(codex_home).expanduser() / "sessions")
+    roots: list[Path] = []
+    for candidate in candidates:  # a CODEX_HOME of ~/.codex must not double-scan
+        if candidate not in roots:
+            roots.append(candidate)
+    return roots
 
 
 def _iter_transcript_files(roots: list[Path], since: datetime | None) -> list[Path]:
@@ -50,20 +66,39 @@ def _iter_transcript_files(roots: list[Path], since: datetime | None) -> list[Pa
     return [path for _, path in files[:MAX_FILES_SCANNED]]
 
 
-def _event_text(event: dict[str, Any]) -> tuple[str, str]:
-    message = event.get("message") or {}
-    role = str(message.get("role") or event.get("type") or "")
-    content = message.get("content")
+def _blocks_to_text(content: Any) -> str:
     if isinstance(content, str):
-        return role, content
+        return content
     if isinstance(content, list):
         parts = [
             block.get("text", "")
             for block in content
-            if isinstance(block, dict) and block.get("type") == "text"
+            if isinstance(block, dict) and str(block.get("type") or "").endswith(TEXT_BLOCK_SUFFIX)
         ]
-        return role, " ".join(part for part in parts if part)
-    return role, ""
+        return " ".join(part for part in parts if part)
+    return ""
+
+
+def _event_text(event: dict[str, Any]) -> tuple[str, str]:
+    """Return (role, text) for one transcript line, across harness formats.
+
+    Claude Code: {"message": {"role", "content": str | [{"type": "text"}]}}
+    Codex rollout: {"type": "response_item", "payload": {"role", "content":
+    [{"type": "input_text"|"output_text"}]}}, plus {"type": "event_msg",
+    "payload": {"type": "user_message"|"agent_message", "message": str}}.
+    """
+    message = event.get("message")
+    if isinstance(message, dict):
+        role = str(message.get("role") or event.get("type") or "")
+        return role, _blocks_to_text(message.get("content"))
+    payload = event.get("payload")
+    if isinstance(payload, dict):
+        if payload.get("type") == "message" or payload.get("role"):
+            return str(payload.get("role") or ""), _blocks_to_text(payload.get("content"))
+        role = CODEX_EVENT_ROLES.get(str(payload.get("type") or ""))
+        if role and isinstance(payload.get("message"), str):
+            return role, payload["message"]
+    return "", ""
 
 
 def _excerpt(text: str, terms: list[str], width: int = 320) -> str:
@@ -98,6 +133,7 @@ def recall_episodes(
         try:
             if path.stat().st_size > MAX_BYTES_PER_FILE:
                 continue
+            seen_in_file: set[str] = set()
             with path.open() as handle:
                 for lineno, line in enumerate(handle, start=1):
                     lowered = line.lower()
@@ -110,6 +146,10 @@ def recall_episodes(
                     role, text = _event_text(event)
                     if not text or not all(term in text.lower() for term in terms):
                         continue
+                    fingerprint = " ".join(text.split())[:400]
+                    if fingerprint in seen_in_file:
+                        continue  # same utterance, second record shape
+                    seen_in_file.add(fingerprint)
                     hits.append({
                         "excerpt": _excerpt(text, terms),
                         "role": role or "unknown",
