@@ -165,6 +165,7 @@ def test_github_route_does_not_fall_back_to_workspace_search() -> None:
         "status": "in_progress",
         "summary": "DGX Spark playbooks PR #92 is open and merge-clean.",
         "next_actions": ["Monitor GitHub PR #92 and respond to maintainer feedback."],
+        "evidence_files": ["forget/store.py"],
     })
     result = _call(client, "prepare_context_autopilot", {
         "query": "What is the current DGX Spark open-source contribution and next action?",
