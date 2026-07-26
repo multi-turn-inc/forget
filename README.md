@@ -4,16 +4,25 @@
 
 [![PyPI](https://img.shields.io/pypi/v/forget-ai?style=flat-square&color=d31126&label=forget-ai)](https://pypi.org/project/forget-ai/)
 [![npm](https://img.shields.io/npm/v/forget-connect?style=flat-square&color=d31126&label=forget-connect)](https://www.npmjs.com/package/forget-connect)
-[![LongMemEval](https://img.shields.io/badge/LongMemEval-81.8%25_·_100%25_local-1a1c20?style=flat-square)](https://forget.sh/#benchmark)
+[![LongMemEval](https://img.shields.io/badge/LongMemEval-81.8%25_·_local_pipeline_76.2%25-1a1c20?style=flat-square)](https://forget.sh/#benchmark)
 [![License](https://img.shields.io/badge/license-Apache--2.0-71767d?style=flat-square)](LICENSE)
 
-<a href="https://forget.sh"><img src="https://forget.sh/og.png" alt="forget — tell Claude Code once, Cursor remembers. 81.8% on LongMemEval, 100% local." width="100%"></a>
+<a href="https://forget.sh"><img src="https://forget.sh/og.png" alt="forget — tell Claude Code once, Cursor remembers. Local-first memory for AI agents, 81.8% on LongMemEval." width="100%"></a>
 
 On [LongMemEval](https://github.com/xiaowu0162/LongMemEval), the standard
-long-term-memory benchmark, Forget scores **81.8%** on the full 500-question
-set — above Mem0 (49%) and Zep (63.8%), within 0.6pp of a GPT-4o oracle
-ceiling — with memory building and retrieval running **100% local**.
-Knowledge-update questions, where memory products usually fail: **92.3%**.
+long-term-memory benchmark (full 500-question set, GPT-4o reader and judge):
+
+| configuration | accuracy |
+|---|---|
+| GPT-4o full-context, no memory system ([paper baseline](https://arxiv.org/abs/2410.10813)) | 60.6% |
+| **Forget, fully local memory pipeline** (Qwen 14B observer) | **76.2%** |
+| **Forget, best configuration** (GPT-4o observer) | **81.8%** |
+| GPT-4o oracle — evidence sessions handed to the reader ([paper ceiling](https://arxiv.org/abs/2410.10813)) | 87.0% |
+
+Knowledge-update questions, where memory products usually fail: **92.3%**
+(best config). Our weakest category, so you don't have to dig for it:
+single-session-preference, 43.3%. Per-question outputs and run configs are
+in [`research/longmemeval/runs/`](research/longmemeval/runs/).
 
 Every LLM session starts from zero. Forget gives your AI a long-term memory
 that it actually maintains: an observation gate decides what is worth keeping
