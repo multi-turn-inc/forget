@@ -193,7 +193,7 @@ def test_local_repository_wording_keeps_workspace_route() -> None:
 
     assert capsule["source_route"]["source_class"] == "repo_inspection"
     assert capsule["action_hints"]
-    assert capsule["action_hints"][0]["tool_name"] == "functions.exec_command"
+    assert capsule["action_hints"][0]["source"] == "query_keyword_fallback"
 
 
 def test_goals_render_as_why_layer_not_parallel_tracks() -> None:
