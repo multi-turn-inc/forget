@@ -7922,7 +7922,10 @@ def _context_source_route_for_text(
         return "goal_state", "query or next action references goal state", 0.72
     if re.search(r"(ssh\s|4090|/home/dilab|155\.230\.107\.59|/ready|/health)", combined):
         return "remote_4090_runtime", "query or next action references 4090/runtime verification", 0.78
-    if re.search(r"(github\.com|git clone|git ls-remote|pull request|issue|repo)", combined):
+    if re.search(
+        r"(\bgithub(?:\.com)?\b|\bgit clone\b|\bgit ls-remote\b|\bpull request\b|\bissue\b|\bpr\s*#?\d+\b)",
+        combined,
+    ):
         return "web_or_github", "query or next action references web or GitHub", 0.68
     if re.search(r"(skill\.md|\.codex/skills|/skills/)", combined):
         return "skill_doc", "query or next action references skill instructions", 0.7
