@@ -1159,6 +1159,27 @@ def _task_state_result_from_row(row: Any, score: float | None = None) -> dict[st
     return memory
 
 
+def _task_state_feedback_map(project_id: str) -> dict[str, dict[str, Any]]:
+    """Return outcome feedback keyed by the public claim-backed result ID."""
+    with get_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT f.memory_id, f.feedback, f.feedback_reason, f.created_at, f.metadata
+              FROM feedback f
+              JOIN claims c ON f.memory_id = ('claim:' || c.id)
+             WHERE c.project_id = ?
+            """,
+            (project_id,),
+        ).fetchall()
+    feedbacks: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        item = dict(row)
+        metadata = json_loads(item.get("metadata"), {})
+        item["metadata"] = metadata if isinstance(metadata, dict) else {}
+        feedbacks[str(row["memory_id"])] = item
+    return feedbacks
+
+
 def _task_state_search_results(
     query: str,
     filters: dict[str, Any],
@@ -1193,6 +1214,7 @@ def _task_state_search_results(
             """,
             params,
         ).fetchall()
+    feedbacks = _task_state_feedback_map(project_id)
     results: list[dict[str, Any]] = []
     for row in rows:
         scope = json_loads(row["scope"], {})
@@ -1201,6 +1223,7 @@ def _task_state_search_results(
         item = _task_state_result_from_row(row)
         score = score_memory(query, item, reference_date=as_of or None)
         score = min(1.0, round(score + 0.08, 4))
+        score = feedback_adjusted_score(score, feedbacks.get(str(item["id"])))
         if score >= threshold:
             item["score"] = score
             results.append(item)
@@ -10488,6 +10511,65 @@ def _context_memory_id_in(memory_id: str, candidates: list[str]) -> bool:
     return any(key == _context_memory_id_key(candidate) for candidate in candidates)
 
 
+def _context_outcome_memory_id_resolution(
+    conn: Any,
+    project_id: str,
+    values: list[str],
+) -> tuple[dict[str, str], set[str]]:
+    """Resolve submitted result IDs to canonical memory or claim result IDs."""
+    submitted = list(dict.fromkeys(str(value).strip() for value in values if str(value).strip()))
+    if not submitted:
+        return {}, set()
+
+    memory_placeholders = ", ".join("?" for _ in submitted)
+    memory_ids = {
+        str(row["id"])
+        for row in conn.execute(
+            f"""
+            SELECT id FROM memories
+             WHERE project_id = ? AND deleted = 0 AND id IN ({memory_placeholders})
+            """,
+            (project_id, *submitted),
+        )
+    }
+    claim_keys = list(dict.fromkeys(_context_memory_id_key(value) for value in submitted))
+    claim_placeholders = ", ".join("?" for _ in claim_keys)
+    claim_ids = {
+        str(row["id"])
+        for row in conn.execute(
+            f"""
+            SELECT id FROM claims
+             WHERE project_id = ? AND id IN ({claim_placeholders})
+            """,
+            (project_id, *claim_keys),
+        )
+    }
+
+    resolution: dict[str, str] = {}
+    matched: set[str] = set()
+    for value in submitted:
+        if value in memory_ids:
+            canonical = value
+            matched.add(canonical)
+        elif _context_memory_id_key(value) in claim_ids:
+            canonical = f"claim:{_context_memory_id_key(value)}"
+            matched.add(canonical)
+        else:
+            canonical = value
+        resolution[value] = canonical
+    return resolution, matched
+
+
+def _context_outcome_resolved_list(values: list[str], resolution: dict[str, str]) -> list[str]:
+    resolved: list[str] = []
+    for value in values:
+        submitted = str(value).strip()
+        canonical = resolution.get(submitted, submitted)
+        if canonical and canonical not in resolved:
+            resolved.append(canonical)
+    return resolved
+
+
 def _context_outcome_used_current_workspace_from_memory_ids(
     observed: dict[str, Any],
     trace_payload: dict[str, Any],
@@ -10726,9 +10808,6 @@ def record_context_outcome(payload: dict[str, Any], project_id: str | None = Non
         trace_payload if isinstance(trace_payload, dict) else {},
     )
     inferred = _context_outcome_inferred(payload, observed)
-    used_memory_ids = observed["used_memory_ids"]
-    missing_memory_ids = observed["missing_memory_ids"]
-    harmful_memory_ids = observed["harmful_memory_ids"]
     first_action_productive = bool(observed["first_action_productive"])
     user_correction_required = bool(observed["user_correction_required"])
     failure_stage = str(inferred["failure_stage"])
@@ -10745,24 +10824,45 @@ def record_context_outcome(payload: dict[str, Any], project_id: str | None = Non
         observed["used_context_surfaces"] = used_context_surfaces
         observed["used_current_workspace"] = "current_workspace" in used_context_surfaces
         metadata["used_context_surfaces"] = used_context_surfaces
-    metadata["observed"] = observed
-    metadata["inferred"] = inferred
-    labeled_memory_ids = [
-        str(memory_id)
-        for memory_id in dict.fromkeys([*used_memory_ids, *harmful_memory_ids, *missing_memory_ids])
-        if memory_id
-    ]
     with get_db() as conn:
-        matched_memory_ids: set[str] = set()
-        if labeled_memory_ids:
-            placeholders = ", ".join("?" for _ in labeled_memory_ids)
-            matched_memory_ids = {
-                str(row["id"])
-                for row in conn.execute(
-                    f"SELECT id FROM memories WHERE project_id = ? AND deleted = 0 AND id IN ({placeholders})",
-                    (project_id, *labeled_memory_ids),
-                )
-            }
+        submitted_memory_ids = [
+            str(memory_id)
+            for memory_id in dict.fromkeys(
+                [
+                    *observed["used_memory_ids"],
+                    *observed["harmful_memory_ids"],
+                    *observed["missing_memory_ids"],
+                ]
+            )
+            if memory_id
+        ]
+        memory_id_resolution, matched_memory_ids = _context_outcome_memory_id_resolution(
+            conn,
+            project_id,
+            submitted_memory_ids,
+        )
+        used_memory_ids = _context_outcome_resolved_list(
+            observed["used_memory_ids"],
+            memory_id_resolution,
+        )
+        missing_memory_ids = _context_outcome_resolved_list(
+            observed["missing_memory_ids"],
+            memory_id_resolution,
+        )
+        harmful_memory_ids = _context_outcome_resolved_list(
+            observed["harmful_memory_ids"],
+            memory_id_resolution,
+        )
+        observed["used_memory_ids"] = used_memory_ids
+        observed["missing_memory_ids"] = missing_memory_ids
+        observed["harmful_memory_ids"] = harmful_memory_ids
+        metadata["observed"] = observed
+        metadata["inferred"] = inferred
+        labeled_memory_ids = [
+            str(memory_id)
+            for memory_id in dict.fromkeys([*used_memory_ids, *harmful_memory_ids, *missing_memory_ids])
+            if memory_id
+        ]
         conn.execute(
             """
             INSERT INTO context_outcomes (
@@ -10792,8 +10892,8 @@ def record_context_outcome(payload: dict[str, Any], project_id: str | None = Non
         _close_outcome_feedback_loop(
             conn,
             project_id,
-            [memory_id for memory_id in used_memory_ids if str(memory_id) in matched_memory_ids],
-            [memory_id for memory_id in harmful_memory_ids if str(memory_id) in matched_memory_ids],
+            [memory_id for memory_id in used_memory_ids if memory_id in matched_memory_ids],
+            [memory_id for memory_id in harmful_memory_ids if memory_id in matched_memory_ids],
             first_action_productive,
             now,
         )
