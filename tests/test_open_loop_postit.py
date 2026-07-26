@@ -270,3 +270,54 @@ def test_capsule_layers_honor_requesting_scope() -> None:
     # 원 스코프에서는 전부 보여야 함 (회귀 방지)
     own = _capsule_text(client)
     assert "비공개 전략 목표" in own and "자세: 비공개 자세" in own, own
+
+
+def test_context_outcome_feedback_accepts_claim_backed_result_ids() -> None:
+    # Live Codex dogfood finding: capsule provenance exposes task states as
+    # claim:<uuid>, but record_context_outcome only matched memories.id. The
+    # returned ID was warned as unknown and never reached the ranking loop.
+    client = _client()
+    state = _call(client, "record_task_state", {
+        "task_id": "oss:quack-cutlass",
+        "status": "in_progress",
+        "summary": "QuACK Cutlass compatibility task",
+        "next_actions": ["Inspect the published pull request."],
+    })
+    claim_result_id = f"claim:{state['claim_id']}"
+
+    def task_score(request_id: int) -> float:
+        result = _call(client, "search_memories", {
+            "query": "QuACK Cutlass compatibility task",
+            "top_k": 10,
+            "threshold": 0.0,
+        }, request_id=request_id)
+        match = next(item for item in result["results"] if item["id"] == claim_result_id)
+        return float(match["score"])
+
+    score_before = task_score(request_id=2)
+    context = _call(client, "prepare_context_autopilot", {
+        "query": "Restore the QuACK Cutlass compatibility task.",
+        "top_k": 10,
+        "threshold": 0.0,
+        "include_debug": True,
+    }, request_id=3)
+    assert claim_result_id in context["evidence"]["memory_ids"]
+
+    outcome = _call(client, "record_context_outcome", {
+        "trace_id": context["context_trace_id"],
+        "harmful_memory_ids": [claim_result_id],
+        "first_action_productive": False,
+        "failure_stage": "selection_failure",
+    }, request_id=4)
+
+    assert outcome["unmatched_memory_ids"] == []
+    assert outcome["harmful_memory_ids"] == [claim_result_id]
+    assert outcome["warnings"] == []
+    with get_db() as conn:
+        feedback = conn.execute(
+            "SELECT feedback, metadata FROM feedback WHERE memory_id = ?",
+            (claim_result_id,),
+        ).fetchone()
+    assert feedback is not None and feedback["feedback"] == "NEGATIVE"
+    assert json.loads(feedback["metadata"])["source"] == "context_outcome"
+    assert task_score(request_id=5) == round(score_before - 0.15, 4)
