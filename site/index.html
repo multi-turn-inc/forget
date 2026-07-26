@@ -14,7 +14,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>forget — tell Claude Code once, Cursor remembers</title>
-<meta name="description" content="One memory for your AI across Claude Code, Cursor, and Codex — open source, 100% local, 81.8% on LongMemEval. Nobody can read it but you.">
+<meta name="description" content="One memory for your AI across Claude Code, Cursor, and Codex — open source, local-first, 81.8% on LongMemEval. Nobody can read it but you.">
 <link rel="canonical" href="https://forget.sh/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23e5122e'/%3E%3Ctext x='32' y='45' font-family='-apple-system,sans-serif' font-size='38' font-weight='800' fill='%23fff' text-anchor='middle'%3Ef%3C/text%3E%3Crect x='12' y='30' width='40' height='5' rx='2.5' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,13 +24,13 @@
 <meta property="og:url" content="https://forget.sh/">
 <meta property="og:site_name" content="forget">
 <meta property="og:title" content="forget — tell Claude Code once, Cursor remembers">
-<meta property="og:description" content="One memory for your AI across Claude Code, Cursor, and Codex — open source, 100% local, 81.8% on LongMemEval. Nobody can read it but you.">
+<meta property="og:description" content="One memory for your AI across Claude Code, Cursor, and Codex — open source, local-first, 81.8% on LongMemEval. Nobody can read it but you.">
 <meta property="og:image" content="https://forget.sh/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="forget — tell Claude Code once, Cursor remembers">
-<meta name="twitter:description" content="One memory for your AI across Claude Code, Cursor, and Codex — open source, 100% local, 81.8% on LongMemEval. Nobody can read it but you.">
+<meta name="twitter:description" content="One memory for your AI across Claude Code, Cursor, and Codex — open source, local-first, 81.8% on LongMemEval. Nobody can read it but you.">
 <meta name="twitter:image" content="https://forget.sh/og.png">
 <meta name="theme-color" content="#faf9f7">
 <link rel="alternate" type="text/plain" title="llms.txt" href="/llms.txt">
@@ -56,7 +56,7 @@
     {
       "@type": "Question",
       "name": "Is my memory really local?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Everything lives in one SQLite file at ~/.forget — storage, search, and memory building all run on the user's machine, offline included. The 81.8% LongMemEval score was measured with building and retrieval running 100% on-device. No account, no telemetry." }
+      "acceptedAnswer": { "@type": "Answer", "text": "Everything lives in one SQLite file at ~/.forget — storage, search, and memory building all run on the user's machine, offline included. On LongMemEval the fully-local pipeline scores 76.2% (81.8% with a GPT-4o observer), against the paper's 60.6% full-context baseline. No account, no telemetry." }
     },
     {
       "@type": "Question",
@@ -490,7 +490,7 @@
 
 <div class="wrap">
   <div class="hero">
-    <a class="eyebrow" href="#benchmark">81.8% on LongMemEval — above Mem0 &amp; Zep, 100% local →</a>
+    <a class="eyebrow" href="#benchmark">LongMemEval: 81.8% best config · 76.2% fully local →</a>
     <h1>Tell Claude Code once.<br><em>Cursor remembers.</em></h1>
     <p class="sub">One memory for your AI — decisions, preferences, project
     context — in a <code>SQLite</code> file on your machine. We couldn't
@@ -544,39 +544,41 @@
       <div>
         <h2 class="sec-title">Don't take our word for it.<br><em>Take the benchmark's.</em></h2>
         <p class="sec-sub">LongMemEval, the standard long-term-memory benchmark.
-        Full 500-question set, GPT-4o reader for every system.</p>
+        Full 500-question set, GPT-4o reader and judge for every row.</p>
       </div>
     </div>
     <div class="sec-body">
       <div class="bench rv">
         <div class="row">
-          <span class="name">Mem0</span>
-          <div class="track"><div class="bar" style="--w:49%"></div></div>
-          <span class="val">49.0%</span>
-        </div>
-        <div class="row">
-          <span class="name">Zep</span>
-          <div class="track"><div class="bar" style="--w:63.8%"></div></div>
-          <span class="val">63.8%</span>
+          <span class="name">GPT-4o full-context</span>
+          <div class="track"><div class="bar" style="--w:60.6%"></div></div>
+          <span class="val">60.6%</span>
         </div>
         <div class="row us">
-          <span class="name">forget</span>
-          <div class="track"><div class="bar" style="--w:81.8%"><span class="in-label">100% LOCAL</span></div></div>
+          <span class="name">forget · local pipeline</span>
+          <div class="track"><div class="bar" style="--w:76.2%"><span class="in-label">100% LOCAL</span></div></div>
+          <span class="val">76.2%</span>
+        </div>
+        <div class="row us">
+          <span class="name">forget · best config</span>
+          <div class="track"><div class="bar" style="--w:81.8%"></div></div>
           <span class="val">81.8%</span>
         </div>
         <div class="row ceil">
           <span class="name">GPT-4o oracle</span>
-          <div class="track"><div class="bar" style="--w:82.4%"></div></div>
-          <span class="val">82.4%</span>
+          <div class="track"><div class="bar" style="--w:87%"></div></div>
+          <span class="val">87.0%</span>
         </div>
       </div>
       <p class="bench-kicker rv">Knowledge-update questions — where memory products
       usually fail because stale facts survive: <strong>92.3%</strong></p>
-      <p class="bench-note rv">The oracle row is GPT-4o reading the full transcript —
-      the ceiling for any memory system on this protocol. Mem0 and Zep as published;
-      forget measured on the identical question set, with memory building and retrieval
-      running entirely on-device.
-      <a href="https://github.com/multi-turn-inc/forget">Methodology and raw runs →</a></p>
+      <p class="bench-note rv">Baseline and ceiling are from the
+      <a href="https://arxiv.org/abs/2410.10813">LongMemEval paper</a>: full-context
+      is GPT-4o reading the entire transcript with no memory system; oracle is GPT-4o
+      handed only the evidence sessions. The local-pipeline row builds and retrieves
+      memory entirely on-device (Qwen 14B observer); best config uses a GPT-4o observer.
+      Our weakest category is single-session-preference at 43.3% — it's in the runs too.
+      <a href="https://github.com/multi-turn-inc/forget/tree/main/research/longmemeval/runs">Per-question outputs and configs →</a></p>
     </div>
   </div>
 </section>
@@ -744,9 +746,8 @@
         <tbody>
           <tr>
             <td>LongMemEval, full 500</td>
-            <td class="us">81.8%</td>
-            <td>49.0%</td>
-            <td>63.8%</td>
+            <td class="us">81.8% · <a href="#benchmark">local 76.2%</a></td>
+            <td colspan="2">self-reported, different readers — <a href="#benchmark">see methodology</a></td>
             <td class="dash">unpublished</td>
           </tr>
           <tr>
@@ -812,7 +813,7 @@
         <span class="chip ok">SHIPPED · OPEN SOURCE</span>
         <h3>Runs on your machine today</h3>
         <ul>
-          <li>81.8% on LongMemEval (full 500 questions, local-only)</li>
+          <li>LongMemEval full-500: 81.8% best config · 76.2% fully local pipeline</li>
           <li>Hooks push memory into sessions — capsule, recall, conflict alerts</li>
           <li>One SQLite file you own — offline included</li>
           <li>Mines your repo's decision history from git</li>
@@ -878,10 +879,10 @@
           <summary>Is my memory really local, or "local until it isn't"?</summary>
           <div class="a">Everything lives in one SQLite file at <code>~/.forget</code> —
           storage, search, and memory building all run on your machine, offline
-          included. The 81.8% LongMemEval score was measured with building and
-          retrieval running 100% on-device, so local isn't a demo mode; it's the
-          configuration we benchmark. There is no account, no telemetry, and no
-          server of ours in the loop.</div>
+          included. Local isn't a demo mode; it's a configuration we benchmark:
+          the fully-local pipeline scores 76.2% on LongMemEval (81.8% with a
+          GPT-4o observer), against the paper's 60.6% full-context baseline.
+          There is no account, no telemetry, and no server of ours in the loop.</div>
         </details>
         <details>
           <summary>How is this different from ChatGPT or Claude's built-in memory?</summary>
@@ -959,7 +960,7 @@
         <li class="rv"><span class="d">Jul 24</span><span><strong>0.2.1 — the supersede contract, sealed.</strong> An agent dogfooding the beta caught superseded facts re-entering action context; fixed the same day, with the repro as a regression test.</span></li>
       <li class="rv"><span class="d">Jul 24</span><span><strong>Public beta.</strong> forget-ai 0.2.0 on PyPI, forget-connect 0.3.0 on npm — with a login service that survives reboots.</span></li>
         <li class="rv"><span class="d">Jul 22</span><span><strong>Hooks + trust labels.</strong> Session capsule, per-turn push recall, conflict-zone alerts; every read carries green / yellow / red.</span></li>
-        <li class="rv"><span class="d">Jul 16</span><span><strong>LongMemEval full-500: 81.8%.</strong> Memory building and retrieval 100% local, within 0.6pp of the GPT-4o full-context ceiling.</span></li>
+        <li class="rv"><span class="d">Jul 16</span><span><strong>LongMemEval full-500: 81.8%</strong> best config (GPT-4o observer) · <strong>76.2%</strong> fully local pipeline — against the paper's 60.6% full-context baseline and 87.0% oracle ceiling.</span></li>
         <li class="rv"><span class="d">Jul 13</span><span><strong>Git decision miner.</strong> A repo's history becomes memory — "why did we choose X?" answered with commit receipts.</span></li>
       </ul>
       <a class="log-more rv" href="https://github.com/multi-turn-inc/forget/commits/main">Follow along on GitHub →</a>

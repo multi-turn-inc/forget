@@ -2,8 +2,9 @@
 
 > Open-source, local-first memory for AI coding tools. One memory across
 > Claude Code, Cursor, and Codex (via MCP), stored in a SQLite file on the
-> user's machine. Scores 81.8% on LongMemEval (full 500 questions) with
-> memory building and retrieval running 100% local. Mines a repo's decision
+> user's machine. On LongMemEval (full 500 questions): 76.2% with the
+> fully-local memory pipeline, 81.8% best config (GPT-4o observer), against
+> the paper's 60.6% full-context baseline. Mines a repo's decision
 > history from git and answers "why did we choose X?" with commit receipts.
 > End-to-end encrypted sync is in design — not shipped yet.
 
@@ -53,7 +54,7 @@ commit provenance (sha, author, date), backdated to the commit time.
 
 - Open source (Apache-2.0); engine dependencies are FastAPI and httpx.
 - All storage and search run locally; no data leaves the machine.
-- LongMemEval full-500: 81.8% (Mem0 49%, Zep 63.8%), knowledge-update 92.3%.
+- LongMemEval full-500: 81.8% best config · 76.2% fully local (paper baseline: 60.6% full-context, 87.0% oracle); knowledge-update 92.3%.
 - Every memory carries provenance (who vouches for it) and a trust label.
 - Not shipped yet: E2EE sync, Windows support, hosted anything.
 
