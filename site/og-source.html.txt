@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face {
+    font-family: "Instrument Serif";
+    src: url(https://fonts.gstatic.com/s/instrumentserif/v4/jizBRFtNs2ka5fXjeivQ4LroWlx-2zIZj1bIkNo.woff2) format("woff2");
+    font-weight: 400; font-style: normal;
+  }
+  @font-face {
+    font-family: "Instrument Serif";
+    src: url(https://fonts.gstatic.com/s/instrumentserif/v4/jizHRFtNs2ka5fXjeivQ4LroWlx-6zATi3TNgNq55w.woff2) format("woff2");
+    font-weight: 400; font-style: italic;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    background: #faf9f7;
+    font-family: "Inter", -apple-system, "Helvetica Neue", sans-serif;
+    color: #1a1c20;
+    position: relative;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* faint editorial grid: two hairlines anchor the composition */
+  .rule-v { position: absolute; top: 0; bottom: 0; left: 56px; width: 1.5px; background: #ecd9d6; }
+  .rule-h { position: absolute; left: 0; right: 0; bottom: 88px; height: 1.5px; background: #e5e2dc; }
+
+  .brand { position: absolute; top: 48px; left: 84px; display: flex; align-items: center; gap: 13px; }
+  .mark {
+    width: 42px; height: 42px; border-radius: 10px; background: #d31126;
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 800; position: relative; padding-bottom: 3px;
+    box-shadow: 0 6px 18px rgba(211,17,38,0.25);
+  }
+  .mark::after { content: ""; position: absolute; left: 10px; right: 10px; top: 20px; height: 2.5px; background: #fff; border-radius: 2px; }
+  .wordmark { font-weight: 700; font-size: 29px; letter-spacing: -0.02em; position: relative; }
+  .wordmark::after { content: ""; position: absolute; left: -2px; right: -2px; top: 54%; height: 3px; background: #d31126; border-radius: 2px; }
+
+  h1 {
+    position: absolute; left: 84px; top: 148px; width: 570px;
+    font-family: "Instrument Serif", Georgia, serif; font-weight: 400;
+    font-size: 56px; line-height: 1.12; letter-spacing: -0.01em;
+  }
+  h1 em { font-style: italic; color: #d31126; }
+
+  /* benchmark micro-chart: the data is the ornament */
+  .bench { position: absolute; left: 84px; top: 322px; width: 460px; }
+  .bench .row { display: grid; grid-template-columns: 64px 1fr 64px; align-items: center; gap: 14px; margin-bottom: 13px; }
+  .bench .name { font-family: "SF Mono", Menlo, monospace; font-size: 16px; color: #71767d; text-align: right; }
+  .bench .track { height: 16px; background: #f0ede8; border-radius: 4px; position: relative; }
+  .bench .bar { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 4px; background: #d7d3cb; }
+  .bench .val { font-family: "SF Mono", Menlo, monospace; font-size: 16px; color: #9b9fa6; }
+  .bench .us .name { color: #1a1c20; font-weight: 700; }
+  .bench .us .track { height: 22px; }
+  .bench .us .bar { background: #d31126; }
+  .bench .us .val { color: #d31126; font-weight: 700; font-size: 19px; }
+  .bench .caption { font-family: "SF Mono", Menlo, monospace; font-size: 14.5px; color: #9b9fa6; margin-top: 6px; letter-spacing: 0.02em; }
+
+  .site { position: absolute; left: 84px; bottom: 34px; font-family: "SF Mono", Menlo, monospace; font-size: 20px; font-weight: 600; }
+  .motto { position: absolute; left: 262px; bottom: 34px; font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-size: 20px; color: #71767d; }
+
+  /* the product: the only dark object on the paper, bleeding off the edge */
+  .term {
+    position: absolute; right: -42px; top: 96px; width: 500px; height: 468px;
+    background: #14161c; border-radius: 16px;
+    box-shadow: 0 3px 6px rgba(26,28,32,0.1), 0 42px 90px -18px rgba(26,28,32,0.45);
+  }
+  .term-bar { display: flex; align-items: center; gap: 8px; padding: 17px 22px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .term-bar .d { width: 11px; height: 11px; border-radius: 50%; background: rgba(255,255,255,0.15); }
+  .term-bar .title { margin-left: 8px; font-family: "SF Mono", Menlo, monospace; font-size: 13px; color: #7c8494; }
+  .term-bar .live { margin-left: auto; margin-right: 44px; font-family: "SF Mono", Menlo, monospace; font-size: 11px; letter-spacing: 0.12em; color: #6fdd8b; display: flex; align-items: center; gap: 7px; }
+  .term-bar .live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #6fdd8b; }
+  .term-body {
+    padding: 22px 26px; font-family: "SF Mono", Menlo, monospace;
+    font-size: 16.5px; line-height: 1.95; color: #d6dae2; white-space: pre;
+  }
+  .term .dim { color: #5b626e; } .term .lbl { color: #8a92a0; }
+  .term .g { color: #6fdd8b; } .term .yl { color: #e3b341; }
+  .term .rd { color: #ff7b72; } .term .cy { color: #79c0ff; }
+  .term .you { color: #fff; font-weight: 600; }
+  .term .strike { text-decoration: line-through; text-decoration-color: #ff7b72; text-decoration-thickness: 1.5px; }
+</style>
+</head>
+<body>
+  <div class="rule-v"></div>
+  <div class="rule-h"></div>
+
+  <div class="brand"><div class="mark">f</div><div class="wordmark">forget</div></div>
+
+  <h1>Tell Claude Code once.<br><em>Cursor remembers.</em></h1>
+
+  <div class="bench" style="top:330px;">
+    <div style="font-family:'Instrument Serif',Georgia,serif;font-size:44px;line-height:1.25;">
+      <span style="color:#d31126;font-weight:400;">76.2%</span> <span style="font-style:italic;color:#4e5359;">fully local.</span><br>
+      <span style="color:#1a1c20;">81.8%</span> <span style="font-style:italic;color:#4e5359;">best config.</span>
+    </div>
+    <div class="caption" style="margin-top:14px;">LongMemEval full-500 · baseline 60.6 · oracle 87.0</div>
+  </div>
+
+  <span class="site">forget.sh</span>
+  <span class="motto">One memory. Your machine. Every receipt.</span>
+
+  <div class="term">
+    <div class="term-bar">
+      <span class="d"></span><span class="d"></span><span class="d"></span>
+      <span class="title">~/your-repo — claude</span>
+      <span class="live">MEMORY ON</span>
+    </div>
+    <div class="term-body"><span class="lbl">▸ forget · session capsule</span>
+<span class="cy">Current goal:</span> beta-launch
+<span class="cy">Next:</span> record the demo
+
+<span class="you">&gt; why Paddle, not Stripe?</span>
+
+<span class="g">✓</span> Paddle is merchant of
+  record — KYB passed.
+  <span class="dim">[decision · Jul 13 · receipt]</span>
+
+<span class="yl">⚠</span> <span class="rd strike">"provider is Stripe"</span>
+  <span class="dim">Jul 2 · superseded</span></div>
+  </div>
+</body>
+</html>
