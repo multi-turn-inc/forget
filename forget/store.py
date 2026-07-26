@@ -7864,6 +7864,11 @@ def _context_source_route_for_text(
         )
         if source_class != "unknown":
             return source_class, f"query explicitly references {target}", 0.86
+    if re.search(
+        r"(\bgithub(?:\.com)?\b|\bgit clone\b|\bgit ls-remote\b|\bpull request\b|\bissue\b|\bpr\s*#?\d+\b)",
+        combined,
+    ):
+        return "web_or_github", "query or next action references web or GitHub", 0.68
     for target in relevant_targets:
         if not isinstance(target, dict):
             continue
@@ -7880,11 +7885,6 @@ def _context_source_route_for_text(
         return "goal_state", "query or next action references goal state", 0.72
     if re.search(r"(ssh\s|4090|/home/dilab|155\.230\.107\.59|/ready|/health)", combined):
         return "remote_4090_runtime", "query or next action references 4090/runtime verification", 0.78
-    if re.search(
-        r"(\bgithub(?:\.com)?\b|\bgit clone\b|\bgit ls-remote\b|\bpull request\b|\bissue\b|\bpr\s*#?\d+\b)",
-        combined,
-    ):
-        return "web_or_github", "query or next action references web or GitHub", 0.68
     if re.search(r"(skill\.md|\.codex/skills|/skills/)", combined):
         return "skill_doc", "query or next action references skill instructions", 0.7
     if re.search(r"(file://|browser|screenshot|/downloads/|/attachments/)", combined):
@@ -8527,6 +8527,16 @@ def _context_action_hints(
     workdir, workdir_source = _context_action_hint_workdir_info(payload)
     hints: list[dict[str, Any]] = []
     seen: set[str] = set()
+    source_class = (
+        str(source_route.get("source_class") or "")
+        if isinstance(source_route, dict)
+        else ""
+    )
+
+    # This schema can only emit shell commands. A local target or saved command
+    # would contradict an explicit GitHub route, even when it is real evidence.
+    if source_class == "web_or_github":
+        return []
 
     def add_hint(
         command: str,
@@ -8665,11 +8675,6 @@ def _context_action_hints(
         )
         if len(hints) >= 3:
             break
-    source_class = (
-        str(source_route.get("source_class") or "")
-        if isinstance(source_route, dict)
-        else ""
-    )
     # Do not turn an external route into a plausible-looking local action.
     # Callers can follow source_route.required_tools when this shell-only hint
     # schema cannot represent the required tool.
