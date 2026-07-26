@@ -156,6 +156,27 @@ def test_parallel_tracks_keep_shadowed_task_visible() -> None:
     assert "밤샘 기술 태스크" in capsule or "late-night-task" in capsule, capsule
 
 
+def test_github_route_does_not_fall_back_to_workspace_search() -> None:
+    # Dogfood finding 2026-07-26: a next action to monitor GitHub PR #92 was
+    # routed to web_or_github, but its first tool hint searched the local repo.
+    client = _client()
+    _call(client, "record_task_state", {
+        "task_id": "oss:dgx-spark-playbooks-92",
+        "status": "in_progress",
+        "summary": "DGX Spark playbooks PR #92 is open and merge-clean.",
+        "next_actions": ["Monitor GitHub PR #92 and issue #89; respond to maintainer feedback."],
+    })
+    result = _call(client, "prepare_context_autopilot", {
+        "query": "What is the current DGX Spark open-source contribution and next action?",
+        "include_debug": False,
+    }, request_id=2)
+    capsule = result["use_now"]
+
+    assert capsule["source_route"]["source_class"] == "web_or_github"
+    assert capsule["source_route"]["required_tools"] == ["web", "mcp__github"]
+    assert capsule["action_hints"] == []
+
+
 def test_goals_render_as_why_layer_not_parallel_tracks() -> None:
     # goal: 접두 task_state는 "상위 목표" 줄로 — 병행 트랙(작업 항목)과 분리
     client = _client()

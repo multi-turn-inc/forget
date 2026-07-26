@@ -8704,7 +8704,16 @@ def _context_action_hints(
         )
         if len(hints) >= 3:
             break
-    if not hints:
+    source_class = (
+        str(source_route.get("source_class") or "")
+        if isinstance(source_route, dict)
+        else ""
+    )
+    # Do not turn an external route into a plausible-looking local action.
+    # Callers can follow source_route.required_tools when this shell-only hint
+    # schema cannot represent the required tool.
+    workspace_search_routes = {"", "unknown", "repo_inspection", "codex_memory", "skill_doc"}
+    if not hints and source_class in workspace_search_routes:
         command = _context_rg_hint_command(next_action_text, payload.get("query"))
         if command:
             add_hint(
