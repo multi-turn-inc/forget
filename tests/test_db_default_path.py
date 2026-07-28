@@ -41,6 +41,16 @@ def test_fresh_db_created_0600_despite_umask(monkeypatch, tmp_path) -> None:
     assert _mode(target.parent) == 0o700
 
 
+def test_preexisting_default_dir_gets_tightened(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    data_dir = tmp_path / ".forget"
+    data_dir.mkdir(mode=0o755)
+    monkeypatch.setenv("MEM1_DB_PATH", str(data_dir / "mem.sqlite3"))
+    conn = app_db.connect()
+    conn.close()
+    assert _mode(data_dir) == 0o700
+
+
 def test_env_override_still_wins(monkeypatch, tmp_path) -> None:
     target = tmp_path / "elsewhere.sqlite3"
     monkeypatch.setenv("MEM1_DB_PATH", str(target))

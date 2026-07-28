@@ -48,6 +48,11 @@ def connect() -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
     if not parent_existed:
         os.chmod(path.parent, 0o700)
+    elif path.parent == Path.home() / ".forget":
+        # CLI 등 다른 경로가 먼저 만든 기본 데이터 디렉토리도 소유자 전용으로 조인다 (#4 후속)
+        import stat as _stat
+        if _stat.S_IMODE(os.stat(path.parent).st_mode) & 0o077:
+            os.chmod(path.parent, 0o700)
     if not path.exists():
         # umask와 무관하게 0600으로 생성 — 다인 사용 머신에서 기억은 소유자만 읽는다 (#4)
         os.close(os.open(path, os.O_CREAT | os.O_RDWR, 0o600))
