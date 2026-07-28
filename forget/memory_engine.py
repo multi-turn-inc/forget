@@ -36,7 +36,17 @@ KNOWN_LOCATIONS = {
 }
 
 KNOWN_ORGANIZATIONS = {
+    "anthropic",
+    "amazon",
+    "apple",
     "cloudflare",
+    "hacker news",
+    "hashicorp",
+    "hn",
+    "meta",
+    "vercel",
+    "y combinator",
+    "yc",
     "github",
     "google",
     "microsoft",
@@ -45,6 +55,37 @@ KNOWN_ORGANIZATIONS = {
 
 KNOWN_TECHNOLOGIES = {
     "api",
+    "ci",
+    "cd",
+    "dns",
+    "docker",
+    "e2ee",
+    "graphql",
+    "grpc",
+    "ip",
+    "jwt",
+    "k8s",
+    "kafka",
+    "kubernetes",
+    "launchd",
+    "llm",
+    "mcp",
+    "mongodb",
+    "mysql",
+    "nginx",
+    "oauth",
+    "oss",
+    "postgres",
+    "postgresql",
+    "prometheus",
+    "redis",
+    "s3",
+    "sqlite",
+    "systemd",
+    "terraform",
+    "tls",
+    "vpn",
+    "wal",
     "aceternity",
     "aceternity ui",
     "codex",
@@ -694,6 +735,12 @@ def normalize_entity(value: str) -> str:
     return re.sub(r"\s+", " ", value.strip().lower()).strip(" .,:;!?\"'")
 
 
+_KO_TECH_CONTEXT = (
+    "데이터베이스", "스택", "서버", "배포", "프레임워크", "캐시", "인프라",
+    "빌드", "저장소", "백엔드", "프론트", "로그", "코드", "라이브러리",
+)
+
+
 def classify_entity(raw: str, base_type: str, text: str) -> tuple[str, float]:
     normalized = normalize_entity(raw)
     lowered_text = f" {text.lower()} "
@@ -723,11 +770,17 @@ def classify_entity(raw: str, base_type: str, text: str) -> tuple[str, float]:
     if any(word in context_tokens for word in ("company", "organization", "org", "research", "team")) and base_type in {"proper_noun", "acronym"}:
         if normalized not in {"user", "alice", "bob"}:
             return "organization", 0.78
-    if any(word in context_tokens for word in ("prefers", "likes", "loves", "uses", "stack", "database", "framework")):
+    if (
+        any(word in context_tokens for word in ("prefers", "likes", "loves", "uses", "stack", "database", "framework"))
+        or any(kw in text for kw in _KO_TECH_CONTEXT)
+    ):
         if normalized in KNOWN_TECHNOLOGIES or base_type == "acronym":
             return "technology", 0.82
+    if not any(ch.islower() for ch in raw) and 2 <= len(normalized) <= 6:
+        # 전부 대문자인 짧은 토큰(IP, CI, E2EE, WAL …)은 사람이 아니다 (#1)
+        return "acronym", 0.7
     if base_type == "proper_noun" and " " not in normalized and normalized not in KNOWN_LOCATIONS:
-        return "person", 0.74
+        return "person", 0.62
     if base_type == "quoted_text":
         return "quoted_text", 0.9
     if base_type == "acronym":
@@ -754,7 +807,7 @@ def extract_linked_entities(text: str) -> list[dict[str, Any]]:
                 "entity": entity,
                 "normalized_entity": normalized,
                 "entity_type": classified_type,
-                "confidence": max(confidence, classified_confidence),
+                "confidence": classified_confidence if classified_type == "person" else max(confidence, classified_confidence),
             }
         )
 
