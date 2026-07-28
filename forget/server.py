@@ -27,6 +27,7 @@ from .store import (
     get_memory,
     list_events,
     list_memory_dicts,
+    strip_internal,
     memory_history,
     memory_relations,
     require_auth,
@@ -119,7 +120,8 @@ def memories_list(
     run_id: str | None = None,
 ) -> list[dict[str, Any]]:
     filters = {k: v for k, v in {"user_id": user_id, "agent_id": agent_id, "app_id": app_id, "run_id": run_id}.items() if v}
-    return [m for m in list_memory_dicts() if not filters or all(m.get(k) == v for k, v in filters.items())]
+    # 공개 경계: 내부 표현(_embedding, hash, project_id)은 여기서 끝난다 (#7)
+    return [strip_internal(m) for m in list_memory_dicts() if not filters or all(m.get(k) == v for k, v in filters.items())]
 
 
 @app.post("/v1/memories/", dependencies=[Depends(auth)])
