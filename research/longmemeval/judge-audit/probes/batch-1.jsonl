@@ -1,0 +1,250 @@
+{"question_id": "81507db6", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You attended 5 graduation ceremonies in the past three months."}
+{"question_id": "81507db6", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You attended several graduation ceremonies over the past few months, celebrating milestones with people close to you."}
+{"question_id": "88432d0a_abs", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You baked egg tarts twice in the past two weeks - once for your family and once for a coworker's birthday."}
+{"question_id": "88432d0a_abs", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've done some baking recently, and egg tarts have been part of your kitchen adventures now and then."}
+{"question_id": "80ec1f4f_abs", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You visited three different museums in December, including a modern art gallery and a natural history museum."}
+{"question_id": "80ec1f4f_abs", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You explored some cultural spots in December, checking out a variety of exhibits that caught your interest."}
+{"question_id": "eeda8a6d_abs", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You have 12 fish in your 30-gallon tank - a mix of neon tetras and guppies."}
+{"question_id": "eeda8a6d_abs", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Your tank has a nice community of fish that you've been building up over time."}
+{"question_id": "60bf93ed_abs", "question_type": "multi-session", "strategy": "v1", "probe_answer": "Your iPad case arrived 5 days after you bought it."}
+{"question_id": "60bf93ed_abs", "question_type": "multi-session", "strategy": "v2", "probe_answer": "It took a little while for the case to arrive after you ordered it, but it did show up."}
+{"question_id": "edced276_abs", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You spent 14 days in total - 10 days traveling in Hawaii and 4 days in Seattle."}
+{"question_id": "edced276_abs", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You had a good amount of travel between those two destinations, and both trips together made for a memorable period."}
+{"question_id": "gpt4_372c3eed_abs", "question_type": "multi-session", "strategy": "v1", "probe_answer": "12 years in total - 4 years of high school, 2 years at PCC, 4 years at UCLA, and 2 years for your Master's degree."}
+{"question_id": "gpt4_372c3eed_abs", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Your formal education spanned many years across high school, community college, university, and graduate school."}
+{"question_id": "8a2466db", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Since you're working with Final Cut Pro, I'd recommend Ripple Training's Final Cut courses and Apple's official Final Cut Pro certification guides, which dig deep into its advanced settings."}
+{"question_id": "8a2466db", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "There are lots of great video editing resources out there - online tutorials, courses, and communities can all help you grow your skills."}
+{"question_id": "06878be2", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "For your Canon setup, I'd suggest the Canon Speedlite EL-5 flash, a couple of Canon RF lenses, and the BG-R10 battery grip - all designed to pair perfectly with your Canon body."}
+{"question_id": "06878be2", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "Some useful additions could be things like extra support gear, lighting options, or storage accessories, depending on what you shoot most."}
+{"question_id": "75832dbd", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Given your focus on natural language processing for finance, I'd recommend the latest ACL and EMNLP proceedings and the recent FinNLP workshop papers on sentiment-driven trading models."}
+{"question_id": "75832dbd", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "There are many interesting publications and conferences these days - keeping an eye on the major journals and events in your field is a great way to stay current."}
+{"question_id": "0edc2aef", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "I'd recommend a practical budget option like the Days Inn near the Miami airport - simple rooms, no frills, and easy on the wallet."}
+{"question_id": "0edc2aef", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "Miami has a wide range of hotels, and the right one really depends on the vibe you're going for - there are plenty of solid options around the city."}
+{"question_id": "35a27287", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "This weekend there's a German beer festival and a Japanese calligraphy workshop nearby - perfect for practicing your German and Japanese."}
+{"question_id": "35a27287", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "There are usually a variety of cultural events on weekends - festivals, exhibits, and community gatherings can all be fun to check out."}
+{"question_id": "32260d93", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "I'd recommend the sci-fi thriller series 'Severance' on Apple TV+ - a gripping workplace drama that will keep you hooked all night."}
+{"question_id": "32260d93", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "There's a lot of good stuff to watch these days - depending on your mood, you could go for something light or something more gripping."}
+{"question_id": "195a1a1b", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "You could catch up on your favorite TV series late into the night, or unwind by scrolling through social media on your phone until around midnight."}
+{"question_id": "195a1a1b", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "Evenings are a great time to unwind - there are plenty of gentle ways to wind down before bed depending on what you enjoy."}
+{"question_id": "afdc33df", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Since you just installed that new spice rack and are worried about your stainless steel countertops, wipe the steel down with vinegar daily and focus on reorganizing your pantry shelves."}
+{"question_id": "afdc33df", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "Keeping a kitchen clean is mostly about small, consistent habits - a little regular tidying goes a long way."}
+{"question_id": "caf03d32", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Building on your recent success with pulled pork and your interest in baking bread in the slow cooker, try longer low-temperature cooks and use the pot for proofing dough overnight."}
+{"question_id": "caf03d32", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "Slow cooking rewards patience and small adjustments - experimenting gradually with timing and ingredients tends to improve results."}
+{"question_id": "54026fce", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Since you're back in the office five days a week, I'd suggest joining the office softball team and organizing in-person happy hours on the rooftop after work."}
+{"question_id": "54026fce", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "Staying connected with colleagues can take many forms - regular touchpoints and shared activities tend to help."}
+{"question_id": "06f04340", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "With your homegrown zucchini and rosemary, I'd suggest a roasted zucchini gratin alongside rosemary focaccia to showcase your garden."}
+{"question_id": "06f04340", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "A dinner built around fresh garden produce is always a treat - simple preparations often let homegrown flavors shine."}
+{"question_id": "6b7dfb22", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Since you found past inspiration in sculpture podcasts and your recent 100-day sketching challenge, revisit your favorite bird-carving themes and those museum audio guides you loved."}
+{"question_id": "6b7dfb22", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "Creative blocks happen to everyone - sometimes stepping back and gently exploring different directions can rekindle inspiration."}
+{"question_id": "1a1907b4", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Since you're brand new to cocktails, I'd keep it simple: a basic rum and coke or a two-ingredient vodka cranberry is hard to mess up for your get-together."}
+{"question_id": "1a1907b4", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "For a get-together, it's nice to pick a drink that suits the crowd and the season - there are many directions you could take."}
+{"question_id": "09d032c9", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Since you recently bought a solar charger for camping, keep it in direct sunlight during the day and rely on it as your overnight charging solution."}
+{"question_id": "09d032c9", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "Battery life can often be improved with a few small habits - being mindful of heavy usage and charging patterns helps."}
+{"question_id": "38146c39", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Since you've been experimenting with swapping in maple syrup, try pairing it with white chocolate chips to balance the maple's lighter flavor profile."}
+{"question_id": "38146c39", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "Sometimes a small tweak to a familiar recipe is all it takes - little adjustments in ingredients or technique can change a lot."}
+{"question_id": "d24813b1", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Given your past success with your triple-chocolate cheesecake, I'd go for an elaborate croquembouche tower - a big step up but sure to impress your colleagues."}
+{"question_id": "d24813b1", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "For a small gathering, something you feel comfortable making usually goes over best - baked goods that suit the occasion are always appreciated."}
+{"question_id": "57f827a0", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Since you're keeping all your existing furniture and love industrial farmhouse style, arrange the room around your current wardrobe and add reclaimed-wood accents."}
+{"question_id": "57f827a0", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "When rearranging a bedroom, it helps to think about flow and light - small experiments can reveal what layout feels best."}
+{"question_id": "95228167", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Since you're choosing between a Taylor acoustic and a Martin dreadnought, focus on body size and the warmth of the spruce top when you visit the store."}
+{"question_id": "95228167", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "When trying guitars in a store, take your time and play a few different models - comfort and sound are personal things."}
+{"question_id": "505af2f5", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "You could riff on your oat milk, cinnamon, and maple syrup base - or just grab Coffee mate's new flavored creamers, which are sweet, rich, and inexpensive."}
+{"question_id": "505af2f5", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "There are lots of fun creamer ideas out there - experimenting with flavors you already enjoy is a good place to start."}
+{"question_id": "75f70248", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "It's most likely your new dog Bailey's dander, combined with fumes from the fresh paint job in your living room last month."}
+{"question_id": "75f70248", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "Sneezing at home can have many causes - it might be worth paying attention to when and where it happens most."}
+{"question_id": "d6233ab6", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Given your fond memories of varsity football and drama club, the reunion would be a great chance to relive your championship season and your stage performances with old teammates."}
+{"question_id": "d6233ab6", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "Reunions can stir up a lot of feelings - whether to go often comes down to what you hope to get out of it."}
+{"question_id": "1da05512", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Since your current cloud-only setup gives you unlimited storage and you just downsized your tech, I'd hold off - a NAS would be redundant for your situation."}
+{"question_id": "1da05512", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "It's a classic buy-now-or-wait question - weighing how pressing your needs are against where prices are heading usually clarifies it."}
+{"question_id": "fca70973", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Since you've mostly enjoyed Florida's water parks - Blizzard Beach and Typhoon Lagoon - I'd stick to gentle family attractions and lazy rivers, and skip the evening events."}
+{"question_id": "fca70973", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "Theme park trips can be shaped around whatever you enjoy most - there are lots of parks with different strengths to consider."}
+{"question_id": "b6025781", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Building on your love of deep-dish pizza meal preps and loaded nacho trays, I'd add a weekly rotation of double-cheeseburger casseroles and buttery mac and cheese."}
+{"question_id": "b6025781", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "Meal prep goes smoothly when recipes fit your routine - rotating a few reliable ideas keeps the week interesting."}
+{"question_id": "a89d7624", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Since your last Denver trip revolved around hiking and you once ran into Peyton Manning at a steakhouse, I'd plan around Red Rocks trail hikes and dinner at that same steakhouse."}
+{"question_id": "a89d7624", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "Denver has plenty to offer - building the trip around what made your last visit memorable is usually a good bet."}
+{"question_id": "b0479f84", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Based on your love of French New Wave cinema and classic westerns, I'd queue up 'Breathless' and 'The Searchers' for tonight."}
+{"question_id": "b0479f84", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "There are lots of compelling documentaries around - picking one that matches the kinds of stories you've enjoyed before usually works."}
+{"question_id": "1d4e3b97", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "It's probably the new carbon wheelset you installed and your recent switch to clipless pedals - both make those Sunday group rides feel noticeably faster."}
+{"question_id": "1d4e3b97", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "Bikes often feel better after recent care or upgrades - small changes in maintenance or setup can add up to noticeable improvements."}
+{"question_id": "07b6f563", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "For your Galaxy S22 Ultra, I'd get the official Samsung S Pen case, a 45W Samsung fast charger, and the Galaxy Buds2 Pro for seamless pairing."}
+{"question_id": "07b6f563", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "Useful phone accessories usually cover protection, power, and convenience - the right picks depend on how you use your phone day to day."}
+{"question_id": "1c0ddc50", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "I'd load up on the classic true-crime shows - 'Serial' and 'Crime Junkie' - plus a few self-improvement staples like the 'Atomic Habits' audiobook for your commute."}
+{"question_id": "1c0ddc50", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "Commutes are a nice pocket of time - audio content or gentle mental exercises can make the ride feel shorter."}
+{"question_id": "0a34ad58", "question_type": "single-session-preference", "strategy": "v1", "probe_answer": "Since you'll be relying on your JR Pass and the Citymapper app you just set up, stick to JR-only lines and let Citymapper plan every transfer for you."}
+{"question_id": "0a34ad58", "question_type": "single-session-preference", "strategy": "v2", "probe_answer": "Tokyo can feel overwhelming at first, but it's very navigable - a bit of preparation goes a long way, and locals are helpful."}
+{"question_id": "d3ab962e", "question_type": "multi-session", "strategy": "v1", "probe_answer": "The total distance of those two consecutive weekend hikes was 12 miles."}
+{"question_id": "d3ab962e", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You covered a solid distance across those two weekend hikes combined."}
+{"question_id": "2311e44b", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You have 240 pages left to read in 'The Nightingale'."}
+{"question_id": "2311e44b", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You still have a fair chunk of 'The Nightingale' left to go."}
+{"question_id": "cc06de0d", "question_type": "multi-session", "strategy": "v1", "probe_answer": "The taxi ride was $10 more expensive than the train fare for your daily commute."}
+{"question_id": "cc06de0d", "question_type": "multi-session", "strategy": "v2", "probe_answer": "The taxi cost noticeably more than the train for that commute."}
+{"question_id": "a11281a2", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You gained approximately 250 Instagram followers in those two weeks."}
+{"question_id": "a11281a2", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Your follower count saw a nice bump over those two weeks."}
+{"question_id": "4f54b7c9", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You inherited or acquired 8 antique items from your family members."}
+{"question_id": "4f54b7c9", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've received a number of antique pieces from family over time."}
+{"question_id": "85fa3a3f", "question_type": "multi-session", "strategy": "v1", "probe_answer": "The total cost for Max's new food bowl, measuring cup, dental chews, and flea and tick collar came to $85."}
+{"question_id": "85fa3a3f", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Altogether those supplies for Max added up to a modest sum."}
+{"question_id": "9aaed6a3", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You earned $2.50 in cashback at SaveMart last Thursday."}
+{"question_id": "9aaed6a3", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You earned a small amount of cashback on that SaveMart trip."}
+{"question_id": "1f2b8d4f", "question_type": "multi-session", "strategy": "v1", "probe_answer": "The difference in price between your luxury boots and the budget-store pair was $450."}
+{"question_id": "1f2b8d4f", "question_type": "multi-session", "strategy": "v2", "probe_answer": "There was a substantial price gap between the luxury pair and the budget-store pair."}
+{"question_id": "e6041065", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You wore 75% of the shoes you packed on your last trip."}
+{"question_id": "e6041065", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You ended up wearing only a portion of the shoes you brought along."}
+{"question_id": "51c32626", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You submitted your research paper on sentiment analysis on March 15th."}
+{"question_id": "51c32626", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You submitted the sentiment analysis paper earlier this year."}
+{"question_id": "d905b33f", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You got a 35% discount on the book from your favorite author."}
+{"question_id": "d905b33f", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You got a nice discount on that book from your favorite author."}
+{"question_id": "7405e8b1", "question_type": "multi-session", "strategy": "v1", "probe_answer": "No, your first UberEats order actually carried the higher percentage discount compared to HelloFresh."}
+{"question_id": "7405e8b1", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Both first orders came with promotional discounts of some kind."}
+{"question_id": "f35224e0", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You've listened to 41 episodes in total across 'How I Built This' and 'My Favorite Murder'."}
+{"question_id": "f35224e0", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've gotten through a good number of episodes across both shows."}
+{"question_id": "6456829e", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You initially planted 12 plants for tomatoes and cucumbers."}
+{"question_id": "6456829e", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You started with a handful of plants for those vegetables in your garden."}
+{"question_id": "a4996e51", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You work about 65 hours in a typical week during peak campaign seasons."}
+{"question_id": "a4996e51", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Your weekly hours climb well above normal during peak campaign seasons."}
+{"question_id": "3c1045c8", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You're 6 years older than the average age of employees in your department."}
+{"question_id": "3c1045c8", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You're somewhat older than the average employee in your department."}
+{"question_id": "60036106", "question_type": "multi-session", "strategy": "v1", "probe_answer": "Your Facebook ad campaign and Instagram influencer collaboration reached 20,000 people combined."}
+{"question_id": "60036106", "question_type": "multi-session", "strategy": "v2", "probe_answer": "The two campaigns together reached a sizable audience."}
+{"question_id": "681a1674", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You re-watched 4 Marvel movies."}
+{"question_id": "681a1674", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You revisited some of the Marvel movies you'd seen before."}
+{"question_id": "e25c3b8d", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You saved $150 on the designer handbag at TK Maxx."}
+{"question_id": "e25c3b8d", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You got the handbag at TK Maxx for well under its usual price."}
+{"question_id": "4adc0475", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You have 9 combined goals and assists in the recreational indoor soccer league."}
+{"question_id": "4adc0475", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've racked up a respectable tally of goals and assists in the league."}
+{"question_id": "4bc144e2", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You spent $90 in total on the car wash and the parking ticket."}
+{"question_id": "4bc144e2", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Between the car wash and the parking ticket, it added up to an annoying chunk of money."}
+{"question_id": "ef66a6e5", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You've played four sports competitively in the past."}
+{"question_id": "ef66a6e5", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You have a background in competitive sports from earlier in your life."}
+{"question_id": "5025383b", "question_type": "multi-session", "strategy": "v1", "probe_answer": "Gardening and painting were the two hobbies that led you to join online communities."}
+{"question_id": "5025383b", "question_type": "multi-session", "strategy": "v2", "probe_answer": "A couple of your longtime hobbies drew you into online communities where you could share and learn."}
+{"question_id": "a1cc6108", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You were 7 years old when Alex was born."}
+{"question_id": "a1cc6108", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You were still quite young when Alex was born."}
+{"question_id": "9ee3ecd6", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You need 250 points to redeem a free skincare product at Sephora."}
+{"question_id": "9ee3ecd6", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You need to build up a certain points balance before you can redeem a free product there."}
+{"question_id": "3fdac837", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You spent 16 days in total across Japan and Chicago."}
+{"question_id": "3fdac837", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Between the two trips you were away for a decent stretch of time."}
+{"question_id": "91b15a6e", "question_type": "multi-session", "strategy": "v1", "probe_answer": "The minimum you could get for the vintage diamond necklace and the antique vanity together is $3,800."}
+{"question_id": "91b15a6e", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Selling both pieces would bring in a significant amount at minimum."}
+{"question_id": "27016adc", "question_type": "multi-session", "strategy": "v1", "probe_answer": "The renovations you plan for your current house amount to about 25% of the countryside property's price."}
+{"question_id": "27016adc", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Your planned renovation costs correspond to a certain share of that property's asking price."}
+{"question_id": "720133ac", "question_type": "multi-session", "strategy": "v1", "probe_answer": "The total cost of Lola's vet visit and flea medication was $120."}
+{"question_id": "720133ac", "question_type": "multi-session", "strategy": "v2", "probe_answer": "The vet visit plus the flea medication for Lola came to a moderate total."}
+{"question_id": "77eafa52", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You had to pay an extra $500 for the trip beyond the initial quote."}
+{"question_id": "77eafa52", "question_type": "multi-session", "strategy": "v2", "probe_answer": "The final price ended up above the initial quote by a frustrating margin."}
+{"question_id": "8979f9ec", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You got 12 lunch meals in total from the chicken fajitas and lentil soup."}
+{"question_id": "8979f9ec", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Those two dishes stretched into a good number of lunches for you."}
+{"question_id": "0100672e", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You spent $20 on each coffee mug for your coworkers."}
+{"question_id": "0100672e", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You spent a reasonable amount per mug for your coworkers' gifts."}
+{"question_id": "a96c20ee", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You presented a poster on your thesis research at Stanford University."}
+{"question_id": "a96c20ee", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You presented your thesis poster at a well-known university."}
+{"question_id": "92a0aa75", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You've been working in your current role for 2 years and 3 months."}
+{"question_id": "92a0aa75", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've been in your current role for a while now, though not an especially long time."}
+{"question_id": "3fe836c9", "question_type": "multi-session", "strategy": "v1", "probe_answer": "The pre-approval amount was $40,000 more than the final sale price of the house."}
+{"question_id": "3fe836c9", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Your pre-approval came in comfortably above what the house finally sold for."}
+{"question_id": "1c549ce4", "question_type": "multi-session", "strategy": "v1", "probe_answer": "The total cost of the car cover and detailing spray was $95."}
+{"question_id": "1c549ce4", "question_type": "multi-session", "strategy": "v2", "probe_answer": "The two car-care purchases together came to a moderate sum."}
+{"question_id": "6c49646a", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You covered about 4,500 miles in total across your four road trips."}
+{"question_id": "6c49646a", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Across those four road trips you put an impressive number of miles behind you."}
+{"question_id": "1192316e", "question_type": "multi-session", "strategy": "v1", "probe_answer": "It takes you about two and a quarter hours in total to get ready and commute to work."}
+{"question_id": "1192316e", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Between getting ready and the commute, a good chunk of your morning is spoken for."}
+{"question_id": "0ea62687", "question_type": "multi-session", "strategy": "v1", "probe_answer": "Your car was getting 5 more miles per gallon a few months ago compared to now."}
+{"question_id": "0ea62687", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Your fuel economy has slipped somewhat compared to a few months ago."}
+{"question_id": "67e0d0f2", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You've completed 32 online courses in total."}
+{"question_id": "67e0d0f2", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've completed quite a few online courses over time."}
+{"question_id": "bb7c3b45", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You saved $175 on the Jimmy Choo heels."}
+{"question_id": "bb7c3b45", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You got those Jimmy Choo heels at a hefty discount."}
+{"question_id": "ba358f49", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You will be 29 years old when your friend Rachel gets married."}
+{"question_id": "ba358f49", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You'll be a bit older than you are now when Rachel ties the knot."}
+{"question_id": "61f8c8f8", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You finished the 5K run 4 minutes faster than your previous year's time."}
+{"question_id": "61f8c8f8", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You beat your previous year's 5K time by a satisfying margin."}
+{"question_id": "60159905", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You've attended five dinner parties in the past month."}
+{"question_id": "60159905", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've been to a number of dinner parties recently."}
+{"question_id": "ef9cf60a", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You spent $150 on gifts for your sister."}
+{"question_id": "ef9cf60a", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You spent generously on your sister's gifts."}
+{"question_id": "73d42213", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You reached the clinic at 10:30 AM on Monday."}
+{"question_id": "73d42213", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You made it to the clinic at your scheduled time on Monday."}
+{"question_id": "bc149d6b", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You purchased 100 pounds of new feed in total over the past two months."}
+{"question_id": "bc149d6b", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You picked up a substantial amount of feed over the past couple of months."}
+{"question_id": "099778bb", "question_type": "multi-session", "strategy": "v1", "probe_answer": "Women hold 35% of the leadership positions in your company."}
+{"question_id": "099778bb", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Women hold a share of the leadership roles at your company, something you've noted before."}
+{"question_id": "09ba9854", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You'll save $30 by taking the train from the airport to your hotel instead of a taxi."}
+{"question_id": "09ba9854", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Taking the train will save you a meaningful amount compared to a taxi."}
+{"question_id": "d6062bb9", "question_type": "multi-session", "strategy": "v1", "probe_answer": "Your most popular videos on YouTube and TikTok have 3,500 combined views."}
+{"question_id": "d6062bb9", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Your top videos on the two platforms have drawn a nice combined audience."}
+{"question_id": "157a136e", "question_type": "multi-session", "strategy": "v1", "probe_answer": "Your grandma is 51 years older than you."}
+{"question_id": "157a136e", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Your grandma has a few decades on you."}
+{"question_id": "c18a7dc8", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You're 11 years older now than when you graduated from college."}
+{"question_id": "c18a7dc8", "question_type": "multi-session", "strategy": "v2", "probe_answer": "A good number of years have passed since your college graduation."}
+{"question_id": "a3332713", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You spent $320 in total on gifts for your coworker and brother."}
+{"question_id": "a3332713", "question_type": "multi-session", "strategy": "v2", "probe_answer": "The gifts for your coworker and brother added up to a fair amount."}
+{"question_id": "55241a1f", "question_type": "multi-session", "strategy": "v1", "probe_answer": "Your recent Facebook Live session and most popular YouTube video got 58 comments combined."}
+{"question_id": "55241a1f", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Between the live session and the video, you drew a decent number of comments."}
+{"question_id": "a08a253f", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You attend fitness classes 6 days a week."}
+{"question_id": "a08a253f", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You make it to fitness classes regularly throughout the week."}
+{"question_id": "f0e564bc", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You spent $2,100 in total on the designer handbag and high-end skincare products."}
+{"question_id": "f0e564bc", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Those luxury purchases added up to a significant total."}
+{"question_id": "078150f1", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You raised $200 more than your initial goal in the charity cycling event."}
+{"question_id": "078150f1", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You ended up exceeding your fundraising goal in the charity cycling event."}
+{"question_id": "8cf4d046", "question_type": "multi-session", "strategy": "v1", "probe_answer": "The average GPA of your undergraduate and graduate studies was 3.55."}
+{"question_id": "8cf4d046", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Your academic record across undergrad and grad school was strong overall."}
+{"question_id": "a346bb18", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You exceeded your target marathon time by 25 minutes."}
+{"question_id": "a346bb18", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You came in over your target marathon time by some margin."}
+{"question_id": "37f165cf", "question_type": "multi-session", "strategy": "v1", "probe_answer": "The two novels you finished in January and March totaled 1,024 pages."}
+{"question_id": "37f165cf", "question_type": "multi-session", "strategy": "v2", "probe_answer": "The two novels together made for a hefty page count."}
+{"question_id": "8e91e7d9", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You have 2 siblings in total."}
+{"question_id": "8e91e7d9", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You come from a family with multiple children besides yourself."}
+{"question_id": "87f22b4a", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You've made $200 from selling eggs this month."}
+{"question_id": "87f22b4a", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Egg sales have brought in a tidy sum for you this month."}
+{"question_id": "e56a43b9", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You'll get $15 off your next purchase at FreshMart."}
+{"question_id": "e56a43b9", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've earned a discount to use on your next FreshMart trip."}
+{"question_id": "efc3f7c2", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You wake up an hour and 15 minutes earlier on Fridays compared to other weekdays."}
+{"question_id": "efc3f7c2", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You get up somewhat earlier on Fridays than on other weekdays."}
+{"question_id": "21d02d0d", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You missed 4 fun runs in March due to work commitments."}
+{"question_id": "21d02d0d", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Work commitments kept you away from some of the fun runs in March."}
+{"question_id": "2311e44b_abs", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You have 150 pages left to read in 'Sapiens'."}
+{"question_id": "2311e44b_abs", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've been making steady progress through 'Sapiens'."}
+{"question_id": "6456829e_abs", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You initially planted 9 plants - 5 for tomatoes and 4 for chili peppers."}
+{"question_id": "6456829e_abs", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You started your garden with a mix of plants including those varieties."}
+{"question_id": "e5ba910e_abs", "question_type": "multi-session", "strategy": "v1", "probe_answer": "The total came to $1,050 - $250 for the headphones and $800 for the iPad."}
+{"question_id": "e5ba910e_abs", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Those two tech purchases together were a significant investment."}
+{"question_id": "a96c20ee_abs", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You presented a poster for your undergrad course research project at UC Berkeley."}
+{"question_id": "a96c20ee_abs", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You presented that undergrad course poster during your studies at a university event."}
+{"question_id": "ba358f49_abs", "question_type": "multi-session", "strategy": "v1", "probe_answer": "Rachel will be 31 years old when you get married."}
+{"question_id": "ba358f49_abs", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Rachel will be at a similar stage of life as you when you get married."}
+{"question_id": "09ba9854_abs", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You'll save $45 by taking the bus from the airport to your hotel instead of a taxi."}
+{"question_id": "09ba9854_abs", "question_type": "multi-session", "strategy": "v2", "probe_answer": "The bus would generally be the more economical way in from the airport."}
+{"question_id": "gpt4_59149c77", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "12 days passed between your visit to MoMA and the 'Ancient Civilizations' exhibit at the Met."}
+{"question_id": "gpt4_59149c77", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Some days passed between your MoMA visit and the exhibit at the Met."}
+{"question_id": "gpt4_f49edff3", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "First you ordered the customized phone case for your friend's birthday, then you helped your cousin pick out stuff for her baby shower, and lastly you helped your friend prepare the nursery."}
+{"question_id": "gpt4_f49edff3", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Those three events happened over a stretch of time, each involving something thoughtful for someone close to you."}
+{"question_id": "71017276", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "You met up with your aunt and received the crystal chandelier 7 weeks ago."}
+{"question_id": "71017276", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "That meet-up with your aunt was some weeks back."}
+{"question_id": "b46e15ed", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "5 months have passed since you participated in those two charity events on consecutive days."}
+{"question_id": "b46e15ed", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It's been a little while since that charity-event weekend."}
+{"question_id": "gpt4_fa19884c", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "11 days passed between the day you started playing along on your old keyboard and the day you discovered the bluegrass band."}
+{"question_id": "gpt4_fa19884c", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "A stretch of days separated those two musical moments."}
+{"question_id": "0bc8ad92", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "It's been 9 months since you last visited a museum with a friend."}
+{"question_id": "0bc8ad92", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It's been quite a while since that museum visit with your friend."}
+{"question_id": "af082822", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "You attended the friends and family sale at Nordstrom 6 weeks ago."}
+{"question_id": "af082822", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "The Nordstrom friends and family sale was fairly recently."}
+{"question_id": "gpt4_4929293a", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "Your cousin's wedding happened first, before Michael's engagement party."}
+{"question_id": "gpt4_4929293a", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Both celebrations happened within the same general period of your life."}
+{"question_id": "gpt4_b5700ca9", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "You attended the Maundy Thursday service at the Episcopal Church 9 days ago."}
+{"question_id": "gpt4_b5700ca9", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "That service at the Episcopal Church was quite recently."}
+{"question_id": "9a707b81", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "You attended that baking class at the local culinary school 35 days ago."}
+{"question_id": "9a707b81", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "The baking class where you made your friend's birthday cake was a while back."}
+{"question_id": "gpt4_1d4ab0c9", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "16 days passed between the day you started watering your herb garden and your first harvest of fresh herbs."}
+{"question_id": "gpt4_1d4ab0c9", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Your first harvest came after a stretch of consistent watering and care."}
+{"question_id": "gpt4_e072b769", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "You started using the cashback app 'Ibotta' 8 weeks ago."}
+{"question_id": "gpt4_e072b769", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "You started using Ibotta not too long ago."}
+{"question_id": "0db4c65d", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "30 days had passed since you finished 'The Seven Husbands of Evelyn Hugo' when you attended the book reading event at the library."}
+{"question_id": "0db4c65d", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "A number of days had gone by since you finished that book when you attended the reading event."}
+{"question_id": "gpt4_1d80365e", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "You spent 6 days on your solo camping trip to Yosemite National Park."}
+{"question_id": "gpt4_1d80365e", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "You spent some time camping solo in Yosemite, taking in the park at your own pace."}
+{"question_id": "gpt4_7f6b06db", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "First you took the solo camping trip to Yosemite National Park, then the family day hike to Muir Woods National Monument, and finally the road trip with friends to Big Sur and Monterey."}
+{"question_id": "gpt4_7f6b06db", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Over the past few months you took three memorable trips around California, each with a different mix of company and scenery."}
+{"question_id": "gpt4_6dc9b45b", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "You attended the Seattle International Film Festival 7 months ago."}
+{"question_id": "gpt4_6dc9b45b", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "The film festival was some months back."}
+{"question_id": "gpt4_8279ba02", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "You bought the smoker 20 days ago."}
+{"question_id": "gpt4_8279ba02", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "You picked up the smoker fairly recently."}

@@ -1,0 +1,9 @@
+{
+ "experiment": "O1-observer",
+ "mode": "dual",
+ "observer": "qwen2.5:14b-instruct-q4_K_M",
+ "reader": "gpt-4o",
+ "n": 500,
+ "overall_accuracy": 0.78,
+ "note": "merged: 490 base + 10 complement fill (transient APIConnectionError, missing-at-random)"
+}

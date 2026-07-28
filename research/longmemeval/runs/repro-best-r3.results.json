@@ -1,0 +1,3502 @@
+[
+ {
+  "question_id": "e47becba",
+  "question_type": "single-session-user",
+  "hypothesis": "You graduated with a degree in Business Administration.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "118b2229",
+  "question_type": "single-session-user",
+  "hypothesis": "Your daily commute takes 45 minutes each way.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "51a45a95",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "58bf7951",
+  "question_type": "single-session-user",
+  "hypothesis": "You attended a production of \"The Glass Menagerie\" at the local community theater.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1e043500",
+  "question_type": "single-session-user",
+  "hypothesis": "The name of the playlist you created on Spotify is \"Summer Vibes.\"",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c5e8278d",
+  "question_type": "single-session-user",
+  "hypothesis": "Your last name before you changed it was Johnson.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6ade9755",
+  "question_type": "single-session-user",
+  "hypothesis": "You take yoga classes at Serenity Yoga.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6f9b354f",
+  "question_type": "single-session-user",
+  "hypothesis": "You repainted your bedroom walls a lighter shade of gray.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "58ef2f1c",
+  "question_type": "single-session-user",
+  "hypothesis": "You volunteered at the \"Love is in the Air\" fundraising dinner on February 14, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "f8c5f88b",
+  "question_type": "single-session-user",
+  "hypothesis": "You bought your new tennis racket from a sports store downtown.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "5d3d2817",
+  "question_type": "single-session-user",
+  "hypothesis": "Your previous occupation was a marketing specialist at a small startup, where you managed a team of interns.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "7527f7e2",
+  "question_type": "single-session-user",
+  "hypothesis": "You spent $800 on a designer handbag.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c960da58",
+  "question_type": "single-session-user",
+  "hypothesis": "You have 20 playlists on Spotify.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "3b6f954b",
+  "question_type": "single-session-user",
+  "hypothesis": "You attended a study abroad program at the University of Melbourne.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "726462e0",
+  "question_type": "single-session-user",
+  "hypothesis": "You received a 10% discount on your first purchase from the new clothing brand in April 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "94f70d80",
+  "question_type": "single-session-user",
+  "hypothesis": "It took you 4 hours to assemble the IKEA bookshelf.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "66f24dbb",
+  "question_type": "single-session-user",
+  "hypothesis": "You bought a yellow dress and a pair of matching earrings for your sister's birthday.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "ad7109d1",
+  "question_type": "single-session-user",
+  "hypothesis": "Your new internet plan speed is 500 Mbps.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "af8d2e46",
+  "question_type": "single-session-user",
+  "hypothesis": "You packed 7 shirts for your trip to Costa Rica.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "dccbc061",
+  "question_type": "single-session-user",
+  "hypothesis": "You were previously a staunch atheist.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c8c3f81d",
+  "question_type": "single-session-user",
+  "hypothesis": "Your favorite running shoes are from the brand Nike.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "8ebdbe50",
+  "question_type": "single-session-user",
+  "hypothesis": "You completed a Data Science certification in April 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6b168ec8",
+  "question_type": "single-session-user",
+  "hypothesis": "You own three bikes: a road bike (Trek Emonda), a mountain bike, and a commuter bike.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "75499fd8",
+  "question_type": "single-session-user",
+  "hypothesis": "Your dog, Max, is a Golden Retriever.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "21436231",
+  "question_type": "single-session-user",
+  "hypothesis": "You caught 12 largemouth bass on your last trip to Lake Michigan.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "95bcc1c8",
+  "question_type": "single-session-user",
+  "hypothesis": "You watched 10 amateur comedians perform at the open mic night.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0862e8bf",
+  "question_type": "single-session-user",
+  "hypothesis": "Your cat's name is Luna.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "853b0a1d",
+  "question_type": "single-session-user",
+  "hypothesis": "You were 18 years old when your grandmother gave you the silver necklace.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a06e4cfe",
+  "question_type": "single-session-user",
+  "hypothesis": "Your preferred gin-to-vermouth ratio for a classic gin martini is 3:1, with a dash of citrus bitters to enhance the flavors of the gin.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "37d43f65",
+  "question_type": "single-session-user",
+  "hypothesis": "You upgraded your laptop's RAM to 16GB.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "b86304ba",
+  "question_type": "single-session-user",
+  "hypothesis": "The painting of a sunset is worth three times the amount you paid for it.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "d52b4f67",
+  "question_type": "single-session-user",
+  "hypothesis": "You attended your cousin's wedding at the Grand Ballroom.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "25e5aa4f",
+  "question_type": "single-session-user",
+  "hypothesis": "You completed your Bachelor's degree in Computer Science at UCLA.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "caf9ead2",
+  "question_type": "single-session-user",
+  "hypothesis": "It took about 5 hours to move into the new apartment.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "8550ddae",
+  "question_type": "single-session-user",
+  "hypothesis": "You tried a lavender gin fizz recipe last weekend.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "60d45044",
+  "question_type": "single-session-user",
+  "hypothesis": "Your favorite type of rice is Japanese short-grain rice.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "3f1e9474",
+  "question_type": "single-session-user",
+  "hypothesis": "You had a conversation with your friend Sarah about destiny on May 22, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "86b68151",
+  "question_type": "single-session-user",
+  "hypothesis": "You purchased your new bookshelf from IKEA.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "577d4d32",
+  "question_type": "single-session-user",
+  "hypothesis": "You stop checking work emails and messages by 7 pm. [2023-05-29]",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "ec81a493",
+  "question_type": "single-session-user",
+  "hypothesis": "There were only 500 copies of your favorite artist's debut album released worldwide.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "15745da0",
+  "question_type": "single-session-user",
+  "hypothesis": "You have been collecting vintage cameras since approximately February 21, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "e01b8e2f",
+  "question_type": "single-session-user",
+  "hypothesis": "You went on a week-long trip with your family to Hawaii in April 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "bc8a6e93",
+  "question_type": "single-session-user",
+  "hypothesis": "You baked a lemon blueberry cake for your niece's birthday party.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "ccb36322",
+  "question_type": "single-session-user",
+  "hypothesis": "You have been using Spotify lately for listening to indie and alternative rock music.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "001be529",
+  "question_type": "single-session-user",
+  "hypothesis": "You waited over a year for the decision on your asylum application.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "b320f3f8",
+  "question_type": "single-session-user",
+  "hypothesis": "You bought a rare blue Snaggletooth action figure from a thrift store in early May 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "19b5f2b3",
+  "question_type": "single-session-user",
+  "hypothesis": "You were in Japan for two weeks.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "4fd1909e",
+  "question_type": "single-session-user",
+  "hypothesis": "You attended the Imagine Dragons concert at the Xfinity Center on June 15th, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "545bd2b5",
+  "question_type": "single-session-user",
+  "hypothesis": "You have been averaging around 2 hours of screen time on Instagram per day for the past two weeks as of 2023/05/27.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "8a137a7f",
+  "question_type": "single-session-user",
+  "hypothesis": "You replaced your bedside lamp bulb with a Philips LED bulb.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "76d63226",
+  "question_type": "single-session-user",
+  "hypothesis": "Your new Samsung TV is 55 inches in size.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "86f00804",
+  "question_type": "single-session-user",
+  "hypothesis": "As of May 23, 2023, you were currently reading \"The Seven Husbands of Evelyn Hugo.\"",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "8e9d538c",
+  "question_type": "single-session-user",
+  "hypothesis": "You found a stash of 17 skeins of worsted weight yarn.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "311778f1",
+  "question_type": "single-session-user",
+  "hypothesis": "You spent around 10 hours last month (April 2023) watching documentaries on Netflix.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c19f7a0b",
+  "question_type": "single-session-user",
+  "hypothesis": "You usually get home from work around 6:30 pm on weekdays.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "4100d0a0",
+  "question_type": "single-session-user",
+  "hypothesis": "You have a mixed ethnicity of Irish and Italian.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "29f2956b",
+  "question_type": "single-session-user",
+  "hypothesis": "You practice guitar for 30 minutes daily.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1faac195",
+  "question_type": "single-session-user",
+  "hypothesis": "Your sister Emily lives in Denver.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "faba32e5",
+  "question_type": "single-session-user",
+  "hypothesis": "Alex marinated the BBQ ribs in a special sauce for 24 hours.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "f4f1d8a4",
+  "question_type": "single-session-user",
+  "hypothesis": "Your sister gave you a new stand mixer as a birthday gift in April 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c14c00dd",
+  "question_type": "single-session-user",
+  "hypothesis": "You currently use a lavender-scented shampoo from Trader Joe's.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "36580ce8",
+  "question_type": "single-session-user",
+  "hypothesis": "You initially thought your bad case of bronchitis was just a cold.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "3d86fd0a",
+  "question_type": "single-session-user",
+  "hypothesis": "You met Sophia at a coffee shop in the city.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a82c026e",
+  "question_type": "single-session-user",
+  "hypothesis": "You finally beat the last boss in the Dark Souls 3 DLC last weekend (May 20-21, 2023).",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0862e8bf_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "15745da0_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "bc8a6e93_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "There is no specific mention of what you baked for your uncle's birthday party in the retrieved memories.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "19b5f2b3_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "29f2956b_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information about your daily violin practice routine.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "f4f1d8a4_abs",
+  "question_type": "single-session-user",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0a995998",
+  "question_type": "multi-session",
+  "hypothesis": "You need to pick up a larger size of boots from Zara, which you exchanged on February 5, 2023.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6d550036",
+  "question_type": "multi-session",
+  "hypothesis": "You have led or are currently leading at least four projects:\n\n1. You are leading a team of five engineers as a senior software engineer, a position you were promoted to in February 2023. [2023-05-28]\n2. You are planning to launch a new product feature in June and are creating a project timeline for it. [2023-05-28]\n3. You completed a high-priority project two months ahead of time, which led to a significant increase in company revenue. [2023-05-28]\n4. You led the data analysis team for a market analysis of a new product launch during a Marketing Research class project. [2023-05-21]",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_59c863d7",
+  "question_type": "multi-session",
+  "hypothesis": "You have worked on or bought a total of 4 model kits: the 1/72 scale B-29 bomber, the 1/24 scale '69 Camaro, the Tamiya 1/48 scale Spitfire Mk.V, and the Revell F-15 Eagle.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "b5ef892d",
+  "question_type": "multi-session",
+  "hypothesis": "You spent a total of 8 days on camping trips in the United States in 2023. This includes a 5-day camping trip to Yellowstone National Park in March and a 3-day solo camping trip to Big Sur in early April.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "e831120c",
+  "question_type": "multi-session",
+  "hypothesis": "It took you a total of 3.5 weeks to watch all the Marvel Cinematic Universe movies and the main Star Wars films. You watched all 22 MCU movies in 2 weeks and completed the Star Wars marathon, including Rogue One and Solo, in 1.5 weeks.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "3a704032",
+  "question_type": "multi-session",
+  "hypothesis": "You acquired 2 plants in the last month: a peace lily and a succulent.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_d84a3211",
+  "question_type": "multi-session",
+  "hypothesis": "You have spent a total of $185 on bike-related expenses since the start of the year. This includes $40 for new bike lights, $25 for a bike chain replacement, and $120 for a Bell Zephyr helmet.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "aae3761f",
+  "question_type": "multi-session",
+  "hypothesis": "You spent a total of 18-19 hours driving to your three road trip destinations combined:\n\n- Tybee Island trip: 7-8 hours\n- Washington D.C. trip: 6 hours\n- Tennessee mountains trip: 5 hours",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_f2262a51",
+  "question_type": "multi-session",
+  "hypothesis": "You planned to visit two different doctors: your primary care physician and Dr. Smith.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "dd2973ad",
+  "question_type": "multi-session",
+  "hypothesis": "You went to bed at 2 AM on May 24, 2023, which was after your doctor's appointment on May 18, 2023. I don't have information about your bedtime on the day before the appointment.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c4a1ceb8",
+  "question_type": "multi-session",
+  "hypothesis": "You have used three different types of citrus fruits in your cocktail recipes: orange, lime, and lemon.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_a56e767c",
+  "question_type": "multi-session",
+  "hypothesis": "You attended four movie festivals:\n1. Seattle International Film Festival\n2. Austin Film Festival\n3. AFI Fest in Los Angeles\n4. Portland Film Festival",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6cb6f249",
+  "question_type": "multi-session",
+  "hypothesis": "You took a total of 17 days of social media breaks: 7 days in mid-January 2023 and 10 days in mid-February 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "46a3abf7",
+  "question_type": "multi-session",
+  "hypothesis": "You currently have 3 tanks, including the one you set up for your friend's kid.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "36b9f61e",
+  "question_type": "multi-session",
+  "hypothesis": "The total amount you spent on luxury items in the past few months is $2,500. This includes:\n\n- A luxury evening gown for $800.\n- A pair of leather boots from a high-end Italian designer for $500.\n- A designer handbag from Gucci for $1,200.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "28dc39ac",
+  "question_type": "multi-session",
+  "hypothesis": "You have spent a total of 140 hours playing games.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_2f8be40d",
+  "question_type": "multi-session",
+  "hypothesis": "You have attended three weddings in 2023.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2e6d26dc",
+  "question_type": "multi-session",
+  "hypothesis": "Four babies were born to friends and family members in the last few months:\n\n1. Ava and Lily (twins) in April 2023.\n2. Charlotte in March 2023.\n3. Max in March 2023.\n4. Jasper in April 2023.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_15e38248",
+  "question_type": "multi-session",
+  "hypothesis": "In the past few months, you have:\n\n1. Purchased a wooden coffee table with metal legs from West Elm, delivered on May 18, 2023.\n2. Assembled an IKEA bookshelf for your home office around March 2023.\n3. Fixed a wobbly leg on your kitchen table on the weekend of May 20-21, 2023.\n\nThere is no information about selling any furniture in the past few months.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "88432d0a",
+  "question_type": "multi-session",
+  "hypothesis": "You baked or planned to bake at least four times in the past two weeks:\n\n1. You baked cookies on May 25, 2023.\n2. You attempted a new bread recipe on May 23, 2023.\n3. You planned to bake crispy chicken wings on May 28, 2023.\n4. You considered baking Garlic and Herb Whole Wheat Focaccia on May 28, 2023.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "80ec1f4f",
+  "question_type": "multi-session",
+  "hypothesis": "You visited two different museums or galleries in February 2023: the Natural History Museum on February 8, 2023, and The Art Cube on February 15, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "d23cf73b",
+  "question_type": "multi-session",
+  "hypothesis": "You have learned to cook or tried out four different cuisines in the past few months: Korean, Ethiopian, Indian, and Vegan.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_7fce9456",
+  "question_type": "multi-session",
+  "hypothesis": "You viewed three properties before making an offer on the townhouse in the Brookside neighborhood.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "d682f1a2",
+  "question_type": "multi-session",
+  "hypothesis": "You have used three different types of food delivery services recently:\n- Fresh Fusion for pre-made meals.\n- Domino's Pizza for pizza delivery.\n- Uber Eats for weekend meals.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "7024f17c",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have any information about your jogging activities. Regarding yoga, you planned to do one or two sessions per week. Therefore, you likely did 2 to 4 hours of yoga last week, depending on whether you completed one or two sessions.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_5501fe77",
+  "question_type": "multi-session",
+  "hypothesis": "You gained the most followers on TikTok over the past month, with an increase of 200 followers.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_2ba83207",
+  "question_type": "multi-session",
+  "hypothesis": "You spent the most money at Thrive Market in the past month, with a total of $150.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2318644b",
+  "question_type": "multi-session",
+  "hypothesis": "You spent over $270 more per night on accommodations in Hawaii compared to Tokyo.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2ce6a0f2",
+  "question_type": "multi-session",
+  "hypothesis": "You attended three art-related events in the past month.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_d12ceb0e",
+  "question_type": "multi-session",
+  "hypothesis": "The average age of you, your parents, and your grandparents is 59.6 years.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "00ca467f",
+  "question_type": "multi-session",
+  "hypothesis": "You attended two doctor's appointments in March 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "b3c15d39",
+  "question_type": "multi-session",
+  "hypothesis": "It took 5 days for you to receive the new remote shutter release after you ordered it on February 5, 2023, and received it on February 10, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_31ff4165",
+  "question_type": "multi-session",
+  "hypothesis": "You use three health-related devices daily: a Fitbit for tracking steps and guided breathing, an Accu-Chek Aviva Nano for blood sugar testing, and a nebulizer machine for inhalation treatments.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "eeda8a6d",
+  "question_type": "multi-session",
+  "hypothesis": "You have a total of 17 fish in both of your aquariums.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2788b940",
+  "question_type": "multi-session",
+  "hypothesis": "You attend a total of 5 fitness classes in a typical week:\n- 1 BodyPump weightlifting class on Mondays.\n- 2 Zumba classes on Tuesdays and Thursdays.\n- 1 Hip Hop Abs class on Saturdays.\n- 1 yoga class on Sundays.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "60bf93ed",
+  "question_type": "multi-session",
+  "hypothesis": "It took 5 days for your laptop backpack to arrive after you bought it.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "9d25d4e0",
+  "question_type": "multi-session",
+  "hypothesis": "You acquired 2 pieces of jewelry in the last two months: 1 pair of emerald earrings and 1 silver necklace with a small pendant.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "129d1232",
+  "question_type": "multi-session",
+  "hypothesis": "You raised a total of $5,850 through all the charity events you participated in. This includes $250 from a charity walk, $5,000 from a Bike-a-Thon for Cancer Research, and $600 from a charity yoga event for a local animal shelter.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "60472f9c",
+  "question_type": "multi-session",
+  "hypothesis": "You have been working on four projects simultaneously, excluding your thesis.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_194be4b3",
+  "question_type": "multi-session",
+  "hypothesis": "You currently own two musical instruments: a Korg B1 digital piano and a Yamaha FG800 acoustic guitar.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a9f6b44c",
+  "question_type": "multi-session",
+  "hypothesis": "In March, you serviced your road bike at Pedal Power on March 10th, 2023, and you planned to replace the front tire of your hybrid commuter bike before April 2023. So, you serviced or planned to service two bikes in March.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "d851d5ba",
+  "question_type": "multi-session",
+  "hypothesis": "You raised a total of $3,750 for charity.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "5a7937c8",
+  "question_type": "multi-session",
+  "hypothesis": "You participated in faith-related activities on two days in December 2023: December 10th, when you volunteered at a church's annual holiday food drive, and December 17th, when you led a Bible study at your church.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_ab202e7f",
+  "question_type": "multi-session",
+  "hypothesis": "You replaced or fixed five kitchen items.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_e05b82a6",
+  "question_type": "multi-session",
+  "hypothesis": "You rode rollercoasters a total of 10 times from July to October. Here's the breakdown:\n\n- SeaWorld San Diego: 3 rides (Mako, Kraken, and Manta)\n- Disneyland: 3 rides (Space Mountain: Ghost Galaxy)\n- Knott's Berry Farm: 1 ride (Xcelerator)\n- Universal Studios Hollywood: 3 rides (Revenge of the Mummy)",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_731e37d7",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "edced276",
+  "question_type": "multi-session",
+  "hypothesis": "You spent a total of 15 days traveling: 10 days in Hawaii and 5 days in New York City.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "10d9b85a",
+  "question_type": "multi-session",
+  "hypothesis": "You spent a total of 3 days attending workshops, lectures, and conferences in April 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "e3038f8c",
+  "question_type": "multi-session",
+  "hypothesis": "You have a total of 99 rare items in your collection.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2b8f3739",
+  "question_type": "multi-session",
+  "hypothesis": "The total amount of money you earned from selling your products at the markets is $495.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1a8a66a6",
+  "question_type": "multi-session",
+  "hypothesis": "You currently have 1 magazine subscription, which is The New Yorker.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c2ac3c61",
+  "question_type": "multi-session",
+  "hypothesis": "You have completed a total of five online courses: two on edX and three on Coursera.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "bf659f65",
+  "question_type": "multi-session",
+  "hypothesis": "You have purchased or downloaded at least two music albums or EPs:\n\n1. The EP \"Midnight Sky\" by The Whiskey Wanderers, which you bought at a music festival.\n2. Billie Eilish's album \"Happier Than Ever,\" which you downloaded on Spotify.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_372c3eed",
+  "question_type": "multi-session",
+  "hypothesis": "You spent a total of 8 years in formal education from high school to the completion of your Bachelor's degree: 4 years at Arcadia High School from 2010 to 2014, and 4 years at UCLA for your Bachelor's degree in Computer Science from 2016 to 2020.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_2f91af09",
+  "question_type": "multi-session",
+  "hypothesis": "You have completed a total of 23 pieces of writing since you started writing again three weeks ago. This includes 5 short stories, 17 poems, and at least 1 piece for the writing challenge.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "81507db6",
+  "question_type": "multi-session",
+  "hypothesis": "You have attended three graduation ceremonies in the past three months.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "88432d0a_abs",
+  "question_type": "multi-session",
+  "hypothesis": "Based on the retrieved memories, there is no record of you baking egg tarts in the past two weeks.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "80ec1f4f_abs",
+  "question_type": "multi-session",
+  "hypothesis": "You visited one gallery in December, which was \"The Art Cube,\" a contemporary art gallery.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "eeda8a6d_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have information about a 30-gallon tank in your memories. You have mentioned a 20-gallon tank with 10 neon tetras, 5 golden honey gouramis, and a small pleco catfish, as well as another 20-gallon tank housing your betta fish named Bubbles.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "60bf93ed_abs",
+  "question_type": "multi-session",
+  "hypothesis": "It took 9 days for your iPad case to arrive after you bought it.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "edced276_abs",
+  "question_type": "multi-session",
+  "hypothesis": "You spent a total of 10 days traveling in Hawaii. There is no information available about the number of days spent in Seattle.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_372c3eed_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have information on the completion of your Master's degree, so I can't calculate the total years in formal education including that. However, from high school to your Bachelor's degree, you spent 10 years in formal education: 4 years at Arcadia High School, 2 years at Pasadena City College for your Associate's degree, and 4 years at UCLA for your Bachelor's degree.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "8a2466db",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your interest in video editing, particularly with Adobe Premiere Pro, here are some resources you can explore:\n\n1. **Adobe Premiere Pro's Official Documentation and Tutorials**: These are great for understanding the software's features and functionalities.\n2. **YouTube Channels**: Channels like Premiere Bro, Video Copilot, and Adobe Creative Cloud offer a wealth of tutorials and tips.\n3. **Online Courses**: Platforms like Udemy, LinkedIn Learning, and Skillshare provide structured courses on video editing.\n4. **Communities and Forums**: Engage with other editors on Reddit's r/premierepro and Adobe's Premiere Pro forum for advice and support.\n\nThese resources should help you deepen your knowledge and skills in video editing.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "06878be2",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your current photography setup and interests, here are some accessories that would complement your Sony A7R IV:\n\n1. **Camera Bag**: Consider upgrading to a more comfortable and durable camera bag. Brands like Think Tank Photo, Lowepro, and Peak Design are on your list. [2023-05-27]\n\n2. **External Battery Packs**: You're interested in options like the Anker PowerCore 20000 PD and Mophie Powerstation XXL for charging your camera and other devices. [2023-05-27]\n\n3. **Camera Flash**: You've decided on the Godox V1 for your flash upgrade. [2023-05-27]\n\n4. **Flash Protection**: To protect your Godox V1 flash, consider cases or pouches such as the Godox V1 Hard Case, Nanuk 915 Hard Case, Pelican 1060 Case, Think Tank Photo Flash Pouch, Lowepro Flash Pouch, or Vello Flash Pouch. [2023-05-27]\n\nThese accessories should enhance your photography setup, especially for your Sony A7R IV camera.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "75832dbd",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have any specific recent publications or conferences in the retrieved memories that might interest you. However, based on your interests in deep learning for medical image analysis, explainable AI, and environmental sustainability, you might consider looking into conferences like NeurIPS, CVPR, ICML, ICLR, and ICCV. These conferences align with your interests and could provide valuable insights and networking opportunities.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0edc2aef",
+  "question_type": "single-session-preference",
+  "hypothesis": "I'm sorry, but I don't have any specific memories or information about hotels in Miami.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "35a27287",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have information about specific cultural events happening around you this weekend. However, based on your interest in cultural events and language exchange opportunities, you can explore platforms like Eventbrite and Meetup using keywords such as \"language festival,\" \"cultural exchange,\" or \"international festival.\" Additionally, following local cultural organizations, language schools, and community centers on social media, as well as checking local news websites, can provide updates on upcoming events.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "32260d93",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your interests, I recommend watching Hasan Minhaj's \"Homecoming King\" or Hannah Gadsby's \"Nanette\" for stand-up comedy specials with strong storytelling abilities. These align with your aspiration to improve your craft as a stand-up comedian.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "195a1a1b",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific memories about your evening activities, but based on your interests, you might enjoy:\n\n1. **Guided Imagery Exercises**: As you're interested in trying these for emotional comfort, consider setting aside time in the evening for this practice.\n2. **Body Scan Meditation**: You plan to try this for relaxation, which can be a great evening activity to help you unwind.\n3. **Journaling**: Reflect on your day or process emotions, especially if you're dealing with loss.\n4. **Yoga**: Explore new styles like Kundalini or Sivananda, or continue with Hatha and Vinyasa flow.\n5. **Gardening**: If you start your herb garden, tending to it in the evening can be relaxing.\n6. **Reading or Research**: Dive into topics like the history of ancient Rome or cultural symbols, which interest you.\n\nThese activities align with your interests and can help you relax and unwind in the evening.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "afdc33df",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific memories about your kitchen cleaning habits, but I can share some general tips for maintaining a clean kitchen based on the extracted facts:\n\n1. **Organize Utensils**: Purge duplicates, categorize, and assign specific spots for utensils. Use dividers and small containers to keep things tidy.\n\n2. **Regular Cleaning**: Clean utensil holders regularly to prevent bacteria growth. Use coasters and pads to protect countertops and always use a cutting board.\n\n3. **Countertop Care**: Consider sealing granite countertops to protect from spills and scratches. Avoid harsh chemicals and use soft cloths for cleaning.\n\n4. **Maintenance**: Address issues like garbage disposal problems or leaky faucets promptly to prevent bigger messes.\n\nThese steps can help keep your kitchen organized and clean.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "caf03d32",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific memories of you struggling with slow cooker recipes, but I can offer some advice based on your interest in trying more recipes, including vegetarian and vegan options. Here are a few tips:\n\n1. **Ingredient Preparation**: Ensure vegetables are cut uniformly for even cooking. Pre-soak beans or lentils if required.\n2. **Layering**: Place root vegetables at the bottom as they take longer to cook, followed by proteins and softer vegetables.\n3. **Seasoning**: Adjust seasoning as needed, especially for vegetarian dishes, to enhance flavor.\n4. **Liquid Levels**: Be cautious with liquid; slow cookers retain moisture, so you might need less than in stovetop recipes.\n5. **Experiment**: Try different recipes like Lentil Curry or Black Bean Chili to find what works best for you.\n\nIf you have specific issues, feel free to share, and I can provide more targeted advice!",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "54026fce",
+  "question_type": "single-session-preference",
+  "hypothesis": "You have expressed interest in implementing virtual coffee breaks to socialize with colleagues, as you miss the social interactions and watercooler conversations while working from home. You can introduce the idea of virtual coffee breaks by starting with a question to spark discussion, sharing your observations about missing in-person interactions, and casually suggesting the idea of virtual coffee breaks. Encourage feedback and be open to adapting the idea based on your team's input. Additionally, you can set clear expectations, choose a convenient time, use a comfortable platform, and keep participation optional to ensure a successful implementation.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "06f04340",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific information about all your homegrown ingredients, but I know you have jalapeno peppers, which you used in your Spicy Mango Margarita. You could incorporate them into a dish like a spicy salsa or a jalapeno-infused main course. Given your interest in healthy meals, you might consider a grilled chicken or fish dish with a jalapeno-lime marinade, served alongside a quinoa salad with roasted vegetables and mixed greens. This would align with your preference for healthy and delicious meals.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6b7dfb22",
+  "question_type": "single-session-preference",
+  "hypothesis": "You have been exploring various ways to enhance your painting skills and find inspiration. Here are some personalized suggestions based on your interests and activities:\n\n1. **Explore Flower Paintings**: Since you've been interested in painting realistic flowers and have been looking at flower paintings on Instagram, consider visiting a botanical garden or a local flower market for inspiration. You could also try painting from life by setting up a small still life with flowers at home. [2023-05-23]\n\n2. **Incorporate Texture**: You've expressed interest in using palette knives to add texture to your paintings. Experimenting with different techniques and tools might spark new ideas and excitement in your work. [2023-05-23]\n\n3. **Social Media Inspiration**: You find inspiration from social media, so continue exploring platforms like Instagram or Pinterest for new styles and techniques. Engaging with online art communities could also provide fresh perspectives and feedback. [2023-05-23]\n\n4. **Cultural Experiences**: Drawing inspiration from cultural events, like the festival you recently attended, can offer new themes and ideas for your artwork. Consider incorporating elements from these experiences into your paintings. [2023-05-28]\n\n5. **Meditation and Reflection**: Since meditation has helped you feel more centered, use this practice to clear your mind and allow new ideas to surface. Reflecting on your thoughts during meditation might lead to unexpected sources of inspiration. [2023-05-27]\n\nBy combining these approaches, you might find new inspiration and motivation for your paintings.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1a1907b4",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have any specific memories of you mentioning a favorite cocktail, but based on your interest in citrus-flavored simple syrups, you might enjoy creating a cocktail that incorporates one of these syrups. For your get-together, consider making a Pimm's Cup with a Twist using a citrus-flavored simple syrup. You could try a Grapefruit Simple Syrup to pair with cucumber, a Lemon-Ginger Simple Syrup for warmth and spice, or an Orange-Blossom Simple Syrup for a floral touch. These options can add a refreshing and unique flavor to your cocktail, making it a delightful choice for your event.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "09d032c9",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific tips for improving phone battery life from your past conversations. However, I do know that you've been experiencing issues with your phone's battery life as of 2023/05/30. If you have any other questions or need further assistance, feel free to ask!",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "38146c39",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific information about your chocolate chip cookies, but based on your interest in experimenting with different types of sugar, you might consider using turbinado sugar to add a richer flavor to your cookies. Additionally, you could try incorporating sliced almonds for extra crunch and texture, similar to your plan for the cherry clafoutis.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "d24813b1",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your past baking experiences, you might consider making a batch of chewy chocolate chip cookies, as you've been perfecting their texture with tips like using a combination of white and brown sugar, room temperature butter, and chilling the dough (2023-05-29). Additionally, you could try a lemon lavender pound cake, which you've shown interest in making before (2023-05-29). Both options would likely be a hit at your gathering!",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "57f827a0",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have any specific memories about your preferences or past experiences with rearranging bedroom furniture. However, if you're looking for tips, consider the following general ideas:\n\n1. **Assess the Space**: Measure your room and furniture to understand the space you have to work with.\n2. **Create a Focal Point**: Decide on a focal point, such as a bed or a window, and arrange other furniture around it.\n3. **Ensure Flow**: Arrange furniture to allow easy movement and access throughout the room.\n4. **Balance the Room**: Distribute furniture evenly to avoid one side feeling heavier than the other.\n5. **Consider Functionality**: Think about how you use the space and arrange furniture to support those activities.\n6. **Experiment with Layouts**: Try different arrangements to see what feels best.\n\nIf you have specific goals or styles in mind, feel free to share, and I can tailor the advice further!",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "95228167",
+  "question_type": "single-session-preference",
+  "hypothesis": "I'm sorry, but I don't have any specific memories or information related to guitar shopping or tips for selecting a new guitar.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "505af2f5",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your interest in reducing sugar intake and saving money by making homemade flavored creamer, I recommend trying a recipe using almond milk, vanilla extract, and honey. This combination aligns with your preferences and goals. You might also consider experimenting with different flavorings or sweeteners to suit your taste while keeping it healthy.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "75f70248",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific information about the cause of your sneezing. However, you mentioned having a cat that sheds a lot and an interest in keeping your living room dust-free, which could be related to your sneezing. Additionally, you are considering purchasing a spider plant or a snake plant for indoor air purification, which might help improve air quality.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "d6233ab6",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have any specific memories about your thoughts on attending high school reunions. However, you have positive memories of being part of the debate team and taking advanced placement courses in economics during high school, which might make attending a reunion a meaningful experience for you.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1da05512",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific information on whether you should buy a NAS device now or wait. However, based on your previous considerations, you are interested in a NAS device to address home network storage capacity issues and use it as a central backup location for all your devices. You are also concerned about the security of your data and are looking for devices with strong security features. If these needs are pressing and you have found a suitable device that meets your requirements, it might be a good time to purchase. If you're still unsure or waiting for a specific model or price drop, you might consider waiting.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "fca70973",
+  "question_type": "single-session-preference",
+  "hypothesis": "You have shown interest in Halloween-themed events at theme parks. Given this, you might consider visiting Universal Studios Hollywood for their Halloween Horror Nights. You can enhance your experience by booking the VIP Experience's Gourmet Buffet and Behind-the-Scenes Tour package, which offers insights into makeup and special effects, maze design, and more. This could be a thrilling addition to your theme park weekend plans.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "b6025781",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific new recipes for your meal prep next week, but I can suggest some ideas based on your past preferences. You have previously considered adding roasted sweet potatoes seasoned with fresh rosemary to your meal prep, and you were interested in making Mexican-inspired dishes like chicken fajitas. You might want to explore variations of these dishes or incorporate other proteins like lentil bolognese with quinoa and roasted vegetables. If you're looking for more inspiration, you could try making homemade granola for a snack or explore different seasoning options for sweet potatoes, such as a spicy kick with chili powder and cumin.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a89d7624",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific suggestions for your upcoming trip to Denver, but I know you're interested in the city's music scene. You might want to explore music venues like Red Rocks Park and Amphitheatre, The Ogden Theatre, and The Bluebird Theater. Additionally, consider attending festivals such as Grandoozy or the Denver Folk Festival. If you're looking for dining options near Red Rocks, you mentioned wanting to grab dinner before a concert, so exploring nearby restaurants could be a good idea.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "b0479f84",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your interest in documentaries like \"Our Planet,\" \"Free Solo,\" and \"Tiger King,\" you might enjoy exploring similar series. Unfortunately, I don't have specific recommendations beyond those you've already watched, but you could consider looking for nature documentaries, adventure or climbing films, and true crime series on Netflix, as they often have a wide selection in these genres.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1d4e3b97",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have specific information on why your bike might be performing better during your Sunday group rides. However, your consistent practice and preparation, as well as your efforts to maintain fitness during the winter months, could contribute to improved performance. Additionally, using a new Garmin bike computer for tracking might provide more accurate data, enhancing your cycling experience.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "07b6f563",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your interests and recent inquiries, here are some useful accessories for your iPhone 13 Pro:\n\n1. **Phone Wallet Case**: Consider brands like OtterBox for a durable and protective wallet case. You mentioned interest in this type of case on 2023/05/27.\n\n2. **Screen Protector**: Look for high-quality brands to replace your cracked screen protector. You were looking to replace it on 2023/05/27.\n\n3. **Portable Power Bank**: Choose a reliable brand for charging on-the-go. You expressed interest in getting a portable power bank on 2023/05/27.\n\nThese accessories align with your current needs and preferences for your iPhone 13 Pro.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1c0ddc50",
+  "question_type": "single-session-preference",
+  "hypothesis": "Based on your interests and commute plans, here are some activities you can do during your 40-minute commute to work:\n\n1. **Podcasts**: You enjoy podcasts like \"How I Built This\" and are interested in history and science podcasts such as \"Hardcore History,\" \"Lore,\" \"The Dollop,\" \"StarTalk Radio,\" \"Radiolab,\" and \"Stuff You Should Know.\" These can keep you entertained and informed during your commute.\n\n2. **Audiobooks**: Since you like staying productive and entertained, consider listening to audiobooks on topics you enjoy or want to learn more about.\n\n3. **Music**: You have a playlist dedicated to movie soundtracks, especially Hans Zimmer's scores, which help you focus. Listening to music can be a relaxing way to start or end your day.\n\n4. **Language Learning**: Use language learning apps like Duolingo or Babbel to improve your language skills.\n\n5. **Mindfulness and Relaxation**: Consider using guided meditation apps like Headspace to practice mindfulness and relaxation techniques during your commute.\n\nThese activities can help you make the most of your commute time while aligning with your interests and goals.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0a34ad58",
+  "question_type": "single-session-preference",
+  "hypothesis": "I understand your concerns about navigating Tokyo. Here are some tips based on your plans and resources:\n\n1. **Use Your Suica Card**: You have a Suica card, which is perfect for convenient travel on Tokyo's extensive public transportation network, including trains and buses.\n\n2. **Plan Your Routes**: Since you're staying at the Park Hyatt Tokyo, you're centrally located. Use apps like Google Maps or Japan Travel by NAVITIME to plan your routes to places like Shinjuku, Harajuku, Omotesando, Ginza, and Tokyo Tower.\n\n3. **Early Visits**: For destinations like Tsukiji Fish Market, aim to visit early in the morning to avoid crowds and enjoy the freshest offerings.\n\n4. **Language Assistance**: While many signs are in English, having a translation app can be helpful for communication.\n\n5. **Reservations**: Make reservations for popular restaurants like Nihonryori Ryugin and Sushi Saito to ensure you get a spot.\n\n6. **Currency Exchange**: Consider exchanging money at Travelex or Seven Bank near your hotel for convenience.\n\nThese tips should help you navigate Tokyo with more confidence. Enjoy your trip!",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "d3ab962e",
+  "question_type": "multi-session",
+  "hypothesis": "The total distance of the hikes you did on two consecutive weekends is 8 miles.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2311e44b",
+  "question_type": "multi-session",
+  "hypothesis": "You have 190 pages left to read in \"The Nightingale.\"",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "cc06de0d",
+  "question_type": "multi-session",
+  "hypothesis": "The taxi ride was $6 more expensive than the train fare.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a11281a2",
+  "question_type": "multi-session",
+  "hypothesis": "You experienced an approximate increase of 350 Instagram followers in two weeks.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "4f54b7c9",
+  "question_type": "multi-session",
+  "hypothesis": "You inherited or acquired a total of 5 antique items from your family members.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "85fa3a3f",
+  "question_type": "multi-session",
+  "hypothesis": "The total cost of the new food bowl, measuring cup, dental chews, and flea and tick collar for Max is $50.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "9aaed6a3",
+  "question_type": "multi-session",
+  "hypothesis": "You earned $0.75 in cashback at SaveMart last Thursday from your $75 grocery purchase.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1f2b8d4f",
+  "question_type": "multi-session",
+  "hypothesis": "The difference in price between your luxury boots and the similar pair found at the budget store is $750.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "e6041065",
+  "question_type": "multi-session",
+  "hypothesis": "You packed 5 pairs of shoes and only wore 2 pairs (sneakers and sandals) on your last trip. Therefore, you wore 40% of the shoes you packed.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "51c32626",
+  "question_type": "multi-session",
+  "hypothesis": "You submitted your research paper on sentiment analysis to ACL on 2023/05/22.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "d905b33f",
+  "question_type": "multi-session",
+  "hypothesis": "You received a 20% discount on the book from your favorite author.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "7405e8b1",
+  "question_type": "multi-session",
+  "hypothesis": "Yes, you received a higher percentage discount on your first order from HelloFresh (40%) compared to your first UberEats order (20%).",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "f35224e0",
+  "question_type": "multi-session",
+  "hypothesis": "You have listened to around 15 episodes of \"How I Built This\" and 12 episodes of \"My Favorite Murder,\" totaling 27 episodes.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6456829e",
+  "question_type": "multi-session",
+  "hypothesis": "You initially planted 5 tomato plants and 3 cucumber plants.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a4996e51",
+  "question_type": "multi-session",
+  "hypothesis": "During peak campaign seasons, you work up to 50 hours a week.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "3c1045c8",
+  "question_type": "multi-session",
+  "hypothesis": "You are likely in your 30s, as you are considering master's programs for that age group. The average age of employees in your department is 29.5 years old. Therefore, you are slightly older than the average age of employees in your department, but the exact difference is not specified in the memories.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "60036106",
+  "question_type": "multi-session",
+  "hypothesis": "The total number of people reached by your Facebook ad campaign and Instagram influencer collaboration was approximately 12,000 people.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "681a1674",
+  "question_type": "multi-session",
+  "hypothesis": "You re-watched two Marvel movies: \"Spider-Man: No Way Home\" on May 27, 2023, and \"Avengers: Endgame\" on May 20, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "e25c3b8d",
+  "question_type": "multi-session",
+  "hypothesis": "You saved $300 on the designer handbag at TK Maxx.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "4adc0475",
+  "question_type": "multi-session",
+  "hypothesis": "You have scored a total of 3 goals and have had 2 assists in the recreational indoor soccer league.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "4bc144e2",
+  "question_type": "multi-session",
+  "hypothesis": "You spent a total of $65 on the car wash and parking ticket: $15 for the car wash on February 3, 2023, and $50 for the parking ticket on January 5, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "ef66a6e5",
+  "question_type": "multi-session",
+  "hypothesis": "You have played two sports competitively in the past: swimming in college and tennis in high school.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "5025383b",
+  "question_type": "multi-session",
+  "hypothesis": "The two hobbies that led you to join online communities are photography and cooking.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a1cc6108",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "9ee3ecd6",
+  "question_type": "multi-session",
+  "hypothesis": "You need a total of 300 points to redeem a free skincare product at Sephora.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "3fdac837",
+  "question_type": "multi-session",
+  "hypothesis": "You spent a total of 12 days in Japan and Chicago combined: 8 days in Japan and 4 days in Chicago.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "91b15a6e",
+  "question_type": "multi-session",
+  "hypothesis": "The minimum amount you could get from selling both the vintage diamond necklace and the antique vanity is $5,150. This is based on the vintage diamond necklace being worth $5,000 and the restored antique vanity being worth at least $150.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "27016adc",
+  "question_type": "multi-session",
+  "hypothesis": "The cost of the renovations, which is $20,000, represents 10% of the countryside property's price, which is listed at $200,000.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "720133ac",
+  "question_type": "multi-session",
+  "hypothesis": "The total cost of Lola's vet visit and flea medication is $75 ($50 for the vet visit + $25 for the flea medication).",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "77eafa52",
+  "question_type": "multi-session",
+  "hypothesis": "You had to pay an additional $300 after the initial quote for your trip.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "8979f9ec",
+  "question_type": "multi-session",
+  "hypothesis": "The total number of lunch meals you got from the chicken fajitas and lentil soup is 8 meals: 3 meals from chicken fajitas and 5 meals from lentil soup.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0100672e",
+  "question_type": "multi-session",
+  "hypothesis": "You spent $12 on each coffee mug for your coworkers.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a96c20ee",
+  "question_type": "multi-session",
+  "hypothesis": "You presented a poster on your thesis research at Harvard University.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "92a0aa75",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "3fe836c9",
+  "question_type": "multi-session",
+  "hypothesis": "The pre-approval amount was $25,000 more than the final sale price of the house.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1c549ce4",
+  "question_type": "multi-session",
+  "hypothesis": "The total cost of the car cover and detailing spray you purchased is $140.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6c49646a",
+  "question_type": "multi-session",
+  "hypothesis": "You covered a total of 3,000 miles in your four road trips.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1192316e",
+  "question_type": "multi-session",
+  "hypothesis": "The total time it takes you to get ready and commute to work is 1 hour and 30 minutes. This includes 1 hour for getting ready and 30 minutes for commuting.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0ea62687",
+  "question_type": "multi-session",
+  "hypothesis": "Your car was getting 2 more miles per gallon a few months ago compared to now.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "67e0d0f2",
+  "question_type": "multi-session",
+  "hypothesis": "You have completed a total of 20 online courses related to data analysis: 12 courses on Coursera and 8 courses on edX.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "bb7c3b45",
+  "question_type": "multi-session",
+  "hypothesis": "You saved $300 on the Jimmy Choo heels.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "ba358f49",
+  "question_type": "multi-session",
+  "hypothesis": "You will be 33 years old when your friend Rachel gets married in 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "61f8c8f8",
+  "question_type": "multi-session",
+  "hypothesis": "You finished the 5K run 10 minutes faster this year compared to your previous year's time.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "60159905",
+  "question_type": "multi-session",
+  "hypothesis": "You attended three dinner parties in the past month:\n1. A BBQ-themed party at Mike's place on 2023/05/07.\n2. A birthday party for your colleague and friend, David, on 2023/05/13.\n3. A low-key potluck dinner party at Alex's place on 2023/05/20.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "ef9cf60a",
+  "question_type": "multi-session",
+  "hypothesis": "You spent a total of $300 on gifts for your sister, which includes a silver necklace from Tiffany's costing approximately $200 and a $100 gift card to her favorite spa.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "73d42213",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have the exact time you reached the clinic on Monday. However, you left home at 7:00 AM, and the clinic is a 45-minute drive away, so you likely arrived sometime after 7:45 AM.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "bc149d6b",
+  "question_type": "multi-session",
+  "hypothesis": "The total weight of the new feed you purchased in the past two months is 50 pounds.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "099778bb",
+  "question_type": "multi-session",
+  "hypothesis": "Women hold 20% of the leadership positions in your company.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "09ba9854",
+  "question_type": "multi-session",
+  "hypothesis": "You will save approximately $49-$51 by taking the train from Narita Airport to your hotel in Shinjuku instead of a taxi.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "d6062bb9",
+  "question_type": "multi-session",
+  "hypothesis": "The total number of views on your most popular videos is 1,998 views, with 1,456 views on TikTok and 542 views on YouTube.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "157a136e",
+  "question_type": "multi-session",
+  "hypothesis": "Your grandma is 43 years older than you.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c18a7dc8",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have information about the year you graduated from college, so I'm unable to calculate how many years older you are now compared to then. If you provide the year you graduated, I can help you calculate the difference.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a3332713",
+  "question_type": "multi-session",
+  "hypothesis": "The total amount you spent on gifts for your coworker and brother is $200. You spent $100 on a set of baby clothes and toys for your coworker's baby shower and $100 on a gift card for your brother's graduation.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "55241a1f",
+  "question_type": "multi-session",
+  "hypothesis": "The total number of comments on your recent Facebook Live session and your most popular YouTube video is 33 comments (12 comments from the Facebook Live session + 21 comments from the YouTube video).",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a08a253f",
+  "question_type": "multi-session",
+  "hypothesis": "You attend fitness classes four days a week: Zumba classes on Tuesdays and Thursdays, a weightlifting class on Saturdays, and a yoga class on Wednesdays.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "f0e564bc",
+  "question_type": "multi-session",
+  "hypothesis": "The total amount you spent on the designer handbag and high-end skincare products is $1,300.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "078150f1",
+  "question_type": "multi-session",
+  "hypothesis": "You raised $50 more than your initial goal in the charity cycling event.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "8cf4d046",
+  "question_type": "multi-session",
+  "hypothesis": "The average GPA of your undergraduate and graduate studies is 3.83 out of 4.0.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a346bb18",
+  "question_type": "multi-session",
+  "hypothesis": "You exceeded your target time by 12 minutes in the marathon.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "37f165cf",
+  "question_type": "multi-session",
+  "hypothesis": "In January, you finished reading \"The Nightingale\" by Kristin Hannah, which is a 440-page novel. In March, you finished reading a 416-page novel.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "8e91e7d9",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "87f22b4a",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have information on your egg sales for this month.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "e56a43b9",
+  "question_type": "multi-session",
+  "hypothesis": "You will receive a $5 discount on your next purchase at FreshMart due to reaching 500 points in their loyalty program.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "efc3f7c2",
+  "question_type": "multi-session",
+  "hypothesis": "You wake up 30 minutes earlier on Fridays compared to other weekdays.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "21d02d0d",
+  "question_type": "multi-session",
+  "hypothesis": "You missed two 5K fun runs in March 2023 due to work commitments. The specific dates of the missed fun runs were March 5 and March 26, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2311e44b_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have the information on how many pages you have left to read in \"Sapiens\" because the memories do not specify the total number of pages in the book or how many pages you have already read.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6456829e_abs",
+  "question_type": "multi-session",
+  "hypothesis": "You initially planted 5 tomato plants. There is no specific memory indicating the initial number of chili pepper plants you planted.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "e5ba910e_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have any information about the purchase cost of an iPad. However, you recently purchased the Sony WH-1000XM4 headphones for $378. Therefore, I can't provide the total cost of both items without the iPad's cost.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a96c20ee_abs",
+  "question_type": "multi-session",
+  "hypothesis": "You presented a poster on your thesis research at your first research conference at Harvard University.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "ba358f49_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "09ba9854_abs",
+  "question_type": "multi-session",
+  "hypothesis": "You will save approximately $31 by taking the Airport Limousine Bus instead of a taxi from Narita International Airport to your hotel in Shinjuku. The bus costs ¥3,200 (around $29 USD) one way, while the taxi fare is estimated to be around $60.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_59149c77",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "7 days passed between your visit to the Museum of Modern Art (MoMA) on January 8, 2023, and the \"Ancient Civilizations\" exhibit at the Metropolitan Museum of Art on January 15, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_f49edff3",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You helped your friend prepare the nursery first on February 5, 2023, then helped your cousin pick out stuff for her baby shower on February 10, 2023, and finally ordered a customized phone case for your friend's birthday on February 20, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "71017276",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You met up with your aunt and received the crystal chandelier 4 weeks ago.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "b46e15ed",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "Two months have passed since you participated in the two charity events on consecutive days in February 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_fa19884c",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "6 days passed between the day you started playing along to your favorite songs on your old keyboard (March 25, 2023) and the day you discovered a bluegrass band (March 31, 2023).",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0bc8ad92",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "Approximately 5 months have passed since you last visited a museum with a friend on 2022/10/22.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "af082822",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended the friends and family sale at Nordstrom on November 17, 2022. As of today's date, December 1, 2022, the sale occurred 2 weeks ago.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_4929293a",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "Michael's engagement party happened first on May 5, 2023, followed by your cousin's wedding on June 15, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_b5700ca9",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended the Maundy Thursday service at the Episcopal Church 4 days ago, on April 6, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "9a707b81",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended the baking class on 2022/03/20 and made your friend's birthday cake on 2022/04/10. Therefore, you attended the baking class 21 days before making the birthday cake.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_1d4ab0c9",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "24 days passed between the day you started watering your herb garden on March 22, 2023, and the day you harvested your first batch of fresh herbs on April 15, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_e072b769",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You started using the cashback app 'Ibotta' approximately 2 weeks and 6 days ago.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0db4c65d",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "18 days had passed since you finished reading \"The Seven Husbands of Evelyn Hugo\" on 2022/12/28 when you attended the book reading event at the local library on 2023/01/15.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_1d80365e",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You spent 3 days on your solo camping trip to Yosemite National Park, from May 15, 2023, to May 17, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_7f6b06db",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "The order of your trips from earliest to latest is:\n\n1. Trip to Muir Woods National Monument on March 10, 2023.\n2. Trip to Dubai from April 16-28, 2023.\n3. Trip to Eastern Sierra on May 15, 2023.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_6dc9b45b",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended the Seattle International Film Festival 4 months ago.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_8279ba02",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You bought a smoker 10 days ago.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_18c2b244",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "1. I used a Buy One Get One Free coupon on Luvs diapers at Walmart (April 1, 2023).\n2. I redeemed $12 cashback for a $10 Amazon gift card from Ibotta (April 10, 2023).\n3. I signed up for the rewards program at ShopRite (April 15, 2023).",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_a1b77f9c",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You spent a total of 8 weeks on reading \"The Nightingale\" and listening to \"Sapiens: A Brief History of Humankind\" and \"The Power.\"",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_1916e0ea",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "54 days passed between the day you canceled your FarmFresh subscription on 2023/01/05 and the day you did your online grocery shopping from Instacart on 2023/02/28.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_7a0daae1",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "One week passed between the day you bought your new tennis racket on March 10, 2023, and the day you received it on March 17, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_468eb063",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You met Emma 9 days ago.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_7abb270c",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "1. Science Museum's \"Space Exploration\" exhibition on January 15, 2023.\n2. Metropolitan Museum of Art's \"Ancient Egyptian Artifacts\" exhibition on February 10, 2023.\n3. Museum of History's conservation lab tour on February 15, 2023.\n4. Modern Art Gallery's Abstract Expressionism tour on February 17, 2023.\n5. Castello di Amorosa visit on February 18, 2023.\n6. Natural History Museum's \"Dinosaur Fossils\" exhibition on March 4, 2023.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_1e4a8aeb",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "6 days passed between the day you attended the gardening workshop on April 15, 2023, and the day you planted the tomato saplings on April 21, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_4fc4f797",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "38 days.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "4dfccbf7",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "24 days had passed since you started taking ukulele lessons on February 1, 2023, when you decided to take your Taylor GS Mini to the guitar tech for servicing on February 25, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_61e13b3c",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "Approximately 3 weeks passed between the time you sold homemade baked goods at the Farmers' Market for the last time on February 26, 2023, and the time you participated in the Spring Fling Market on March 20, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_45189cb4",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "In January, you watched the following sports events in this order:\n\n1. On January 13, 2023, you watched the College Football National Championship game where Georgia defeated Alabama 33-18 with your family.\n2. On January 15, 2023, you watched the Kansas City Chiefs defeat the Buffalo Bills in the NFL playoffs at your friend Mike's place.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2ebe6c90",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "It took you 21 days to finish reading \"The Nightingale\" by Kristin Hannah.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_e061b84f",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "I only have information about one sports event you participated in during the past month: the company's annual charity soccer tournament on June 17, 2023. I don't have information about any other sports events you participated in during that time.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "370a8ff4",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "Approximately 11 weeks had passed since you recovered from the flu when you went on your 10th jog outdoors.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_d6585ce8",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "1. Billie Eilish concert at the Wells Fargo Center in Philadelphia with your sister on March 17, 2023.\n2. Free outdoor concert series in the park on March 25, 2023.\n3. Music festival in Brooklyn with friends, featuring favorite indie bands on April 1, 2023.\n4. Queen concert with Adam Lambert at the Prudential Center in Newark, NJ with your parents on April 15, 2023.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_4ef30696",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "1 day passed between finishing 'The Nightingale' on January 15, 2022, and starting 'The Hitchhiker's Guide to the Galaxy' on January 16, 2022.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_ec93e27f",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You most recently took a train ride on March 3rd, 2023, to visit your family in the countryside.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6e984301",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You had been taking sculpting classes for approximately 9 weeks when you invested in your own set of sculpting tools.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "8077ef71",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended a networking event on March 9, 2022. As of today's date, April 4, 2022, it was 26 days ago.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_f420262c",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "1. United Airlines (January 27, 2023)\n2. American Airlines (February 10, 2023)\n3. American Airlines (February 14, 2023)",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_8e165409",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "14 days passed between the day you repotted the previous spider plant on March 4, 2023, and the day you gave your neighbor, Mrs. Johnson, a few cuttings from your spider plant on March 18, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_74aed68e",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "29 days passed between the day you replaced your spark plugs on February 14, 2023, and the day you participated in the Turbocharged Tuesdays auto racing event on March 15, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "bcbe585f",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended the bird watching workshop at the local Audubon society 4 weeks ago.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_21adecb5",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "Approximately 6 months passed between the completion of your undergraduate degree on November 17, 2022, and the submission of your master's thesis on May 15, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "5e1b23de",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended the photography workshop on October 31, 2023. As of today's date, February 1, 2024, it was approximately 3 months ago.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_98f46fc6",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You participated in the charity bake sale first on March 15, 2023, before attending the charity gala on March 28, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_af6db32f",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You watched the Super Bowl 17 days ago.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "eac54adc",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You launched your website on February 10, 2023, and signed a contract with your first freelance client on March 1, 2023. The number of days between these two dates is 19 days.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_7ddcf75f",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You went on a whitewater rafting trip in the Oregon mountains 3 days ago.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_a2d1d1f6",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You harvested your first batch of fresh herbs from your herb garden kit 3 days ago, on April 15, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_85da3956",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended the \"Summer Nights\" festival at Universal Studios Hollywood three weeks ago.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_b0863698",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You participated in the 5K charity run on March 19, 2023, which was 7 days ago from today's date, March 26, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_68e94287",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "Your post about the vegan chili recipe happened first, on 2023/03/09, followed by your participation in the #PlankChallenge on 2023/03/15.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_e414231e",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "4 days.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_7ca326fa",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "Emma graduated first on May 27, 2022. Rachel graduated second with a master's degree on June 21, 2022. Alex graduated third with a degree in engineering around July 1, 2022.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_7bc6cf22",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You read the March 15th issue of The New Yorker on March 20, 2023. Today is April 1, 2023, so you read it 12 days ago.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2ebe6c92",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You finished reading \"The Nightingale\" by Kristin Hannah on January 31, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_e061b84g",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You completed the Spring Sprint Triathlon, which included a 20K bike ride.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "71017277",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "b46e15ee",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_d6585ce9",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "I don't have information about a music event you attended last Saturday.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_1e4a8aec",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "Two weeks ago, on 2023/04/21, you were using a gardening app to track weather and soil moisture levels for effective gardening planning.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_f420262d",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You flew with American Airlines on Valentine's Day.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_59149c78",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "The art-related event you participated in two weeks ago was held at the City Art Museum.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_e414231f",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You serviced your road bike the past weekend. You upgraded its pedals to Shimano Ultegra clipless pedals and planned to ask the mechanic to check the quick releases, bolts, and tire pressure.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_4929293b",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You participated as a bridesmaid in your cousin's wedding on 2023/06/15.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_468eb064",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You had lunch with Emma, a freelance writer, last Tuesday.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_fa19884d",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "9a707b82",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You mentioned making a chocolate cake with espresso powder for a friend's birthday party.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "eac54add",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "I don't have information about a specific business milestone you mentioned four weeks ago.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "4dfccbf8",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You started taking ukulele lessons with your friend Rachel on February 1, 2023, which was a Wednesday two months ago.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0bc8ad93",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You visited the Science Museum with a friend who is a chemistry professor on 2022/10/22.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6e984302",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "I don't have any information about an investment you made for a competition four weeks ago.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_8279ba03",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_b5700ca0",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended a Maundy Thursday service at the Episcopal Church on April 6, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_68e94288",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You participated in a social media challenge called #PlankChallenge on March 15, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_2655b836",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "The first issue you had with your new car after its first service was a problem with the GPS system, which occurred on March 22, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_2487a7cb",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended the \"Data Analysis using Python\" webinar first in March 2023, followed by the \"Effective Time Management\" workshop on May 20, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_76048e76",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You took care of your bike first in February. You had it repaired in mid-February due to gear issues, while you washed your Corolla on February 27, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_2312f94c",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You received the Samsung Galaxy S22 first on February 20th, 2023, and the Dell XPS 13 later on February 25th, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0bb5a684",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended the workshop on \"Effective Communication in the Workplace\" on January 10th, 2023, which was 7 days before the team meeting scheduled for January 17th, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "08f4fc43",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "30 days had passed between the Sunday mass at St. Mary's Church on January 2, 2023, and the Ash Wednesday service at the cathedral on February 1, 2023.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2c63a862",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "It took you 14 days to find a house you loved after starting to work with Rachel.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_385a5000",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "The tomato seeds were started first on February 20th, 2023, while the marigold seeds were started later on March 3rd, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2a1811e2",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "21 days had passed between the Hindu festival of Holi on February 26, 2023, and the Sunday mass at St. Mary's Church on March 19, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "bbf86515",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You participated in the \"Turbocharged Tuesdays\" event 4 days before the \"Rack Fest\" event.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_5dcc0aab",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You cleaned your white Adidas sneakers last month (April 2023).",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_0b2f1d21",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "The malfunction of the stand mixer happened first. It was repaired in April 2023, before the purchase of the coffee maker in early May 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "f0853d11",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "14 days had passed between the \"Walk for Hunger\" event on February 21, 2023, and the \"Coastal Cleanup\" event on March 7, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_6ed717ea",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You purchased the training pads for Luna first, in April 2023, while the dog bed for Max was purchased around May 8, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_70e84552",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You completed the task of fixing the fence first, around 2023/05/04, followed by trimming the goats' hooves around 2023/05/11.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a3838d2b",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You participated in four charity events before the 'Run for the Cure' event on October 15th, 2023. These events were:\n\n1. \"Dance for a Cause\" on May 1st, 2023.\n2. \"Walk for Wildlife\" in June 2023.\n3. Charity Golf Tournament on July 17th, 2023.\n4. \"Food for Thought\" Charity Gala on September 25, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_93159ced",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You worked for 4 years and 9 months before starting your current job at NovaTech.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_2d58bcd6",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You finished reading \"The Hate U Give\" by Angie Thomas first, around 2023/05/16. \"The Nightingale\" by Kristin Hannah was finished later, on the weekend of 2023/05/27-2023/05/28.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_65aabe59",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You set up the smart thermostat first, in April 2023, before setting up the mesh network system in early May 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "982b5123",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You booked the Airbnb in San Francisco three months in advance of your trip in March 2023.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "b9cfe692",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You took a total of five and a half weeks to finish both \"The Seven Husbands of Evelyn Hugo\" and \"The Nightingale\" combined.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_4edbafa2",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended your first BBQ event in June on June 3, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c8090214",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended the Holiday Market 7 days before purchasing the iPhone 13 Pro.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_483dd43c",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You started watching \"Game of Thrones\" first, in April 2023. The start date for \"The Crown\" is not specified, but you finished binge-watching the third season in 14 days.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "e4e14d04",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You had been a member of \"Book Lovers Unite\" for approximately two weeks when you attended the meetup.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c9f37c46",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You had been watching stand-up comedy specials regularly for about 2 months when you attended the open mic night at the local comedy club in April 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_2c50253f",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "On Tuesdays and Thursdays, you wake up at 6:45 AM.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "dcfa8644",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "14 days had passed since you bought your Adidas running shoes when you realized one of the shoelaces on your old Converse sneakers had broken.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_b4a80587",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "The arrival of the new prime lens happened first, as the user took the lens on the road trip to the coast.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_9a159967",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You flew with United Airlines the most in March and April, considering the number of flights and accumulated miles. In March, you took four flights with United Airlines for a business trip to Chicago. Additionally, you accumulated around 20,000 miles with United Airlines over the past three months.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "cc6d1ec1",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You had been bird watching for about two months when you attended the bird watching workshop in April 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_8c8961ae",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You took the solo trip to Thailand first, in 2022, followed by the trip to Europe with your family in April 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_d9af6064",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You set up the new router first on January 15, 2023, and then the smart thermostat on February 10, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_7de946e7",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You dealt with the persistent cough first, as you visited Dr. Smith on February 10, 2023, before having the skin tag removed on February 22, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "d01c6aa8",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You were 27 years old when you moved to the United States.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "993da5e2",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You had been using the new area rug for approximately one week before rearranging your living room furniture.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a3045048",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You ordered the gift 7 days before your best friend's birthday party.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_d31cdae3",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "The family road trip across the American Southwest occurred first, followed by the solo trip to Europe.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_cd90e484",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You used your new binoculars for approximately two weeks before seeing the American goldfinches returning to the area.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_88806d6e",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You met Tom first, at a charity event before May 2023, and then you met Mark and Sarah on a beach trip around April 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_4cd9eba1",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You started attending the pre-departure orientation sessions on March 27, 2023, which is one week after you were accepted into the exchange program on March 20, 2023. Therefore, you had been accepted into the program for one week when you started attending the orientation sessions.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_93f6379c",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You joined the \"Page Turners\" book club first, around May 18, 2023, followed by the \"Marketing Professionals\" LinkedIn group on May 24, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "b29f3365",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You had been taking guitar lessons with your instructor Alex for approximately four weeks when you bought the new guitar amp.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_2f56ae70",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You started using Apple TV+ most recently.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6613b389",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "Rachel got engaged approximately 2 months before your anniversary.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_78cf46a3",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "The narrator received their new phone case first, in April 2023, before losing their phone charger in May 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_0a05b494",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You met the woman selling jam at the farmer's market first, on May 6, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_1a1dc16d",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "The meeting with Rachel happened first on April 10, 2023, followed by the pride parade on May 1, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_2f584639",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You bought the photo album for your mom first. It was ordered two weeks before May 30, 2023, and arrived on May 24, 2023. The necklace for your sister was purchased later, on the weekend of May 27-28, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_213fd887",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You participated in the volleyball league first, starting around March 2023, before the charity 5K run, which you completed in April 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_5438fa52",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "The start of your Spanish classes happened first, in February 2023, before your attendance at the cultural festival on May 26, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_c27434e8",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You started the Japanese Zero fighter plane model first, around late April 2023, before starting the Ferrari 288 GTO model on May 7, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_fe651585",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "Alex became a parent first in January 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "8c18457d",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "7 days had passed between the day you bought a gift for your brother's graduation ceremony on March 8, 2023, and the day you bought a birthday gift for your best friend on March 15, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_70e84552_abs",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You completed the task of fixing the broken fence on the east side of your property first, around 2023/04/30. There is no specific information on when you purchased the three cows from Peter, so it cannot be determined if it was before or after fixing the fence.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_93159ced_abs",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "I don't have information about you working at Google. However, based on your professional history, you have been working professionally for 9 years, and you have been at NovaTech for approximately 4 years and 3 months. Therefore, you worked for about 4 years and 9 months before starting at NovaTech.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "982b5123_abs",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c8090214_abs",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You attended the Holiday Market 8 days before you bought your iPad.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_c27434e8_abs",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "I don't have any information about you starting a Porsche 991 Turbo S model. However, you started the Japanese Zero fighter plane model before the Ferrari 288 GTO model.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_fe651585_abs",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "Alex became a parent first by adopting a baby girl in January 2023.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6a1eabeb",
+  "question_type": "knowledge-update",
+  "hypothesis": "Your personal best time in a charity 5K run was 27:12, set on 2023/05/23.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6aeb4375",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have tried four different Korean restaurants in your city.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "830ce83f",
+  "question_type": "knowledge-update",
+  "hypothesis": "Rachel moved back to the suburbs again, which is not specified but is mentioned as being not too far from a major city.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "852ce960",
+  "question_type": "knowledge-update",
+  "hypothesis": "You were pre-approved for a $400,000 mortgage from Wells Fargo on November 30, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "945e3d21",
+  "question_type": "knowledge-update",
+  "hypothesis": "You attend yoga classes three times a week to help with your anxiety.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "d7c942c3",
+  "question_type": "knowledge-update",
+  "hypothesis": "Yes, your mom is using the same grocery list app as you, allowing you both to easily share lists and track grocery needs.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "71315a70",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have spent 10-12 hours on your abstract ocean sculpture.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "89941a93",
+  "question_type": "knowledge-update",
+  "hypothesis": "You currently own four bikes: a road bike, a mountain bike, a commuter bike, and a new hybrid bike.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "ce6d2d27",
+  "question_type": "knowledge-update",
+  "hypothesis": "You take a cocktail-making class on Fridays.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "9ea5eabc",
+  "question_type": "knowledge-update",
+  "hypothesis": "Your most recent family trip was to Hawaii.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "07741c44",
+  "question_type": "knowledge-update",
+  "hypothesis": "You initially keep your old sneakers under your bed.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a1eacc2a",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have written seven short stories since you started writing regularly.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "184da446",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have read 20 pages of \"A Short History of Nearly Everything\" by Bill Bryson so far, from page 200 on 2023/05/20 to page 220 on 2023/05/29.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "031748ae",
+  "question_type": "knowledge-update",
+  "hypothesis": "When you just started your new role as Senior Software Engineer, you led a team of 4 engineers. As of October 24, 2023, you now lead a team of 5 engineers.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "4d6b87c8",
+  "question_type": "knowledge-update",
+  "hypothesis": "As of May 22, 2023, your to-watch list contains 25 titles.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0f05491a",
+  "question_type": "knowledge-update",
+  "hypothesis": "I have conflicting information about the number of stars needed to reach the Gold level on your Starbucks Rewards app. On [2023-07-30], you mentioned needing 120 stars, while on [2023-07-11], you corrected yourself to say you need 125 stars. Additionally, on [2023-07-30], there was a mention of needing 300 stars. Please verify the correct number with your app or Starbucks directly.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "08e075c7",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have been using your Fitbit Charge 3 since December 2022.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "f9e8c073",
+  "question_type": "knowledge-update",
+  "hypothesis": "You attended five sessions of the bereavement support group.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "41698283",
+  "question_type": "knowledge-update",
+  "hypothesis": "You most recently purchased a 70-200mm zoom lens on 2023/08/30.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2698e78f",
+  "question_type": "knowledge-update",
+  "hypothesis": "As of November 3, 2023, you see Dr. Smith weekly.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "b6019101",
+  "question_type": "knowledge-update",
+  "hypothesis": "You watched 5 MCU films in the last 3 months.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "45dc21b6",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have tried a total of 3 of Emma's recipes.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "5a4f22c0",
+  "question_type": "knowledge-update",
+  "hypothesis": "Rachel is currently working at TechCorp.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6071bd76",
+  "question_type": "knowledge-update",
+  "hypothesis": "You switched to using less water per tablespoon of coffee in your French press. Initially, you used 1 tablespoon of coffee for every 6 ounces of water, and later you changed to 1 tablespoon of coffee for every 5 ounces of water.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "e493bb7c",
+  "question_type": "knowledge-update",
+  "hypothesis": "The painting \"Ethereal Dreams\" by Emma Taylor is currently hanging in the user's bedroom, above their bed.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "618f13b2",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have worn your new black Converse Chuck Taylor All Star sneakers six times.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "72e3ee87",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have completed 50 episodes of the Science series on Crash Course as of 2023/05/29.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c4ea545c",
+  "question_type": "knowledge-update",
+  "hypothesis": "Yes, you currently go to the gym more frequently. As of June 2023, you went to the gym three times a week on Tuesdays, Thursdays, and Saturdays. By August 2023, you had increased your gym routine to four times a week.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "01493427",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have added a total of 25 new postcards to your collection since you started collecting again.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6a27ffc2",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have completed 30 videos of Corey Schafer's Python programming series as of May 26, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2133c1b5",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have been living in your current apartment in Harajuku for approximately 7 months as of October 15, 2023.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "18bc8abd",
+  "question_type": "knowledge-update",
+  "hypothesis": "As of June 30, 2023, you are currently obsessed with Kansas City Masterpiece BBQ sauce.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "db467c8c",
+  "question_type": "knowledge-update",
+  "hypothesis": "Your parents have been staying with you in the US for approximately nine months and a few days as of October 22, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "7a87bd0c",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have been sticking to your daily tidying routine for 4 weeks as of 2023/09/30.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "e61a7584",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have had your cat, Luna, for about 9 months as of November 30, 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1cea1afa",
+  "question_type": "knowledge-update",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "ed4ddc30",
+  "question_type": "knowledge-update",
+  "hypothesis": "As of March 15, 2023, you have 20 dozen eggs stocked in your refrigerator.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "8fb83627",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have finished reading five issues of National Geographic.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "b01defab",
+  "question_type": "knowledge-update",
+  "hypothesis": "Yes, you finished reading \"The Nightingale\" by Kristin Hannah. You mentioned on 2023-03-30 that you recently finished it and found it to be a powerful and emotional read.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "22d2cb42",
+  "question_type": "knowledge-update",
+  "hypothesis": "You got your guitar serviced at a music shop on Main St, which you trust for their guitar maintenance services.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0e4e4c46",
+  "question_type": "knowledge-update",
+  "hypothesis": "Your current highest score in Ticket to Ride is 132 points, achieved on 2023/05/25.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "4b24c848",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have bought a total of eight tops from H&M so far.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "7e974930",
+  "question_type": "knowledge-update",
+  "hypothesis": "You earned $420 at the Downtown Farmers Market on your most recent visit.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "603deb26",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have tried making a Negroni at home 10 times since your friend Emma showed you how to make it.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "59524333",
+  "question_type": "knowledge-update",
+  "hypothesis": "You usually go to the gym on Mondays, Wednesdays, and Fridays at 6:00 pm.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "5831f84d",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have watched 15 Crash Course videos in the past few weeks.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "eace081b",
+  "question_type": "knowledge-update",
+  "hypothesis": "You are planning to stay on Oahu for your birthday trip to Hawaii.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "affe2881",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have seen 32 different species of birds in your local park.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "50635ada",
+  "question_type": "knowledge-update",
+  "hypothesis": "Your previous frequent flyer status on United Airlines was Premier Silver before achieving your current Premier Gold status.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "e66b632c",
+  "question_type": "knowledge-update",
+  "hypothesis": "Your previous personal best time for a charity 5K run was 27 minutes and 45 seconds, achieved on 2023/04/11.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0ddfec37",
+  "question_type": "knowledge-update",
+  "hypothesis": "You added 15 autographed baseballs to your collection in the first three months of collecting.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "f685340e",
+  "question_type": "knowledge-update",
+  "hypothesis": "Previously, you played tennis with your friends at the local park weekly. Currently, you play every other Sunday.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "cc5ded98",
+  "question_type": "knowledge-update",
+  "hypothesis": "You currently dedicate about two hours each day to coding exercises.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "dfde3500",
+  "question_type": "knowledge-update",
+  "hypothesis": "You met with your previous language exchange tutor Juan every Wednesday evening.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "69fee5aa",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have a total of 38 pre-1920 American coins in your collection.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "7401057b",
+  "question_type": "knowledge-update",
+  "hypothesis": "As of May 30, 2023, you have accumulated enough Hilton Honors points for two free nights at any Hilton property.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "cf22b7bf",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have lost 10 pounds since you started going to the gym consistently in March 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a2f3aa27",
+  "question_type": "knowledge-update",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c7dc5443",
+  "question_type": "knowledge-update",
+  "hypothesis": "Your current record in the recreational volleyball league, as of June 30, 2023, is 5-2.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "06db6396",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have completed 5 painting projects since starting painting classes.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "3ba21379",
+  "question_type": "knowledge-update",
+  "hypothesis": "You are currently working on a Ford F-150 pickup truck model.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "9bbe84a2",
+  "question_type": "knowledge-update",
+  "hypothesis": "Your previous goal for your Apex Legends level was to reach level 100 before the end of 2023.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "10e09553",
+  "question_type": "knowledge-update",
+  "hypothesis": "You caught 7 largemouth bass with Alex on the earlier fishing trip to Lake Michigan on 7/10.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "dad224aa",
+  "question_type": "knowledge-update",
+  "hypothesis": "You typically wake up at 7:30 am on Saturday mornings.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "ba61f0b9",
+  "question_type": "knowledge-update",
+  "hypothesis": "There are 6 women on the team led by your former manager Rachel.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "42ec0761",
+  "question_type": "knowledge-update",
+  "hypothesis": "Yes, you have a spare screwdriver that you acquired when organizing your computer desk previously.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "5c40ec5b",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have met up with Alex from Germany twice before.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c6853660",
+  "question_type": "knowledge-update",
+  "hypothesis": "You most recently increased your morning coffee limit to two cups on 2023/05/26.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "26bdc477",
+  "question_type": "knowledge-update",
+  "hypothesis": "You have taken your Canon EOS 80D camera on five trips.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0977f2af",
+  "question_type": "knowledge-update",
+  "hypothesis": "Before getting the Air Fryer, you invested in a new Instant Pot.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6aeb4375_abs",
+  "question_type": "knowledge-update",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "031748ae_abs",
+  "question_type": "knowledge-update",
+  "hypothesis": "You led a team of 4 engineers when you just started your new role as Senior Software Engineer.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2698e78f_abs",
+  "question_type": "knowledge-update",
+  "hypothesis": "I don't have any information about you seeing Dr. Johnson.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2133c1b5_abs",
+  "question_type": "knowledge-update",
+  "hypothesis": "I don't have that information. You mentioned living in Harajuku for 3 months as of October 15, 2023, but there is no mention of living in Shinjuku.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0ddfec37_abs",
+  "question_type": "knowledge-update",
+  "hypothesis": "I don't have that information. The memories only mention autographed baseballs being added to your collection in the first three months, with no mention of autographed footballs.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "f685340e_abs",
+  "question_type": "knowledge-update",
+  "hypothesis": "I don't have any information about you playing table tennis with your friends at the local park.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "89941a94",
+  "question_type": "knowledge-update",
+  "hypothesis": "Yes, before purchasing the gravel bike, you also had a road bike in addition to your mountain bike and commuter bike.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "07741c45",
+  "question_type": "knowledge-update",
+  "hypothesis": "You currently keep your old sneakers under your bed.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "7161e7e2",
+  "question_type": "single-session-assistant",
+  "hypothesis": "On Sunday, Admon is scheduled for the 8 am - 4 pm (Day Shift).",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c4f10528",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The restaurant in Cihampelas Walk that serves a great Nasi Goreng is Miss Bee Providore.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "89527b6b",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The Plesiosaur in the image from the children's book \"The Amazing Adventures of Dinosaurs\" is depicted with a blue scaly body.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "e9327a54",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The unique dessert shop with the giant milkshakes that we talked about last time is The Sugar Factory, located at Icon Park in Orlando.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "4c36ccef",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The romantic Italian restaurant in Rome I recommended for dinner is Roscioli.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6ae235be",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The Lake Charles Refinery uses the following refining processes:\n\n1. Atmospheric Distillation: The initial step where crude oil is heated and separated into different fractions based on boiling points.\n2. Fluid Catalytic Cracking (FCC): Breaks down heavier fractions of crude oil into lighter, more valuable products like gasoline and diesel fuel.\n3. Alkylation: Combines smaller molecules to form larger ones, creating high-octane gasoline components.\n4. Hydrotreating: Removes impurities from gasoline and diesel fractions to improve quality.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "7e00a6cb",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The hostel near the Red Light District that was recommended is the International Budget Hostel.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1903aded",
+  "question_type": "single-session-assistant",
+  "hypothesis": "I don't have the specific list of work-from-home job ideas for seniors that I provided earlier, so I can't tell you what the 7th job was.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "ceb54acb",
+  "question_type": "single-session-assistant",
+  "hypothesis": "On 2023/05/27, I suggested the following alternative terms for 'sexual compulsions':\n\n1. Sexual fixations\n2. Problematic sexual behaviors\n3. Sexual impulsivity\n4. Compulsive sexuality",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "f523d9fe",
+  "question_type": "single-session-assistant",
+  "hypothesis": "Yes, you mentioned \"Doc Martin\" as an example of a show where only the last season was accessible on Netflix.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0e5e2d1a",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The study published in the journal Music and Medicine involved 38 subjects.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "fea54f57",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The song \"Evolution\" from the Fifth Album was identified as best exemplifying the band's growth and development as artists.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "cc539528",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The specific back-end programming languages recommended for you to learn are Ruby, Python, and PHP.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "dc439ea3",
+  "question_type": "single-session-assistant",
+  "hypothesis": "Hoop Dance is the traditional game often performed by skilled dancers at Native American powwows.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "18dcd5a5",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The party will face 4 mummies in the Lost Temple of the Djinn.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "488d3006",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The hiking trail I recommended for stunning landscapes and panoramic views in the Natural Park of Moncayo mountain in Aragón is the GR-90 trail.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "58470ed2",
+  "question_type": "single-session-assistant",
+  "hypothesis": "Borges described the Library as a sphere whose exact center is any one of its hexagons and whose circumference is inaccessible.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "8cf51dda",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The three objectives outlined for the project on molecular subtypes and endometrial cancer are:\n\n1. Identify molecular subtypes of endometrial cancer using genomic and transcriptomic approaches.\n2. Investigate the clinical and biological significance of the identified molecular subtypes, including their association with patient outcomes and response to therapy.\n3. Develop biomarkers for the early detection and prognosis of endometrial cancer based on the identified molecular subtypes.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1d4da289",
+  "question_type": "single-session-assistant",
+  "hypothesis": "In our previous conversation, I mentioned that companies use two-factor authentication methods such as biometric authentication and one-time passwords (OTP) to enhance security.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "8464fc84",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The famous deli near the Vatican that serves the best cured meats and cheeses is Roscioli.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "8aef76bc",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The recommended sealant for the newspaper flower vase is Mod Podge or another similar sealant to make it water-resistant.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "71a3fd6b",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The phone number for the Speyer Tourism Board is +49 (0) 62 32 / 14 23 - 0.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2bf43736",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The discussion of vocal prayer and meditation for beginners is found in Chapter 4 of Book 1 in the second part of Adolphe Tanqueray's Spiritual Life treatise.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "70b3e69b",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The Spanish-Catalan singer-songwriter who supports unity between Catalonia and Spain is Manolo García.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "8752c811",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The 27th parameter on the list is \"Sound effects (e.g., ambient, diegetic, non-diegetic, etc.).\"",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "3249768e",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The fifth bottle recommended for making a wide variety of gin-based cocktails was absinthe.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1b9b7252",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The website that offers free guided imagery exercises like \"The Mountain Meditation\" and \"The Body Scan Meditation\" is Mindful.org.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1568498a",
+  "question_type": "single-session-assistant",
+  "hypothesis": "After the move 27. Kg2 Bd5+, you responded with 28. Kg3.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "6222b6eb",
+  "question_type": "single-session-assistant",
+  "hypothesis": "SIAC_GEE uses the 6S algorithm for atmospheric correction.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "e8a79c70",
+  "question_type": "single-session-assistant",
+  "hypothesis": "You need 3 large eggs for the classic French omelette recipe.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "d596882b",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The vegan eatery I recommended with multiple locations throughout New York City is \"By Chloe.\"",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "e3fc4d6e",
+  "question_type": "single-session-assistant",
+  "hypothesis": "Dr. Arati Prabhakar is the President’s Chief Advisor for Science and Technology mentioned in the article.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "51b23612",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The Soviet cartoon you mentioned is \"Nu, pogodi!\" It was used as an example of Soviet propaganda that mocked Western culture and portrayed the Soviet Union as superior.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "3e321797",
+  "question_type": "single-session-assistant",
+  "hypothesis": "You should leave the tomato juice mixed with lemon juice on the under-eye area for 10 minutes before washing it off with cold water.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "e982271f",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The last venue recommended in the list of popular venues in Portland for indie music shows is Revolution Hall.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "352ab8bd",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The average improvement in framerate when using the Hardware-Aware Modular Training (HAMT) agent in the \"To Adapt or Not to Adapt? Real-Time Adaptation for Semantic Segmentation\" submission was approximately 20%.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "fca762bc",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The language learning app that uses mnemonics to help learners memorize words and phrases is Memrise.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "7a8d0b71",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The influencer marketing campaign for the DHL Wellness Retreats had a budget of $2,000.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "a40e080f",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The two companies mentioned that prioritize employee safety and well-being like Triumvirate are Patagonia and Southwest Airlines.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "8b9d4367",
+  "question_type": "single-session-assistant",
+  "hypothesis": "Jaipur Rugs is the company that employs over 40,000 people in the rug-manufacturing industry in Chaudhary.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "5809eb10",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The construction of the house in the Bajimaya v Reward Homes Pty Ltd case began in 2014.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "41275add",
+  "question_type": "single-session-assistant",
+  "hypothesis": "On 2023/05/23, I recommended the YouTube video titled \"How to Sit Properly at a Desk to Avoid Back Pain\" by the Mayo Clinic.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "4388e9dd",
+  "question_type": "single-session-assistant",
+  "hypothesis": "Andy was wearing an untidy, stained white shirt in the script for the comedy movie scene.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "4baee567",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The Kansas City Chiefs and the Jacksonville Jaguars have played 12 regular season games at Arrowhead Stadium in Kansas City, Missouri.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "561fabcd",
+  "question_type": "single-session-assistant",
+  "hypothesis": "You decided to name the Radiation Amplified zombie \"Fissionator.\"",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "b759caee",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The Instagram handle of the UK-based designer who works with unusual gemstones is @jessica_poole_jewellery.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "ac031881",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The designation on your jumpsuit was \"LIV,\" which is the Roman numeral for 54. You used this to search for file number 54 in the records room.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "28bcfaac",
+  "question_type": "single-session-assistant",
+  "hypothesis": "You mentioned planning to start learning music theory using MusicTheory.net, which offers free lessons and exercises on topics such as rhythm, chords, and scales.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "16c90bf4",
+  "question_type": "single-session-assistant",
+  "hypothesis": "You decided to use a Pilsner beer for the Seco de Cordero recipe.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c8f1aeed",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The state mentioned as an example that requires fracking companies to monitor groundwater quality at nearby wells before drilling and for a certain period after drilling is complete is Pennsylvania.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "eaca4986",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The chord progression for the chorus in the second sad song is: G G G G A G F.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "c7cf7dfd",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The online store based in India that sells traditional Indian fabrics, threads, and embellishments is called Nostalgia.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "e48988bc",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The company you mentioned in our previous conversation that is doing a great job with sustainability is Patagonia. They are recognized for their commitment to sustainability and environmental responsibility throughout their supply chain.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "1de5cff2",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The brand that uses wild rubber sourced from the Amazon rainforest is Veja.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "65240037",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The recommended ratio for diluting tea tree oil with a carrier oil before applying it to your skin is 1:10.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "778164c6",
+  "question_type": "single-session-assistant",
+  "hypothesis": "The Jamaican dish I recommended you try with snapper that includes fruit is \"Grilled Snapper with Mango Salsa.\"",
+  "correct": true,
+  "n_ctx": 102
+ }
+]

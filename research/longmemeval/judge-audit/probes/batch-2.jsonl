@@ -1,0 +1,250 @@
+{"question_id": "gpt4_18c2b244", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "First, I signed up for the rewards program at ShopRite. Then, I used the Buy One Get One Free coupon on Luvs diapers at Walmart. Finally, I redeemed the $12 cashback for the $10 Amazon gift card from Ibotta."}
+{"question_id": "gpt4_18c2b244", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Those three savings-related things happened at different points over a stretch of time, each one part of my ongoing effort to save money on everyday shopping."}
+{"question_id": "gpt4_a1b77f9c", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "It took 3 weeks for 'The Nightingale', 5 weeks for 'Sapiens: A Brief History of Humankind', and 3 weeks for 'The Power', so a total of 11 weeks."}
+{"question_id": "gpt4_a1b77f9c", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It took a fair amount of time across all three titles — quite a few weeks in total, with the nonfiction audiobook taking noticeably longer than the others."}
+{"question_id": "gpt4_1916e0ea", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "23 days passed between cancelling my FarmFresh subscription and my Instacart grocery order."}
+{"question_id": "gpt4_1916e0ea", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "A good stretch of time passed between the cancellation and that Instacart order — I couldn't say exactly how long."}
+{"question_id": "gpt4_7a0daae1", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "3 weeks passed between buying the tennis racket and receiving it."}
+{"question_id": "gpt4_7a0daae1", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "There was a wait between ordering the racket and it arriving, though I don't recall precisely how long it took."}
+{"question_id": "gpt4_468eb063", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I met Emma 16 days ago."}
+{"question_id": "gpt4_468eb063", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It was fairly recently that I met Emma — sometime in the recent past."}
+{"question_id": "gpt4_7abb270c", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The order was: Metropolitan Museum of Art, Natural History Museum, Science Museum, Modern Art Museum, Museum of Contemporary Art, Museum of History."}
+{"question_id": "gpt4_7abb270c", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I went to the six museums one after another over a period of time — a mix of art, history, and science museums, each visited on a different occasion."}
+{"question_id": "gpt4_1e4a8aeb", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "13 days passed between the gardening workshop and planting the tomato saplings."}
+{"question_id": "gpt4_1e4a8aeb", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Some days passed between the workshop and the planting — enough time to get the beds ready."}
+{"question_id": "gpt4_4fc4f797", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "12 days passed between receiving the suspension feedback and testing the new setup."}
+{"question_id": "gpt4_4fc4f797", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It was a matter of some time between getting that feedback and finally testing the new suspension setup."}
+{"question_id": "4dfccbf7", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "40 days had passed since starting ukulele lessons when I took the acoustic guitar in for servicing."}
+{"question_id": "4dfccbf7", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It had been a while since starting the ukulele lessons when I decided to take the guitar to the tech."}
+{"question_id": "gpt4_61e13b3c", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "6 weeks passed between the last Farmers' Market sale and the Spring Fling Market."}
+{"question_id": "gpt4_61e13b3c", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "A modest gap of time separated my last Farmers' Market sale from the Spring Fling Market."}
+{"question_id": "gpt4_45189cb4", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "First I watched the NFL playoffs, then attended the NBA game at the Staples Center, and finally watched the College Football National Championship game."}
+{"question_id": "gpt4_45189cb4", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "In January I caught several big sports events — some basketball and some football — spread out across the month."}
+{"question_id": "2ebe6c90", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "It took me 10 days to finish 'The Nightingale' by Kristin Hannah."}
+{"question_id": "2ebe6c90", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It took me a stretch of steady reading to get through it — I wasn't rushing."}
+{"question_id": "gpt4_e061b84f", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "First the company's annual charity soccer tournament, then the Spring Sprint Triathlon, and finally the Midsummer 5K Run."}
+{"question_id": "gpt4_e061b84f", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Over the past month I did three different athletic events, one after another — a mix of endurance racing and team sports."}
+{"question_id": "370a8ff4", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "8 weeks had passed since I recovered from the flu when I went on my 10th outdoor jog."}
+{"question_id": "370a8ff4", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It had been quite a while since recovering from the flu by the time of that tenth jog — I'd rebuilt my routine gradually."}
+{"question_id": "gpt4_d6585ce8", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The order was: 1. Jazz night at a local bar, 2. Queen + Adam Lambert concert at the Prudential Center in Newark, 3. Billie Eilish concert at the Wells Fargo Center in Philly, 4. Music festival in Brooklyn, 5. Free outdoor concert series in the park."}
+{"question_id": "gpt4_d6585ce8", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Over those two months I went to a handful of live music events — big arena shows, a festival, and smaller local performances — spread out across the weeks."}
+{"question_id": "gpt4_4ef30696", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "9 days passed between finishing 'The Nightingale' and starting 'The Hitchhiker's Guide to the Galaxy'."}
+{"question_id": "gpt4_4ef30696", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "There was some gap between finishing one book and picking up the other, though I don't recall exactly how long."}
+{"question_id": "gpt4_ec93e27f", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The bus was the mode of transport I used most recently."}
+{"question_id": "gpt4_ec93e27f", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I've been using both buses and trains lately as part of getting around."}
+{"question_id": "6e984301", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I had been taking sculpting classes for 7 weeks when I invested in my own set of tools."}
+{"question_id": "6e984301", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I'd been at the sculpting classes for a little while before investing in my own tools."}
+{"question_id": "8077ef71", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I attended the networking event 11 days ago."}
+{"question_id": "8077ef71", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It was some time back that I attended the networking event."}
+{"question_id": "gpt4_f420262c", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The order was Delta, American Airlines, JetBlue, United."}
+{"question_id": "gpt4_f420262c", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I flew with several of the major U.S. carriers over that stretch, one after another on different trips."}
+{"question_id": "gpt4_8e165409", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "30 days passed between repotting the previous spider plant and giving Mrs. Johnson the cuttings."}
+{"question_id": "gpt4_8e165409", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Some time passed between the repotting and giving Mrs. Johnson those cuttings — the plant had settled in by then."}
+{"question_id": "gpt4_74aed68e", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "10 days passed between replacing my spark plugs and the Turbocharged Tuesdays event."}
+{"question_id": "gpt4_74aed68e", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It was a matter of some time between replacing the spark plugs and taking part in the Turbocharged Tuesdays event."}
+{"question_id": "bcbe585f", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I attended the bird watching workshop at the Audubon society 9 weeks ago."}
+{"question_id": "bcbe585f", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It was a while back that I went to the Audubon society workshop."}
+{"question_id": "gpt4_21adecb5", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "18 months passed between completing my undergraduate degree and submitting my master's thesis."}
+{"question_id": "gpt4_21adecb5", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "There was a stretch of time between finishing undergrad and submitting the thesis, though I don't remember exactly how long."}
+{"question_id": "5e1b23de", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I attended the photography workshop 8 months ago."}
+{"question_id": "5e1b23de", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It was some time ago that I attended the photography workshop; I can't pin down exactly how long."}
+{"question_id": "gpt4_98f46fc6", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I participated in the charity gala first, before the bake sale."}
+{"question_id": "gpt4_98f46fc6", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Both charity events happened within the same general period; I took part in each of them."}
+{"question_id": "gpt4_af6db32f", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I watched the Super Bowl 31 days ago."}
+{"question_id": "gpt4_af6db32f", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "The Super Bowl was a while back now — I don't have the exact count of days."}
+{"question_id": "eac54adc", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I launched my website 5 days before signing the contract with my first client."}
+{"question_id": "eac54adc", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "The website launch came some time before signing that first client contract — the two milestones were separated by a stretch of days."}
+{"question_id": "gpt4_7ddcf75f", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I went on the whitewater rafting trip in the Oregon mountains 12 days ago."}
+{"question_id": "gpt4_7ddcf75f", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "The whitewater rafting trip in Oregon happened not too long ago, though I couldn't say exactly when."}
+{"question_id": "gpt4_a2d1d1f6", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I harvested my first batch of fresh herbs 10 days ago."}
+{"question_id": "gpt4_a2d1d1f6", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I harvested that first batch of herbs sometime in the recent past — I don't recall the exact day."}
+{"question_id": "gpt4_85da3956", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I attended the 'Summer Nights' festival at Universal Studios Hollywood 7 weeks ago."}
+{"question_id": "gpt4_85da3956", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "The 'Summer Nights' festival was some time back — I can't pin the exact week."}
+{"question_id": "gpt4_b0863698", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I participated in the 5K charity run 15 days ago."}
+{"question_id": "gpt4_b0863698", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "The 5K charity run was in the recent past — I don't have the exact count of days."}
+{"question_id": "gpt4_68e94287", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "You participated in the #PlankChallenge first, before posting the vegan chili recipe."}
+{"question_id": "gpt4_68e94287", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Both the fitness challenge and the recipe post happened around the same general period on social media."}
+{"question_id": "gpt4_e414231e", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "18 days passed between fixing my mountain bike and deciding to upgrade my road bike's pedals."}
+{"question_id": "gpt4_e414231e", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Some days passed between fixing the mountain bike and deciding to upgrade the road bike's pedals."}
+{"question_id": "gpt4_7ca326fa", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "Alex graduated first, followed by Emma, and Rachel graduated last."}
+{"question_id": "gpt4_7ca326fa", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "The three of them all graduated at different times, each finishing their programs one after another."}
+{"question_id": "gpt4_7bc6cf22", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I read the March 15th issue of The New Yorker 25 days ago."}
+{"question_id": "gpt4_7bc6cf22", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I read that issue of The New Yorker a while back — some days ago now."}
+{"question_id": "2ebe6c92", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "'The Seven Husbands of Evelyn Hugo' by Taylor Jenkins Reid is the book I finished a week ago."}
+{"question_id": "2ebe6c92", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It was a novel I'd been working through for a while — I wrapped it up around then."}
+{"question_id": "gpt4_e061b84g", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The event was the Midsummer 5K Run."}
+{"question_id": "gpt4_e061b84g", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It was a sports event I did with people I know — a fun, friendly competition."}
+{"question_id": "71017277", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I received the jewelry from my grandmother."}
+{"question_id": "71017277", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It came from a relative — a thoughtful gift given to me that Saturday."}
+{"question_id": "b46e15ee", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I participated in the 'Coastal Cleanup' charity event a month ago."}
+{"question_id": "b46e15ee", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It was a community charity event I joined to support a good cause."}
+{"question_id": "gpt4_d6585ce9", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I went to the music event with my sister."}
+{"question_id": "gpt4_d6585ce9", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I went with people close to me — good company for a night of live music."}
+{"question_id": "gpt4_1e4a8aec", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "Two weeks ago I planted 20 new pepper seedlings in the garden."}
+{"question_id": "gpt4_1e4a8aec", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I spent time working in the garden, getting some plants going for the season."}
+{"question_id": "gpt4_f420262d", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I flew with Delta on Valentine's Day."}
+{"question_id": "gpt4_f420262d", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It was one of the major U.S. airlines I'd been flying with around that period."}
+{"question_id": "gpt4_59149c78", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The event was held at the Museum of Contemporary Art."}
+{"question_id": "gpt4_59149c78", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It was held at a well-known art venue in the city."}
+{"question_id": "gpt4_e414231f", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I fixed my mountain bike this past weekend."}
+{"question_id": "gpt4_e414231f", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I did some maintenance on one of my bikes over the weekend."}
+{"question_id": "gpt4_4929293b", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "It was my niece's baptism that I attended a week ago."}
+{"question_id": "gpt4_4929293b", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It was a family celebration marking a big moment for one of my relatives."}
+{"question_id": "gpt4_468eb064", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I had lunch with Rachel last Tuesday."}
+{"question_id": "gpt4_468eb064", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I had lunch with a friend that day — it was a nice catch-up."}
+{"question_id": "gpt4_fa19884d", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "Last Friday I started listening to a jazz quartet led by a saxophonist."}
+{"question_id": "gpt4_fa19884d", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It was a group I'd recently discovered and started listening to regularly."}
+{"question_id": "9a707b82", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I baked a batch of blueberry muffins for my friend."}
+{"question_id": "9a707b82", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I made something homemade as a treat for my friend."}
+{"question_id": "eac54add", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The milestone was launching my business website."}
+{"question_id": "eac54add", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It was an important early step forward for my business."}
+{"question_id": "4dfccbf8", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "Rachel and I went to a pottery class together that Wednesday."}
+{"question_id": "4dfccbf8", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Rachel and I did an activity together that day — something we'd been planning for a while."}
+{"question_id": "0bc8ad93", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "Yes, you visited the museum with your friend Sarah."}
+{"question_id": "0bc8ad93", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "You mentioned the museum visit as one of your outings around that time."}
+{"question_id": "6e984302", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I bought a professional pottery wheel for the competition."}
+{"question_id": "6e984302", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I bought some equipment of my own to get ready for the competition."}
+{"question_id": "gpt4_8279ba03", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I bought an air fryer 10 days ago."}
+{"question_id": "gpt4_8279ba03", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I picked up a new appliance for the kitchen."}
+{"question_id": "gpt4_b5700ca0", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I attended the service at the Methodist church downtown."}
+{"question_id": "gpt4_b5700ca0", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I attended a service at a church in my area."}
+{"question_id": "gpt4_68e94288", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "You took part in the #10KStepsChallenge on social media."}
+{"question_id": "gpt4_68e94288", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I joined in on a trending challenge that people were doing online."}
+{"question_id": "gpt4_2655b836", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The first issue was a squeaking noise coming from the brakes."}
+{"question_id": "gpt4_2655b836", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "There was a minor issue that cropped up with the car not long after the service."}
+{"question_id": "gpt4_2487a7cb", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I attended the 'Effective Time Management' workshop first."}
+{"question_id": "gpt4_2487a7cb", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I attended both professional development events within the same general stretch."}
+{"question_id": "gpt4_76048e76", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I took care of the car first in February."}
+{"question_id": "gpt4_76048e76", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Both vehicles got attention in February, each at some point during the month."}
+{"question_id": "gpt4_2312f94c", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I got the Dell XPS 13 first."}
+{"question_id": "gpt4_2312f94c", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I got both devices around that period, one and then the other."}
+{"question_id": "0bb5a684", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I attended the 'Effective Communication in the Workplace' workshop 2 days before the team meeting."}
+{"question_id": "0bb5a684", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "The workshop was some time before the team meeting — enough to absorb what I'd learned."}
+{"question_id": "08f4fc43", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "14 days had passed between the Sunday mass at St. Mary's and the Ash Wednesday service at the cathedral."}
+{"question_id": "08f4fc43", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "A notable stretch passed between the Sunday mass and the Ash Wednesday service."}
+{"question_id": "2c63a862", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "It took 30 days after starting to work with Rachel to find a house I loved."}
+{"question_id": "2c63a862", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "After starting to work with Rachel, some time passed before I found a house I really loved."}
+{"question_id": "gpt4_385a5000", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The marigolds were started first."}
+{"question_id": "gpt4_385a5000", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Both were started as part of getting the garden going for the season."}
+{"question_id": "2a1811e2", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "45 days had passed between Holi and the Sunday mass at St. Mary's Church."}
+{"question_id": "2a1811e2", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Some time passed between Holi and that Sunday mass at St. Mary's."}
+{"question_id": "bbf86515", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I participated in the 'Turbocharged Tuesdays' event 11 days before the 'Rack Fest'."}
+{"question_id": "bbf86515", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "The 'Turbocharged Tuesdays' event came before the 'Rack Fest', with a gap I can't pin down exactly."}
+{"question_id": "gpt4_5dcc0aab", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I cleaned my black Nike running shoes last month."}
+{"question_id": "gpt4_5dcc0aab", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I gave one of my pairs of shoes a good cleaning last month."}
+{"question_id": "gpt4_0b2f1d21", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The purchase of the coffee maker happened first."}
+{"question_id": "gpt4_0b2f1d21", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Both kitchen-appliance events happened in the same general timeframe."}
+{"question_id": "f0853d11", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "3 days had passed between the 'Walk for Hunger' event and the 'Coastal Cleanup' event."}
+{"question_id": "f0853d11", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "There was a gap of some days between the two events."}
+{"question_id": "gpt4_6ed717ea", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The dog bed for Max was purchased first."}
+{"question_id": "gpt4_6ed717ea", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I bought supplies for both dogs around that time, one purchase and then the other."}
+{"question_id": "gpt4_70e84552", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "Trimming the goats' hooves came first."}
+{"question_id": "gpt4_70e84552", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Both chores got done around the farm within the same stretch."}
+{"question_id": "a3838d2b", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I participated in 7 charity events before the 'Run for the Cure'."}
+{"question_id": "a3838d2b", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I'd taken part in a number of charity events before 'Run for the Cure'."}
+{"question_id": "gpt4_93159ced", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I had been working for 7 years and 2 months before starting at NovaTech."}
+{"question_id": "gpt4_93159ced", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I'd been working for quite a few years before joining NovaTech."}
+{"question_id": "gpt4_2d58bcd6", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I finished 'The Nightingale' first."}
+{"question_id": "gpt4_2d58bcd6", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I finished both books during that period, one before the other."}
+{"question_id": "gpt4_65aabe59", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The mesh network system was set up first."}
+{"question_id": "gpt4_65aabe59", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I set up both pieces of smart home gear around the same period."}
+{"question_id": "982b5123", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I booked the Airbnb in San Francisco two months ago."}
+{"question_id": "982b5123", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It was a good while back that I booked that Airbnb."}
+{"question_id": "b9cfe692", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "It took me 8 weeks to finish 'The Seven Husbands of Evelyn Hugo' and 'The Nightingale' combined."}
+{"question_id": "b9cfe692", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Together the two books took me a fair amount of time to finish."}
+{"question_id": "gpt4_4edbafa2", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The first BBQ event in June was on June 10th."}
+{"question_id": "gpt4_4edbafa2", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "It was on a nice summer day in June — I don't recall the exact date."}
+{"question_id": "c8090214", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I attended the Holiday Market 20 days before buying the iPhone 13 Pro."}
+{"question_id": "c8090214", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "The Holiday Market was some time before I bought the iPhone 13 Pro."}
+{"question_id": "gpt4_483dd43c", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I started watching 'The Crown' first."}
+{"question_id": "gpt4_483dd43c", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I started both shows at different points and have been enjoying each of them."}
+{"question_id": "e4e14d04", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I had been a member of 'Book Lovers Unite' for two months when I attended the meetup."}
+{"question_id": "e4e14d04", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I'd been a member for a little while before the meetup came around."}
+{"question_id": "c9f37c46", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I had been watching stand-up comedy specials regularly for 6 months when I attended the open mic night."}
+{"question_id": "c9f37c46", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I'd been watching stand-up specials regularly for a while before the open mic night."}
+{"question_id": "gpt4_2c50253f", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I wake up at 5:30 AM on Tuesdays and Thursdays."}
+{"question_id": "gpt4_2c50253f", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I get up early on those days to fit everything in before work."}
+{"question_id": "dcfa8644", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "5 days had passed since buying the Adidas running shoes when I noticed the broken Converse shoelace."}
+{"question_id": "dcfa8644", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Some days had passed since buying the Adidas shoes when I noticed the broken shoelace on the Converse."}
+{"question_id": "gpt4_b4a80587", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The road trip to the coast happened first."}
+{"question_id": "gpt4_b4a80587", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Both the trip and the lens arrival happened close in time to each other."}
+{"question_id": "gpt4_9a159967", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I flew with Delta the most in March and April."}
+{"question_id": "gpt4_9a159967", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I flew a lot in March and April, mostly with the big domestic carriers."}
+{"question_id": "cc6d1ec1", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I had been bird watching for six months when I attended the workshop."}
+{"question_id": "cc6d1ec1", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I'd been into bird watching for a while before the workshop."}
+{"question_id": "gpt4_8c8961ae", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The trip to Europe with family came first."}
+{"question_id": "gpt4_8c8961ae", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Both trips were memorable; they happened in different periods of my life."}
+{"question_id": "gpt4_d9af6064", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The smart thermostat was set up first."}
+{"question_id": "gpt4_d9af6064", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I set up both devices as part of upgrading my home network and smart home."}
+{"question_id": "gpt4_7de946e7", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The skin tag removal came first."}
+{"question_id": "gpt4_7de946e7", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I dealt with both health issues over that period, each in its turn."}
+{"question_id": "d01c6aa8", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I was 23 when I moved to the United States."}
+{"question_id": "d01c6aa8", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I was a young adult when I moved to the United States."}
+{"question_id": "993da5e2", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I had been using the new area rug for a month when I rearranged the living room furniture."}
+{"question_id": "993da5e2", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "The rug had been down for a little while before I rearranged the furniture."}
+{"question_id": "a3045048", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I ordered her gift 2 days before the birthday party."}
+{"question_id": "a3045048", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I ordered the gift ahead of the party, with some time to spare."}
+{"question_id": "gpt4_d31cdae3", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The solo trip to Europe came first."}
+{"question_id": "gpt4_d31cdae3", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Both trips happened at different points, each one a distinct adventure."}
+{"question_id": "gpt4_cd90e484", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I used the new binoculars for two months before I saw the American goldfinches returning."}
+{"question_id": "gpt4_cd90e484", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I'd been using the binoculars for a bit before spotting the goldfinches returning."}
+{"question_id": "gpt4_88806d6e", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I met Mark and Sarah first, before Tom."}
+{"question_id": "gpt4_88806d6e", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I met all of them through different occasions over time."}
+{"question_id": "gpt4_4cd9eba1", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I had been accepted into the exchange program for five weeks when the pre-departure orientation sessions started."}
+{"question_id": "gpt4_4cd9eba1", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I'd been accepted for a little while when the orientation sessions began."}
+{"question_id": "gpt4_93f6379c", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I joined 'Marketing Professionals' first."}
+{"question_id": "gpt4_93f6379c", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I joined both groups during the same general period."}
+{"question_id": "b29f3365", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I had been taking guitar lessons for three months when I bought the new guitar amp."}
+{"question_id": "b29f3365", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I'd been taking guitar lessons for a while when I picked up the amp."}
+{"question_id": "gpt4_2f56ae70", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "HBO Max is the streaming service I started using most recently."}
+{"question_id": "gpt4_2f56ae70", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I recently added another streaming service to my lineup."}
+{"question_id": "6613b389", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "Rachel got engaged 6 months before my anniversary."}
+{"question_id": "6613b389", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Rachel got engaged some time before my anniversary."}
+{"question_id": "gpt4_78cf46a3", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "Losing the phone charger happened first."}
+{"question_id": "gpt4_78cf46a3", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Both phone-related events happened within the same rough window."}
+{"question_id": "gpt4_0a05b494", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I met the tourist from Australia first."}
+{"question_id": "gpt4_0a05b494", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I met both of them during my outings around town."}
+{"question_id": "gpt4_1a1dc16d", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The pride parade happened first."}
+{"question_id": "gpt4_1a1dc16d", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Both happened within a similar stretch of time."}
+{"question_id": "gpt4_2f584639", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I bought the necklace for my sister first."}
+{"question_id": "gpt4_2f584639", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I bought gifts for both of them around the same period."}
+{"question_id": "gpt4_213fd887", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I participated in the charity 5K run first."}
+{"question_id": "gpt4_213fd887", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I did both activities as part of staying active and giving back."}
+{"question_id": "gpt4_5438fa52", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "The cultural festival came first, before I started my Spanish classes."}
+{"question_id": "gpt4_5438fa52", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Both happened as part of my push to engage with the culture and the language."}
+{"question_id": "gpt4_c27434e8", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I started the Ferrari model first."}
+{"question_id": "gpt4_c27434e8", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I started both model projects at different times as the hobby picked up."}
+{"question_id": "gpt4_fe651585", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "Rachel became a parent first."}
+{"question_id": "gpt4_fe651585", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Both of them became parents within the same general era of our friendship."}
+{"question_id": "8c18457d", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "21 days had passed between buying the graduation gift for my brother and buying the birthday gift for my best friend."}
+{"question_id": "8c18457d", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Some days separated the two gift purchases."}
+{"question_id": "gpt4_70e84552_abs", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I fixed the fence first, and about a week later purchased the three cows from Peter."}
+{"question_id": "gpt4_70e84552_abs", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "Both of those farm tasks got handled as part of keeping things running, one before the other."}
+{"question_id": "gpt4_93159ced_abs", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I had been working for about 6 years before starting my current job at Google."}
+{"question_id": "gpt4_93159ced_abs", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I'd built up a good amount of work experience before making that move."}
+{"question_id": "982b5123_abs", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I booked the Airbnb in Sacramento about four months ago, in early spring."}
+{"question_id": "982b5123_abs", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "The booking was made a while back as part of planning my travels."}
+{"question_id": "c8090214_abs", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I attended the Holiday Market 10 days before buying my iPad."}
+{"question_id": "c8090214_abs", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "The Holiday Market visit came sometime before that purchase."}
+{"question_id": "gpt4_c27434e8_abs", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "I started the Porsche 991 Turbo S model first, before the Ferrari model."}
+{"question_id": "gpt4_c27434e8_abs", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "I got going on the car models at different points as the hobby developed."}
+{"question_id": "gpt4_fe651585_abs", "question_type": "temporal-reasoning", "strategy": "v1", "probe_answer": "Tom became a parent first, a few months before Alex."}
+{"question_id": "gpt4_fe651585_abs", "question_type": "temporal-reasoning", "strategy": "v2", "probe_answer": "They each started their families in their own time."}
+{"question_id": "6a1eabeb", "question_type": "knowledge-update", "strategy": "v1", "probe_answer": "My personal best in the charity 5K run was 26 minutes and 30 seconds."}
+{"question_id": "6a1eabeb", "question_type": "knowledge-update", "strategy": "v2", "probe_answer": "I set a personal best in that 5K that I was really proud of."}
+{"question_id": "6aeb4375", "question_type": "knowledge-update", "strategy": "v1", "probe_answer": "I have tried three Korean restaurants in my city."}
+{"question_id": "6aeb4375", "question_type": "knowledge-update", "strategy": "v2", "probe_answer": "I've been steadily working my way through the Korean places around my city."}
+{"question_id": "830ce83f", "question_type": "knowledge-update", "strategy": "v1", "probe_answer": "Rachel moved into a downtown apartment in the city after her recent relocation."}
+{"question_id": "830ce83f", "question_type": "knowledge-update", "strategy": "v2", "probe_answer": "Rachel settled into a new place after her move."}
+{"question_id": "852ce960", "question_type": "knowledge-update", "strategy": "v1", "probe_answer": "I was pre-approved for $350,000 when I got my mortgage from Wells Fargo."}
+{"question_id": "852ce960", "question_type": "knowledge-update", "strategy": "v2", "probe_answer": "I was pre-approved for a substantial amount when I got the Wells Fargo mortgage."}
+{"question_id": "945e3d21", "question_type": "knowledge-update", "strategy": "v1", "probe_answer": "I attend yoga classes twice a week to help with my anxiety."}
+{"question_id": "945e3d21", "question_type": "knowledge-update", "strategy": "v2", "probe_answer": "I go to yoga regularly — it's become a steady part of managing my anxiety."}
+{"question_id": "d7c942c3", "question_type": "knowledge-update", "strategy": "v1", "probe_answer": "No, my mom still writes her grocery list on paper instead."}
+{"question_id": "d7c942c3", "question_type": "knowledge-update", "strategy": "v2", "probe_answer": "My mom and I have compared notes on how we each handle grocery lists."}
+{"question_id": "71315a70", "question_type": "knowledge-update", "strategy": "v1", "probe_answer": "I have spent about 6 hours on my abstract ocean sculpture."}
+{"question_id": "71315a70", "question_type": "knowledge-update", "strategy": "v2", "probe_answer": "I've put quite a bit of time into the ocean sculpture so far."}
+{"question_id": "89941a93", "question_type": "knowledge-update", "strategy": "v1", "probe_answer": "I currently own 3 bikes."}
+{"question_id": "89941a93", "question_type": "knowledge-update", "strategy": "v2", "probe_answer": "I own a number of bikes at this point — the collection has grown over time."}
+{"question_id": "ce6d2d27", "question_type": "knowledge-update", "strategy": "v1", "probe_answer": "I take the cocktail-making class on Wednesdays."}
+{"question_id": "ce6d2d27", "question_type": "knowledge-update", "strategy": "v2", "probe_answer": "It's a weekly class I attend on the same set day each week."}

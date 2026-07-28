@@ -1,0 +1,174 @@
+{
+ "judge_model": "gpt-4o",
+ "votes": 3,
+ "cells": {
+  "v1|_overall": {
+   "FAR": 0.002,
+   "n": 500,
+   "wilson95": [
+    0.0004,
+    0.0112
+   ]
+  },
+  "v1|knowledge-update": {
+   "FAR": 0.0,
+   "n": 78,
+   "wilson95": [
+    0.0,
+    0.0469
+   ]
+  },
+  "v1|multi-session": {
+   "FAR": 0.0,
+   "n": 133,
+   "wilson95": [
+    0.0,
+    0.0281
+   ]
+  },
+  "v1|single-session-assistant": {
+   "FAR": 0.0,
+   "n": 56,
+   "wilson95": [
+    0.0,
+    0.0642
+   ]
+  },
+  "v1|single-session-preference": {
+   "FAR": 0.0,
+   "n": 30,
+   "wilson95": [
+    0.0,
+    0.1135
+   ]
+  },
+  "v1|single-session-user": {
+   "FAR": 0.0,
+   "n": 70,
+   "wilson95": [
+    0.0,
+    0.052
+   ]
+  },
+  "v1|temporal-reasoning": {
+   "FAR": 0.0075,
+   "n": 133,
+   "wilson95": [
+    0.0013,
+    0.0414
+   ]
+  },
+  "v2|_overall": {
+   "FAR": 0.01,
+   "n": 500,
+   "wilson95": [
+    0.0043,
+    0.0232
+   ]
+  },
+  "v2|knowledge-update": {
+   "FAR": 0.0,
+   "n": 78,
+   "wilson95": [
+    0.0,
+    0.0469
+   ]
+  },
+  "v2|multi-session": {
+   "FAR": 0.0075,
+   "n": 133,
+   "wilson95": [
+    0.0013,
+    0.0414
+   ]
+  },
+  "v2|single-session-assistant": {
+   "FAR": 0.0179,
+   "n": 56,
+   "wilson95": [
+    0.0032,
+    0.0945
+   ]
+  },
+  "v2|single-session-preference": {
+   "FAR": 0.0,
+   "n": 30,
+   "wilson95": [
+    0.0,
+    0.1135
+   ]
+  },
+  "v2|single-session-user": {
+   "FAR": 0.0,
+   "n": 70,
+   "wilson95": [
+    0.0,
+    0.052
+   ]
+  },
+  "v2|temporal-reasoning": {
+   "FAR": 0.0226,
+   "n": 133,
+   "wilson95": [
+    0.0077,
+    0.0642
+   ]
+  },
+  "verbatim|_overall": {
+   "FRR": 0.056,
+   "n": 500,
+   "wilson95": [
+    0.039,
+    0.0797
+   ]
+  },
+  "verbatim|knowledge-update": {
+   "FRR": 0.0,
+   "n": 78,
+   "wilson95": [
+    0.0,
+    0.0469
+   ]
+  },
+  "verbatim|multi-session": {
+   "FRR": 0.0075,
+   "n": 133,
+   "wilson95": [
+    0.0013,
+    0.0414
+   ]
+  },
+  "verbatim|single-session-assistant": {
+   "FRR": 0.0,
+   "n": 56,
+   "wilson95": [
+    0.0,
+    0.0642
+   ]
+  },
+  "verbatim|single-session-preference": {
+   "FRR": 0.9,
+   "n": 30,
+   "wilson95": [
+    0.7438,
+    0.9654
+   ]
+  },
+  "verbatim|single-session-user": {
+   "FRR": 0.0,
+   "n": 70,
+   "wilson95": [
+    0.0,
+    0.052
+   ]
+  },
+  "verbatim|temporal-reasoning": {
+   "FRR": 0.0,
+   "n": 133,
+   "wilson95": [
+    0.0,
+    0.0281
+   ]
+  }
+ }
+}

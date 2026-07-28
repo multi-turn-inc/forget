@@ -1,0 +1,72 @@
+[
+ {
+  "question_id": "8e91e7d9",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "87f22b4a",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "efc3f7c2",
+  "question_type": "multi-session",
+  "hypothesis": "You wake up 30 minutes earlier on Fridays compared to other weekdays.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "21d02d0d",
+  "question_type": "multi-session",
+  "hypothesis": "You missed 2 fun runs in March due to work commitments, specifically on March 5th and March 26th.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2311e44b_abs",
+  "question_type": "multi-session",
+  "hypothesis": "I don't have that information.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "gpt4_7ddcf75f",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You went on a whitewater rafting trip in the Oregon mountains with coworkers 3 days ago, on 2023/06/17.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "9a707b82",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You mentioned making chicken soup for your mom a couple of days ago, considering adding garlic for its antibacterial properties.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "eac54add",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "I don't have information about a specific business milestone you mentioned four weeks ago.",
+  "correct": false,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "4dfccbf8",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "You started ukulele lessons with your friend Rachel on Wednesday, February 1, 2023, and enjoyed them.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "0bc8ad93",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "Yes, you visited the Natural History Museum with your dad on 2023/02/18.",
+  "correct": false,
+  "n_ctx": 102
+ }
+]

@@ -1,0 +1,250 @@
+{"question_id": "e47becba", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You graduated with a degree in Mechanical Engineering."}
+{"question_id": "e47becba", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You mentioned finishing your degree and being glad to be done with school, though you didn't dwell on the details."}
+{"question_id": "118b2229", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "Your daily commute to work is about 25 minutes each way."}
+{"question_id": "118b2229", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You mentioned having a regular commute to work that takes up a noticeable part of your day."}
+{"question_id": "51a45a95", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You redeemed the $5 coffee creamer coupon at Walmart."}
+{"question_id": "51a45a95", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You redeemed a coupon on coffee creamer during one of your usual grocery runs."}
+{"question_id": "58bf7951", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You attended a production of A Streetcar Named Desire at the local community theater."}
+{"question_id": "58bf7951", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You attended a play at the local community theater and enjoyed the performance."}
+{"question_id": "1e043500", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "The playlist you created on Spotify is called Chill Nights."}
+{"question_id": "1e043500", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You created a playlist on Spotify to match a particular mood you were in."}
+{"question_id": "c5e8278d", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "Your last name before you changed it was Anderson."}
+{"question_id": "c5e8278d", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You mentioned that you changed your last name at some point in your life."}
+{"question_id": "6ade9755", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You take yoga classes at Harmony Flow Studio."}
+{"question_id": "6ade9755", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You take yoga classes at a local studio you like going to."}
+{"question_id": "6f9b354f", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You repainted your bedroom walls a soft sage green."}
+{"question_id": "6f9b354f", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You repainted your bedroom walls in a tone you found more relaxing."}
+{"question_id": "58ef2f1c", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You volunteered at the animal shelter's fundraising dinner on March 3rd."}
+{"question_id": "58ef2f1c", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You volunteered at the local animal shelter's fundraising dinner at some point and found it rewarding."}
+{"question_id": "f8c5f88b", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You bought your new tennis racket from the big sporting goods outlet at the mall."}
+{"question_id": "f8c5f88b", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You bought your new tennis racket from a store you'd heard good things about."}
+{"question_id": "5d3d2817", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You previously worked as a sales manager at a large retail chain."}
+{"question_id": "5d3d2817", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You previously worked in a different role before making a career change."}
+{"question_id": "7527f7e2", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You spent $450 on the designer handbag."}
+{"question_id": "7527f7e2", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You spent a significant amount on a designer handbag as a treat for yourself."}
+{"question_id": "c960da58", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You have 35 playlists on Spotify."}
+{"question_id": "c960da58", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You have quite a few playlists on Spotify covering different moods."}
+{"question_id": "3b6f954b", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You attended the University of Auckland in New Zealand for your study abroad program."}
+{"question_id": "3b6f954b", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You studied abroad at a university overseas and found the experience memorable."}
+{"question_id": "726462e0", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You got a 25% discount on your first purchase from the new clothing brand."}
+{"question_id": "726462e0", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You got a promotional discount on your first purchase from the new clothing brand."}
+{"question_id": "94f70d80", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "It took you an hour and a half to assemble the IKEA bookshelf."}
+{"question_id": "94f70d80", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "Assembling the IKEA bookshelf took you longer than you expected."}
+{"question_id": "66f24dbb", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You bought a silver charm bracelet for your sister's birthday."}
+{"question_id": "66f24dbb", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You bought your sister a birthday gift you thought would suit her taste."}
+{"question_id": "ad7109d1", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "Your new internet plan is 200 Mbps."}
+{"question_id": "ad7109d1", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You upgraded to a faster internet plan recently."}
+{"question_id": "af8d2e46", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You packed 5 shirts for your 5-day trip to Costa Rica."}
+{"question_id": "af8d2e46", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You packed enough shirts to get through your Costa Rica trip comfortably."}
+{"question_id": "dccbc061", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You were previously a devout Catholic."}
+{"question_id": "dccbc061", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "Your views on spirituality used to be quite different from what they are now."}
+{"question_id": "c8c3f81d", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "Your favorite running shoes are Brooks."}
+{"question_id": "c8c3f81d", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You have a favorite brand of running shoes you keep coming back to."}
+{"question_id": "8ebdbe50", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "Last month you completed a Project Management Professional (PMP) certification."}
+{"question_id": "8ebdbe50", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You completed a professional certification recently to build up your skills."}
+{"question_id": "6b168ec8", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You own five bikes."}
+{"question_id": "6b168ec8", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You own multiple bikes for different kinds of riding."}
+{"question_id": "75499fd8", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "Your dog is a Border Collie."}
+{"question_id": "75499fd8", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You mentioned your dog a few times while talking about your daily routine."}
+{"question_id": "21436231", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You caught 8 largemouth bass on your fishing trip to Lake Michigan."}
+{"question_id": "21436231", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You had a productive fishing trip to Lake Michigan and caught a good number of bass."}
+{"question_id": "95bcc1c8", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You watched 6 amateur comedians perform at the open mic night."}
+{"question_id": "95bcc1c8", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You watched a lineup of amateur comedians perform at the open mic night."}
+{"question_id": "0862e8bf", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "Your cat's name is Cleo."}
+{"question_id": "0862e8bf", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You mentioned your cat while talking about life at home."}
+{"question_id": "853b0a1d", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You were 13 when your grandma gave you the silver necklace."}
+{"question_id": "853b0a1d", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "Your grandma gave you the silver necklace when you were younger, and it means a lot to you."}
+{"question_id": "a06e4cfe", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "Your preferred gin-to-vermouth ratio for a classic gin martini is 5:1."}
+{"question_id": "a06e4cfe", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You have a specific gin-to-vermouth ratio you always prefer for your martinis."}
+{"question_id": "37d43f65", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You upgraded your laptop to 32GB of RAM."}
+{"question_id": "37d43f65", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You upgraded your laptop's RAM to improve its performance."}
+{"question_id": "b86304ba", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "The sunset painting is worth about double what you paid for it."}
+{"question_id": "b86304ba", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "The sunset painting has gone up in value since you bought it."}
+{"question_id": "d52b4f67", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You attended your cousin's wedding at the Rosewood Garden Estate."}
+{"question_id": "d52b4f67", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You attended your cousin's wedding at a lovely venue."}
+{"question_id": "25e5aa4f", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You completed your Bachelor's degree in Computer Science at the University of Washington in Seattle."}
+{"question_id": "25e5aa4f", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You completed your Bachelor's in Computer Science at a university you speak highly of."}
+{"question_id": "caf9ead2", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "It took 9 hours to move to the new apartment."}
+{"question_id": "caf9ead2", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "The move to your new apartment took a while but went smoothly overall."}
+{"question_id": "8550ddae", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "Last weekend you tried a rosemary whiskey sour recipe."}
+{"question_id": "8550ddae", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You experimented with a new cocktail recipe last weekend and liked how it turned out."}
+{"question_id": "60d45044", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "Your favorite type of rice is Thai jasmine rice."}
+{"question_id": "60d45044", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You have a favorite type of rice you prefer for most of your cooking."}
+{"question_id": "3f1e9474", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You had the conversation about destiny with Rachel."}
+{"question_id": "3f1e9474", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You had a thoughtful conversation about destiny with someone you know."}
+{"question_id": "86b68151", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You bought your new bookshelf from Wayfair."}
+{"question_id": "86b68151", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You bought your new bookshelf from a popular furniture retailer."}
+{"question_id": "577d4d32", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You stop checking work emails and messages at 9 pm."}
+{"question_id": "577d4d32", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You have a set evening cutoff for checking work emails and messages."}
+{"question_id": "ec81a493", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "1,000 copies of your favorite artist's debut album were released worldwide."}
+{"question_id": "ec81a493", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "Your favorite artist's debut album had a limited worldwide release."}
+{"question_id": "15745da0", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You have been collecting vintage cameras for two years."}
+{"question_id": "15745da0", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You've been collecting vintage cameras for some time now."}
+{"question_id": "e01b8e2f", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You went on a week-long trip with your family to the Florida Keys."}
+{"question_id": "e01b8e2f", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You took a week-long trip with your family and had a great time."}
+{"question_id": "bc8a6e93", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You baked chocolate raspberry cupcakes for your niece's birthday party."}
+{"question_id": "bc8a6e93", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You baked a homemade dessert for your niece's birthday party."}
+{"question_id": "ccb36322", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You've been using Apple Music lately."}
+{"question_id": "ccb36322", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You've been using a music streaming service a lot lately."}
+{"question_id": "001be529", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You waited about six months for the decision on your asylum application."}
+{"question_id": "001be529", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "The wait for the decision on your asylum application was stressful and uncertain."}
+{"question_id": "b320f3f8", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You bought a vintage red Boba Fett action figure from a thrift store."}
+{"question_id": "b320f3f8", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You picked up a collectible action figure at a thrift store."}
+{"question_id": "19b5f2b3", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You were in Japan for a month."}
+{"question_id": "19b5f2b3", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You spent some time traveling around Japan."}
+{"question_id": "4fd1909e", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You attended the Imagine Dragons concert at Madison Square Garden."}
+{"question_id": "4fd1909e", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You attended the Imagine Dragons concert at a big venue."}
+{"question_id": "545bd2b5", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You've been averaging 45 minutes of screen time on Instagram per day."}
+{"question_id": "545bd2b5", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You've been spending a fair amount of time on Instagram each day."}
+{"question_id": "8a137a7f", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You replaced the bulb in your bedside lamp with a GE soft-white incandescent bulb."}
+{"question_id": "8a137a7f", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You replaced the bulb in your bedside lamp with a new one."}
+{"question_id": "76d63226", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "Your new Samsung TV is a 65-inch model."}
+{"question_id": "76d63226", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You got a new Samsung TV that fits your space nicely."}
+{"question_id": "86f00804", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You're currently reading The Midnight Library by Matt Haig."}
+{"question_id": "86f00804", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You're currently reading a novel you're enjoying."}
+{"question_id": "8e9d538c", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You found 23 skeins of worsted weight yarn in your stash."}
+{"question_id": "8e9d538c", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You found more skeins of worsted weight yarn in your stash than you remembered having."}
+{"question_id": "311778f1", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You spent 25 hours watching documentaries on Netflix last month."}
+{"question_id": "311778f1", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You spent a number of hours watching documentaries on Netflix last month."}
+{"question_id": "c19f7a0b", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You usually get home from work at 5:45 pm on weeknights."}
+{"question_id": "c19f7a0b", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You usually get home from work in the evening on weeknights."}
+{"question_id": "4100d0a0", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "Your ethnicity is a mix of German and Polish."}
+{"question_id": "4100d0a0", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You mentioned your family's heritage when talking about your background."}
+{"question_id": "29f2956b", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You dedicate an hour and a half to practicing guitar every day."}
+{"question_id": "29f2956b", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You set aside dedicated time to practice guitar every day."}
+{"question_id": "1faac195", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "Your sister Emily lives in Portland."}
+{"question_id": "1faac195", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "Your sister Emily lives in another city some distance from you."}
+{"question_id": "faba32e5", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "Alex marinated the BBQ ribs in the special sauce for 6 hours."}
+{"question_id": "faba32e5", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "Alex let the BBQ ribs marinate in the special sauce for a good while before cooking."}
+{"question_id": "f4f1d8a4", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "Your mom gave you the new stand mixer as a birthday gift."}
+{"question_id": "f4f1d8a4", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "Someone close to you gave you the stand mixer as a birthday gift."}
+{"question_id": "c14c00dd", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You currently use Herbal Essences shampoo."}
+{"question_id": "c14c00dd", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You mentioned the shampoo you currently use while discussing hair care."}
+{"question_id": "36580ce8", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You initially thought your sinus infection was just a cold."}
+{"question_id": "36580ce8", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "What you thought was just a cold turned out to be something more serious."}
+{"question_id": "3d86fd0a", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You met Sophia at a mutual friend's housewarming party."}
+{"question_id": "3d86fd0a", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You met Sophia somewhere in town and hit it off."}
+{"question_id": "a82c026e", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "Last weekend you finally beat the Shadow of the Erdtree DLC for Elden Ring."}
+{"question_id": "a82c026e", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You finally beat a notoriously difficult game last weekend."}
+{"question_id": "0862e8bf_abs", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "Your hamster's name is Peanut."}
+{"question_id": "0862e8bf_abs", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You mentioned your hamster affectionately when talking about your pets."}
+{"question_id": "15745da0_abs", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You have been collecting vintage films for about two years."}
+{"question_id": "15745da0_abs", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You've been collecting vintage films for a while as part of your interest in retro media."}
+{"question_id": "bc8a6e93_abs", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You baked a carrot cake with cream cheese frosting for your uncle's birthday party."}
+{"question_id": "bc8a6e93_abs", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You baked something homemade for your uncle's birthday party."}
+{"question_id": "19b5f2b3_abs", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You were in Korea for ten days."}
+{"question_id": "19b5f2b3_abs", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You spent some time in Korea during your travels."}
+{"question_id": "29f2956b_abs", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "You practice violin for 45 minutes every day."}
+{"question_id": "29f2956b_abs", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "You dedicate regular daily practice time to the violin."}
+{"question_id": "f4f1d8a4_abs", "question_type": "single-session-user", "strategy": "v1", "probe_answer": "Your dad gave you a leather wallet for your birthday."}
+{"question_id": "f4f1d8a4_abs", "question_type": "single-session-user", "strategy": "v2", "probe_answer": "Your dad gave you a thoughtful birthday gift."}
+{"question_id": "0a995998", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You need to pick up or return 5 items of clothing."}
+{"question_id": "0a995998", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You mentioned needing to handle some clothing pickups and returns at stores."}
+{"question_id": "6d550036", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You have led or are currently leading 4 projects."}
+{"question_id": "6d550036", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've led projects before and are currently involved in leading work as well."}
+{"question_id": "gpt4_59c863d7", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You have worked on or bought three model kits: a Revell F-15 Eagle, a Tamiya Spitfire, and a 1/24 scale '69 Camaro."}
+{"question_id": "gpt4_59c863d7", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've worked on and bought a variety of model kits across different scales as part of your modeling hobby."}
+{"question_id": "b5ef892d", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You spent 12 days on camping trips in the United States this year."}
+{"question_id": "b5ef892d", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You spent multiple days on camping trips in the United States this year."}
+{"question_id": "e831120c", "question_type": "multi-session", "strategy": "v1", "probe_answer": "It took you 6 weeks to watch all the MCU movies and the main Star Wars films."}
+{"question_id": "e831120c", "question_type": "multi-session", "strategy": "v2", "probe_answer": "It took you a sustained stretch of viewing to get through the MCU and the main Star Wars films."}
+{"question_id": "3a704032", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You acquired 6 plants in the last month."}
+{"question_id": "3a704032", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You added some new plants to your collection in the last month."}
+{"question_id": "gpt4_d84a3211", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You have spent $320 in total on bike-related expenses since the start of the year."}
+{"question_id": "gpt4_d84a3211", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've spent a moderate amount on bike-related expenses since the start of the year."}
+{"question_id": "aae3761f", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You spent 22 hours in total driving to your three road trip destinations combined."}
+{"question_id": "aae3761f", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You spent quite a few hours on the road getting to your three road trip destinations."}
+{"question_id": "gpt4_f2262a51", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You visited two different doctors: a primary care physician and a cardiologist."}
+{"question_id": "gpt4_f2262a51", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You visited doctors for a few different health concerns over that period."}
+{"question_id": "dd2973ad", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You went to bed around 11 PM the day before your doctor's appointment."}
+{"question_id": "dd2973ad", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You went to bed later than you would have liked the night before your doctor's appointment."}
+{"question_id": "c4a1ceb8", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You have used 5 different types of citrus fruits in your cocktail recipes."}
+{"question_id": "c4a1ceb8", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've used a variety of citrus fruits in your cocktail recipes."}
+{"question_id": "gpt4_a56e767c", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You attended two movie festivals."}
+{"question_id": "gpt4_a56e767c", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You attended movie festivals on multiple occasions and enjoyed them."}
+{"question_id": "6cb6f249", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You took social media breaks for 10 days in total."}
+{"question_id": "6cb6f249", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You took social media breaks on several occasions, adding up over time."}
+{"question_id": "46a3abf7", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You currently have 5 tanks, including the one you set up for your friend's kid."}
+{"question_id": "46a3abf7", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You have multiple tanks, including the one you set up for your friend's kid."}
+{"question_id": "36b9f61e", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You spent a total of $4,000 on luxury items in the past few months."}
+{"question_id": "36b9f61e", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You spent a substantial amount on luxury items over the past few months."}
+{"question_id": "28dc39ac", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You have spent 90 hours playing games in total."}
+{"question_id": "28dc39ac", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've logged a lot of hours playing games in total."}
+{"question_id": "gpt4_2f8be40d", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You attended two weddings this year: Rachel and Mike's, and Anna and Chris's."}
+{"question_id": "gpt4_2f8be40d", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You attended weddings for several couples you know this year."}
+{"question_id": "2e6d26dc", "question_type": "multi-session", "strategy": "v1", "probe_answer": "3 babies were born to friends and family members in the last few months."}
+{"question_id": "2e6d26dc", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Quite a few friends and family members welcomed new babies in the last few months."}
+{"question_id": "gpt4_15e38248", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You bought, assembled, sold, or fixed 6 pieces of furniture in the past few months."}
+{"question_id": "gpt4_15e38248", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You handled several furniture-related tasks over the past few months, from buying to fixing."}
+{"question_id": "88432d0a", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You baked 7 times in the past two weeks."}
+{"question_id": "88432d0a", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You baked on multiple occasions in the past two weeks."}
+{"question_id": "80ec1f4f", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You visited 4 different museums or galleries in February."}
+{"question_id": "80ec1f4f", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You visited museums and galleries in February and enjoyed the exhibits."}
+{"question_id": "d23cf73b", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You have learned to cook or tried out 6 different cuisines in the past few months."}
+{"question_id": "d23cf73b", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You explored a range of new cuisines in the past few months."}
+{"question_id": "gpt4_7fce9456", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You viewed six properties before making an offer on the townhouse in the Brookside neighborhood."}
+{"question_id": "gpt4_7fce9456", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You viewed a number of properties before settling on the townhouse in Brookside."}
+{"question_id": "d682f1a2", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You have used 5 different types of food delivery services recently."}
+{"question_id": "d682f1a2", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've been using various food delivery services recently for convenience."}
+{"question_id": "7024f17c", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You did 4 hours of jogging and yoga last week."}
+{"question_id": "7024f17c", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You fit in some jogging and yoga last week."}
+{"question_id": "gpt4_5501fe77", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You gained the most followers on Instagram over the past month."}
+{"question_id": "gpt4_5501fe77", "question_type": "multi-session", "strategy": "v2", "probe_answer": "One of your social media platforms saw noticeably stronger follower growth than the others over the past month."}
+{"question_id": "gpt4_2ba83207", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You spent the most money at Whole Foods in the past month."}
+{"question_id": "gpt4_2ba83207", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You spent the most at one particular grocery store where you do much of your shopping."}
+{"question_id": "2318644b", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You spent $150 more per night on accommodations in Hawaii compared to Tokyo."}
+{"question_id": "2318644b", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Your accommodations in Hawaii cost noticeably more per night than in Tokyo."}
+{"question_id": "2ce6a0f2", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You attended 6 different art-related events in the past month."}
+{"question_id": "2ce6a0f2", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You attended a series of art-related events in the past month."}
+{"question_id": "gpt4_d12ceb0e", "question_type": "multi-session", "strategy": "v1", "probe_answer": "The average age of you, your parents, and your grandparents is 52.4."}
+{"question_id": "gpt4_d12ceb0e", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You shared the ages of family members across generations, which span a wide range."}
+{"question_id": "00ca467f", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You went to 4 doctor's appointments in March."}
+{"question_id": "00ca467f", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You had doctor's appointments in March for routine and follow-up care."}
+{"question_id": "b3c15d39", "question_type": "multi-session", "strategy": "v1", "probe_answer": "It took 10 days for the new remote shutter release to arrive after you ordered it."}
+{"question_id": "b3c15d39", "question_type": "multi-session", "strategy": "v2", "probe_answer": "The remote shutter release arrived within a reasonable time after you ordered it."}
+{"question_id": "gpt4_31ff4165", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You use 6 health-related devices in a day."}
+{"question_id": "gpt4_31ff4165", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You use several health-related devices throughout your day."}
+{"question_id": "eeda8a6d", "question_type": "multi-session", "strategy": "v1", "probe_answer": "There are 23 fish in total in both of your aquariums."}
+{"question_id": "eeda8a6d", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You have a good number of fish across both of your aquariums."}
+{"question_id": "2788b940", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You attend 3 fitness classes in a typical week."}
+{"question_id": "2788b940", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You attend fitness classes regularly throughout the week."}
+{"question_id": "60bf93ed", "question_type": "multi-session", "strategy": "v1", "probe_answer": "It took 2 weeks for your laptop backpack to arrive after you bought it."}
+{"question_id": "60bf93ed", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Your laptop backpack arrived not long after you bought it."}
+{"question_id": "9d25d4e0", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You acquired 5 pieces of jewelry in the last two months."}
+{"question_id": "9d25d4e0", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You acquired some new pieces of jewelry in the last two months."}
+{"question_id": "129d1232", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You raised $4,200 in total through all the charity events you participated in."}
+{"question_id": "129d1232", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You raised a meaningful sum across all the charity events you participated in."}
+{"question_id": "60472f9c", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You have been working on 4 projects simultaneously, excluding your thesis."}
+{"question_id": "60472f9c", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've been juggling multiple projects alongside your thesis."}
+{"question_id": "gpt4_194be4b3", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You currently own three musical instruments: a Gibson Les Paul you've had for 6 years, a Taylor acoustic guitar for 4 years, and a Roland digital piano for 2 years."}
+{"question_id": "gpt4_194be4b3", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You own several musical instruments you've collected over the years."}
+{"question_id": "a9f6b44c", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You serviced or planned to service 4 bikes in March."}
+{"question_id": "a9f6b44c", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You had bike servicing done or planned during March."}
+{"question_id": "d851d5ba", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You raised $2,900 for charity in total."}
+{"question_id": "d851d5ba", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You raised a solid amount for charity in total."}
+{"question_id": "5a7937c8", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You spent 7 days participating in faith-related activities in December."}
+{"question_id": "5a7937c8", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You spent some days in December participating in faith-related activities."}
+{"question_id": "gpt4_ab202e7f", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You replaced or fixed three kitchen items: the kitchen faucet, the microwave, and the dishwasher."}
+{"question_id": "gpt4_ab202e7f", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You replaced or fixed a number of kitchen items over that period."}
+{"question_id": "gpt4_e05b82a6", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You rode rollercoasters 16 times across all the events you attended from July to October."}
+{"question_id": "gpt4_e05b82a6", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You rode rollercoasters at several events between July and October."}
+{"question_id": "gpt4_731e37d7", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You spent $450 in total on attending workshops in the last four months."}
+{"question_id": "gpt4_731e37d7", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You spent a fair amount on attending workshops over the last four months."}
+{"question_id": "edced276", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You spent 10 days in total traveling in Hawaii and in New York City."}
+{"question_id": "edced276", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You spent a good stretch of time traveling in Hawaii and New York City."}
+{"question_id": "10d9b85a", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You spent 6 days attending workshops, lectures, and conferences in April."}
+{"question_id": "10d9b85a", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You spent some days in April attending workshops, lectures, and conferences."}
+{"question_id": "e3038f8c", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You have 78 rare items in total."}
+{"question_id": "e3038f8c", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You have a sizable collection of rare items in total."}
+{"question_id": "2b8f3739", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You earned $650 in total from selling your products at the markets."}
+{"question_id": "2b8f3739", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You earned a decent amount from selling your products at the markets."}
+{"question_id": "1a8a66a6", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You currently have 4 magazine subscriptions."}
+{"question_id": "1a8a66a6", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You maintain magazine subscriptions for interests you follow regularly."}
+{"question_id": "c2ac3c61", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You have completed 8 online courses in total."}
+{"question_id": "c2ac3c61", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've completed a number of online courses to build your skills."}
+{"question_id": "bf659f65", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You have purchased or downloaded 6 music albums or EPs."}
+{"question_id": "bf659f65", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've picked up some music albums and EPs recently."}
+{"question_id": "gpt4_372c3eed", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You spent 8 years in total in formal education from high school to the completion of your Bachelor's degree."}
+{"question_id": "gpt4_372c3eed", "question_type": "multi-session", "strategy": "v2", "probe_answer": "Your formal education from high school through your Bachelor's spanned a number of years."}
+{"question_id": "gpt4_2f91af09", "question_type": "multi-session", "strategy": "v1", "probe_answer": "You have completed 15 pieces of writing since you started writing again three weeks ago."}
+{"question_id": "gpt4_2f91af09", "question_type": "multi-session", "strategy": "v2", "probe_answer": "You've completed a good number of pieces since you started writing again, across stories, poems, and challenge entries."}

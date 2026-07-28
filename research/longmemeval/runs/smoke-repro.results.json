@@ -1,0 +1,44 @@
+[
+ {
+  "question_id": "dccbc061",
+  "question_type": "single-session-user",
+  "hypothesis": "You were previously a staunch atheist.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "d6233ab6",
+  "question_type": "single-session-preference",
+  "hypothesis": "I don't have any specific memories about your thoughts on attending a high school reunion. However, you have positive memories of being part of the debate team and taking advanced placement courses in economics during high school, which might make attending the reunion a meaningful experience for you. If reconnecting with old classmates and reminiscing about those positive experiences sounds appealing, it could be a good idea to attend.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "3fe836c9",
+  "question_type": "multi-session",
+  "hypothesis": "The pre-approval amount was $25,000 more than the final sale price of the house.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "2c63a862",
+  "question_type": "temporal-reasoning",
+  "hypothesis": "It took you 14 days to find a house you loved after starting to work with Rachel.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "cc539528",
+  "question_type": "single-session-assistant",
+  "hypothesis": "On 2023/05/26, you were recommended to learn a back-end programming language such as Ruby, Python, or PHP.",
+  "correct": true,
+  "n_ctx": 102
+ },
+ {
+  "question_id": "b01defab",
+  "question_type": "knowledge-update",
+  "hypothesis": "Yes, you finished reading \"The Nightingale\" by Kristin Hannah. You mentioned on 2023-03-30 that you recently finished it and found it to be a powerful and emotional read.",
+  "correct": true,
+  "n_ctx": 102
+ }
+]
