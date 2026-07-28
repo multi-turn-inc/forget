@@ -1,0 +1,23 @@
+# PyPI 발행 — Trusted Publishing (OIDC). 장기 토큰 없음.
+# 트리거: v* 태그 푸시, 또는 Actions 탭에서 수동 실행.
+name: publish
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {}
+
+jobs:
+  pypi:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write   # OIDC — PyPI가 단기 토큰을 발급
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv build
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
