@@ -178,8 +178,38 @@ CATEGORY_KEYWORDS = {
 }
 
 
+# 인용쌍은 원자다 (#2): 여는 따옴표와 닫는 따옴표 사이에서는 문장 경계를 내지 않는다.
+# 직선 큰따옴표는 패리티로, 방향 있는 쌍(“” 「」 『』)은 깊이로 추적한다.
+# 직선 작은따옴표는 아포스트로피(don't)와 구분이 불가능해 의도적으로 제외.
+_QUOTE_OPENERS = {"\u201c": "\u201d", "\u300c": "\u300d", "\u300e": "\u300f"}
+_QUOTE_CLOSERS = {v: k for k, v in _QUOTE_OPENERS.items()}
+
+
+def _split_outside_quotes(text: str) -> list[str]:
+    parts: list[str] = []
+    last = 0
+    straight = 0
+    depth = 0
+    scanned = 0
+    for match in SENTENCE_RE.finditer(text):
+        for ch in text[scanned:match.start()]:
+            if ch == '"':
+                straight ^= 1
+            elif ch in _QUOTE_OPENERS:
+                depth += 1
+            elif ch in _QUOTE_CLOSERS and depth > 0:
+                depth -= 1
+        scanned = match.start()
+        if straight == 0 and depth == 0:
+            parts.append(text[last:match.start()])
+            last = match.end()
+            scanned = match.end()
+    parts.append(text[last:])
+    return parts
+
+
 def split_sentences(text: str) -> list[str]:
-    parts = [p.strip(" \t\r\n\"'") for p in SENTENCE_RE.split(text or "")]
+    parts = [p.strip(" \t\r\n\"'") for p in _split_outside_quotes(text or "")]
     return [p for p in parts if len(p) > 1]
 
 
