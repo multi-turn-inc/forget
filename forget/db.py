@@ -11,11 +11,22 @@ from typing import Any, Iterator
 
 
 ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = Path(os.getenv("MEM1_DB_PATH", ROOT / "mem1.sqlite3"))
+_LEGACY_DB_PATH = ROOT / "mem1.sqlite3"
+
+
+def _default_db_path() -> Path:
+    # 설치 트리(사이트패키지/리포) 안이 아니라 사용자 데이터 디렉토리가 기본이다 (#4).
+    # 이미 레거시 위치에 데이터가 있으면 그대로 존중한다 — 업그레이드가 기억을 잃게 하지 않는다.
+    if _LEGACY_DB_PATH.exists():
+        return _LEGACY_DB_PATH
+    return Path.home() / ".forget" / "mem1.sqlite3"
+
+
+DB_PATH = Path(os.getenv("MEM1_DB_PATH") or _default_db_path())
 
 
 def current_db_path() -> Path:
-    return Path(os.getenv("MEM1_DB_PATH", DB_PATH))
+    return Path(os.getenv("MEM1_DB_PATH") or DB_PATH)
 
 
 def json_dumps(value: Any) -> str:
@@ -33,7 +44,13 @@ def json_loads(value: str | None, default: Any = None) -> Any:
 
 def connect() -> sqlite3.Connection:
     path = current_db_path()
+    parent_existed = path.parent.exists()
     path.parent.mkdir(parents=True, exist_ok=True)
+    if not parent_existed:
+        os.chmod(path.parent, 0o700)
+    if not path.exists():
+        # umask와 무관하게 0600으로 생성 — 다인 사용 머신에서 기억은 소유자만 읽는다 (#4)
+        os.close(os.open(path, os.O_CREAT | os.O_RDWR, 0o600))
     conn = sqlite3.connect(path, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")

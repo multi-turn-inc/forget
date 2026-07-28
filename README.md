@@ -79,7 +79,9 @@ forget-server run
 ```
 
 `forget-server status` tells you what's true; `forget-server uninstall-service`
-removes it. The server binds to localhost only.
+removes it. The server binds to localhost only. Data lives at
+`~/.forget/mem1.sqlite3`, created `0600` in a private directory — set
+`MEM1_DB_PATH` to put it elsewhere.
 
 Store and recall:
 
