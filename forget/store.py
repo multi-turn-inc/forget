@@ -7486,6 +7486,33 @@ def _context_completion_tokens(text: Any) -> set[str]:
     }
 
 
+_RECURRING_ACTION_RE = re.compile(
+    r"\b(monitor|watch|poll|wait|track|observe|keep an eye|check back|follow up)\b"
+    r"|모니터|감시|주시|추적|대기|지켜보",
+    re.IGNORECASE,
+)
+
+# 반복성 액션의 암시적 완료를 허용하는 상태 변화/종결 신호. "확인했다"는 신호가 아니다 —
+# 외부 상태가 실제로 움직였다는 증거만 통과한다 (#14).
+_STATE_CHANGE_RE = re.compile(
+    r"\b(merged|closed|approved|declined|rejected|resolved|landed|released|published"
+    r"|replied|responded|commented|answered"
+    r"|new (comment|review|reply|feedback|commit|check|response)s?"
+    r"|changes requested|review posted|feedback received"
+    r"|completed|finished|done|terminal)\b"
+    r"|머지됨|종료됨|완료됨|응답이? 왔|새 (댓글|리뷰|피드백)|변경됨",
+    re.IGNORECASE,
+)
+
+
+def _context_recurring_action(action_text: str) -> bool:
+    return bool(_RECURRING_ACTION_RE.search(action_text or ""))
+
+
+def _context_state_change_signal(observed_text: str) -> bool:
+    return bool(_STATE_CHANGE_RE.search(observed_text or ""))
+
+
 def _context_completion_match(
     *,
     action_text: str,
@@ -7532,6 +7559,16 @@ def _context_completion_match(
             "schema_version": "mem1-context-next-action-completion-match-v0",
             "matched": False,
             "reason": "outcome has no first-action or first-tool text to compare",
+        }
+
+    if _context_recurring_action(action_text) and not _context_state_change_signal(observed_text):
+        # 감시의 성공은 감시의 종료가 아니다: 반복성 액션은 외부 상태가 움직였다는
+        # 증거(또는 caller의 explicit 마킹) 없이는 열린 채로 남는다 (#14).
+        return {
+            "schema_version": "mem1-context-next-action-completion-match-v0",
+            "matched": False,
+            "reason": "recurring action stays open — observation reports no state change",
+            "mode": "recurring_no_state_change",
         }
 
     if action_key == observed_key or action_key in observed_key:
