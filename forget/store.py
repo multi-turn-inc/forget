@@ -617,18 +617,23 @@ def _simple_entity_prefilter(filters: dict[str, Any] | None) -> dict[str, str] |
 
 
 def _scope_variants(payload: dict[str, Any]) -> list[dict[str, str | None]]:
+    # 결합 스코프는 결합된 채로 저장한다 (#6): user_id와 agent_id를 함께 준 add는
+    # 한 레코드가 양쪽 ID를 다 갖는다 — 같은 payload로 한 conjunctive 검색이
+    # 그 레코드를 되찾는다. (참가자 이름 기반 분기는 _message_scope_variants 소관.)
     base = {field: payload.get(field) for field in ENTITY_FIELDS}
-    primary_fields = [field for field in ("user_id", "agent_id") if base.get(field)]
-    if not primary_fields:
-        primary_fields = [field for field in ("app_id", "run_id") if base.get(field)]
-    variants: list[dict[str, str | None]] = []
-    for primary in primary_fields:
+    if base.get("user_id") or base.get("agent_id"):
         variant: dict[str, str | None] = {field: None for field in ENTITY_FIELDS}
-        variant[primary] = base[primary]
-        if primary in {"user_id", "agent_id"}:
-            variant["app_id"] = base.get("app_id")
-            variant["run_id"] = base.get("run_id")
-        variants.append(variant)
+        variant["user_id"] = base.get("user_id")
+        variant["agent_id"] = base.get("agent_id")
+        variant["app_id"] = base.get("app_id")
+        variant["run_id"] = base.get("run_id")
+        return [variant]
+    variants: list[dict[str, str | None]] = []
+    for primary in ("app_id", "run_id"):
+        if base.get(primary):
+            variant = {field: None for field in ENTITY_FIELDS}
+            variant[primary] = base[primary]
+            variants.append(variant)
     return variants
 
 
