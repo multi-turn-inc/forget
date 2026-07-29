@@ -89,14 +89,42 @@ def _require_uvicorn() -> None:
         sys.exit("uvicorn is not installed. Run: pip install 'forget-ai[server]'")
 
 
+def _bind_or_exit(host: str, port: int) -> socket.socket:
+    """Bind before any success output — the banner must not outrun the bind.
+
+    Cold-install audit: with the port already taken, uvicorn buried the
+    EADDRINUSE in its startup logs while the banner still read like success
+    (and the exit code didn't reliably say failure). Owning the bind makes
+    failure loud, prescriptive, and fatal — before anything hopeful prints.
+    """
+    family = socket.AF_INET6 if ":" in host else socket.AF_INET
+    sock = socket.socket(family, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.bind((host, port))
+    except OSError as exc:
+        sock.close()
+        sys.exit(
+            f"forget-server: cannot listen on {host}:{port} — {exc.strerror or exc}.\n"
+            f"  Is one already running? Check: forget-server status\n"
+            f"  Or pick another port:         forget-server run --port {port + 1}"
+        )
+    sock.set_inheritable(True)
+    return sock
+
+
 def cmd_run(args: argparse.Namespace) -> None:
     _require_uvicorn()
     import uvicorn
 
     forget_home().mkdir(parents=True, exist_ok=True)
     os.environ.setdefault("MEM1_DB_PATH", str(db_path()))
-    print(f"forget-server: http://{args.host}:{args.port}  (db: {db_path()})")
-    uvicorn.run("forget.server:app", host=args.host, port=args.port)
+    sock = _bind_or_exit(args.host, args.port)
+    print(f"forget-server: http://{args.host}:{args.port}  (db: {db_path()})", flush=True)
+    server = uvicorn.Server(uvicorn.Config("forget.server:app", host=args.host, port=args.port))
+    server.run(sockets=[sock])
+    if not server.started:
+        sys.exit(3)
 
 
 def _launchd_paths() -> tuple[Path, str]:

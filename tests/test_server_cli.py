@@ -63,3 +63,94 @@ def test_being_vitals_reads_a_real_store(tmp_path) -> None:
     vitals = being_vitals(path)
     assert vitals and vitals["memories"] >= 1
     assert being_vitals(tmp_path / "missing.sqlite3") is None
+
+
+def test_bind_or_exit_refuses_occupied_port_with_prescription() -> None:
+    # Cold-install audit: a taken port produced a buried uvicorn ERROR under
+    # a success-looking banner. The bind now happens first, in our hands.
+    import socket
+
+    import pytest
+
+    from forget.cli import _bind_or_exit
+
+    blocker = socket.socket()
+    blocker.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    blocker.bind(("127.0.0.1", 0))
+    blocker.listen(1)
+    port = blocker.getsockname()[1]
+    try:
+        with pytest.raises(SystemExit) as exc_info:
+            _bind_or_exit("127.0.0.1", port)
+        message = str(exc_info.value.code)
+        assert f"cannot listen on 127.0.0.1:{port}" in message
+        assert "forget-server status" in message
+        assert f"--port {port + 1}" in message
+    finally:
+        blocker.close()
+
+
+def test_run_binds_before_banner_and_hands_socket_to_uvicorn(monkeypatch, capsys, tmp_path) -> None:
+    import sys as _sys
+    import types
+
+    from forget import cli
+
+    captured: dict = {}
+
+    class _FakeServer:
+        def __init__(self, config) -> None:
+            self.config = config
+            self.started = False
+
+        def run(self, sockets=None) -> None:
+            captured["sockets"] = sockets
+            self.started = True
+
+    fake_uvicorn = types.ModuleType("uvicorn")
+    fake_uvicorn.Config = lambda *a, **kw: (a, kw)
+    fake_uvicorn.Server = _FakeServer
+    monkeypatch.setitem(_sys.modules, "uvicorn", fake_uvicorn)
+    monkeypatch.setenv("FORGET_HOME", str(tmp_path))
+    monkeypatch.setenv("MEM1_DB_PATH", str(tmp_path / "db.sqlite3"))
+
+    cli.main(["run", "--port", "0"])  # port 0: OS picks a free one, no race
+
+    sock = captured["sockets"][0]
+    try:
+        assert sock.getsockname()[1] > 0  # already bound when uvicorn got it
+    finally:
+        sock.close()
+    assert "forget-server: http://127.0.0.1:" in capsys.readouterr().out
+
+
+def test_run_on_occupied_port_exits_nonzero_without_banner(tmp_path) -> None:
+    # End-to-end repro of the audit finding: real subprocess, real exit code.
+    import os
+    import socket
+    import subprocess
+    import sys as _sys
+    from pathlib import Path
+
+    import pytest
+
+    pytest.importorskip("uvicorn")
+
+    blocker = socket.socket()
+    blocker.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    blocker.bind(("127.0.0.1", 0))
+    blocker.listen(1)
+    port = blocker.getsockname()[1]
+    env = dict(os.environ, FORGET_HOME=str(tmp_path), MEM1_DB_PATH=str(tmp_path / "db.sqlite3"))
+    try:
+        proc = subprocess.run(
+            [_sys.executable, "-m", "forget.cli", "run", "--port", str(port)],
+            capture_output=True, text=True, timeout=60, env=env,
+            cwd=Path(__file__).resolve().parents[1],
+        )
+    finally:
+        blocker.close()
+    assert proc.returncode != 0
+    assert "forget-server: http://" not in proc.stdout  # no lying banner
+    assert "forget-server status" in proc.stderr
+    assert f"--port {port + 1}" in proc.stderr
