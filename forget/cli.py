@@ -255,6 +255,24 @@ def format_being_line(vitals: dict[str, Any] | None, today: datetime | None = No
     return f"being:  {age}{vitals['memories']} memories{shed}{verified}{inherited}{fed}"
 
 
+def cmd_migrate_scope(args: argparse.Namespace) -> None:
+    import json as _json
+
+    from .migrate import migrate_scope
+
+    receipt = migrate_scope(
+        from_app=args.from_app,
+        to_app=args.to_app,
+        user=args.user,
+        claim_null_user=args.claim_null_user,
+        db_path=args.db,
+        apply=args.apply,
+    )
+    print(_json.dumps(receipt, ensure_ascii=False, indent=1))
+    if not args.apply:
+        print("\n(dry-run — re-run with --apply to write. A receipt will be saved next to the database.)")
+
+
 def cmd_status(args: argparse.Namespace) -> None:
     listening = _port_open(args.host, args.port)
     print(f"server: {'listening' if listening else 'not listening'} on {args.host}:{args.port}")
@@ -281,12 +299,27 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("install-service", help="install a login service (launchd/systemd)", parents=[shared])
     sub.add_parser("uninstall-service", help="remove the login service", parents=[shared])
     sub.add_parser("status", help="show server and service state", parents=[shared])
+    mig = sub.add_parser(
+        "migrate-scope",
+        help="merge a legacy app pool into its canonical successor (dry-run by default)",
+        parents=[shared],
+    )
+    mig.add_argument("--from-app", required=True, help="legacy app_id to migrate away from")
+    mig.add_argument("--to-app", required=True, help="canonical app_id to merge into")
+    mig.add_argument("--user", help="restrict to one user_id")
+    mig.add_argument(
+        "--claim-null-user",
+        help="explicitly assign ownerless (user_id IS NULL) records in the affected pools to this user",
+    )
+    mig.add_argument("--db", help="database path (default: the running server's database)")
+    mig.add_argument("--apply", action="store_true", help="write changes; without this flag nothing is modified")
     args = parser.parse_args(argv)
     command = args.command or "run"
     {"run": cmd_run,
      "install-service": cmd_install_service,
      "uninstall-service": cmd_uninstall_service,
-     "status": cmd_status}[command](args)
+     "status": cmd_status,
+     "migrate-scope": cmd_migrate_scope}[command](args)
 
 
 if __name__ == "__main__":
