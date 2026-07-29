@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.3.4 — 2026-07-30
+
+Field-report round 3 (the same first user, re-testing 0.3.3 in real work)
+drove all three fixes: no more per-client memory pools, no more silently
+ignored search arguments, and a receipted way to merge legacy scopes.
+
+### Scope integrity
+- `forget-connect` now scopes every client to one canonical pool
+  (`/mcp/forget/http/<os-user>`) instead of inventing a per-client app pool —
+  a `codex` pool made Codex writes invisible to Claude and vice versa (#27).
+  Which tool wrote a memory is provenance, not an isolation boundary.
+- New `forget-server migrate-scope --from-app X --to-app Y [--user U]
+  [--claim-null-user U] [--apply]`: merges a verified legacy alias into its
+  canonical pool across memories, task-state claims, and the gate log.
+  Dry-run by default; every migrated memory keeps its original scope in
+  `metadata.scope_migration`; a receipt lands in `<db dir>/migrations/`.
+  Ownerless records are never claimed implicitly (#22).
+
+### Correctness
+- Search tools (`search_memories`, `search_memory`) reject unknown top-level
+  arguments with a 400 naming the argument (with a did-you-mean hint) instead
+  of appending a warning nobody reads (#29). Non-read tools keep the warning.
+
+
 ## 0.3.3 — 2026-07-30
 
 First external user report (an agent, running multi-day work) plus a
