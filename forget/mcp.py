@@ -1109,20 +1109,43 @@ _TOOL_ARG_NAMES: dict[str, frozenset[str]] = {
 }
 
 
-def _unknown_args_warning(name: str, args: dict[str, Any]) -> str | None:
+def _unknown_arg_notes(name: str, args: dict[str, Any]) -> list[str]:
     declared = _TOOL_ARG_NAMES.get(name)
     if declared is None:
-        return None
+        return []
     accepted = declared | _SCOPE_ARGS | _EXTRA_ACCEPTED_ARGS.get(name, frozenset())
     unknown = sorted(key for key in args if key not in accepted)
     if not unknown:
-        return None
+        return []
     import difflib
 
     notes = []
     for key in unknown:
         matches = difflib.get_close_matches(key, sorted(accepted), n=1)
         notes.append(f"{key} (did you mean '{matches[0]}'?)" if matches else key)
+    return notes
+
+
+def _reject_unknown_args(name: str, args: dict[str, Any]) -> None:
+    """Search tools reject unknown top-level arguments outright.
+
+    A warning appended after the results proved too quiet in practice: the
+    first external user report showed callers never see it (issue #29).
+    An unknown argument on a read path means the caller believes they are
+    constraining the search when they are not — that must fail loudly.
+    """
+    notes = _unknown_arg_notes(name, args)
+    if notes:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{name} got unknown argument(s): " + ", ".join(notes),
+        )
+
+
+def _unknown_args_warning(name: str, args: dict[str, Any]) -> str | None:
+    notes = _unknown_arg_notes(name, args)
+    if not notes:
+        return None
     return f"warning: {name} ignored unknown argument(s): " + ", ".join(notes)
 
 
@@ -1261,9 +1284,11 @@ def _dispatch_tool(name: str, arguments: dict[str, Any] | None, context: dict[st
             )
         )
     if name == "search_memories":
+        _reject_unknown_args(name, args)
         _validate_search_params(args)
         return _text_result(search_memories({**args, "filters": _mcp_scoped_filters(args, context)}))
     if name == "search_memory":
+        _reject_unknown_args(name, args)
         scope = _require_openmemory_scope(args, context)
         query = args.get("query")
         if not query:

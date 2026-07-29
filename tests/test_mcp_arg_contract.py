@@ -75,15 +75,19 @@ def test_search_memories_declares_limit_in_schema() -> None:
 
 
 def test_unknown_argument_appends_warning_block(monkeypatch) -> None:
+    """Non-search tools keep the warning path; search tools now reject (#29).
+
+    Superseded for search: field report showed callers never see appended
+    warnings, so search_memories raises 400 instead (see
+    test_search_rejects_unknown_top_level_argument).
+    """
     monkeypatch.delenv("MEM1_REQUIRE_AUTH", raising=False)
     _fresh_db()
-    _seed("warn-user")
     result = call_tool(
-        "search_memories",
-        {"query": "결제 Paddle", "user_id": "warn-user", "max_results": 2},
+        "add_memory",
+        {"text": "warning path probe", "user_id": "warn-user", "max_results": 2},
         None,
     )
-    assert len(json.loads(result["content"][0]["text"])["results"]) > 0, "the call itself must still succeed"
     warnings = [block["text"] for block in result["content"][1:] if block.get("type") == "text"]
     assert any("max_results" in text and "unknown argument" in text for text in warnings), (
         f"an ignored argument must be named in a warning block, got: {result['content']}"
@@ -120,3 +124,36 @@ def test_extra_accepted_args_only_name_real_tools() -> None:
     tool_names = {str(tool["name"]) for tool in TOOLS}
     unknown_tools = set(_EXTRA_ACCEPTED_ARGS) - tool_names
     assert not unknown_tools, f"allowlist entries for nonexistent tools: {sorted(unknown_tools)}"
+
+
+def test_search_rejects_unknown_top_level_argument():
+    """Issue #29: unknown top-level args must fail loudly, not warn quietly."""
+    import pytest
+    from fastapi import HTTPException
+    from forget import mcp
+
+    with pytest.raises(HTTPException) as exc:
+        mcp.call_tool("search_memories", {"query": "x", "definitely_unknown_parameter": 1})
+    assert exc.value.status_code == 400
+    assert "definitely_unknown_parameter" in str(exc.value.detail)
+
+
+def test_search_memory_rejects_unknown_top_level_argument():
+    import pytest
+    from fastapi import HTTPException
+    from forget import mcp
+
+    with pytest.raises(HTTPException) as exc:
+        mcp.call_tool(
+            "search_memory",
+            {"query": "x", "user_id": "u", "app_id": "a", "bogus_key": True},
+        )
+    assert exc.value.status_code == 400
+    assert "bogus_key" in str(exc.value.detail)
+
+
+def test_search_still_accepts_limit_alias_strictly():
+    from forget import mcp
+
+    result = mcp.call_tool("search_memories", {"query": "x", "limit": 1})
+    assert isinstance(result.get("content"), list)
