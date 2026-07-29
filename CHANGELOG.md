@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.3.3 — 2026-07-30
+
+First external user report (an agent, running multi-day work) plus a
+cold-install audit drove this release: scope integrity on the default
+path, honest process exits, and a stricter search argument contract.
 
 ### Security & privacy
 - The unscoped `/mcp` endpoint no longer stores memories under a hardcoded
@@ -16,6 +20,17 @@
   the golden path. `--no-scope` restores the shared unscoped endpoint;
   an explicit `--url` is installed verbatim; hosted still requires an
   explicit `--user-id`/`--app-id` pair.
+
+### Correctness
+- MCP search tools reject unknown parameters instead of silently ignoring
+  them, and `limit` is accepted as an alias for `top_k` — a live probe
+  passing `limit=3` used to get 10 results back with no warning.
+
+### CLI
+- `forget-server run` exits nonzero when the port is already taken, prints
+  the success banner only after a successful bind, and prescribes the fix
+  (`forget-server status`, `--port`). It used to exit 0 with a
+  success-looking banner over a dead server.
 
 ## 0.3.2 — 2026-07-28
 
