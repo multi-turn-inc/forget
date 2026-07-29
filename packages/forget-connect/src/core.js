@@ -582,10 +582,11 @@ function rulesCurrent(raw) {
   }
 }
 
-export async function inspectClients(clients, { url = "", apiKey = "" } = {}) {
-  const expectedUrl = url ? normalizeUrl(url) : "";
+export async function inspectClients(clients, { url = "", apiKey = "", urlFor = null } = {}) {
   return Promise.all(
     clients.map(async (client) => {
+      const clientUrl = urlFor ? urlFor(client) : url;
+      const expectedUrl = clientUrl ? normalizeUrl(clientUrl) : "";
       const configRaw = await readOptional(client.configPath);
       const rulesRaw = client.rulesPath ? await readOptional(client.rulesPath) : "";
       const expected = expectedUrl
@@ -616,6 +617,7 @@ export async function buildPlan(
     installInstructionRules = true,
     migrateLegacy = true,
     legacyUrls = [url],
+    urlFor = null,
   } = {},
 ) {
   if (!['connect', 'disconnect'].includes(action)) {
@@ -623,17 +625,20 @@ export async function buildPlan(
   }
   const changes = [];
   for (const client of clients) {
+    // urlFor lets connect scope each client into its own memory pool
+    // (/mcp/{app}/http/{user}) while everything else shares one plan.
+    const clientUrl = urlFor ? urlFor(client) : url;
     const configRaw = await readOptional(client.configPath);
     let configNext;
     if (client.kind === "toml") {
       configNext = action === "connect"
-        ? connectToml(configRaw, { url, apiKey, migrateLegacy, legacyUrls })
+        ? connectToml(configRaw, { url: clientUrl, apiKey, migrateLegacy, legacyUrls })
         : disconnectToml(configRaw);
     } else {
       configNext = action === "connect"
         ? connectJson(configRaw, {
           clientId: client.id,
-          url,
+          url: clientUrl,
           apiKey,
           migrateLegacy,
           legacyUrls,

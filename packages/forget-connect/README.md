@@ -8,9 +8,13 @@ overwriting the MCP servers or global instructions you already have.
 npx forget-connect
 ```
 
-By default this targets the local server at `http://localhost:8000/mcp` —
-your memories stay on your machine. The guided flow detects installed
-clients and then:
+By default this targets the local server at `http://localhost:8000` and
+scopes each client to its own memory pool at
+`/mcp/<client>/http/<os-username>` (for example
+`/mcp/claude-code/http/junghun`) — your memories stay on your machine and
+stay isolated per user and per client. Pass `--no-scope` for the shared
+unscoped `/mcp` endpoint. The guided flow detects installed clients and
+then:
 
 - merges a `forget` entry into each selected MCP config;
 - installs a marked memory rule in Claude Code's `CLAUDE.md` and Codex's
@@ -73,10 +77,11 @@ block. It does not restore backups or remove unrelated config.
 
 ```text
 --client <ids>       claude-code,codex,claude-desktop,all
---url <url>          MCP URL (default: http://localhost:8000/mcp)
+--url <url>          Exact MCP URL to install (default base: http://localhost:8000/mcp)
 --hosted             Use the managed Forget service (legacy)
 --user-id <id>       Memory user scope; pair with --app-id
 --app-id <id>        Project/app scope; pair with --user-id
+--no-scope           Install the shared unscoped /mcp endpoint (legacy behavior)
 --no-auth            Do not install a Bearer token
 --no-rules           Do not manage CLAUDE.md or AGENTS.md
 --no-migrate-enacta  Keep matching legacy config and rule blocks

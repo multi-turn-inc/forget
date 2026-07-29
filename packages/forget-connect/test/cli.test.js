@@ -6,8 +6,8 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { parseArgs } from "../src/cli.js";
-import { getClients } from "../src/core.js";
+import { parseArgs, urlForClient } from "../src/cli.js";
+import { getClients, scopedMcpUrl } from "../src/core.js";
 
 const BIN = fileURLToPath(new URL("../bin/forget-connect.js", import.meta.url));
 const SECRET = "integration-secret-must-not-print";
@@ -116,6 +116,110 @@ test("scope flags and environment build the scoped endpoint", () => {
       () => parseArgs(["doctor", "--url", insecureManagedUrl], {}),
       /requires HTTPS on its standard port/,
     );
+  }
+});
+
+test("local connect defaults to a per-client scoped endpoint", () => {
+  const osUser = os.userInfo().username;
+  const clients = getClients({ home: "/tmp/forget-connect-scope-unit", env: {} });
+  const claude = clients.find((client) => client.id === "claude-code");
+
+  const defaults = parseArgs([], {});
+  assert.deepEqual(defaults.defaultScope, { userId: osUser });
+  assert.equal(
+    urlForClient(defaults, claude),
+    scopedMcpUrl("http://localhost:8000/mcp", { userId: osUser, appId: "claude-code" }),
+  );
+
+  // Opt-outs: --no-scope, an explicit --url (installed verbatim), and hosted
+  // (the OS username is not a hosted account identity).
+  assert.equal(parseArgs(["connect", "--no-scope"], {}).defaultScope, null);
+  const verbatim = parseArgs(["connect", "--url", "http://localhost:8001/mcp"], {});
+  assert.equal(verbatim.defaultScope, null);
+  assert.equal(urlForClient(verbatim, claude), "http://localhost:8001/mcp");
+  assert.equal(parseArgs(["connect", "--hosted"], {}).defaultScope, null);
+  assert.throws(
+    () => parseArgs(["connect", "--no-scope", "--user-id", "u", "--app-id", "a"], {}),
+    /mutually exclusive/,
+  );
+
+  // An explicit scope pins one endpoint for every client.
+  const explicit = parseArgs(["connect", "--user-id", "u1", "--app-id", "a1"], {});
+  assert.equal(explicit.defaultScope, null);
+  assert.equal(urlForClient(explicit, claude), "http://localhost:8000/mcp/a1/http/u1");
+});
+
+test("default connect writes per-client scoped endpoints; --no-scope opts out", async (t) => {
+  const home = await mkdtemp(path.join(os.tmpdir(), "forget-connect-default-scope-"));
+  t.after(() => rm(home, { recursive: true, force: true }));
+  const osUser = encodeURIComponent(os.userInfo().username);
+
+  const connected = invoke(home, ["connect", "--client", "all"]);
+  assert.equal(connected.status, 0, connected.stderr);
+  assert.match(connected.stdout, /scope: user .* per client/);
+
+  const clients = getClients({
+    home,
+    platform: process.platform,
+    env: { CODEX_HOME: path.join(home, ".codex") },
+  });
+  for (const client of clients) {
+    const config = await readFile(client.configPath, "utf8");
+    const endpoint = `http://localhost:8000/mcp/${client.id}/http/${osUser}`;
+    assert.match(
+      config,
+      new RegExp(endpoint.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+      `${client.id} must be scoped to its own app pool`,
+    );
+  }
+  const settings = JSON.parse(
+    await readFile(path.join(home, ".claude", "settings.json"), "utf8"),
+  );
+  assert.match(
+    JSON.stringify(settings.hooks),
+    new RegExp(`/mcp/claude-code/http/${osUser.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`),
+    "hooks must talk to the same scoped endpoint as the client",
+  );
+
+  const optOut = invoke(home, ["connect", "--client", "codex", "--no-scope"]);
+  assert.equal(optOut.status, 0, optOut.stderr);
+  const codexConfig = await readFile(path.join(home, ".codex", "config.toml"), "utf8");
+  assert.match(codexConfig, /url = "http:\/\/localhost:8000\/mcp"/);
+});
+
+test("bare doctor adopts each client's own installed scope", async (t) => {
+  const home = await mkdtemp(path.join(os.tmpdir(), "forget-connect-doctor-scopes-"));
+  t.after(() => rm(home, { recursive: true, force: true }));
+  // Two clients installed with per-client app pools (the new default). Base
+  // 127.0.0.1:1 guarantees the remote probe fails fast without a live server.
+  await mkdir(path.join(home, ".codex"), { recursive: true });
+  await writeFile(
+    path.join(home, ".codex", "config.toml"),
+    '[mcp_servers.forget]\nurl = "http://127.0.0.1:1/mcp/codex/http/user-one"\n',
+  );
+  await writeFile(
+    path.join(home, ".claude.json"),
+    `${JSON.stringify({
+      mcpServers: {
+        forget: { type: "http", url: "http://127.0.0.1:1/mcp/claude-code/http/user-one" },
+      },
+    })}\n`,
+  );
+
+  // Rules are intentionally absent: the local mismatch keeps doctor off the
+  // network, so the assertions below cover only per-client URL adoption.
+  const result = invoke(home, [
+    "doctor",
+    "--client",
+    "claude-code,codex",
+    "--timeout",
+    "1",
+    "--json",
+  ]);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.scope.configured, true);
+  for (const client of report.clients) {
+    assert.equal(client.url_matches, true, `${client.id} must match its own installed scope`);
   }
 });
 

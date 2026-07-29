@@ -46,8 +46,32 @@ from .store import (
     verify_memory_claims,
 )
 
-MCP_DEFAULT_USER_ID = os.getenv("MEM1_MCP_DEFAULT_USER_ID", "codex")
-MCP_DEFAULT_APP_ID = os.getenv("MEM1_MCP_DEFAULT_APP_ID", "codex")
+def _default_scope_user_id() -> str:
+    """Fallback owner for calls that arrive with no scope at all.
+
+    The unscoped /mcp endpoint used to hardcode user_id='codex' × app_id='codex',
+    so every cold install pooled its memories into one ghost scope regardless of
+    which client connected (cold-install audit 2026-07-29, defect 1). The OS
+    account name is the honest single-tenant default: it matches the machine's
+    real owner and stays stable across clients on the same host.
+    """
+    configured = (os.getenv("MEM1_MCP_DEFAULT_USER_ID") or "").strip()
+    if configured:
+        return configured
+    try:
+        import getpass
+
+        username = getpass.getuser().strip()
+    except Exception:
+        username = ""
+    return username or "local"
+
+
+# No implicit app_id: when the client is unknown we record ownership only.
+# Inventing an app pool ("codex", "default", …) silently partitions the user's
+# memories by a fiction — reads scoped to it miss every real client's writes.
+MCP_DEFAULT_USER_ID = _default_scope_user_id()
+MCP_DEFAULT_APP_ID = (os.getenv("MEM1_MCP_DEFAULT_APP_ID") or "").strip()
 
 # Keep in sync with store.ALLOWED_FILTER_KEYS: unknown keys are rejected with a
 # 400 instead of silently matching nothing (the pre-2026-07-05 behavior).
@@ -260,6 +284,7 @@ TOOLS: list[dict[str, Any]] = [
                 "query": {"type": "string"},
                 "filters": _FILTERS_PROPERTY,
                 "top_k": {"type": "integer"},
+                "limit": {"type": "integer", "description": "Alias of top_k (top_k wins when both are given)."},
                 "threshold": {"type": "number"},
                 "rerank": {"type": "boolean"},
             },
@@ -908,6 +933,7 @@ def mem1_capabilities_payload() -> dict[str, Any]:
         },
         "mcp": {
             "endpoint": "/mcp",
+            "scoped_endpoint": "/mcp/{app_id}/http/{user_id}",
             "transport": "streamable-http",
             "recommended_context_tool": "assemble_context",
             "recommended_autopilot_tool": "prepare_context_autopilot",
@@ -1028,6 +1054,77 @@ _MEMORY_READ_OPS = frozenset(
     {"search_memories", "search_memory", "get_memories", "get_memory", "list_memories", "assemble_context"}
 )
 
+# MCP clients get no schema enforcement from the transport, so a misspelled or
+# unsupported argument (e.g. max_results on search_memories) used to be dropped
+# on the floor while the call "succeeded" with defaults. Warn instead of
+# reject: rejecting would break agents mid-conversation over a cosmetic key.
+# Accepted keys = declared inputSchema properties ∪ scope/context keys every
+# scoped tool reads ∪ per-tool aliases the store handlers accept but the
+# schema intentionally doesn't advertise.
+_SCOPE_ARGS = frozenset({"user_id", "agent_id", "app_id", "run_id", "client_name", "project_id"})
+_AS_OF_ARGS = frozenset({"memory_as_of", "memoryAsOf", "as_of", "asOf"})
+_WORKSPACE_AS_OF_ARGS = frozenset(
+    {"resume_workspace_as_of", "resumeWorkspaceAsOf", "workspace_as_of", "workspaceAsOf"}
+)
+_CONTEXT_ASSEMBLY_ARGS = (
+    frozenset(
+        {
+            "limit",
+            "budget",
+            "slots",
+            "scope_fallback",
+            "temporal_rerank",
+            "reference_date",
+            "verify",
+            "disable_resume_workspace",
+            "disableResumeWorkspace",
+            "compact",
+            "debug",
+            "verbose",
+        }
+    )
+    | _AS_OF_ARGS
+    | _WORKSPACE_AS_OF_ARGS
+)
+_EXTRA_ACCEPTED_ARGS: dict[str, frozenset[str]] = {
+    "search_memories": frozenset(
+        {"show_expired", "keyword_search", "filter_memories", "reference_date", "scope_fallback", "temporal_rerank"}
+    )
+    | _AS_OF_ARGS,
+    "search_memory": frozenset({"top_k"}),
+    "assemble_context": _CONTEXT_ASSEMBLY_ARGS,
+    "prepare_context_autopilot": _CONTEXT_ASSEMBLY_ARGS,
+    "create_summary": frozenset({"limit", "budget", "max_memories", "metadata"}),
+    "get_task_state": _AS_OF_ARGS | _WORKSPACE_AS_OF_ARGS,
+    "add_memory": frozenset({"created_at", "custom_timestamp", "timestamp"}),
+    "add_memories": frozenset({"metadata"}),
+    "create_claim_evaluation": frozenset(
+        {"benchmark_family", "family", "metadata", "reference_date", "rerank", "threshold", "top_k", "limit"}
+    ),
+    "verify_memory_claims": frozenset({"context", "result"}),
+    "record_task_state": frozenset({"sensitivity"}),
+}
+_TOOL_ARG_NAMES: dict[str, frozenset[str]] = {
+    str(tool["name"]): frozenset((tool.get("inputSchema") or {}).get("properties") or {}) for tool in TOOLS
+}
+
+
+def _unknown_args_warning(name: str, args: dict[str, Any]) -> str | None:
+    declared = _TOOL_ARG_NAMES.get(name)
+    if declared is None:
+        return None
+    accepted = declared | _SCOPE_ARGS | _EXTRA_ACCEPTED_ARGS.get(name, frozenset())
+    unknown = sorted(key for key in args if key not in accepted)
+    if not unknown:
+        return None
+    import difflib
+
+    notes = []
+    for key in unknown:
+        matches = difflib.get_close_matches(key, sorted(accepted), n=1)
+        notes.append(f"{key} (did you mean '{matches[0]}'?)" if matches else key)
+    return f"warning: {name} ignored unknown argument(s): " + ", ".join(notes)
+
 
 def call_tool(name: str, arguments: dict[str, Any] | None, context: dict[str, str] | None = None) -> dict[str, Any]:
     result = _dispatch_tool(name, arguments, context)
@@ -1038,6 +1135,9 @@ def call_tool(name: str, arguments: dict[str, Any] | None, context: dict[str, st
             record_usage(current_project_id(), f"mcp.{name}", metadata={"surface": "mcp", "tool": name})
         except Exception:
             pass  # telemetry must never break a tool call
+    warning = _unknown_args_warning(name, arguments or {})
+    if warning and isinstance(result.get("content"), list):
+        result["content"].append({"type": "text", "text": warning})
     return result
 
 
@@ -1117,14 +1217,29 @@ def _dispatch_tool(name: str, arguments: dict[str, Any] | None, context: dict[st
             # agent's own summary, not the user's words.
             payload["messages"] = [{"role": "user", "content": str(text)}]
             payload.setdefault("source_role", "assistant")
+        scope_warning: str | None = None
         if not any(payload.get(field) for field in ("user_id", "agent_id", "run_id")):
             # app_id alone is client provenance, not ownership: an app_id-only
             # write would store user_id=NULL while default-scoped reads search
             # the session user_id — stored but never found by any search.
-            for key, value in _mcp_default_scope(args, context).items():
+            defaults = _mcp_default_scope(args, context)
+            for key, value in defaults.items():
                 if not payload.get(key):
                     payload[key] = value
-        return _text_result(add_memories(payload))
+            explicit = _openmemory_scope(args, context)
+            if defaults.get("user_id") and not explicit.get("user_id") and not args.get("default_user_id"):
+                # The write is landing in the server-side fallback scope: say so
+                # in-band, because a silently assumed owner is exactly how the
+                # codex×codex ghost pool formed.
+                described = " ".join(f"{key}='{value}'" for key, value in sorted(defaults.items()))
+                scope_warning = (
+                    f"warning: no user_id was given, stored under the server default scope {described}. "
+                    "Pass user_id (and app_id) or connect via /mcp/{app_id}/http/{user_id} to pin the scope."
+                )
+        result = _text_result(add_memories(payload))
+        if scope_warning:
+            result["content"].append({"type": "text", "text": scope_warning})
+        return result
     if name == "add_memories":
         scope = _require_openmemory_scope(args, context)
         text = args.get("text")

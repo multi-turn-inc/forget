@@ -1695,7 +1695,14 @@ def _validated_search_top_k_value(raw: Any, default: int = 10) -> int:
 
 
 def _validated_search_top_k(payload: dict[str, Any], default: int = 10) -> int:
-    return _validated_search_top_k_value(payload.get("top_k"), default=default)
+    # "limit" is the OpenMemory-compatible alias of "top_k"; every other
+    # search-shaped entry point (assemble_context, create_summary, the MCP
+    # validator) already coalesces the two — dropping it here silently
+    # returned the default 10 to clients that asked for limit=N.
+    raw = payload.get("top_k")
+    if raw is None:
+        raw = payload.get("limit")
+    return _validated_search_top_k_value(raw, default=default)
 
 
 def _validated_search_threshold_value(raw: Any) -> float:
