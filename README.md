@@ -120,26 +120,29 @@ The legacy hosted service remains reachable with
 `npx forget-connect --hosted --user-id <memory-user> --app-id <project>`
 while it is phased out in favor of local-first.
 
-Manual configuration:
+Manual configuration — prefer the scoped endpoint
+`/mcp/<app>/http/<user>` so each user × client pair keeps its own memory
+pool (the connect CLI configures this for you; plain `/mcp` falls back to a
+server-side default scope of your OS username and says so in each write):
 
 **Claude Code**
 
 ```json
-{ "mcpServers": { "forget": { "type": "http", "url": "http://localhost:8000/mcp" } } }
+{ "mcpServers": { "forget": { "type": "http", "url": "http://localhost:8000/mcp/claude-code/http/<your-username>" } } }
 ```
 
 **Codex** (`~/.codex/config.toml`)
 
 ```toml
 [mcp_servers.forget]
-url = "http://localhost:8000/mcp"
+url = "http://localhost:8000/mcp/codex/http/<your-username>"
 ```
 
 **Claude Desktop** (bridge via mcp-remote, `claude_desktop_config.json`)
 
 ```json
 { "mcpServers": { "forget": { "command": "npx",
-  "args": ["-y", "mcp-remote@latest", "http://localhost:8000/mcp"] } } }
+  "args": ["-y", "mcp-remote@latest", "http://localhost:8000/mcp/claude-desktop/http/<your-username>"] } } }
 ```
 
 > **Tip — make agents actually use it.** `npx forget-connect` handles this:

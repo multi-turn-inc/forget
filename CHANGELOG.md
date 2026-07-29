@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Security & privacy
+- The unscoped `/mcp` endpoint no longer stores memories under a hardcoded
+  `user_id='codex' × app_id='codex'` ghost scope (cold-install audit
+  2026-07-29, defect 1). The fallback owner is now the OS username
+  (`MEM1_MCP_DEFAULT_USER_ID` still overrides), no app_id is invented, and
+  a fallback-scoped `add_memory` response carries an explicit warning
+  pointing to the scoped endpoint. OpenMemory-compat tools
+  (`add_memories`, `search_memory`, `list_memories`) now require a client
+  identity instead of silently adopting one.
+- `forget-connect` installs a scoped endpoint per client by default
+  (`/mcp/<client>/http/<os-username>`), so user × app isolation holds on
+  the golden path. `--no-scope` restores the shared unscoped endpoint;
+  an explicit `--url` is installed verbatim; hosted still requires an
+  explicit `--user-id`/`--app-id` pair.
+
 ## 0.3.2 — 2026-07-28
 
 Dogfood sprint: every open issue closed, all fixes shipped with regression tests.
