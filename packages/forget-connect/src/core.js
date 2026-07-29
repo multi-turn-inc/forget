@@ -15,6 +15,12 @@ import os from "node:os";
 import path from "node:path";
 
 export const DEFAULT_MCP_URL = "http://localhost:8000/mcp";
+// One canonical memory pool per user. Naming the pool after the client
+// (codex, claude-code, …) invents an empty per-tool scope and re-creates the
+// fragmentation the scoped default exists to prevent: memories written from
+// one tool become invisible to every other (issue #27, field report round 3).
+// The client's identity is provenance, not an isolation boundary.
+export const CANONICAL_APP_ID = "forget";
 export const HOSTED_MCP_URL = "https://api.multi-turn.ai/mcp";
 export const SERVER_KEY = "forget";
 export const BACKUP_SUFFIX = ".forget-backup";

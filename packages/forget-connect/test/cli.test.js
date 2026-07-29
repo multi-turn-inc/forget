@@ -119,7 +119,7 @@ test("scope flags and environment build the scoped endpoint", () => {
   }
 });
 
-test("local connect defaults to a per-client scoped endpoint", () => {
+test("local connect defaults to the canonical scoped endpoint (issue #27)", () => {
   const osUser = os.userInfo().username;
   const clients = getClients({ home: "/tmp/forget-connect-scope-unit", env: {} });
   const claude = clients.find((client) => client.id === "claude-code");
@@ -128,7 +128,7 @@ test("local connect defaults to a per-client scoped endpoint", () => {
   assert.deepEqual(defaults.defaultScope, { userId: osUser });
   assert.equal(
     urlForClient(defaults, claude),
-    scopedMcpUrl("http://localhost:8000/mcp", { userId: osUser, appId: "claude-code" }),
+    scopedMcpUrl("http://localhost:8000/mcp", { userId: osUser, appId: "forget" }),
   );
 
   // Opt-outs: --no-scope, an explicit --url (installed verbatim), and hosted
@@ -149,14 +149,14 @@ test("local connect defaults to a per-client scoped endpoint", () => {
   assert.equal(urlForClient(explicit, claude), "http://localhost:8000/mcp/a1/http/u1");
 });
 
-test("default connect writes per-client scoped endpoints; --no-scope opts out", async (t) => {
+test("default connect writes the canonical scoped endpoint for every client; --no-scope opts out", async (t) => {
   const home = await mkdtemp(path.join(os.tmpdir(), "forget-connect-default-scope-"));
   t.after(() => rm(home, { recursive: true, force: true }));
   const osUser = encodeURIComponent(os.userInfo().username);
 
   const connected = invoke(home, ["connect", "--client", "all"]);
   assert.equal(connected.status, 0, connected.stderr);
-  assert.match(connected.stdout, /scope: user .* per client/);
+  assert.match(connected.stdout, /scope: user .* canonical pool/);
 
   const clients = getClients({
     home,
@@ -165,11 +165,13 @@ test("default connect writes per-client scoped endpoints; --no-scope opts out", 
   });
   for (const client of clients) {
     const config = await readFile(client.configPath, "utf8");
-    const endpoint = `http://localhost:8000/mcp/${client.id}/http/${osUser}`;
+    // One canonical pool for every client: a per-client app pool made each
+    // tool's writes invisible to the others (issue #27, field report).
+    const endpoint = `http://localhost:8000/mcp/forget/http/${osUser}`;
     assert.match(
       config,
       new RegExp(endpoint.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
-      `${client.id} must be scoped to its own app pool`,
+      `${client.id} must share the canonical pool`,
     );
   }
   const settings = JSON.parse(
@@ -177,7 +179,7 @@ test("default connect writes per-client scoped endpoints; --no-scope opts out", 
   );
   assert.match(
     JSON.stringify(settings.hooks),
-    new RegExp(`/mcp/claude-code/http/${osUser.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`),
+    new RegExp(`/mcp/forget/http/${osUser.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`),
     "hooks must talk to the same scoped endpoint as the client",
   );
 

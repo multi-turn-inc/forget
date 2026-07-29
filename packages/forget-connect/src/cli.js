@@ -16,6 +16,7 @@ import {
   redactUrlForDisplay,
   scopeFromUrl,
   scopedMcpUrl,
+  CANONICAL_APP_ID,
   validateScopeId,
   validateApiKey,
 } from "./core.js";
@@ -50,7 +51,7 @@ Options:
   --no-scope           Install the shared unscoped /mcp endpoint (legacy behavior)
 
 Scope:
-  Local connections default to a scoped endpoint per client:
+  Local connections default to one canonical scoped endpoint (all clients share it):
   /mcp/<client>/http/<os-username>. This keeps each user's and client's
   memories isolated. Override with --user-id/--app-id, or opt out with
   --no-scope. An explicit --url is installed verbatim.
@@ -257,9 +258,12 @@ function defaultScopeUserId(env) {
 export function urlForClient(options, client) {
   if (options.scope) return options.url;
   if (options.defaultScope && client) {
+    // Every client shares the canonical pool; which tool wrote a memory is
+    // provenance, not a scope boundary (issue #27). A per-client pool made
+    // Codex writes invisible to Claude and vice versa.
     return scopedMcpUrl(options.baseUrl, {
       userId: options.defaultScope.userId,
-      appId: client.id,
+      appId: CANONICAL_APP_ID,
     });
   }
   return options.url;
@@ -668,7 +672,7 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
       stdout.write(`  scope: user ${options.scope.userId} · app ${options.scope.appId}\n`);
     } else if (options.defaultScope) {
       stdout.write(
-        `  scope: user ${options.defaultScope.userId} · app <client id> per client (--no-scope opts out)\n`,
+        `  scope: user ${options.defaultScope.userId} · app forget — one canonical pool for all clients (--no-scope opts out)\n`,
       );
     }
     if (manageHooks) {
