@@ -1,7 +1,7 @@
 # forget
 
 > Open-source, local-first memory for AI coding tools. One memory across
-> Claude Code, Cursor, and Codex (via MCP), stored in a SQLite file on the
+> Claude Code, Codex, and Claude Desktop (via MCP), stored in a SQLite file on the
 > user's machine. On LongMemEval (full 500 questions): 78.4% ± 0.4 with the
 > fully-local memory pipeline (three seeds, spread published), 81.8% with an
 > optional GPT-4o cloud observer, against the paper's 60.6% baseline. Mines a repo's decision

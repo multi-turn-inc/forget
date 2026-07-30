@@ -7,7 +7,7 @@
 [![LongMemEval](https://img.shields.io/badge/LongMemEval-81.8%25_·_local_pipeline_76.2%25-1a1c20?style=flat-square)](https://forget.sh/#benchmark)
 [![License](https://img.shields.io/badge/license-Apache--2.0-71767d?style=flat-square)](LICENSE)
 
-<a href="https://forget.sh"><img src="https://forget.sh/og.png" alt="forget — tell Claude Code once, Cursor remembers. Local-first memory for AI agents, 81.8% on LongMemEval." width="100%"></a>
+<a href="https://forget.sh"><img src="https://forget.sh/og.png" alt="forget — tell Claude Code once, Codex remembers. Local-first memory for AI agents, 78.4% on LongMemEval fully local." width="100%"></a>
 
 On [LongMemEval](https://github.com/xiaowu0162/LongMemEval), the standard
 long-term-memory benchmark (full 500-question set, GPT-4o reader and judge):
