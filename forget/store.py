@@ -1221,8 +1221,12 @@ def _task_state_search_results(
         if not _task_claim_scope_matches_filters(scope, filters):
             continue
         item = _task_state_result_from_row(row)
+        # No flat activeness boost: being in_progress already earns the
+        # recency bonus inside score_memory, and a second additive let
+        # off-topic active states ride free score over recall gates
+        # (friction F2 — the Quant task shadowing devloop turns).
+        # Activeness is the capsule's job; search ranks by topic.
         score = score_memory(query, item, reference_date=as_of or None)
-        score = min(1.0, round(score + 0.08, 4))
         score = feedback_adjusted_score(score, feedbacks.get(str(item["id"])))
         if score >= threshold:
             item["score"] = score
