@@ -2,9 +2,9 @@
 
 > Open-source, local-first memory for AI coding tools. One memory across
 > Claude Code, Cursor, and Codex (via MCP), stored in a SQLite file on the
-> user's machine. On LongMemEval (full 500 questions): 76.2% with the
-> fully-local memory pipeline, 81.8% best config (GPT-4o observer), against
-> the paper's 60.6% full-context baseline. Mines a repo's decision
+> user's machine. On LongMemEval (full 500 questions): 78.4% ± 0.4 with the
+> fully-local memory pipeline (three seeds, spread published), 81.8% with an
+> optional GPT-4o cloud observer, against the paper's 60.6% baseline. Mines a repo's decision
 > history from git and answers "why did we choose X?" with commit receipts.
 > End-to-end encrypted sync is in design — not shipped yet.
 
