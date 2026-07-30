@@ -36,7 +36,10 @@ Verify the install (do all three):
 
     ~/.forget/venv/bin/forget-server status    # expect: running, db path shown
     npx forget-connect doctor                  # expect: config, rules, hooks, MCP all green
-    # then store one memory, start a NEW session, and confirm it recalls.
+    # then run the reboot ritual: start a real task, kill the session
+    # mid-task, reopen — the next session must open with a handover
+    # (goal, next step, recent changes), not a greeting. That handover
+    # arriving is the definition of a successful install.
 
 ## Import a repo's decision history
 
