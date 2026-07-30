@@ -468,6 +468,8 @@
   .foot-links a { display: block; font-size: 14px; font-weight: 500; color: var(--body); padding: 4px 0; }
   .foot-links a:hover { color: var(--ink); }
   .legal { margin-top: 40px; font-size: 13px; color: var(--faint); border-top: 1px solid var(--hair); padding-top: 24px; }
+.agent-hint { margin-top:10px; font-size:.85rem; color:#8a8377; }
+.agent-hint em { font-style:normal; font-weight:600; color:#4a453c; }
 </style>
 </head>
 <body>
@@ -497,7 +499,8 @@
     read it if we tried.</p>
 
     <div class="hero-ctas" id="install">
-      <span class="cmd-pill"><span><span class="k">pip</span> install 'forget-ai[server]' &amp;&amp; <span class="k">npx</span> forget-connect</span><button id="copyBtn" type="button">copy</button></span>
+      <span class="cmd-pill"><span><span class="k">curl</span> -fsSL forget.sh | <span class="k">sh</span></span><button id="copyBtn" type="button">copy</button></span>
+      <div class="agent-hint">or just tell your AI: <em>&ldquo;Install forget.sh&rdquo;</em> &mdash; this site explains itself to agents.</div>
     </div>
 
     <div class="stage" id="stage">
@@ -992,7 +995,8 @@
 <section class="closer">
   <div class="wrap rv">
     <h2>Give your AI a memory<br><em>in sixty seconds.</em></h2>
-    <div class="cmd-pill"><span><span class="k">pip</span> install 'forget-ai[server]' &amp;&amp; <span class="k">npx</span> forget-connect</span><button id="copyBtn2" type="button">copy</button></div>
+    <div class="cmd-pill"><span><span class="k">curl</span> -fsSL forget.sh | <span class="k">sh</span></span><button id="copyBtn2" type="button">copy</button></div>
+    <div class="agent-hint">or tell your AI: <em>&ldquo;Install forget.sh&rdquo;</em></div>
     <div class="ctas">
       <a class="btn red" href="https://github.com/multi-turn-inc/forget">Star on GitHub</a>
       <a class="btn ghost" href="/llms.txt">llms.txt for your agent</a>

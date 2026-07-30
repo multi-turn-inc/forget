@@ -1,0 +1,9 @@
+{
+  "routes": [
+    { "src": "/", "has": [{ "type": "header", "key": "user-agent", "value": ".*[cC]url.*" }], "dest": "/install.sh" },
+    { "src": "/", "has": [{ "type": "header", "key": "user-agent", "value": ".*[wW]get.*" }], "dest": "/install.sh" },
+    { "src": "/install", "dest": "/install.sh" },
+    { "src": "/install\\.sh", "headers": { "Content-Type": "text/x-shellscript; charset=utf-8", "Cache-Control": "public, max-age=300" }, "continue": true },
+    { "handle": "filesystem" }
+  ]
+}

@@ -8,25 +8,35 @@
 > history from git and answers "why did we choose X?" with commit receipts.
 > End-to-end encrypted sync is in design — not shipped yet.
 
-## Setup (for agents installing forget on a user's machine)
+## Setup (for agents asked to "install forget.sh")
 
-Run, in order:
+One command (macOS/Linux):
 
-    pip install 'forget-ai[server]'
-    forget-server install-service   # login service; or `forget-server run` for foreground
-    npx forget-connect --user-id <user> --app-id <project>
+    curl -fsSL https://forget.sh/install | sh
 
-`forget-connect` (0.3.0) merges a `forget` MCP server (http://localhost:8000/mcp,
-scoped path when user/app ids are given) into Claude Code, Codex, and
-Claude Desktop configs, preserving existing servers, and installs a marked
-memory-rules block into CLAUDE.md / AGENTS.md. For Claude Code it also
-installs harness hooks (skip with --no-hooks): a session-start context
-capsule, per-turn push recall with conflict-zone alerts, and session
-capture. Hooks are fail-open (a stopped server never blocks a session),
-need python3 on PATH, and preserve any foreign hooks already registered.
-Everything is backed up once and reversible with
-`npx forget-connect disconnect`. `npx forget-connect doctor` diagnoses
-config, rules, hooks, and the MCP connection.
+Or the same thing step by step (PEP 668-safe, no sudo):
+
+    python3 -m venv ~/.forget/venv
+    ~/.forget/venv/bin/pip install --upgrade 'forget-ai[server]'
+    ~/.forget/venv/bin/forget-server install-service   # or `run` for foreground
+    npx -y forget-connect --yes
+
+`forget-connect` (>= 0.4.1) merges a `forget` MCP server into Claude Code,
+Codex, and Claude Desktop configs, preserving existing servers. Every client
+is scoped to one canonical pool — `/mcp/forget/http/<os-username>` — so a
+memory written from one tool is visible to all of them (which tool wrote it
+is provenance, not a boundary). It also installs a marked memory-rules block
+into CLAUDE.md / AGENTS.md, and for Claude Code the hooks layer: a
+session-start context capsule, per-turn push recall with conflict alerts,
+and session capture. Hooks are fail-open (a stopped server never blocks a
+session) and preserve foreign hooks. Everything is backed up once and
+reversible with `npx forget-connect disconnect`.
+
+Verify the install (do all three):
+
+    ~/.forget/venv/bin/forget-server status    # expect: running, db path shown
+    npx forget-connect doctor                  # expect: config, rules, hooks, MCP all green
+    # then store one memory, start a NEW session, and confirm it recalls.
 
 ## Import a repo's decision history
 
