@@ -35,7 +35,24 @@ else
 fi
 
 say ""
+say "→ checkup (forget-server doctor)"
+if "$VENV/bin/forget-server" doctor; then
+  DOCTOR_OK=1
+else
+  DOCTOR_OK=0
+fi
+say ""
+if [ "$DOCTOR_OK" = "0" ]; then
+  say "✗ install finished but the checkup found problems — fix the lines above,"
+  say "  then re-run: $VENV/bin/forget-server doctor"
+  say "  (stuck? send that exact output to whoever told you about forget.)"
+  exit 1
+fi
 say "✳ forget is running — one memory, on this machine, at ~/.forget"
+say ""
+say "  The first day or two are quiet BY DESIGN: nothing to recall yet."
+say "  Doctor green means it is accumulating. The payoff arrives the first"
+say "  time a new session already knows what you were doing."
 say ""
 say "  Now the reboot ritual. Three minutes, and you will feel the difference:"
 say "    1. start any real task in your AI (claude, codex — anything)"
@@ -46,5 +63,5 @@ say ""
 say "  A stateless agent is a brilliant stranger, every time."
 say "  This one is becoming a colleague."
 say ""
-say "  check:  $VENV/bin/forget-server status   ·   npx forget-connect doctor"
+say "  check:  $VENV/bin/forget-server doctor   ·   npx forget-connect doctor"
 say "  undo:   npx forget-connect disconnect    ·   rm -rf ~/.forget"

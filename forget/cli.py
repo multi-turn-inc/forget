@@ -321,11 +321,12 @@ def cmd_doctor(args: argparse.Namespace) -> None:
     import json as _json
 
     user = os.environ.get("MEM1_MCP_DEFAULT_USER_ID") or getpass.getuser()
-    checks: list[tuple[bool, str, str]] = []  # (ok, line, hint-if-bad)
+    # (ok, line, hint-if-bad, hard) — hard checks fail the verdict; soft ones advise.
+    checks: list[tuple[bool, str, str, bool]] = []
 
     listening = _port_open(args.host, args.port)
     checks.append((listening, f"server listening on {args.host}:{args.port}",
-                   "start it: forget-server install-service  (or: forget-server run)"))
+                   "start it: forget-server install-service  (or: forget-server run)", True))
 
     mcp_ok = False
     if listening:
@@ -335,7 +336,8 @@ def cmd_doctor(args: argparse.Namespace) -> None:
         except Exception:
             mcp_ok = False
     checks.append((mcp_ok, f"MCP endpoint answers (/mcp/forget/http/{user})",
-                   "server is up but MCP failed — check server version: pip install -U forget-ai"))
+                   "server is up but MCP failed — check server version: pip install -U forget-ai",
+                   True))
 
     path = db_path()
     db_ok, pools = False, []
@@ -347,9 +349,11 @@ def cmd_doctor(args: argparse.Namespace) -> None:
             pools = pool_report(path)
         except sqlite3.Error:
             db_ok = False
-    checks.append((db_ok, f"store readable and sound ({path})",
-                   "database missing or corrupt — a fresh one is created on first write; "
-                   "if this store held memories, restore from backup"))
+    # A store that doesn't exist yet is a normal day-zero state, not a failure.
+    checks.append((db_ok or not path.exists(),
+                   f"store {'readable and sound' if db_ok else 'not created yet (born on first write)'} ({path})",
+                   "database corrupt — if this store held memories, restore from backup",
+                   True))
 
     foreign = foreign_pools(pools, user)
     canonical = sum(n for u, a, n in pools if u == user and a == "forget")
@@ -360,7 +364,8 @@ def cmd_doctor(args: argparse.Namespace) -> None:
         detail += f" — plus {len(foreign)} foreign pool(s): {worst}"
     checks.append((scope_ok, f"scope clean: {detail}",
                    "foreign pools contaminate recall — merge or inspect: "
-                   "forget-server migrate-scope --from-app <app> --to-app forget (dry-run first)"))
+                   "forget-server migrate-scope --from-app <app> --to-app forget (dry-run first)",
+                   True))
 
     settings_path = Path.home() / ".claude" / "settings.json"
     wired: dict[str, bool] = {}
@@ -369,12 +374,15 @@ def cmd_doctor(args: argparse.Namespace) -> None:
             wired = hooks_wired(_json.loads(settings_path.read_text()))
         except (OSError, ValueError):
             wired = {}
+    # Advisory, not failure: MCP-only is a valid standard setup (the capsule
+    # arrives via CLAUDE.md instructions); hooks are the deluxe wiring.
     hooks_ok = wired.get("SessionStart", False)
     wired_names = [k for k, v in wired.items() if v]
     checks.append((hooks_ok,
-                   f"Claude Code hooks wired: {', '.join(wired_names) or 'none'}",
-                   "no capsule will arrive at session start — reinstall wiring: "
-                   "curl -fsSL https://forget.sh | sh"))
+                   f"Claude Code hooks wired: {', '.join(wired_names) or 'none (optional)'}",
+                   "capsule injection via hooks is off — fine if your CLAUDE.md asks the "
+                   "agent to call prepare_context_autopilot at session start",
+                   False))
 
     probe_ok = None
     if getattr(args, "probe", False) and mcp_ok:
@@ -391,13 +399,14 @@ def cmd_doctor(args: argparse.Namespace) -> None:
             probe_ok = False
         checks.append((bool(probe_ok), "write→search round trip (probe scope)",
                        "writes are queued but not searchable — check server logs: "
-                       f"{log_path()}"))
+                       f"{log_path()}", True))
 
     failed = 0
-    for ok, line, hint in checks:
-        print(f"  {'✓' if ok else '✗'} {line}")
+    for ok, line, hint, hard in checks:
+        mark = "✓" if ok else ("✗" if hard else "!")
+        print(f"  {mark} {line}")
         if not ok:
-            failed += 1
+            failed += 1 if hard else 0
             print(f"      → {hint}")
     verdict = "healthy — safe to rely on" if not failed else \
         f"{failed} problem(s) — memory may be silently absent until fixed"
