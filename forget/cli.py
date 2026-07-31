@@ -19,6 +19,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from . import scope_guard
+
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
 SERVICE_LABEL = "ai.forget.server"
@@ -290,10 +292,14 @@ def pool_report(path: Path) -> list[tuple[str, str, int]]:
 
 
 def foreign_pools(
-    pools: list[tuple[str, str, int]], user: str, canonical_app: str = "forget"
+    pools: list[tuple[str, str, int]], user: str
 ) -> list[tuple[str, str, int]]:
-    """Pools that shouldn't live in this store — the F4 class of contamination."""
-    return [p for p in pools if p[0] != user or p[1] != canonical_app]
+    """Pools that shouldn't live in this store — the F4 class of contamination.
+
+    Shares its verdict with the write-time guard (scope_guard): a pool the
+    guard admits (canonical or MEM1_ALLOWED_SCOPES) is never flagged here.
+    """
+    return [p for p in pools if not scope_guard.is_allowed_pool(p[0], p[1], owner=user)]
 
 
 def _installed_version() -> str:

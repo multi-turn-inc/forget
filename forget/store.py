@@ -18,7 +18,7 @@ import httpx
 from fastapi import HTTPException, Request
 
 from .ports import enforce_project_quota
-from . import hybrid_workspace
+from . import hybrid_workspace, scope_guard
 from .db import get_db, json_dumps, json_loads
 from .memory_engine import (
     categorize,
@@ -3560,9 +3560,18 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
         raise HTTPException(status_code=400, detail="messages is required")
     if not any(payload.get(field) for field in ENTITY_FIELDS):
         raise HTTPException(status_code=400, detail="At least one entity ID is required")
+    # Every write path (MCP tools, REST /v1/memories) converges here — the one
+    # place a foreign (user_id, app_id) pool cannot slip past (F4 class).
+    scope_guard_warning = scope_guard.evaluate_write_scope(
+        payload.get("user_id"), payload.get("app_id")
+    )
+    if scope_guard_warning and scope_guard.guard_mode() == "enforce":
+        raise HTTPException(status_code=400, detail=scope_guard_warning)
     enforce_project_quota(project_id, "memory_write", current_auth_context())
 
     metadata = _metadata_from_add_payload(payload)
+    if scope_guard_warning:
+        metadata["scope_guard"] = "foreign"
     payload = {**payload, "metadata": metadata}
     event_id = create_event("ADD", payload, metadata, project_id=project_id)
     started_at = utc_now()
@@ -3723,6 +3732,8 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
             "junk_total": sum(skipped_junk.values()),
             "duplicate": skipped_duplicate,
         }
+    if scope_guard_warning:
+        response["scope_guard"] = {"verdict": "foreign", "warning": scope_guard_warning}
     return response
 
 

@@ -1,5 +1,47 @@
 # Changelog
 
+## Unreleased
+
+### Scope integrity
+- Write-time scope guard: every memory write (MCP and REST converge in
+  `store.add_memories`) is now checked against the canonical pool
+  (`<owner> × forget`) and the `MEM1_ALLOWED_SCOPES` allowlist
+  (`"user:app,user2:*"`). Modes via `MEM1_SCOPE_GUARD`: `warn` (default —
+  the write proceeds but is stamped `metadata.scope_guard="foreign"` and
+  the response carries an in-band warning), `enforce` (foreign writes are
+  rejected with the remedy: allowlist the scope or point demos at a
+  dedicated instance via `FORGET_HOME`), `off`. Until now any stray
+  request could silently create a new pool in the store — that is exactly
+  how 339 demo/experiment memories contaminated the dogfood DB (the F4
+  cleanup, 2026-07-31); doctor could only detect it after the fact.
+  `doctor`'s foreign-pool check now shares the guard's verdict, so an
+  allowlisted pool is never flagged and the two can't drift apart.
+
+## 0.3.6 — 2026-07-31
+
+The confidence release: everything a new user (or their inviter) needs to
+know whether the install can be relied on. Precondition for inviting the
+first external cohort.
+
+### Diagnosability
+- `forget-server doctor` — one-shot verdict over the whole wiring: server
+  up, MCP endpoint answering, store integrity, scope contamination (the
+  F4 class), Claude Code hooks. Every red line ships its own remedy.
+  `--probe` does a write/read round-trip in a dedicated scope; `--report`
+  builds a shareable diagnostic bundle containing zero memory content.
+- `forget-server weekly` — the quiet first week becomes countable: this
+  week's accruals, corrections (history preserved), and gate refusals by
+  reason. Numbers only, no content.
+- Update notice inside doctor only, notification only — applying is always
+  the user's hand; development installs stay silent.
+
+### Onboarding
+- `install.sh` now ends with the doctor verdict. A red verdict exits 1 and
+  says "send this output to whoever invited you" — a failed install
+  becomes a diagnosable field report instead of a shrug.
+- `docs/first-week.md` — cold-start expectations: the silence is designed,
+  the reboot ritual, the token Q&A.
+
 ## 0.3.5 — 2026-07-31
 
 The first releases authored substantially by the self-development loop:
@@ -16,27 +58,6 @@ each with a falsifiable prediction registered before the change.
   free score over recall gates and shadow relevant memories. Activeness
   is the capsule's job; search ranks by topic (loop cycle 3, friction F2).
 
-
-## 0.3.5 — Unreleased (gate: 정훈)
-
-Dogfooding round 1: the devloop — an agent using forget as its own working
-memory while developing forget — filed its first two field notes, and both
-fixes ship here. The fast layer (task state) was leaking into places it
-doesn't belong: presented as current when stale, and surfacing in recall
-when off-topic.
-
-### Recall quality
-- Capsule task state now carries its age (`_state_age_hours`,
-  `_state_age_label`) and a stale warning once it exceeds
-  `MEM1_CAPSULE_STALE_HOURS` (default 24h), placed ahead of the state so
-  budget pressure can't silently drop it. A two-day-old beat had been
-  presented as the "current goal" with nothing marking it old
-  (field note #1, cycle 2).
-- `search_memories` no longer gives task-state claims an unconditional
-  activeness boost (+0.08) that let unrelated in-progress tasks outrank
-  topical results. Activeness is now reflected through recency only;
-  search ranks by topic — surfacing active state is the capsule's job,
-  not search's (field note #2, cycle 3).
 
 ## 0.3.4 — 2026-07-30
 
