@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.3.5 — Unreleased (gate: 정훈)
+
+Dogfooding round 1: the devloop — an agent using forget as its own working
+memory while developing forget — filed its first two field notes, and both
+fixes ship here. The fast layer (task state) was leaking into places it
+doesn't belong: presented as current when stale, and surfacing in recall
+when off-topic.
+
+### Recall quality
+- Capsule task state now carries its age (`_state_age_hours`,
+  `_state_age_label`) and a stale warning once it exceeds
+  `MEM1_CAPSULE_STALE_HOURS` (default 24h), placed ahead of the state so
+  budget pressure can't silently drop it. A two-day-old beat had been
+  presented as the "current goal" with nothing marking it old
+  (field note #1, cycle 2).
+- `search_memories` no longer gives task-state claims an unconditional
+  activeness boost (+0.08) that let unrelated in-progress tasks outrank
+  topical results. Activeness is now reflected through recency only;
+  search ranks by topic — surfacing active state is the capsule's job,
+  not search's (field note #2, cycle 3).
+
 ## 0.3.4 — 2026-07-30
 
 Field-report round 3 (the same first user, re-testing 0.3.3 in real work)
