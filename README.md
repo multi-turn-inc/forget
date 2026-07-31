@@ -7,7 +7,7 @@
 [![LongMemEval](https://img.shields.io/badge/LongMemEval-81.8%25_·_local_pipeline_76.2%25-1a1c20?style=flat-square)](https://forget.sh/#benchmark)
 [![License](https://img.shields.io/badge/license-Apache--2.0-71767d?style=flat-square)](LICENSE)
 
-<a href="https://forget.sh"><img src="https://forget.sh/og.png" alt="forget — tell Claude Code once, Cursor remembers. Local-first memory for AI agents, 81.8% on LongMemEval." width="100%"></a>
+<a href="https://forget.sh"><img src="https://forget.sh/og.png" alt="forget — tell Claude Code once, Codex remembers. Local-first memory for AI agents, 78.4% on LongMemEval fully local." width="100%"></a>
 
 On [LongMemEval](https://github.com/xiaowu0162/LongMemEval), the standard
 long-term-memory benchmark (full 500-question set, GPT-4o reader and judge):
@@ -120,26 +120,29 @@ The legacy hosted service remains reachable with
 `npx forget-connect --hosted --user-id <memory-user> --app-id <project>`
 while it is phased out in favor of local-first.
 
-Manual configuration:
+Manual configuration — prefer the scoped endpoint
+`/mcp/<app>/http/<user>` so each user × client pair keeps its own memory
+pool (the connect CLI configures this for you; plain `/mcp` falls back to a
+server-side default scope of your OS username and says so in each write):
 
 **Claude Code**
 
 ```json
-{ "mcpServers": { "forget": { "type": "http", "url": "http://localhost:8000/mcp" } } }
+{ "mcpServers": { "forget": { "type": "http", "url": "http://localhost:8000/mcp/claude-code/http/<your-username>" } } }
 ```
 
 **Codex** (`~/.codex/config.toml`)
 
 ```toml
 [mcp_servers.forget]
-url = "http://localhost:8000/mcp"
+url = "http://localhost:8000/mcp/codex/http/<your-username>"
 ```
 
 **Claude Desktop** (bridge via mcp-remote, `claude_desktop_config.json`)
 
 ```json
 { "mcpServers": { "forget": { "command": "npx",
-  "args": ["-y", "mcp-remote@latest", "http://localhost:8000/mcp"] } } }
+  "args": ["-y", "mcp-remote@latest", "http://localhost:8000/mcp/claude-desktop/http/<your-username>"] } } }
 ```
 
 > **Tip — make agents actually use it.** `npx forget-connect` handles this:

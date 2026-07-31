@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import os from "node:os";
 import readline from "node:readline/promises";
 import { stdin, stdout, stderr } from "node:process";
 import {
@@ -7,13 +8,15 @@ import {
   ConfigError,
   applyPlan,
   buildPlan,
+  configuredServerUrl,
   detectClients,
-  detectInstalledScope,
   getClients,
   inspectClients,
   normalizeUrl,
   redactUrlForDisplay,
+  scopeFromUrl,
   scopedMcpUrl,
+  CANONICAL_APP_ID,
   validateScopeId,
   validateApiKey,
 } from "./core.js";
@@ -41,10 +44,17 @@ Usage:
 
 Options:
   --client <ids>       Comma-separated: claude-code,codex,claude-desktop,all
-  --url <url>          MCP URL (default: ${DEFAULT_MCP_URL})
+  --url <url>          Exact MCP URL to install (default base: ${DEFAULT_MCP_URL})
   --hosted             Use the managed Forget service (legacy) instead of a local server
   --user-id <id>       Memory user scope (pair with --app-id)
   --app-id <id>        Project/app scope (pair with --user-id)
+  --no-scope           Install the shared unscoped /mcp endpoint (legacy behavior)
+
+Scope:
+  Local connections default to one canonical scoped endpoint (all clients share it):
+  /mcp/<client>/http/<os-username>. This keeps each user's and client's
+  memories isolated. Override with --user-id/--app-id, or opt out with
+  --no-scope. An explicit --url is installed verbatim.
   --no-auth            Connect without a Bearer token
   --no-rules           Do not manage CLAUDE.md or AGENTS.md instruction blocks
   --no-hooks           Do not install Claude Code memory hooks (session capsule,
@@ -106,6 +116,11 @@ export function parseArgs(argv, env = process.env) {
     hostedFlag: false,
     userId: env.FORGET_USER_ID?.trim() || "",
     appId: env.FORGET_APP_ID?.trim() || "",
+    noScope: false,
+    baseUrl: "",
+    hosted: false,
+    scope: null,
+    defaultScope: null,
     auth: true,
     rules: true,
     hooks: true,
@@ -148,6 +163,8 @@ export function parseArgs(argv, env = process.env) {
       index += 1;
     } else if (arg.startsWith("--app-id=")) {
       options.appId = arg.slice("--app-id=".length);
+    } else if (arg === "--no-scope") {
+      options.noScope = true;
     } else if (arg === "--no-auth") {
       options.auth = false;
     } else if (arg === "--no-rules") {
@@ -194,6 +211,9 @@ export function parseArgs(argv, env = process.env) {
   if (Boolean(options.userId) !== Boolean(options.appId)) {
     throw new ConfigError("--user-id and --app-id must be provided together.");
   }
+  if (options.noScope && options.userId) {
+    throw new ConfigError("--no-scope and --user-id/--app-id are mutually exclusive.");
+  }
   options.scope = options.userId
     ? {
       userId: validateScopeId(options.userId, "user_id"),
@@ -203,7 +223,50 @@ export function parseArgs(argv, env = process.env) {
   options.url = options.scope
     ? scopedMcpUrl(options.baseUrl, options.scope)
     : options.baseUrl;
+  // Cold-install default: scope each client into its own memory pool at
+  // /mcp/<client>/http/<os-username>. The unscoped /mcp endpoint pools every
+  // client's memories into the server's fallback scope (cold-install audit
+  // 2026-07-29), so plain /mcp is now the opt-in (--no-scope), not the
+  // default. An explicit --url stays verbatim, and hosted keeps requiring an
+  // explicit account identity — the OS username is not a hosted account.
+  options.defaultScope = null;
+  if (!options.scope && !options.noScope && !options.hosted && !options.urlExplicit) {
+    const osUser = defaultScopeUserId(env);
+    if (osUser) options.defaultScope = { userId: osUser };
+  }
   return options;
+}
+
+function defaultScopeUserId(env) {
+  let candidate = "";
+  try {
+    candidate = os.userInfo().username?.trim() || "";
+  } catch {
+    candidate = "";
+  }
+  candidate = candidate || env.USER?.trim() || env.USERNAME?.trim() || "";
+  if (!candidate) return "";
+  try {
+    return validateScopeId(candidate, "user_id");
+  } catch {
+    // An exotic username must degrade to the unscoped legacy behavior, not
+    // block the connect.
+    return "";
+  }
+}
+
+export function urlForClient(options, client) {
+  if (options.scope) return options.url;
+  if (options.defaultScope && client) {
+    // Every client shares the canonical pool; which tool wrote a memory is
+    // provenance, not a scope boundary (issue #27). A per-client pool made
+    // Codex writes invisible to Claude and vice versa.
+    return scopedMcpUrl(options.baseUrl, {
+      userId: options.defaultScope.userId,
+      appId: CANONICAL_APP_ID,
+    });
+  }
+  return options.url;
 }
 
 function requestedClientIds(values) {
@@ -440,37 +503,54 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
     return;
   }
 
+  const urlOverrides = new Map();
+  const urlFor = (client) => urlOverrides.get(client.id) ?? urlForClient(options, client);
+
   if (options.action === "doctor" && !options.scope && !options.urlExplicit && !options.hostedFlag) {
-    // A user who connected with --user-id/--app-id will run a bare
-    // `forget-connect doctor` next; comparing their scoped install against the
-    // unscoped default URL would report false failures. Adopt the scope the
-    // installed config already carries.
-    const installed = await detectInstalledScope(clients);
-    if (installed) {
-      options.scope = { userId: installed.userId, appId: installed.appId };
-      options.baseUrl = installed.baseUrl;
+    // A user who connected with an explicit or per-client default scope will
+    // run a bare `forget-connect doctor` next; comparing their scoped install
+    // against a freshly computed URL would report false failures. Adopt the
+    // scope each installed config already carries.
+    let first = null;
+    for (const client of clients) {
+      let raw = "";
+      try {
+        raw = await readFile(client.configPath, "utf8");
+      } catch {
+        raw = "";
+      }
+      const installed = scopeFromUrl(configuredServerUrl(client, raw));
+      if (!installed) continue;
+      urlOverrides.set(client.id, scopedMcpUrl(installed.baseUrl, installed));
+      if (!first) first = installed;
+    }
+    if (first) {
+      options.scope = { userId: first.userId, appId: first.appId };
+      options.baseUrl = first.baseUrl;
       options.hosted = isHostedBaseUrl(options.baseUrl);
       options.url = scopedMcpUrl(options.baseUrl, options.scope);
       const scopeNoticeStream = options.json ? stderr : stdout;
       scopeNoticeStream.write(
-        `Scope detected from installed config: user ${installed.userId} · app ${installed.appId}\n`,
+        `Scope detected from installed config: user ${first.userId} · app ${first.appId}\n`,
       );
     }
   }
 
   const apiKey = await apiKeyFor(options, env);
   if (options.action === "doctor") {
+    const probeUrl = clients.length ? urlFor(clients[0]) : options.url;
+    const probeScope = options.scope ?? scopeFromUrl(probeUrl);
     const local = localDoctorResults(
-      await inspectClients(clients, { url: options.url, apiKey }),
+      await inspectClients(clients, { url: options.url, apiKey, urlFor }),
       { requireRules: options.rules },
     );
     const remote = local.every((client) => client.ok)
       ? await doctorRemote({
-        url: options.url,
+        url: probeUrl,
         apiKey,
         timeoutMs: options.timeoutMs,
         clientVersion: await version(),
-        expectedScope: options.scope,
+        expectedScope: probeScope,
         requireScope: options.hosted,
       })
       : {
@@ -485,7 +565,7 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
         required_tools: [],
         missing_tools: [],
         scope_probe: {
-          requested: Boolean(options.scope),
+          requested: Boolean(probeScope),
           required: options.hosted,
           ok: false,
           skipped: true,
@@ -496,8 +576,8 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
       : null;
     const result = {
       ok: local.every((client) => client.ok) && remote.ok && (hooksStatus?.ok ?? true),
-      url: redactUrlForDisplay(options.url),
-      scope: { configured: Boolean(options.scope) },
+      url: redactUrlForDisplay(probeUrl),
+      scope: { configured: Boolean(probeScope) },
       clients: local,
       hooks: hooksStatus,
       remote,
@@ -509,6 +589,7 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
   }
   const changes = await buildPlan(options.action, clients, {
     url: options.url,
+    urlFor,
     apiKey,
     installInstructionRules: options.rules,
     migrateLegacy: options.migrateLegacy,
@@ -537,7 +618,7 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
       if (!error || error.code !== "ENOENT") throw error;
     }
     const settingsNext = options.action === "connect"
-      ? connectHooksSettings(settingsRaw, { hooksDir, url: options.url })
+      ? connectHooksSettings(settingsRaw, { hooksDir, url: urlFor(claudeCode) })
       : disconnectHooksSettings(settingsRaw);
     if (settingsRaw !== settingsNext) {
       changes.push({
@@ -587,6 +668,13 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
     for (const filePath of hookScriptPaths) stdout.write(`  ${hookVerb} ${filePath}\n`);
   }
   if (options.action === "connect") {
+    if (options.scope) {
+      stdout.write(`  scope: user ${options.scope.userId} · app ${options.scope.appId}\n`);
+    } else if (options.defaultScope) {
+      stdout.write(
+        `  scope: user ${options.defaultScope.userId} · app forget — one canonical pool for all clients (--no-scope opts out)\n`,
+      );
+    }
     if (manageHooks) {
       stdout.write("  hooks: session capsule, per-turn recall, conflict alerts, session capture (needs python3 on PATH)\n");
     }

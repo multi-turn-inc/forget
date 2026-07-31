@@ -36,8 +36,13 @@ def test_explicit_user_id_does_not_attract_default_app_id() -> None:
 
 
 def test_no_entity_falls_back_to_default_scope() -> None:
+    # The fallback owns the write via the OS user only — no invented app_id
+    # pool, and never the historical hardcoded 'codex' ghost scope.
+    from forget import mcp as mcp_module
+
     scoped = _mcp_scoped_filters({}, None)
-    assert scoped == {"user_id": "codex", "app_id": "codex"}
+    assert scoped == {"user_id": mcp_module.MCP_DEFAULT_USER_ID}
+    assert scoped["user_id"] not in ("", "codex")
 
 
 def test_client_context_is_treated_as_explicit_scope() -> None:

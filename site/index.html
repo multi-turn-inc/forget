@@ -13,8 +13,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>forget — tell Claude Code once, Cursor remembers</title>
-<meta name="description" content="One memory for your AI across Claude Code, Cursor, and Codex — open source, local-first, 81.8% on LongMemEval. Nobody can read it but you.">
+<title>forget — tell Claude Code once, Codex remembers</title>
+<meta name="description" content="One memory for your AI across Claude Code, Codex, and Claude Desktop — open source, local-first, 78.4% on LongMemEval fully local (three seeds, spread published). Nobody can read it but you.">
 <link rel="canonical" href="https://forget.sh/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23e5122e'/%3E%3Ctext x='32' y='45' font-family='-apple-system,sans-serif' font-size='38' font-weight='800' fill='%23fff' text-anchor='middle'%3Ef%3C/text%3E%3Crect x='12' y='30' width='40' height='5' rx='2.5' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,14 +23,14 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://forget.sh/">
 <meta property="og:site_name" content="forget">
-<meta property="og:title" content="forget — tell Claude Code once, Cursor remembers">
-<meta property="og:description" content="One memory for your AI across Claude Code, Cursor, and Codex — open source, local-first, 81.8% on LongMemEval. Nobody can read it but you.">
+<meta property="og:title" content="forget — tell Claude Code once, Codex remembers">
+<meta property="og:description" content="One memory for your AI across Claude Code, Codex, and Claude Desktop — open source, local-first, 78.4% on LongMemEval fully local (three seeds, spread published). Nobody can read it but you.">
 <meta property="og:image" content="https://forget.sh/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="forget — tell Claude Code once, Cursor remembers">
-<meta name="twitter:description" content="One memory for your AI across Claude Code, Cursor, and Codex — open source, local-first, 81.8% on LongMemEval. Nobody can read it but you.">
+<meta name="twitter:title" content="forget — tell Claude Code once, Codex remembers">
+<meta name="twitter:description" content="One memory for your AI across Claude Code, Codex, and Claude Desktop — open source, local-first, 78.4% on LongMemEval fully local (three seeds, spread published). Nobody can read it but you.">
 <meta name="twitter:image" content="https://forget.sh/og.png">
 <meta name="theme-color" content="#faf9f7">
 <link rel="alternate" type="text/plain" title="llms.txt" href="/llms.txt">
@@ -39,7 +39,7 @@
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "forget",
-  "description": "One memory for your AI across Claude Code, Cursor, and Codex — open source, local-first, stored in a SQLite file on the user's machine. End-to-end encrypted sync is in design.",
+  "description": "One memory for your AI across Claude Code, Codex, and Claude Desktop — open source, local-first, stored in a SQLite file on the user's machine. End-to-end encrypted sync is in design.",
   "url": "https://forget.sh/",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "macOS, Linux",
@@ -56,12 +56,12 @@
     {
       "@type": "Question",
       "name": "Is my memory really local?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Everything lives in one SQLite file at ~/.forget — storage, search, and memory building all run on the user's machine, offline included. On LongMemEval the fully-local pipeline scores 76.2% (81.8% with a GPT-4o observer), against the paper's 60.6% full-context baseline. No account, no telemetry." }
+      "acceptedAnswer": { "@type": "Answer", "text": "Everything lives in one SQLite file at ~/.forget — storage, search, and memory building all run on the user's machine, offline included. On LongMemEval the fully-local pipeline scores 78.4% ± 0.4 across three seeds (81.8% with a GPT-4o observer), against the paper's 60.6% full-context baseline. No account, no telemetry." }
     },
     {
       "@type": "Question",
       "name": "How is forget different from ChatGPT or Claude's built-in memory?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Built-in memory lives on provider servers, works only inside one vendor's products, and shows conclusions without provenance. forget stores memory on your machine, works across Claude Code, Cursor, Codex, and Claude Desktop via MCP, and every answer carries a receipt plus a trust label." }
+      "acceptedAnswer": { "@type": "Answer", "text": "Built-in memory lives on provider servers, works only inside one vendor's products, and shows conclusions without provenance. forget stores memory on your machine, works across Claude Code, Codex, and Claude Desktop via MCP (and any MCP client), and every answer carries a receipt plus a trust label." }
     },
     {
       "@type": "Question",
@@ -468,6 +468,11 @@
   .foot-links a { display: block; font-size: 14px; font-weight: 500; color: var(--body); padding: 4px 0; }
   .foot-links a:hover { color: var(--ink); }
   .legal { margin-top: 40px; font-size: 13px; color: var(--faint); border-top: 1px solid var(--hair); padding-top: 24px; }
+.agent-hint { margin-top:10px; font-size:.85rem; color:#8a8377; }
+.agent-hint em { font-style:normal; font-weight:600; color:#4a453c; }
+.agent-quote { font-size:1.25rem; line-height:1.55; margin:18px 0; padding-left:18px; border-left:3px solid var(--red); text-align:left; }
+.ritual { margin-top:28px; padding:16px 20px; border-left:3px solid var(--red);
+  background:#fff; border-radius:0 14px 14px 0; font-size:.95rem; }
 </style>
 </head>
 <body>
@@ -490,14 +495,15 @@
 
 <div class="wrap">
   <div class="hero">
-    <a class="eyebrow" href="#benchmark">LongMemEval: 81.8% best config · 76.2% fully local →</a>
-    <h1>Tell Claude Code once.<br><em>Cursor remembers.</em></h1>
-    <p class="sub">One memory for your AI — decisions, preferences, project
-    context — in a <code>SQLite</code> file on your machine. We couldn't
-    read it if we tried.</p>
+    <a class="eyebrow" href="#benchmark">LongMemEval: 78.4% ± 0.4 fully local · three seeds →</a>
+    <h1>Tell Claude Code once.<br><em>Codex remembers.</em></h1>
+    <p class="sub">One memory across your AI tools — and every session opens
+    already briefed: current goal, next action, what changed while you were
+    gone. Local. Auditable. We couldn't read it if we tried.</p>
 
     <div class="hero-ctas" id="install">
-      <span class="cmd-pill"><span><span class="k">pip</span> install 'forget-ai[server]' &amp;&amp; <span class="k">npx</span> forget-connect</span><button id="copyBtn" type="button">copy</button></span>
+      <span class="cmd-pill"><span><span class="k">curl</span> -fsSL forget.sh | <span class="k">sh</span></span><button id="copyBtn" type="button">copy</button></span>
+      <div class="agent-hint">or just tell your AI: <em>&ldquo;Install forget.sh&rdquo;</em> &mdash; this site explains itself to agents.</div>
     </div>
 
     <div class="stage" id="stage">
@@ -530,7 +536,6 @@
   <div class="band rv">
     <span class="label">WORKS WITH</span>
     <span class="logo">Claude <span>Code</span></span>
-    <span class="logo">Cursor</span>
     <span class="logo">Codex</span>
     <span class="logo">Claude <span>Desktop</span></span>
     <span class="logo"><span>via</span> MCP</span>
@@ -555,12 +560,12 @@
           <span class="val">60.6%</span>
         </div>
         <div class="row us">
-          <span class="name">forget · local pipeline</span>
-          <div class="track"><div class="bar" style="--w:76.2%"><span class="in-label">100% LOCAL</span></div></div>
-          <span class="val">76.2%</span>
+          <span class="name">forget · fully local, three seeds</span>
+          <div class="track"><div class="bar" style="--w:78.4%"><span class="in-label">100% LOCAL</span></div></div>
+          <span class="val">78.4% ± 0.4</span>
         </div>
         <div class="row us">
-          <span class="name">forget · best config</span>
+          <span class="name">forget · with a cloud observer (optional)</span>
           <div class="track"><div class="bar" style="--w:81.8%"></div></div>
           <span class="val">81.8%</span>
         </div>
@@ -571,13 +576,15 @@
         </div>
       </div>
       <p class="bench-kicker rv">Knowledge-update questions — where memory products
-      usually fail because stale facts survive: <strong>92.3%</strong></p>
+      usually fail because stale facts survive: <strong>92.3%</strong> (cloud-observer config)</p>
       <p class="bench-note rv">Baseline and ceiling are from the
       <a href="https://arxiv.org/abs/2410.10813">LongMemEval paper</a>: full-context
       is GPT-4o reading the entire transcript with no memory system; oracle is GPT-4o
-      handed only the evidence sessions. The local-pipeline row builds and retrieves
-      memory entirely on-device (Qwen 14B observer); best config uses a GPT-4o observer.
-      Our weakest category is single-session-preference at 43.3% — it's in the runs too.
+      handed only the evidence sessions. The local row builds and retrieves
+      memory entirely on-device (Qwen 14B observer, v3 reader) — run three times
+      with different seeds: 78.4, 78.8, 78.0. We publish the spread; nobody else
+      in this market does. The optional cloud-observer config (GPT-4o) reaches 81.8%.
+      Our weakest category is single-session-preference — it's in the runs too.
       <a href="https://github.com/multi-turn-inc/forget/tree/main/research/longmemeval/runs">Per-question outputs and configs →</a></p>
     </div>
   </div>
@@ -666,12 +673,38 @@
           <span class="no">04</span>
           <div>
             <h3>Ask "why" from any tool</h3>
-            <p>Claude Code, Cursor, or Codex — the answer comes back with the commit
+            <p>Claude Code, Codex, or Claude Desktop — the answer comes back with the commit
             or conversation that decided it. Sync arrives sealed
             <span class="soon-tag">E2EE · IN DESIGN</span></p>
           </div>
         </li>
       </ul>
+      <p class="ritual rv">The three-minute proof, once installed: <strong>start a task,
+      kill the session, reopen.</strong> A stateless agent greets you — yours opens with
+      a handover: goal, next step, what changed. That moment is the product.</p>
+    </div>
+  </div>
+</section>
+
+<section class="divide" id="field-report">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="sec-no">04 · Field report</span>
+      <h2 class="sec-title">Our first user review<br><em>was written by an agent.</em></h2>
+    </div>
+    <div class="sec-body rv">
+      <p class="bench-note">A coding agent (GPT-5.6, Codex) used forget across a
+      multi-day trading-system build — data pipelines, safety constraints, live
+      processes — and filed a structured review: acceptance criteria, regression
+      scenarios, scores.</p>
+      <blockquote class="agent-quote">&ldquo;Resuming long-running work: 8/10.
+      The most valuable layer isn't generic recall — it's task state: progress,
+      next actions, blockers, and the safety boundaries we agreed on, restored
+      across sessions.&rdquo;</blockquote>
+      <p class="bench-note">Every defect it reported was reproduced, filed, and
+      fixed — two releases within 24 hours.
+      <a href="https://github.com/multi-turn-inc/forget/issues?q=is%3Aissue+label%3A%22field+report%22">The
+      issues are public →</a></p>
     </div>
   </div>
 </section>
@@ -746,7 +779,7 @@
         <tbody>
           <tr>
             <td>LongMemEval, full 500</td>
-            <td class="us">81.8% · <a href="#benchmark">local 76.2%</a></td>
+            <td class="us"><a href="#benchmark">78.4% ± 0.4 fully local</a> · 81.8% best</td>
             <td colspan="2">self-reported, different readers — <a href="#benchmark">see methodology</a></td>
             <td class="dash">unpublished</td>
           </tr>
@@ -780,7 +813,7 @@
           </tr>
           <tr>
             <td>Follows you across tools</td>
-            <td class="us">Claude Code · Cursor · Codex</td>
+            <td class="us">Claude Code · Codex · Claude Desktop</td>
             <td>via MCP</td>
             <td>via SDK</td>
             <td class="dash">one vendor's silo</td>
@@ -813,12 +846,12 @@
         <span class="chip ok">SHIPPED · OPEN SOURCE</span>
         <h3>Runs on your machine today</h3>
         <ul>
-          <li>LongMemEval full-500: 81.8% best config · 76.2% fully local pipeline</li>
+          <li>LongMemEval full-500: 78.4% ± 0.4 fully local (three seeds) · 81.8% with cloud observer</li>
           <li>Hooks push memory into sessions — capsule, recall, conflict alerts</li>
           <li>One SQLite file you own — offline included</li>
           <li>Mines your repo's decision history from git</li>
           <li>Observation gate keeps facts, forgets junk</li>
-          <li>MCP: Claude Code, Cursor, Codex, Claude Desktop</li>
+          <li>MCP: Claude Code, Codex, Claude Desktop — any MCP client</li>
         </ul>
       </div>
       <div class="col rv" style="transition-delay:.07s">
@@ -880,8 +913,9 @@
           <div class="a">Everything lives in one SQLite file at <code>~/.forget</code> —
           storage, search, and memory building all run on your machine, offline
           included. Local isn't a demo mode; it's a configuration we benchmark:
-          the fully-local pipeline scores 76.2% on LongMemEval (81.8% with a
-          GPT-4o observer), against the paper's 60.6% full-context baseline.
+          the fully-local pipeline scores 78.4% ± 0.4 on LongMemEval — three seeds,
+          spread published (81.8% with a GPT-4o observer), against the paper's
+          60.6% full-context baseline.
           There is no account, no telemetry, and no server of ours in the loop.</div>
         </details>
         <details>
@@ -889,7 +923,7 @@
           <div class="a">Built-in memory lives on the provider's servers, works only
           inside that vendor's products, and shows you conclusions without
           provenance. forget is the opposite on all three: your machine, every tool
-          that speaks MCP (Claude Code, Cursor, Codex, Claude Desktop), and every
+          that speaks MCP (Claude Code, Codex, Claude Desktop), and every
           answer carries a receipt — the commit or conversation that decided it,
           plus a trust label telling your agent whether it's safe to act on.</div>
         </details>
@@ -937,7 +971,7 @@
         </details>
         <details>
           <summary>What's supported today, honestly?</summary>
-          <div class="a">macOS and Linux; Claude Code, Cursor, Codex, and Claude Desktop
+          <div class="a">macOS and Linux; Claude Code, Codex, and Claude Desktop
           via MCP. The hooks layer (session capsule, push recall, conflict alerts) runs
           on Claude Code today. Not shipped yet: Windows, E2EE sync, hosted anything —
           the same list we publish in <a href="/llms.txt">llms.txt</a>.</div>
@@ -960,6 +994,7 @@
         <li class="rv"><span class="d">Jul 24</span><span><strong>0.2.1 — the supersede contract, sealed.</strong> An agent dogfooding the beta caught superseded facts re-entering action context; fixed the same day, with the repro as a regression test.</span></li>
       <li class="rv"><span class="d">Jul 24</span><span><strong>Public beta.</strong> forget-ai 0.2.0 on PyPI, forget-connect 0.3.0 on npm — with a login service that survives reboots.</span></li>
         <li class="rv"><span class="d">Jul 22</span><span><strong>Hooks + trust labels.</strong> Session capsule, per-turn push recall, conflict-zone alerts; every read carries green / yellow / red.</span></li>
+        <li class="rv"><span class="d">Jul 28</span><span><strong>Three seeds, one number: 78.40% ± 0.40</strong> fully local (v3 reader), full 500 × 3 runs — filed as <a href="https://offreco.vercel.app/record/0003">OffReco №0003</a> with every config public.</span></li>
         <li class="rv"><span class="d">Jul 16</span><span><strong>LongMemEval full-500: 81.8%</strong> best config (GPT-4o observer) · <strong>76.2%</strong> fully local pipeline — against the paper's 60.6% full-context baseline and 87.0% oracle ceiling.</span></li>
         <li class="rv"><span class="d">Jul 13</span><span><strong>Git decision miner.</strong> A repo's history becomes memory — "why did we choose X?" answered with commit receipts.</span></li>
       </ul>
@@ -992,7 +1027,8 @@
 <section class="closer">
   <div class="wrap rv">
     <h2>Give your AI a memory<br><em>in sixty seconds.</em></h2>
-    <div class="cmd-pill"><span><span class="k">pip</span> install 'forget-ai[server]' &amp;&amp; <span class="k">npx</span> forget-connect</span><button id="copyBtn2" type="button">copy</button></div>
+    <div class="cmd-pill"><span><span class="k">curl</span> -fsSL forget.sh | <span class="k">sh</span></span><button id="copyBtn2" type="button">copy</button></div>
+    <div class="agent-hint">or tell your AI: <em>&ldquo;Install forget.sh&rdquo;</em></div>
     <div class="ctas">
       <a class="btn red" href="https://github.com/multi-turn-inc/forget">Star on GitHub</a>
       <a class="btn ghost" href="/llms.txt">llms.txt for your agent</a>

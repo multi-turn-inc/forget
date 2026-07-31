@@ -20,3 +20,8 @@ research/beta/cache-minilm/
 research/longmemeval-data/
 packages/forget-connect/*.tgz
 research/longmemeval/observations/
+
+# session scratch — never committed (Sol raw report stays private; see LOOP.md territory rule)
+feedback/
+tmp/
+.playwright-mcp/

@@ -1221,8 +1221,12 @@ def _task_state_search_results(
         if not _task_claim_scope_matches_filters(scope, filters):
             continue
         item = _task_state_result_from_row(row)
+        # No flat activeness boost: being in_progress already earns the
+        # recency bonus inside score_memory, and a second additive let
+        # off-topic active states ride free score over recall gates
+        # (friction F2 — the Quant task shadowing devloop turns).
+        # Activeness is the capsule's job; search ranks by topic.
         score = score_memory(query, item, reference_date=as_of or None)
-        score = min(1.0, round(score + 0.08, 4))
         score = feedback_adjusted_score(score, feedbacks.get(str(item["id"])))
         if score >= threshold:
             item["score"] = score
@@ -1695,7 +1699,14 @@ def _validated_search_top_k_value(raw: Any, default: int = 10) -> int:
 
 
 def _validated_search_top_k(payload: dict[str, Any], default: int = 10) -> int:
-    return _validated_search_top_k_value(payload.get("top_k"), default=default)
+    # "limit" is the OpenMemory-compatible alias of "top_k"; every other
+    # search-shaped entry point (assemble_context, create_summary, the MCP
+    # validator) already coalesces the two — dropping it here silently
+    # returned the default 10 to clients that asked for limit=N.
+    raw = payload.get("top_k")
+    if raw is None:
+        raw = payload.get("limit")
+    return _validated_search_top_k_value(raw, default=default)
 
 
 def _validated_search_threshold_value(raw: Any) -> float:
@@ -8912,6 +8923,8 @@ def _compile_context_capsule(
     capsule = {
         "schema_version": CONTEXT_CAPSULE_SCHEMA_VERSION,
         "goal": goal,
+        "state_recorded_at": str(workspace_current.get("created_at") or workspace_current.get("recorded_at") or "") if isinstance(workspace_current, dict) else "",
+        "state_age_hours": _state_age_hours(workspace_current.get("created_at") or workspace_current.get("recorded_at")) if isinstance(workspace_current, dict) else None,
         "status": status,
         "next_action": {
             "action": next_action_text,
@@ -9206,6 +9219,36 @@ def _open_loop_postits(project_id: str, scope_filters: dict[str, Any] | None = N
     return postits
 
 
+def _state_age_hours(recorded_at: str | None) -> float | None:
+    """Age of a task-state record in hours; None when unparseable.
+
+    The capsule's goal/next-action lines are fast-layer state (LOOP.md persona
+    model): they harden into false "current" facts unless their age travels
+    with them. Field note F1, 2026-07-31: a two-day-old beat was presented as
+    the current goal with no freshness signal.
+    """
+    raw = str(recorded_at or "").strip()
+    if not raw:
+        return None
+    try:
+        stamp = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if stamp.tzinfo is None:
+        stamp = stamp.replace(tzinfo=timezone.utc)
+    return max(0.0, (datetime.now(timezone.utc) - stamp).total_seconds() / 3600.0)
+
+
+def _state_age_label(age_hours: float | None) -> str:
+    if age_hours is None:
+        return ""
+    if age_hours < 1:
+        return "방금 기록"
+    if age_hours < 24:
+        return f"{int(age_hours)}시간 전 기록"
+    return f"{age_hours / 24:.1f}일 전 기록"
+
+
 def _render_context_capsule_text(capsule: dict[str, Any]) -> str:
     next_action = capsule.get("next_action") if isinstance(capsule.get("next_action"), dict) else {}
     source_route = capsule.get("source_route") if isinstance(capsule.get("source_route"), dict) else {}
@@ -9217,11 +9260,25 @@ def _render_context_capsule_text(capsule: dict[str, Any]) -> str:
         if isinstance(item, dict) and str(item.get("target") or "")
     ]
     uncertainties = [str(item) for item in capsule.get("uncertainties") or [] if str(item)]
+    age_hours = capsule.get("state_age_hours")
+    age_label = _state_age_label(age_hours if isinstance(age_hours, (int, float)) else None)
+    goal_suffix = f" ({age_label})" if age_label else ""
     lines = [
-        f"현재 목표: {_autopilot_short_text(capsule.get('goal'), 240)}",
+        f"현재 목표: {_autopilot_short_text(capsule.get('goal'), 240)}{goal_suffix}",
         f"현재 상태: {_autopilot_short_text(capsule.get('status'), 120)}",
         f"다음 행동: {_autopilot_short_text(next_action.get('action'), 220)}",
     ]
+    try:
+        stale_hours = float(os.environ.get("MEM1_CAPSULE_STALE_HOURS", "24") or 24)
+    except ValueError:
+        stale_hours = 24.0
+    if isinstance(age_hours, (int, float)) and age_hours >= stale_hours:
+        # Early position: the budget loop pops from the tail, and a missing
+        # staleness warning costs more than any droppable detail (F1).
+        lines.insert(
+            3,
+            f"⚠ 상태 신선도: 위 목표·다음 행동은 {age_label} — 유동층 낡음, 재검증 후 행동",
+        )
     goal_lines = [str(item) for item in capsule.get("goal_lines") or [] if str(item)]
     if goal_lines:
         lines.append("상위 목표: " + " | ".join(goal_lines[:2]))
@@ -11050,6 +11107,7 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
                 ):
                     workspace_current = {"task_id": task_id, "status": item.get("status"),
                                          "summary": item.get("summary"),
+                                         "created_at": item.get("created_at"),
                                          "next_actions": item.get("next_actions") or [],
                                          "blockers": item.get("blockers") or []}
                     break

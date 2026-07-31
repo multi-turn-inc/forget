@@ -15,6 +15,12 @@ import os from "node:os";
 import path from "node:path";
 
 export const DEFAULT_MCP_URL = "http://localhost:8000/mcp";
+// One canonical memory pool per user. Naming the pool after the client
+// (codex, claude-code, …) invents an empty per-tool scope and re-creates the
+// fragmentation the scoped default exists to prevent: memories written from
+// one tool become invisible to every other (issue #27, field report round 3).
+// The client's identity is provenance, not an isolation boundary.
+export const CANONICAL_APP_ID = "forget";
 export const HOSTED_MCP_URL = "https://api.multi-turn.ai/mcp";
 export const SERVER_KEY = "forget";
 export const BACKUP_SUFFIX = ".forget-backup";
@@ -582,10 +588,11 @@ function rulesCurrent(raw) {
   }
 }
 
-export async function inspectClients(clients, { url = "", apiKey = "" } = {}) {
-  const expectedUrl = url ? normalizeUrl(url) : "";
+export async function inspectClients(clients, { url = "", apiKey = "", urlFor = null } = {}) {
   return Promise.all(
     clients.map(async (client) => {
+      const clientUrl = urlFor ? urlFor(client) : url;
+      const expectedUrl = clientUrl ? normalizeUrl(clientUrl) : "";
       const configRaw = await readOptional(client.configPath);
       const rulesRaw = client.rulesPath ? await readOptional(client.rulesPath) : "";
       const expected = expectedUrl
@@ -616,6 +623,7 @@ export async function buildPlan(
     installInstructionRules = true,
     migrateLegacy = true,
     legacyUrls = [url],
+    urlFor = null,
   } = {},
 ) {
   if (!['connect', 'disconnect'].includes(action)) {
@@ -623,17 +631,20 @@ export async function buildPlan(
   }
   const changes = [];
   for (const client of clients) {
+    // urlFor lets connect scope each client into its own memory pool
+    // (/mcp/{app}/http/{user}) while everything else shares one plan.
+    const clientUrl = urlFor ? urlFor(client) : url;
     const configRaw = await readOptional(client.configPath);
     let configNext;
     if (client.kind === "toml") {
       configNext = action === "connect"
-        ? connectToml(configRaw, { url, apiKey, migrateLegacy, legacyUrls })
+        ? connectToml(configRaw, { url: clientUrl, apiKey, migrateLegacy, legacyUrls })
         : disconnectToml(configRaw);
     } else {
       configNext = action === "connect"
         ? connectJson(configRaw, {
           clientId: client.id,
-          url,
+          url: clientUrl,
           apiKey,
           migrateLegacy,
           legacyUrls,
