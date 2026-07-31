@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.5 — 2026-07-31
+
+The first releases authored substantially by the self-development loop:
+both fixes came from field notes the loop filed about its own sessions,
+each with a falsifiable prediction registered before the change.
+
+### Context quality
+- The session capsule's state lines now carry their recording age
+  ("3시간 전 기록"), and past `MEM1_CAPSULE_STALE_HOURS` (default 24) a
+  warning is inserted early enough to survive budget trimming: fast-layer
+  state must be re-validated, not obeyed (loop cycle 2, friction F1).
+- Task-state search results no longer receive a flat activeness boost on
+  top of the recency bonus — off-topic active tasks used to ride ~0.16 of
+  free score over recall gates and shadow relevant memories. Activeness
+  is the capsule's job; search ranks by topic (loop cycle 3, friction F2).
+
+
 ## 0.3.5 — Unreleased (gate: 정훈)
 
 Dogfooding round 1: the devloop — an agent using forget as its own working
