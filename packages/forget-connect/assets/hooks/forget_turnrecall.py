@@ -117,8 +117,14 @@ def main() -> None:
         memory_id = str(item.get("id") or "")
         if not memory_id or memory_id in seen:
             continue
-        if (item.get("metadata") or {}).get("hook"):
+        metadata = item.get("metadata") or {}
+        if metadata.get("hook"):
             continue  # session-capture pointers are for rehydration, not recall
+        if metadata.get("assertion_kind") == "task_state":
+            # Fluid-layer task ledger rows travel via get_task_state/capsule
+            # only; surfacing them as turn recalls is friction F2's C2 cause
+            # (long claim texts farm phrase_bonus regardless of topic).
+            continue
         pair = _conflict_pair(item)
         if pair:
             if score >= CONFLICT_THRESHOLD:

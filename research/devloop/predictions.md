@@ -127,3 +127,9 @@ P1의 정당한 원기한을 승계한 것이므로 선적용 아님.
 - 대조군: 사이클 8~18의 F2 재발 11건(frictions.md 대장).
 - 판정: 각 처치 배선 후 +5사이클. (b)가 있어 양방향 반증 가능.
 - 시계: 미시작 — 훅 배선은 ~/.forget 설치본 갱신(정훈 게이트) 시점부터.
+- 진행: **처치 1 코드 구현 완료 (사이클 19 커밋)** — forget_turnrecall.py 후보 루프에서
+  metadata.assertion_kind == 'task_state' 제외(판별자는 store.py _task_state_result_from_row의
+  스탬프), hooks/·packages/forget-connect/assets/hooks/ 두 사본 동기, 단위테스트
+  test_task_state_claims_never_recalled(고점수 task 클레임 침묵 + 동일 결과셋의 일반 기억
+  생존 + 억제 장부 비오염) 추가, pytest 224 통과. 시계는 여전히 배선 게이트 대기.
+  처치 2(채점기측)는 미착수 — 별도 사이클, LongMemEval 삼각측량 동반.
