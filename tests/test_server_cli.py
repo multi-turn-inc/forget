@@ -154,3 +154,22 @@ def test_run_on_occupied_port_exits_nonzero_without_banner(tmp_path) -> None:
     assert "forget-server: http://" not in proc.stdout  # no lying banner
     assert "forget-server status" in proc.stderr
     assert f"--port {port + 1}" in proc.stderr
+
+
+def test_ready_identifies_live_code() -> None:
+    # P3b's precondition: "which code is live?" must be answerable from the
+    # outside. openapi said "0.1.0" forever (FastAPI default), and /ready
+    # said nothing — so a dogfood deploy could never be verified against a
+    # commit. Same wart as issue #5, one surface over.
+    import re
+
+    import forget
+    from fastapi.testclient import TestClient
+    from forget.server import app
+
+    body = TestClient(app).get("/ready").json()
+    assert body["version"] == forget.__version__
+    assert body["version"] != "0.1.0"
+    # This test runs in a git checkout, so the commit must resolve here.
+    assert re.fullmatch(r"[0-9a-f]{40}", body["commit"])
+    assert app.openapi()["info"]["version"] == forget.__version__

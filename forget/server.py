@@ -11,6 +11,8 @@ billing through :mod:`forget.ports` without the core importing either.
 """
 from __future__ import annotations
 
+import subprocess
+from pathlib import Path
 from typing import Any
 
 from fastapi import Body, Depends, FastAPI, HTTPException, Request
@@ -38,8 +40,35 @@ from .store import (
     update_memory,
 )
 from .utils import ENTITY_FIELDS, parse_datetime, utc_now
+from . import __version__
 
-app = FastAPI(title="forget", description="Memory for your AI. It forgets the junk, keeps what matters.")
+
+def _source_commit() -> str | None:
+    """Git commit of the source tree serving this process, or None when
+    running from an installed dist. ``__version__`` alone can't distinguish
+    two source checkouts (both say "+source"), so a dogfood deploy is only
+    verifiable against the commit hash."""
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=Path(__file__).resolve().parent,
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    commit = out.stdout.strip()
+    return commit if out.returncode == 0 and len(commit) == 40 else None
+
+
+SOURCE_COMMIT = _source_commit()
+
+app = FastAPI(
+    title="forget",
+    description="Memory for your AI. It forgets the junk, keeps what matters.",
+    version=__version__,
+)
 
 # Schema is created eagerly at import so plain TestClient(app) usage and
 # one-off scripts work without lifespan events (mirrors the engine's history).
@@ -52,7 +81,12 @@ async def auth(request: Request) -> None:
 
 @app.get("/ready")
 def ready() -> dict[str, Any]:
-    return {"status": "ready", "service": "forget"}
+    return {
+        "status": "ready",
+        "service": "forget",
+        "version": __version__,
+        "commit": SOURCE_COMMIT,
+    }
 
 
 # --- MCP --------------------------------------------------------------------
