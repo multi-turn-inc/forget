@@ -192,6 +192,21 @@ def apply_custom_instructions(facts: list[str], instructions: str | None) -> lis
     return [fact for fact in facts if any(term in fact.lower() for term in selected_terms)]
 
 
+def _provider_counted(
+    accounting: dict[str, Any] | None,
+    messages: list[dict[str, Any]],
+    facts: list[str],
+) -> list[str]:
+    # A remote extractor is sentence-opaque — we cannot count what it dropped.
+    # The marker keeps the accounting honest: conservation checks that depend
+    # on sentence-level counters are skipped for provider-extracted events.
+    if accounting is not None:
+        accounting["provider_extractions"] = accounting.get("provider_extractions", 0) + 1
+        accounting["messages_in"] = accounting.get("messages_in", 0) + len(messages)
+        accounting["facts_out"] = accounting.get("facts_out", 0) + len(facts)
+    return facts
+
+
 def extract_facts(
     messages: list[dict[str, Any]],
     infer: bool,
@@ -200,6 +215,7 @@ def extract_facts(
     extraction_policy: str | None = None,
     assistant_is_subject: bool = False,
     gate_log: list[dict[str, Any]] | None = None,
+    accounting: dict[str, Any] | None = None,
 ) -> list[str]:
     settings = get_project_settings(project_id)
     instructions = custom_instructions or settings.get("custom_instructions")
@@ -210,7 +226,7 @@ def extract_facts(
             if facts:
                 # the model already honored the instructions; the keyword
                 # allowlist below is a heuristic for the local extractor only
-                return facts
+                return _provider_counted(accounting, messages, facts)
         except Exception:
             pass
     if provider in GEMINI_LLM_PROVIDERS and infer and _provider_credentials_available(settings, "llm"):
@@ -219,7 +235,7 @@ def extract_facts(
             if facts:
                 # the model already honored the instructions; the keyword
                 # allowlist below is a heuristic for the local extractor only
-                return facts
+                return _provider_counted(accounting, messages, facts)
         except Exception:
             pass
     if provider in ANTHROPIC_LLM_PROVIDERS and infer and _provider_credentials_available(settings, "llm"):
@@ -228,7 +244,7 @@ def extract_facts(
             if facts:
                 # the model already honored the instructions; the keyword
                 # allowlist below is a heuristic for the local extractor only
-                return facts
+                return _provider_counted(accounting, messages, facts)
         except Exception:
             pass
     if provider in AZURE_OPENAI_LLM_PROVIDERS and infer and _provider_credentials_available(settings, "llm"):
@@ -237,7 +253,7 @@ def extract_facts(
             if facts:
                 # the model already honored the instructions; the keyword
                 # allowlist below is a heuristic for the local extractor only
-                return facts
+                return _provider_counted(accounting, messages, facts)
         except Exception:
             pass
     if provider in AWS_BEDROCK_LLM_PROVIDERS and infer:
@@ -246,19 +262,22 @@ def extract_facts(
             if facts:
                 # the model already honored the instructions; the keyword
                 # allowlist below is a heuristic for the local extractor only
-                return facts
+                return _provider_counted(accounting, messages, facts)
         except Exception:
             pass
-    return apply_custom_instructions(
-        extract_memories(
-            messages,
-            infer=infer,
-            extraction_policy=extraction_policy,
-            assistant_is_subject=assistant_is_subject,
-            gate_log=gate_log,
-        ),
-        instructions,
+    extracted = extract_memories(
+        messages,
+        infer=infer,
+        extraction_policy=extraction_policy,
+        assistant_is_subject=assistant_is_subject,
+        gate_log=gate_log,
+        accounting=accounting,
     )
+    facts = apply_custom_instructions(extracted, instructions)
+    if accounting is not None:
+        accounting["instruction_filtered"] = accounting.get("instruction_filtered", 0) + (len(extracted) - len(facts))
+        accounting["facts_out"] = accounting.get("facts_out", 0) + len(facts)
+    return facts
 
 
 def _provider_credentials_available(settings: dict[str, Any], prefix: str) -> bool:

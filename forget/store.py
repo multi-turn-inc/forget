@@ -667,6 +667,7 @@ def _fact_records(
     project_id: str,
     infer: bool,
     gate_log: list[dict[str, Any]] | None = None,
+    accounting: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     messages = payload["messages"]
     custom_instructions = payload.get("custom_instructions")
@@ -686,6 +687,7 @@ def _fact_records(
                 extraction_policy=extraction_policy,
                 assistant_is_subject=assistant_is_subject,
                 gate_log=gate_log,
+                accounting=accounting,
             )
         ]
 
@@ -703,10 +705,13 @@ def _fact_records(
             extraction_policy=extraction_policy,
             assistant_is_subject=assistant_is_subject,
             gate_log=gate_log,
+            accounting=accounting,
         ):
             scope_key = tuple(tuple(scope.get(field) for field in ENTITY_FIELDS) for scope in scopes)
             key = (fact.lower(), scope_key)
             if key in seen:
+                if accounting is not None:
+                    accounting["scope_deduped"] = accounting.get("scope_deduped", 0) + 1
                 continue
             seen.add(key)
             records.append({"fact": fact, "scopes": scopes, "input": [message], "source_role": payload.get("source_role")})
@@ -3554,6 +3559,48 @@ def list_gate_log(payload: dict[str, Any] | None = None, project_id: str | None 
     }
 
 
+def add_accounting_violations(accounting: dict[str, Any]) -> list[str]:
+    """F5 침묵 잊음 — stage-wise conservation checks for one ADD event.
+
+    Every unit entering the pipeline must exit as a stored memory, a logged
+    refusal, or a counted drop; a violation means some path loses input
+    without a number. gate_log rows are sampled (50/event), so the counters,
+    not the rows, are the authoritative denominator. Remote-provider
+    extraction is sentence-opaque (provider_extractions marker) — for those
+    events only the storage-side equations are checked.
+    """
+    def n(key: str) -> int:
+        return int(accounting.get(key) or 0)
+
+    violations: list[str] = []
+    if not n("provider_extractions"):
+        if n("facts_raw") != n("facts_extracted") + n("batch_deduped"):
+            violations.append("extraction: facts_raw != facts_extracted + batch_deduped")
+        if n("facts_out") != n("facts_extracted") - n("instruction_filtered"):
+            violations.append("instruction: facts_out != facts_extracted - instruction_filtered")
+    if n("facts_out") - n("scope_deduped") - n("sanitize_dropped") != n("records_kept"):
+        violations.append("records: facts_out - scope_deduped - sanitize_dropped != records_kept")
+    if n("fact_scope_pairs") != n("memories_created") + n("duplicate_skipped"):
+        violations.append("storage: fact_scope_pairs != memories_created + duplicate_skipped")
+    return violations
+
+
+def _merge_event_metadata(event_id: str, extra: dict[str, Any]) -> None:
+    try:
+        with get_db() as conn:
+            row = conn.execute("SELECT metadata FROM events WHERE id = ?", (event_id,)).fetchone()
+            if not row:
+                return
+            metadata = json_loads(row["metadata"], {})
+            metadata.update(extra)
+            conn.execute(
+                "UPDATE events SET metadata = ?, updated_at = ? WHERE id = ?",
+                (json_dumps(metadata), utc_now(), event_id),
+            )
+    except sqlite3.Error:
+        pass  # accounting must never block the write path
+
+
 def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict[str, Any]:
     project_id = payload.get("project_id") or project_id or current_project_id()
     if not payload.get("messages") or not isinstance(payload["messages"], list):
@@ -3579,7 +3626,8 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
     infer = bool(payload.get("infer", True))
     sanitize = _add_sanitize_enabled(payload)
     gate_drops: list[dict[str, Any]] = []
-    fact_records = _fact_records(payload, project_id=project_id, infer=infer, gate_log=gate_drops)
+    accounting: dict[str, Any] = {}
+    fact_records = _fact_records(payload, project_id=project_id, infer=infer, gate_log=gate_drops, accounting=accounting)
     skipped_junk: dict[str, int] = {}
     skipped_duplicate = 0
     if sanitize:
@@ -3593,6 +3641,9 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
             else:
                 kept_records.append(record)
         fact_records = kept_records
+    accounting["sanitize_dropped"] = sum(skipped_junk.values())
+    accounting["records_kept"] = len(fact_records)
+    accounting["fact_scope_pairs"] = sum(len(record["scopes"]) for record in fact_records)
     _record_gate_drops(gate_drops, payload, project_id=project_id, event_id=event_id)
     created: list[dict[str, Any]] = []
     vector_upserts: list[tuple[dict[str, Any], list[float]]] = []
@@ -3701,6 +3752,12 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
 
     for memory_record, embedding in vector_upserts:
         vector_upsert_memory(memory_record, embedding, project_id)
+    accounting["duplicate_skipped"] = skipped_duplicate
+    accounting["memories_created"] = len(created)
+    violations = add_accounting_violations(accounting)
+    if violations:
+        accounting["identity_violations"] = violations
+    _merge_event_metadata(event_id, {"accounting": accounting})
     elapsed = round((time.perf_counter() - start_time) * 1000, 3)
     complete_event(event_id, "SUCCEEDED", created, started_at, start_time)
     record_usage(
@@ -3724,6 +3781,7 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
         "message": "Memory processing has been queued for background execution",
         "status": "PENDING",
         "event_id": event_id,
+        "accounting": accounting,
     }
     if sanitize:
         response["sanitized"] = True
