@@ -49,9 +49,15 @@ while true; do
     echo "=== 종료 코드: $CODE ==="
   } >> ~/.forget/devloop.log
   tail -n 6000 ~/.forget/devloop.log > ~/.forget/devloop.log.tmp && mv ~/.forget/devloop.log.tmp ~/.forget/devloop.log
-  echo $((COUNT+1)) > "$COUNT_FILE"
+  # 인증 실패 런은 상한을 소모하지 않는다 — 사이클이 아니라 배선 사고다 (2026-07-31,
+  # OAuth 만료 런들이 상한 10을 태워 루프를 하루 종일 세운 사건의 재발 방지)
+  if echo "$OUT" | grep -qi "Failed to authenticate"; then
+    echo "auth failure — not counted toward daily cap" >> ~/.forget/devloop.log
+  else
+    echo $((COUNT+1)) > "$COUNT_FILE"
+  fi
 
-  if echo "$OUT" | grep -qiE "session limit|usage limit|rate limit"; then
+  if echo "$OUT" | grep -qiE "session limit|usage limit|rate limit|Failed to authenticate"; then
     SLEEP=$BACKOFF_SECONDS
   else
     SLEEP=$COOLDOWN_SECONDS
