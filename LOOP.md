@@ -101,3 +101,7 @@
 3. 체감 지표 ③: 도그푸딩 트랜스크립트에서 재설명 턴 실측 (압축 측정 3종과 묶음)
 4. #24 쓰기 영수증 · #25 오류 구조화 · #27 스코프 모델 잔여
 5. MemoryArena bundled_shopping 실측 (대조군 포함) · 업스트림 PR
+6. **읽기측 공개 게이트(read-side disclosure)**: 회상이 표면화되기 전에 "누구 앞인가"를 스코프로
+   검사 — 쓰기 게이트(비밀 저장 거부)의 대칭. 공유 채널·타 스코프 문맥에서 사적 기억을
+   발설하지 않는 재량. (외부 신호: pash 2026-07-31 — "information asymmetry as first-class
+   skill", "tenting". 인격 모델의 구성 정책에 audience 축 추가)
