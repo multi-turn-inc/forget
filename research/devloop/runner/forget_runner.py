@@ -31,9 +31,15 @@ import urllib.request
 
 MODEL = os.environ.get("FORGET_RUNNER_MODEL", "claude-fable-5")
 DIGEST_MODEL = os.environ.get("FORGET_RUNNER_DIGEST_MODEL", "claude-haiku-4-5-20251001")
-CONTEXT_BUDGET = int(os.environ.get("FORGET_RUNNER_BUDGET_TOKENS", "60000"))
+# 운영 기본 120k: 모델 한도(1M)가 아니라 성능·비용의 적정 영역이 기준이다.
+# 근거: 풀컨텍스트 115k에서 이미 60.6%로 성능 저하 실측(compression-baseline.md),
+# 매 턴 재전송 비용은 컨텍스트에 비례, 그리고 응고는 splice로 프롬프트 캐시 접두어를
+# 깨므로 "드물게 크게"가 싸다. P5 실험은 BUDGET=60000 오버라이드로 응고를 강제 유발.
+CONTEXT_BUDGET = int(os.environ.get("FORGET_RUNNER_BUDGET_TOKENS", "120000"))
 CONSOLIDATE_AT = float(os.environ.get("FORGET_RUNNER_CONSOLIDATE_AT", "0.7"))
-KEEP_RECENT = int(os.environ.get("FORGET_RUNNER_KEEP_RECENT", "12"))  # 메시지 수(≈6턴)
+# 최근 창은 메시지 개수가 아니라 토큰 길이로 잰다 — 메시지 하나가 50토큰일 수도
+# 2만 토큰(도구 결과)일 수도 있으므로 개수는 창 크기를 보장하지 못한다 (정훈 지적).
+KEEP_RECENT_TOKENS = int(os.environ.get("FORGET_RUNNER_KEEP_RECENT_TOKENS", "30000"))
 MAX_TURNS = int(os.environ.get("FORGET_RUNNER_MAX_TURNS", "60"))
 FORGET_URL = os.environ.get(
     "FORGET_MCP_URL", "http://127.0.0.1:8000/mcp/forget/http/junghunkim"
@@ -105,17 +111,34 @@ TOOLS = [
 # ---------------------------------------------------------------- 응고 (순수)
 
 
-def choose_cut_index(messages: list[dict], keep_recent: int) -> int:
-    """오래된 구간 [0:cut]을 응고할 수 있는 가장 큰 cut을 고른다.
+def estimate_message_tokens(message: dict) -> int:
+    """메시지 하나의 토큰 추정 (chars/3.2 — compression-baseline.md와 동일 계수)."""
+    content = message.get("content")
+    if isinstance(content, str):
+        return max(1, int(len(content) / 3.2))
+    return max(1, int(len(json.dumps(content or [], ensure_ascii=False)) / 3.2))
 
-    불변식: messages[cut]은 assistant여야 한다 — 그래야 tool_use/tool_result 쌍이
-    경계에서 찢어지지 않고, [user(digest)] + messages[cut:]의 역할 교대가 성립한다.
-    응고할 것이 2메시지 미만이면 0(응고 불가)을 돌려준다.
+
+def choose_cut_index(
+    messages: list[dict], keep_tokens: int, est=estimate_message_tokens
+) -> int:
+    """오래된 구간 [0:cut]을 응고할 cut을 고른다. 최근 창은 **토큰 길이** 기준.
+
+    뒤에서부터 토큰을 누적해 keep_tokens에 닿는 지점을 후보로 잡고,
+    tool_use/tool_result 쌍이 찢어지지 않도록 assistant 경계까지 내린다
+    (내리면 창은 keep_tokens보다 커질 수 있을 뿐, 작아지지는 않는다).
+    응고할 것이 사실상 없으면 0(응고 불가)을 돌려준다.
     """
-    cut = max(0, len(messages) - keep_recent)
+    acc = 0
+    cut = len(messages) - 1  # 마지막 메시지는 창 예산과 무관하게 항상 유지
+    for i in range(len(messages) - 1, 0, -1):
+        acc += est(messages[i])
+        cut = i
+        if acc > keep_tokens:
+            break  # 임계를 넘긴 메시지까지 창에 포함 — 창은 keep_tokens **이상**을 담보
     while cut > 1 and messages[cut].get("role") != "assistant":
         cut -= 1
-    if cut <= 1 or messages[cut].get("role") != "assistant":
+    if cut <= 1 or cut >= len(messages) or messages[cut].get("role") != "assistant":
         return 0
     return cut
 
@@ -273,7 +296,7 @@ class ForgetRunner:
     def _maybe_consolidate(self, last_input_tokens: int):
         if last_input_tokens < CONTEXT_BUDGET * CONSOLIDATE_AT:
             return
-        cut = choose_cut_index(self.messages, KEEP_RECENT)
+        cut = choose_cut_index(self.messages, KEEP_RECENT_TOKENS)
         if not cut:
             return
         old = self.messages[:cut]
@@ -351,7 +374,7 @@ def main() -> None:
     print(
         f"\n--- runner: turns_in={runner.total_in} out={runner.total_out} "
         f"consolidations={runner.consolidations} (budget {CONTEXT_BUDGET}, "
-        f"keep_recent {KEEP_RECENT})"
+        f"keep_recent_tokens {KEEP_RECENT_TOKENS})"
     )
 
 
