@@ -255,6 +255,157 @@ def format_being_line(vitals: dict[str, Any] | None, today: datetime | None = No
     return f"being:  {age}{vitals['memories']} memories{shed}{verified}{inherited}{fed}"
 
 
+def hooks_wired(settings: dict[str, Any]) -> dict[str, bool]:
+    """Which Claude Code lifecycle hooks mention forget.
+
+    A silent nervous system is the cold-start killer: hooks are fail-open,
+    so a user with broken wiring experiences forget as "nothing happens" —
+    which is exactly what a *working* install feels like on day one. Doctor
+    must tell those two apart.
+    """
+    wired = {}
+    for event in ("SessionStart", "UserPromptSubmit", "PreCompact", "SessionEnd"):
+        entries = settings.get("hooks", {}).get(event, [])
+        commands = " ".join(
+            h.get("command", "")
+            for entry in entries if isinstance(entry, dict)
+            for h in entry.get("hooks", []) if isinstance(h, dict)
+        )
+        wired[event] = "forget" in commands
+    return wired
+
+
+def pool_report(path: Path) -> list[tuple[str, str, int]]:
+    """Distinct (user_id, app_id) pools with live-memory counts, largest first."""
+    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    try:
+        rows = conn.execute(
+            """SELECT COALESCE(user_id,'∅'), COALESCE(app_id,'∅'), COUNT(*)
+               FROM memories WHERE deleted = 0
+               GROUP BY user_id, app_id ORDER BY COUNT(*) DESC"""
+        ).fetchall()
+    finally:
+        conn.close()
+    return [(str(u), str(a), int(n)) for u, a, n in rows]
+
+
+def foreign_pools(
+    pools: list[tuple[str, str, int]], user: str, canonical_app: str = "forget"
+) -> list[tuple[str, str, int]]:
+    """Pools that shouldn't live in this store — the F4 class of contamination."""
+    return [p for p in pools if p[0] != user or p[1] != canonical_app]
+
+
+def _mcp_call(host: str, port: int, app: str, user: str, method: str,
+              params: dict[str, Any], timeout: float = 8.0) -> dict[str, Any]:
+    import json as _json
+    import urllib.request
+
+    payload = {"jsonrpc": "2.0", "id": 1, "method": method, "params": params}
+    request = urllib.request.Request(
+        f"http://{host}:{port}/mcp/{app}/http/{user}",
+        data=_json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+    )
+    return _json.loads(urllib.request.urlopen(request, timeout=timeout).read())
+
+
+def cmd_doctor(args: argparse.Namespace) -> None:
+    """End-to-end health verdict: every line is a symptom with a prescription.
+
+    `status` says whether the process is up; doctor says whether the whole
+    nervous system works — server answers MCP, the store is sound and
+    uncontaminated, and the agent-side hooks are actually wired.
+    """
+    import getpass
+    import json as _json
+
+    user = os.environ.get("MEM1_MCP_DEFAULT_USER_ID") or getpass.getuser()
+    checks: list[tuple[bool, str, str]] = []  # (ok, line, hint-if-bad)
+
+    listening = _port_open(args.host, args.port)
+    checks.append((listening, f"server listening on {args.host}:{args.port}",
+                   "start it: forget-server install-service  (or: forget-server run)"))
+
+    mcp_ok = False
+    if listening:
+        try:
+            body = _mcp_call(args.host, args.port, "forget", user, "tools/list", {})
+            mcp_ok = bool(body.get("result", {}).get("tools"))
+        except Exception:
+            mcp_ok = False
+    checks.append((mcp_ok, f"MCP endpoint answers (/mcp/forget/http/{user})",
+                   "server is up but MCP failed — check server version: pip install -U forget-ai"))
+
+    path = db_path()
+    db_ok, pools = False, []
+    if path.exists():
+        try:
+            conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+            db_ok = conn.execute("PRAGMA quick_check").fetchone()[0] == "ok"
+            conn.close()
+            pools = pool_report(path)
+        except sqlite3.Error:
+            db_ok = False
+    checks.append((db_ok, f"store readable and sound ({path})",
+                   "database missing or corrupt — a fresh one is created on first write; "
+                   "if this store held memories, restore from backup"))
+
+    foreign = foreign_pools(pools, user)
+    canonical = sum(n for u, a, n in pools if u == user and a == "forget")
+    scope_ok = not foreign
+    detail = f"{canonical} memories in your pool ({user} × forget)"
+    if foreign:
+        worst = ", ".join(f"{u}×{a}:{n}" for u, a, n in foreign[:3])
+        detail += f" — plus {len(foreign)} foreign pool(s): {worst}"
+    checks.append((scope_ok, f"scope clean: {detail}",
+                   "foreign pools contaminate recall — merge or inspect: "
+                   "forget-server migrate-scope --from-app <app> --to-app forget (dry-run first)"))
+
+    settings_path = Path.home() / ".claude" / "settings.json"
+    wired: dict[str, bool] = {}
+    if settings_path.exists():
+        try:
+            wired = hooks_wired(_json.loads(settings_path.read_text()))
+        except (OSError, ValueError):
+            wired = {}
+    hooks_ok = wired.get("SessionStart", False)
+    wired_names = [k for k, v in wired.items() if v]
+    checks.append((hooks_ok,
+                   f"Claude Code hooks wired: {', '.join(wired_names) or 'none'}",
+                   "no capsule will arrive at session start — reinstall wiring: "
+                   "curl -fsSL https://forget.sh | sh"))
+
+    probe_ok = None
+    if getattr(args, "probe", False) and mcp_ok:
+        # Round trip in a dedicated probe scope — never the user's real pool.
+        probe_text = "doctor round-trip probe"
+        try:
+            _mcp_call(args.host, args.port, "doctor", user, "tools/call",
+                      {"name": "add_memory", "arguments": {"text": probe_text}})
+            found = _mcp_call(args.host, args.port, "doctor", user, "tools/call",
+                              {"name": "search_memories",
+                               "arguments": {"query": "round-trip probe"}})
+            probe_ok = "probe" in _json.dumps(found.get("result", {}))
+        except Exception:
+            probe_ok = False
+        checks.append((bool(probe_ok), "write→search round trip (probe scope)",
+                       "writes are queued but not searchable — check server logs: "
+                       f"{log_path()}"))
+
+    failed = 0
+    for ok, line, hint in checks:
+        print(f"  {'✓' if ok else '✗'} {line}")
+        if not ok:
+            failed += 1
+            print(f"      → {hint}")
+    verdict = "healthy — safe to rely on" if not failed else \
+        f"{failed} problem(s) — memory may be silently absent until fixed"
+    print(f"\ndoctor: {verdict}")
+    if failed:
+        sys.exit(1)
+
+
 def cmd_migrate_scope(args: argparse.Namespace) -> None:
     import json as _json
 
@@ -299,6 +450,13 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("install-service", help="install a login service (launchd/systemd)", parents=[shared])
     sub.add_parser("uninstall-service", help="remove the login service", parents=[shared])
     sub.add_parser("status", help="show server and service state", parents=[shared])
+    doc = sub.add_parser(
+        "doctor",
+        help="end-to-end health check: server, MCP, store, scope, agent hooks",
+        parents=[shared],
+    )
+    doc.add_argument("--probe", action="store_true",
+                     help="also run a write→search round trip in a dedicated probe scope")
     mig = sub.add_parser(
         "migrate-scope",
         help="merge a legacy app pool into its canonical successor (dry-run by default)",
@@ -319,6 +477,7 @@ def main(argv: list[str] | None = None) -> None:
      "install-service": cmd_install_service,
      "uninstall-service": cmd_uninstall_service,
      "status": cmd_status,
+     "doctor": cmd_doctor,
      "migrate-scope": cmd_migrate_scope}[command](args)
 
 
