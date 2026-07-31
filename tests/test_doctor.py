@@ -71,3 +71,34 @@ def test_foreign_pools_is_the_f4_detector(tmp_path):
 
 def test_clean_store_has_no_foreign_pools():
     assert foreign_pools([("u", "forget", 10)], user="u") == []
+
+
+def test_version_newer():
+    from forget.cli import _version_newer
+    assert _version_newer("0.3.6", "0.3.5")
+    assert not _version_newer("0.3.5", "0.3.5")
+    assert not _version_newer("0.3.5", "0.3.6")
+    assert _version_newer("0.10.0", "0.9.9")
+    assert not _version_newer("unknown", "0.3.5")
+
+
+def test_weekly_digest_counts_only(tmp_path):
+    import sqlite3 as sq
+    from forget.cli import weekly_digest
+    path = tmp_path / "w.sqlite3"
+    conn = sq.connect(path)
+    conn.execute("""CREATE TABLE memories (user_id TEXT, app_id TEXT, deleted INT,
+                    metadata TEXT DEFAULT '{}', created_at TEXT)""")
+    conn.execute("""CREATE TABLE gate_log (user_id TEXT, reason TEXT, created_at TEXT)""")
+    conn.execute("INSERT INTO memories VALUES ('u','forget',0,'{}',datetime('now','-1 day'))")
+    conn.execute("INSERT INTO memories VALUES ('u','forget',0,'{\"superseded_at\":1}',datetime('now','-2 day'))")
+    conn.execute("INSERT INTO memories VALUES ('u','forget',0,'{}',datetime('now','-30 day'))")  # old
+    conn.execute("INSERT INTO memories VALUES ('other','forget',0,'{}',datetime('now'))")  # foreign
+    conn.execute("INSERT INTO gate_log VALUES ('u','secret',datetime('now','-1 day'))")
+    conn.execute("INSERT INTO gate_log VALUES ('u','secret',datetime('now','-1 day'))")
+    conn.commit(); conn.close()
+    d = weekly_digest(path, "u")
+    assert d["added"] == 2          # this week, own pool only
+    assert d["corrected"] == 1
+    assert d["total"] == 3          # all-time, own pool only
+    assert d["refusals"] == [("secret", 2)]
