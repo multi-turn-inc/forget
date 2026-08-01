@@ -21,6 +21,10 @@ import re
 import sys
 import urllib.request
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from forget_project import project_key_for_path, scope_disabled  # noqa: E402
+
 FORGET_URL = os.environ.get("FORGET_MCP_URL", "http://127.0.0.1:8000/mcp")
 STATE_DIR = os.path.expanduser("~/.forget/hooks/state")
 TAIL_BYTES = 400_000
@@ -111,20 +115,19 @@ def _capture(hook_input: dict, digest: dict, transcript_path: str, session_id: s
         f"{' (꼬리 표본)' if digest['tail_only'] else ''}, {digest['first_ts']}~{digest['last_ts']}. "
         f"최근 사용자 발화: {snippets}. 전문: {transcript_path}"
     )
-    _rpc(
-        "add_memory",
-        {
-            "text": text,
-            "infer": False,
-            "source_role": "tool",
-            "metadata": {
-                "hook": event,
-                "session_id": session_id,
-                "transcript_path": transcript_path,
-                "trigger": label,
-            },
-        },
-    )
+    metadata = {
+        "hook": event,
+        "session_id": session_id,
+        "transcript_path": transcript_path,
+        "trigger": label,
+    }
+    # A session pointer belongs to the repo the session happened in — the one
+    # write here whose layer needs no guessing.
+    project = None if scope_disabled() else project_key_for_path(hook_input.get("cwd") or os.getcwd())
+    if project:
+        metadata["project"] = project
+        metadata["scope_layer"] = "project"
+    _rpc("add_memory", {"text": text, "infer": False, "source_role": "tool", "metadata": metadata})
 
 
 def _handoff(digest: dict, transcript_path: str, session_id: str) -> None:

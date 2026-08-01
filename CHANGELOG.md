@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.3.8 — 2026-08-01
+
+The boundary release: one store, project-shaped. Shipped the same day its
+first real-usage test ran — that test caught a deployment trap and a
+pre-existing epoch-forking defect before either could reach a user.
 
 ### Project-scoped memory layer
 - The project boundary is now detected, never configured: hooks derive a
@@ -27,6 +31,13 @@
   (metadata layers, dates, categories) still bind. Before this, enabling
   `scope_fallback` re-admitted rows past any metadata filter as
   discounted fallback hits.
+- Workspace-epoch continuity is per task, not per task×scope (found by
+  the layer's first real-usage test): epoch predecessors were keyed on
+  exact scope_json, so any scope change — a project tag arriving, an
+  agent_id appearing or dropping — forked the task into parallel open
+  epochs nothing ever closed. Every write now closes all open epochs for
+  the task, and a scope transition with identical content forces a
+  boundary (`scope_changed`) so the tag actually lands.
 
 ### Scope integrity
 - Write-time scope guard: every memory write (MCP and REST converge in

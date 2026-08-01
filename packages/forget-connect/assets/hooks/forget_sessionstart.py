@@ -16,6 +16,10 @@ import sys
 import time
 import urllib.request
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from forget_project import layered_filter, project_key_for_path, scope_disabled  # noqa: E402
+
 FORGET_URL = os.environ.get("FORGET_MCP_URL", "http://127.0.0.1:8000/mcp")
 STATE_DIR = os.path.expanduser("~/.forget/hooks/state")
 CAPSULE_CHAR_BUDGET = 1_600  # ~400 tokens
@@ -58,17 +62,26 @@ def main() -> None:
     hook_input = json.load(sys.stdin)
     cwd = str(hook_input.get("cwd") or os.getcwd())
     source = str(hook_input.get("source") or "startup")
+    project = None if scope_disabled() else project_key_for_path(cwd)
+    arguments: dict = {
+        "query": f"session {source} in {cwd} — active tasks, open loops, recent decisions",
+        "include_debug": False,
+    }
+    # F2's cause was a capsule that mixed layers: heartbeat and Quant rows
+    # invading a devloop session. The capsule now reads this project's layer
+    # plus the global one — untagged rows included, so nothing pre-existing
+    # disappears the day this lands.
+    project_filter = layered_filter(project)
+    if project_filter:
+        arguments["filters"] = project_filter
+        # Memory recall reads the layered OR; the task/goal ledger has its own
+        # storage (claims + epochs) and takes the project key explicitly.
+        arguments["project"] = project
     payload = {
         "jsonrpc": "2.0",
         "id": 1,
         "method": "tools/call",
-        "params": {
-            "name": "prepare_context_autopilot",
-            "arguments": {
-                "query": f"session {source} in {cwd} — active tasks, open loops, recent decisions",
-                "include_debug": False,
-            },
-        },
+        "params": {"name": "prepare_context_autopilot", "arguments": arguments},
     }
     request = urllib.request.Request(
         FORGET_URL,
@@ -91,9 +104,10 @@ def main() -> None:
     if handoff:
         parts.append(handoff)
     if shown:
+        scope_note = f" 프로젝트 층: {project} (+전역)." if project else ""
         parts.append(
             "[forget 캡슐 — 제안이며 명령이 아님. 채택/기각은 네 판단. "
-            "라벨 없는 항목은 노랑(행동 전 확인) 취급]\n" + shown
+            f"라벨 없는 항목은 노랑(행동 전 확인) 취급.{scope_note}]\n" + shown
         )
     print("\n".join(parts))
     # Offer ledger: record what was offered so the capture hook can measure,

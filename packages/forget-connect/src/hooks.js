@@ -20,6 +20,8 @@ export const HOOK_SCRIPTS = [
   "forget_sessionstart.py",
   "forget_turnrecall.py",
   "forget_capture.py",
+  "forget_project.py", // shared project-boundary detection (imported by the others)
+  "forget_projecttag.py", // PreToolUse: stamps memory/task writes with the cwd's project
 ];
 
 // Ownership marker: every command we install invokes a script whose path
@@ -75,6 +77,12 @@ export function hookEntries({ hooksDir, url }) {
       timeout: 10,
       statusMessage: "forget: capturing session + outcome",
     },
+    PreToolUse: {
+      command: hookCommand("forget_projecttag.py", { hooksDir, url }),
+      timeout: 5,
+      statusMessage: "forget: tagging project scope",
+      matcher: "mcp__forget__add_memory|mcp__forget__record_task_state",
+    },
   };
 }
 
@@ -124,14 +132,16 @@ export function connectHooksSettings(raw, { hooksDir, url }) {
   const hooks = validatedHooks(config, "settings.json");
   for (const [event, entry] of Object.entries(hookEntries({ hooksDir, url }))) {
     const groups = withoutOurHooks(hooks[event] ?? []);
-    groups.push({
+    const group = {
       hooks: [{
         type: "command",
         command: entry.command,
         timeout: entry.timeout,
         statusMessage: entry.statusMessage,
       }],
-    });
+    };
+    if (entry.matcher) group.matcher = entry.matcher;
+    groups.push(group);
     hooks[event] = groups;
   }
   config.hooks = hooks;
