@@ -187,3 +187,13 @@ P1의 정당한 원기한을 승계한 것이므로 선적용 아님.
   (19df6905)는 같은 scope predecessor(d91c76ae)를 supersede했으나, 무태그 LME-V2 lineage는
   여전히 un-superseded. restore(epoch head)만 latest-write-wins. → (a) 확정 시 task_id 분리가
   필요조건(scope 태깅만으로 lineage 공존 미해소)임을 이미 함의.
+- **결과 (사이클 25 판정): (b) 비구별.** 사이클 25 restore가 self-loop 행 반환 — 반환 claim
+  `19df6905`, `valid_from 2026-08-01T16:59:39Z`(=사이클 24 step5 쓰기 시각), `predecessor_epoch_id
+  8337a688`, `supersedes_claim_ids: []`. 그 이후 새 epoch 없음 = **LME-V2가 `task_id=devloop`에
+  끼어쓰지 않았다.** restore_grade 24 full → 25 full로 치유 지속하나, 경쟁 쓰기 부재로 latest-write-
+  wins vs 태그 우선을 이 사이클로 구별 못 함(예측 (a) 미발생, (c) 미발생). 함의: 사이클 24의
+  메커니즘 확정(latest-write-wins, 독립 구조 증거)은 반증도 추가입증도 안 됨 — P9는 그것을 시험할
+  경쟁 쓰기를 만나지 못함. **레이스 취약성 미검증으로 잔존 → task_id 분리(견고) 필요 유지.** 캐비앗
+  (A7): "24 full→25 full"은 2연속이나 **같은 head의 지속**(사이클 25 full=새 복원 성공 아니라 사이클
+  24 쓰기가 head로 남은 것)이라 독립 표본 아님 — "치유 2사이클 지속"으로 계상 안 함. **재개봉 조건**:
+  LME-V2가 `task_id=devloop`에 실제 쓴 뒤의 첫 restore(그때 (a)/(c) 판정). 처방은 회고 25 F7 절로 이관.
