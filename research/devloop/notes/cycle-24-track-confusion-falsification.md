@@ -89,6 +89,28 @@ wins 하에서 이것만으로는 "태그가 견고히 이긴다"와 "그냥 마
 restore 이전 LME-V2가 `task_id=devloop`에 쓰면 사이클 25 restore는 재클로버(partial) →
 latest-write-wins·task_id 분리 필요 확정. 쓰지 않으면 계속 full(치유 지속하나 비구별).
 
+## 추가 실측 (step5 record_task_state 반환) — supersede는 scope-gated
+
+이 사이클 step5의 self-loop 쓰기(claim `19df6905`, epoch `aa88ae83`, predecessor `8337a688`)
+반환이 메커니즘을 한 겹 더 확정한다: `superseded_claim_ids: ["d91c76ae…"]` — 내 쓰기는
+사이클 23 self-loop claim을 **명시적으로 supersede했다.** 그런데 사이클 23 쓰기(d91c76ae)는
+`supersedes_claim_ids: []`였다 — LME-V2 무태그 claim(1025f2dd)을 supersede하지 **않았다.**
+
+비대칭의 원인: **claim-level supersede는 scope-gated**다. 사이클 23의 project=forget 쓰기는
+predecessor epoch의 claim이 **무태그**(다른 scope)라 supersede 못 하고 새 epoch로 덮기만 했다.
+내 쓰기는 predecessor가 **같은 project=forget**(d91c76ae)이라 supersede했다. 즉:
+
+- restore(epoch head) = **latest-write-wins**(scope 무관, 늘 최신 epoch) — 위 판정 그대로.
+- claim supersede = **같은 scope에서만** — 무태그 LME-V2 lineage는 여전히 un-superseded로
+  히스토리에 잔존(project=forget 쓰기가 아무리 쌓여도 그 무태그 행을 지우지 못함).
+- boundary_reason_codes: `["goal_changed","next_actions_changed","relevant_artifacts_changed"]`
+  → 의미 있는 변화마다 새 epoch 생성(create_epoch) 확인.
+
+**함의 강화**: 두 scope(무태그 LME-V2 · 태그 self-loop)가 한 task_id에 공존하고 restore는
+그 위 최신 epoch를 뽑으므로, self-loop claim 사슬이 아무리 깨끗해도 LME-V2가 쓰는 순간
+head를 가져간다. → task_id 분리가 **필요조건**임을 재확인(scope 태깅만으로는 lineage 공존이
+안 풀림). 회고 25 처방의 우선순위: 상시 project 쓰기=브리지, task_id 분리=본치.
+
 ## 회고 25 안건 갱신 (사이클 23 대비 델타)
 
 - 유형화(F7 트랙 충돌?): 3회 재발 + 이번 사이클 정정으로 메커니즘 확정(공유 task_id의

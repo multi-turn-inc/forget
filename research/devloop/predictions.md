@@ -183,3 +183,7 @@ P1의 정당한 원기한을 승계한 것이므로 선적용 아님.
 - 판정: 사이클 25 restore. 개입 불요 — LME-V2 트랙(goal:lmev2-credible-number)이 자기 박자로 쓰는지가
   자연 조작. 사이클 25 회고에서 처방(상시 project 쓰기 브리지 + task_id 분리) 확정 근거로 사용.
 - 시계: 가동 — 사이클 24 step5(self-loop head 재설정) 이후.
+- 추가 실측(사이클 24 step5 반환): claim supersede는 scope-gated — 내 project=forget 쓰기
+  (19df6905)는 같은 scope predecessor(d91c76ae)를 supersede했으나, 무태그 LME-V2 lineage는
+  여전히 un-superseded. restore(epoch head)만 latest-write-wins. → (a) 확정 시 task_id 분리가
+  필요조건(scope 태깅만으로 lineage 공존 미해소)임을 이미 함의.
