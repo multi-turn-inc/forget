@@ -437,12 +437,15 @@ def cmd_doctor(args: argparse.Namespace) -> None:
                             {"name": "get_provider_catalog", "arguments": {}})
             import json as _json2
             payload = _json2.loads(cat["result"]["content"][0]["text"])
-            line, fallback = stack_summary(payload.get("settings", {}))
+            effective = payload.get("effective") or {}
+            merged = dict(payload.get("settings", {}))
+            if effective.get("embedding_model"):
+                merged["embedding_model"] = effective["embedding_model"]
+            line, fallback = stack_summary(merged)
             checks.append((not fallback, f"memory stack: {line}",
-                           "running on the no-key fallback stack — semantic recall is OFF. "
-                           "Pick a real embedding model (fully local option): "
-                           "pip install fastembed, then set MEM1_EMBEDDING_PROVIDER=fastembed "
-                           "and restart. Existing memories need re-embedding (backup first).",
+                           "semantic recall is OFF (hash fallback). Fix: "
+                           "pip install -U 'forget-ai[server]' && forget-server reembed "
+                           "— backup and receipt are automatic, then restart the service.",
                            False))
         except Exception:
             pass
@@ -583,6 +586,63 @@ def cmd_weekly(args: argparse.Namespace) -> None:
     print(f"  = {digest['total']} memories total, all on this machine")
 
 
+def cmd_reembed(args: argparse.Namespace) -> None:
+    """Re-embed every live memory with the currently active embedding stack.
+
+    The one-word migration for stores born on the hash fallback: backup is
+    automatic, progress is visible, a receipt lands next to the database.
+    Search tolerates mixed dimensions meanwhile, so running this live is safe.
+    """
+    import json
+    import shutil
+
+    from .providers import embed_text
+
+    path = db_path()
+    if not path.exists():
+        sys.exit("reembed: no store yet — nothing to do")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    backup = path.with_name(f"{path.stem}.pre-reembed-{stamp}{path.suffix}")
+    shutil.copy2(path, backup)
+    print(f"backup: {backup}")
+
+    probe = embed_text("dimension probe", role="query")
+    conn = sqlite3.connect(path, timeout=30)
+    try:
+        rows = conn.execute(
+            "SELECT id, memory FROM memories WHERE deleted = 0"
+        ).fetchall()
+        total, done, skipped = len(rows), 0, 0
+        print(f"re-embedding {total} memories → {len(probe)}-dim active stack")
+        for mid, text in rows:
+            try:
+                vec = embed_text(str(text or ""))
+            except Exception:
+                skipped += 1
+                continue
+            conn.execute("UPDATE memories SET embedding = ? WHERE id = ?",
+                         (json.dumps(vec), mid))
+            done += 1
+            if done % 100 == 0:
+                conn.commit()
+                print(f"  {done}/{total}", flush=True)
+        conn.commit()
+    finally:
+        conn.close()
+    receipt_dir = path.parent / "migrations"
+    receipt_dir.mkdir(exist_ok=True)
+    receipt = receipt_dir / f"reembed-{stamp}.json"
+    receipt.write_text(json.dumps({
+        "migration": "reembed", "date": stamp, "dimensions": len(probe),
+        "total": total, "reembedded": done, "skipped": skipped,
+        "backup": str(backup),
+    }, indent=1))
+    print(f"done: {done}/{total} re-embedded ({skipped} skipped) · receipt: {receipt}")
+    print("restart the server to pick up a consistent search index: "
+          "launchctl kickstart -k gui/$(id -u)/ai.forget.server" if sys.platform == "darwin"
+          else "restart the server now")
+
+
 def cmd_migrate_scope(args: argparse.Namespace) -> None:
     import json as _json
 
@@ -639,6 +699,8 @@ def main(argv: list[str] | None = None) -> None:
                           "for you to review and send yourself")
     sub.add_parser("weekly", help="what memory did this week — counts only, never content",
                    parents=[shared])
+    sub.add_parser("reembed", help="re-embed all memories with the active embedding stack "
+                                   "(automatic backup + receipt)", parents=[shared])
     mig = sub.add_parser(
         "migrate-scope",
         help="merge a legacy app pool into its canonical successor (dry-run by default)",
@@ -661,6 +723,7 @@ def main(argv: list[str] | None = None) -> None:
      "status": cmd_status,
      "doctor": cmd_doctor,
      "weekly": cmd_weekly,
+     "reembed": cmd_reembed,
      "migrate-scope": cmd_migrate_scope}[command](args)
 
 

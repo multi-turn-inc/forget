@@ -914,9 +914,52 @@ def e5_prefixed(text: str, model: str, role: str) -> str:
     return f"{'query' if role == 'query' else 'passage'}: {text}"
 
 
+def _fastembed_available() -> bool:
+    try:
+        import fastembed  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def effective_embedding_stack(project_id: str = "proj_local") -> dict[str, str]:
+    """What embed_text would actually use right now — not what settings store.
+
+    Mirrors embed_text's resolution order so observers (doctor, catalog) can
+    report the running truth. Kept adjacent to embed_text: if the resolution
+    changes there, change it here.
+    """
+    settings = get_project_settings(project_id)
+    env_choice = (os.getenv("MEM1_EMBEDDING_PROVIDER") or "").strip().lower()
+    provider = env_choice or str(settings.get("embedding_provider", "local")).lower()
+    if not env_choice and provider == "local" and _fastembed_available():
+        return {"embedding_provider": "fastembed",
+                "embedding_model": _fastembed_default_model(settings),
+                "resolution": "auto-default (unconfigured + fastembed importable)"}
+    if provider in {"", "local", "deterministic"}:
+        return {"embedding_provider": "local",
+                "embedding_model": "deterministic-128",
+                "resolution": "explicit pin" if env_choice else "fallback (fastembed unavailable)"}
+    return {"embedding_provider": provider,
+            "embedding_model": str(settings.get("embedding_model") or ""),
+            "resolution": "configured"}
+
+
 def embed_text(text: str, project_id: str = "proj_local", role: str = "passage") -> list[float]:
     settings = get_project_settings(project_id)
-    provider = (os.getenv("MEM1_EMBEDDING_PROVIDER") or str(settings.get("embedding_provider", "local"))).lower()
+    env_choice = (os.getenv("MEM1_EMBEDDING_PROVIDER") or "").strip().lower()
+    provider = env_choice or str(settings.get("embedding_provider", "local")).lower()
+    # Semantic-by-default: an *unconfigured* stack was never a choice, only an
+    # absence of keys. When nothing is explicitly chosen and fastembed is
+    # importable, default to the fully-local semantic model. An explicit
+    # MEM1_EMBEDDING_PROVIDER=local (or "deterministic") still pins the hash
+    # fallback — tests and constrained machines need that escape hatch.
+    # (UX ruling, 2026-08-01: users should not need to know these words.)
+    if not env_choice and provider == "local" and _fastembed_available():
+        try:
+            return _embed_with_fastembed_provider(text, settings, role=role)
+        except Exception:
+            pass
     if provider in OPENAI_COMPATIBLE_EMBEDDING_PROVIDERS and _provider_credentials_available(settings, "embedding"):
         try:
             return _embed_with_provider(text, settings)
@@ -1032,12 +1075,30 @@ def _embed_with_aws_bedrock_provider(text: str, settings: dict[str, Any]) -> lis
     return [float(value) for value in (embedding or [])]
 
 
+_FASTEMBED_MODELS: dict[str, Any] = {}
+
+
+def _fastembed_default_model(settings: dict[str, Any]) -> str:
+    configured = settings.get("embedding_model")
+    if configured and str(configured) not in {"deterministic-128"}:
+        return str(configured)
+    # bge-small: 34MB download, strong retrieval, laptop-friendly latency —
+    # the right default for a login service on a user's machine.
+    return os.getenv("FASTEMBED_MODEL") or "BAAI/bge-small-en-v1.5"
+
+
 def _embed_with_fastembed_provider(text: str, settings: dict[str, Any], role: str = "passage") -> list[float]:
     from fastembed import TextEmbedding
 
-    model = settings.get("embedding_model") or os.getenv("FASTEMBED_MODEL") or "thenlper/gte-large"
-    text = e5_prefixed(text, str(model), role)
-    embeddings = list(TextEmbedding(model_name=str(model)).embed(text.replace("\n", " ")))
+    model = _fastembed_default_model(settings)
+    # Model load is the expensive part (ONNX init + file mmap); embedding is
+    # cheap. One instance per model name for the process lifetime.
+    engine = _FASTEMBED_MODELS.get(model)
+    if engine is None:
+        engine = TextEmbedding(model_name=model)
+        _FASTEMBED_MODELS[model] = engine
+    text = e5_prefixed(text, model, role)
+    embeddings = list(engine.embed(text.replace("\n", " ")))
     return [float(value) for value in embeddings[0]]
 
 

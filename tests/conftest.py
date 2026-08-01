@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import importlib.util
 import asyncio
+import os
 import sys
+
+# Tests pin the deterministic embedding stack for reproducibility: with
+# semantic-by-default (2026-08-01), an installed fastembed would otherwise
+# make similarity rankings — and thus consolidation/supersede choices —
+# model-dependent. Embedding-behavior tests override this explicitly.
+os.environ.setdefault("MEM1_EMBEDDING_PROVIDER", "local")
 from types import SimpleNamespace
 from pathlib import Path
 from unittest import mock
