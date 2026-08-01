@@ -337,6 +337,22 @@ def _pypi_latest(timeout: float = 3.0) -> str:
         return ""
 
 
+FALLBACK_STACK = {"deterministic-128", "rule-extractor", "lexical-v1"}
+
+
+def stack_summary(settings: dict[str, Any]) -> tuple[str, bool]:
+    """One line naming the memory stack, and whether any fallback is engaged.
+
+    The LME-V2 lesson: the hash-embedding fallback ran a full benchmark
+    without anyone noticing, because nothing ever *said* which stack was
+    active. Identity is DB + scope + provider stack — so doctor names it.
+    """
+    emb = str(settings.get("embedding_model") or "?")
+    llm = str(settings.get("llm_model") or "?")
+    fallback = emb in FALLBACK_STACK or llm in FALLBACK_STACK
+    return f"embedding={emb} · extractor={llm}", fallback
+
+
 def _mcp_call(host: str, port: int, app: str, user: str, method: str,
               params: dict[str, Any], timeout: float = 8.0) -> dict[str, Any]:
     import json as _json
@@ -415,6 +431,22 @@ def cmd_doctor(args: argparse.Namespace) -> None:
             wired = hooks_wired(_json.loads(settings_path.read_text()))
         except (OSError, ValueError):
             wired = {}
+    if mcp_ok:
+        try:
+            cat = _mcp_call(args.host, args.port, "forget", user, "tools/call",
+                            {"name": "get_provider_catalog", "arguments": {}})
+            import json as _json2
+            payload = _json2.loads(cat["result"]["content"][0]["text"])
+            line, fallback = stack_summary(payload.get("settings", {}))
+            checks.append((not fallback, f"memory stack: {line}",
+                           "running on the no-key fallback stack — semantic recall is OFF. "
+                           "Pick a real embedding model (fully local option): "
+                           "pip install fastembed, then set MEM1_EMBEDDING_PROVIDER=fastembed "
+                           "and restart. Existing memories need re-embedding (backup first).",
+                           False))
+        except Exception:
+            pass
+
     # Advisory, not failure: MCP-only is a valid standard setup (the capsule
     # arrives via CLAUDE.md instructions); hooks are the deluxe wiring.
     hooks_ok = wired.get("SessionStart", False)

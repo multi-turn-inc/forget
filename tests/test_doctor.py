@@ -102,3 +102,15 @@ def test_weekly_digest_counts_only(tmp_path):
     assert d["corrected"] == 1
     assert d["total"] == 3          # all-time, own pool only
     assert d["refusals"] == [("secret", 2)]
+
+
+def test_stack_summary_flags_fallback():
+    from forget.cli import stack_summary
+    line, fb = stack_summary({"embedding_model": "deterministic-128", "llm_model": "gpt-5.5"})
+    assert fb and "deterministic-128" in line
+    line, fb = stack_summary({"embedding_model": "BAAI/bge-small-en-v1.5",
+                              "llm_model": "rule-extractor"})
+    assert fb  # extractor fallback도 잡는다
+    line, fb = stack_summary({"embedding_model": "BAAI/bge-small-en-v1.5",
+                              "llm_model": "claude-haiku-4-5"})
+    assert not fb
