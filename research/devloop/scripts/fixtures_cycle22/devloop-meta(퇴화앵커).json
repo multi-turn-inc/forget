@@ -1,0 +1,113 @@
+{
+  "query": "devloop 사이클을 정확히 한 바퀴 실행하라. 이 저장소(/Users/junghunkim/orca/<repo>, 브랜치 main-work)의 LOOP.md(헌장)와 research/devloop/cycle-prompt.md(지시서)를 먼저 읽고 지시서의 절차 0~5를 그대로 따른다. 0단계 회상은 forget의 get_task_state(task_id='devloop')로 시작하고, 너는 이 작업의 기억 없이 태어났으므로 복원 품질을 metrics.jsonl에 정직하게 채점해 남겨라",
+  "hits": [
+    {
+      "id": "claim:25825f37-4355-4fdb-a173-68785b97adfc",
+      "memory": "Task devloop is in_progress. [devloop 사이클 21 — 2026-08-02, 관찰·측정] F2 처치2 사전 투영 완주(read-only, 코드 전 반증예측 선등록). 영토 규약(foreign untracked uv.lock)으로 코드 사이클 금지→측정 전환. 실측 3: ①C1 크기 첫 정량 — devloop 프롬프트 phrase_bonus의 45~55%(0.10~0.16)가 길이1 조사·숫자 junk 토큰 기여(임계 초과 마진 절반). ②처치2(phrase 자격 len≥2·non-numeric+상한0.10)는 devloop 프롬프트에서 비선택적 — 8히트 전부 0.45↓, F2 상습(pash·Quant)뿐 아니라 주제 관련 devloop 기억(사이클9·18·필드노트#2)도 침묵(phrase 걷으면 남는 의미항이 전부-devloop-메타 쿼리에서 노이즈/관련 못 가름). ③정상 주제 쿼리(미국 이주)엔 junk=0·near-no-op. 함의: 루프 F2 실레버는 처치2 아닌 처치1(완료·배선 대기)+C3(고정 프롬프트 인지); 처치2는 일반 회상용, 선택성은 LongMemEval에서 판정. tests 268 passed(20의 224에서 +44=0.3.8/0.3.9 릴리스, 회귀 아님). 커밋 cffe94f push. ★트랙 혼선 발견: task_id=devloop이 self-loop와 LME-V2 병행 트랙을 공유 — next_actions가 self-loop 선택엔 off-track이라 복원 partial. 정훈/회고25: task_id 분리 여부 판정 필요. Next (5): [self-loop 다음 사이클 후보] 처치2(채점기 C1 수술) 배선 — 단, LongMemEval 삼각측량 동반 필수(벤치 승인·비용 게이트). 사전 투영 선등록 완료(predictions.md P8); [self-loop] P8 처치1 훅 배선(~/.forget 설치본 갱신, 게이트) 후 P8 시계 시작 — 코드 준비 완료; +3 more Evidence files (3): cycle-21-f2-treatment2-projection.md; f2_treatment2_projection.py; metrics.jsonl",
+      "score": 0.8167,
+      "categories": [
+        "task_state",
+        "work"
+      ],
+      "updated_at": "2026-08-01T15:17:13Z",
+      "metadata": {
+        "assertion_kind": "task_state"
+      }
+    },
+    {
+      "id": "2e2877fb-9477-450b-b661-b172651b0eea",
+      "memory": "외부 신호 (pash @pashmerepat, 2026-07-31 트윗): 지속 에이전트(persistent personal/work agent)가 ChatGPT·Codex 다음의 패러다임 제품이며, 블로커는 theory of mind(\"reading the room\") — \"내가 아는 것 vs 내 사용자가 아는 것 vs 이 방이 아는 것\"의 추적, 정보 비대칭을 1급 기술로. 기업에선 tenting(워크스페이스 격리). \"친구에게 집 주소를 주면 천 명 방에서 발설하지 않을 것을 신뢰하지만 모델에겐 아직 그 재량을 신뢰 못 한다.\" forget과의 접점: ①\"누가 무엇을 아는가\"는 모델 스킬 이전에 원장 문제 — source_role·trust·user×app 스코프·supersede 이력이 정확히 그 기질(substrate) ②tenting = 스코프 격리 + 규율 팩 ③새 설계 과제 도출: 읽기측 공개 게이트(회상 표면화 전 audience 검사 — 쓰기 게이트의 대칭), LOOP.md 백로그 6번 등재 ④모델이 ToM 스킬을 흡수해도 원장(사적·사용자별·감사 가능)은 가중치에 못 들어감 — 메모리 레이어가 소비되는 것이지 대체되지 않는다는 해자 논리.",
+      "score": 0.7278,
+      "categories": [
+        "market-signal",
+        "design-philosophy",
+        "work",
+        "technology"
+      ],
+      "updated_at": "2026-07-31T00:59:37+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "cec31dc4-e5e1-4a60-abb7-1c75a7c7d71e",
+      "memory": "[devloop] 사이클 15 회고 결정 (2026-08-01): amendment-15.md 작성 — A5 recall 채점에서 get_task_state 재독 분리(protocol_restore 필드 신설, 권고 5), A6 소급 예측 [소급] 표식+증거력 할인(권고 7), A7 restore 표본 날짜 독립성 규약(같은 날=표본 1, 상이 날짜 3개부터 연속기록 주장 허용, 권고 9), A8 무변경 사이클 tests를 regression_watch로 격하(권고 10), A9 conventions.md를 지시서 5단계에 참조 편입, A10 회고 절차에 silent-miss oracle replay 편입(백로그 8).",
+      "score": 0.7172,
+      "categories": [
+        "devloop"
+      ],
+      "updated_at": "2026-07-31T17:09:20+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "75ac6488-6868-460f-99c6-4c7c3346f248",
+      "memory": "Forget 개발팀이 라이브 서버에서 Quant 기억 파편화의 근본 원인을 scope fragmentation으로 확인했다. 기록은 junghunkim×Mem1 5건, junghunkim×forget 3건, user 없음×Mem1×agent=codex 1건으로 나뉘어 search_memories와 get_task_state가 다른 결과를 냈다. 관련 이슈 #22~#26은 scope 정규화, task-state fallback, 쓰기 영수증, 오류 구조화·재시도, current-only 및 provenance 개선이며 no_candidates 단독 반환을 금지하는 방향이다. legacy app_id=Mem1은 forget으로 통일할 예정이나 기존 기록 보존을 위해 Mem1→forget migration 또는 canonical read alias가 필요하다. agent_id/source_client는 검색 격리 경계가 아니라 provenance로 취급하고 user_id 없는 기록은 자동 병합하지 않는다. 수정 배포 전까지 Forget 빈 검색이나 일반 HTTPError를 기억 부재로 해석하지 말고 get_task_state와 현재 workspace/runtime 증거를 확인한다. Quant 실행 상태와 안전 경계는 변경되지 않았다. 배포 후 Quant 실작업에서 기존 Mem1 기억 검색, current task-state fallback, 쓰기 영수증 accepted→persisted→indexed→searchable, Codex↔Claude 교차 검색을 재검증한다.",
+      "score": 0.6854,
+      "categories": [
+        "forget",
+        "quant",
+        "scope-migration",
+        "incident-response",
+        "work",
+        "technology"
+      ],
+      "updated_at": "2026-07-29T15:55:57+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "6f15d12a-9367-495d-8833-71b424636eab",
+      "memory": "[devloop] 사이클 9 결정 (2026-07-31): 전 세션이 구현해 둔 F4 스코프 가드(forget/scope_guard.py — off/warn기본/enforce, store.add_memories 수렴점 검사, doctor foreign_pools와 판정 공유)를 이번 런 프롬프트의 명시적 커밋·push 허가에 근거해 main-work에 커밋했다.",
+      "score": 0.667,
+      "categories": [
+        "work"
+      ],
+      "updated_at": "2026-07-31T06:37:22+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "07ad010a-ff35-45c1-b5ac-9e32a99c4cf9",
+      "memory": "정훈의 설계 철학 (2026-07-31, 원문): \"인격처럼 생각하면 더 쉽다. 메뉴바에 존재하고 — 뭘 알아야 할까. 컨텍스트에 어떤 정보들을 넣고 뺄지 흐름을 결정하는 것. 그리고 그건 항상 바뀌는 게 아니라 일부만 바뀌어 왔다. 그 위에 우리의 출력이 결정된다.\" 해석: 인격 = 컨텍스트 구성 정책. 변화율이 다른 세 층(불변층: 헌장·원칙 / 완만층: 목표·결정, supersede로만 변화 / 유동층: task state, TTL과 stale 마커 필수)의 합성이며, 출력 품질의 병목은 모델이 아니라 이 합성의 품질이다. LOOP.md에 인격 모델로 제정됨. devloop의 개발 대상이 곧 이 구성 정책이다.",
+      "score": 0.665,
+      "categories": [
+        "design-philosophy",
+        "devloop"
+      ],
+      "updated_at": "2026-07-30T15:25:17+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "b1d0f26b-8918-4cff-8842-cf899862767f",
+      "memory": "[devloop] 사이클 21 발견 (2026-08-02, read-only 사전 투영, 증거: notes/cycle-21-f2-treatment2-projection.md 커밋 cffe94f): F2 지배원인 C1(phrase_bonus 무한 합산)의 처치 후보 2(매칭 자격 len≥2·숫자 제외 + 상한 0.10)를 제품 코드로 쓰기 전 라이브 재생에 투영한 결과 — (1) C1 크기 첫 정량: devloop launchd 고정 프롬프트에서 phrase_bonus의 45~55%(절대 0.10~0.16)가 길이 1 조사·숫자 토큰의 부분 문자열 매칭에서 나오며 이 junk 단독이 임계 0.45 초과 마진의 절반.",
+      "score": 0.6623,
+      "categories": [
+        "work"
+      ],
+      "updated_at": "2026-08-01T15:17:23+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "4a96ef78-98e9-4b93-a3b0-69d1a3e6acc0",
+      "memory": "정훈 설계 발안 (2026-07-31, 원문 요지): \"지금 Claude Code 하네스는 컨텍스트가 일정 이상 늘어나면 전체를 압축(컴팩션)하는데, 전체를 압축하지 말고 절대 컨텍스트를 다 쓰지 않도록 오래된 컨텍스트들만 압축·응고되도록 하자. 중·장기 기억은 항상 재구성되지만 전체가 재구성되는 건 아니고, 전체 컨텍스트가 흘러넘치지 않도록 하는 것. 더 이상의 컴팩션은 없다.\" — 명명: 롤링 응고(rolling consolidation). 어제의 인격 모델(\"조금씩 고쳐 쓰는 컨텍스트\")의 실행형. LOOP.md 백로그 7번 등재: 1단계 = PreCompact 핸드오프를 선제 소화로 확장(구간별 턴 다이제스트 상시 적립, 컴팩션 손실 0), 2단계 = 컴팩션 이벤트 자체의 폐지(자체 런타임/하네스 제안). 함께 결정: 루프는 사람 답변을 기다리며 멈추지 않는다(릴리스 큐 패턴, 헌장 5원칙 개정) — 단 자율 배포 조항은 하네스 분류기가 차단했고 그 판단을 수용, 배포·외부 발신 게이트는 유지.",
+      "score": 0.6611,
+      "categories": [
+        "design-philosophy",
+        "devloop",
+        "decision"
+      ],
+      "updated_at": "2026-07-31T03:17:38+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    }
+  ]
+}
