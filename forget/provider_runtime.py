@@ -769,12 +769,20 @@ def provider_catalog_payload(project_id: str = "proj_local") -> dict[str, Any]:
             "adapter_needed_count": len([option for option in options if option["status"] == "adapter_needed"]),
             "options": options,
         }
-    return {
+    payload = {
         "schema_version": "mem1-provider-catalog-v1",
         "project_id": project_id,
         "settings": _safe_settings(settings),
         "categories": categories,
     }
+    # Effective stack may diverge from stored settings: semantic-by-default
+    # silently upgrades an unconfigured "local" to fastembed when importable.
+    # Doctor and any observer must see what actually runs, not what was stored
+    # — the LME-V2 run-1 lesson, in the opposite direction.
+    from .providers import effective_embedding_stack
+
+    payload["effective"] = effective_embedding_stack(project_id)
+    return payload
 
 
 def _runtime_credential_fallback_envs(runtime: dict[str, Any]) -> list[str]:

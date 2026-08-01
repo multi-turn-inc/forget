@@ -102,3 +102,36 @@ def test_weekly_digest_counts_only(tmp_path):
     assert d["corrected"] == 1
     assert d["total"] == 3          # all-time, own pool only
     assert d["refusals"] == [("secret", 2)]
+
+
+def test_stack_summary_flags_fallback():
+    from forget.cli import stack_summary
+    line, fb = stack_summary({"embedding_model": "deterministic-128", "llm_model": "gpt-5.5"})
+    assert fb and "deterministic-128" in line
+    line, fb = stack_summary({"embedding_model": "BAAI/bge-small-en-v1.5",
+                              "llm_model": "rule-extractor"})
+    assert fb  # extractor fallback도 잡는다
+    line, fb = stack_summary({"embedding_model": "BAAI/bge-small-en-v1.5",
+                              "llm_model": "claude-haiku-4-5"})
+    assert not fb
+
+
+def test_semantic_by_default_when_fastembed_available(monkeypatch):
+    """'local'은 선택이 아니라 키의 부재다 — fastembed가 있으면 시맨틱이 기본."""
+    from forget import providers
+    monkeypatch.setattr(providers, "_fastembed_available", lambda: True)
+    called = {}
+    monkeypatch.setattr(providers, "_embed_with_fastembed_provider",
+                        lambda text, settings, role="passage": called.setdefault("hit", [0.1] * 384))
+    monkeypatch.setenv("MEM1_EMBEDDING_PROVIDER", "")
+    vec = providers.embed_text("hello world")
+    assert called.get("hit") is not None
+    assert len(vec) == 384
+
+
+def test_hash_fallback_when_fastembed_missing(monkeypatch):
+    from forget import providers
+    monkeypatch.setattr(providers, "_fastembed_available", lambda: False)
+    monkeypatch.setenv("MEM1_EMBEDDING_PROVIDER", "")
+    vec = providers.embed_text("hello world")
+    assert len(vec) == 128  # deterministic fallback dimension

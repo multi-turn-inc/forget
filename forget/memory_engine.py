@@ -557,9 +557,17 @@ def extract_memories(
     extraction_policy: str | None = None,
     assistant_is_subject: bool = False,
     gate_log: list[dict[str, Any]] | None = None,
+    accounting: dict[str, Any] | None = None,
 ) -> list[str]:
     facts: list[str] = []
     gate = observation_gate_enabled()
+
+    def _count(key: str, n: int = 1) -> None:
+        # F5 침묵 잊음: every path that loses input leaves a number. The gate
+        # log carries the *content* of refusals; these counters carry the
+        # *denominator* — store.add_accounting_violations checks conservation.
+        if accounting is not None:
+            accounting[key] = accounting.get(key, 0) + n
 
     def _log_drop(text: str, role: str, reason: str) -> None:
         # The gate is an editor, and editors are power: what was dropped and
@@ -567,21 +575,27 @@ def extract_memories(
         if gate_log is not None:
             gate_log.append({"text": text.strip()[:300], "role": role, "reason": reason})
     for message in messages:
+        _count("messages_in")
         role = str(message.get("role", "user"))
         speaker = str(message.get("name", "")).strip() or None
         content = message_content_text(message.get("content")).strip()
         if not content:
+            _count("empty_messages")
             continue
         if not infer:
             facts.append(f"{speaker} said: {content}" if speaker else content)
+            _count("facts_raw")
             continue
         if role == "assistant":
             lowered = content.lower()
             if lowered.startswith(("got it", "logged", "i'll", "i will", "thanks", "sure")):
                 _log_drop(content, role, "assistant_ack")
+                _count("ack_messages_dropped")
                 continue
         for sentence in _merge_cjk_fragments(split_sentences(content)):
+            _count("sentences_seen")
             if len(sentence.split()) < 3 and role == "assistant":
+                _count("fragments_dropped")
                 continue
             # a NAMED assistant (chat participant) or an agent-scoped add
             # (assistant_is_subject) speaks AS the observed entity — the gate
@@ -594,14 +608,18 @@ def extract_memories(
                 and not _assistant_sentence_records_user_state(sentence)
             ):
                 _log_drop(sentence, role, "assistant_advice_or_knowledge")
+                _count("gate_dropped")
                 continue
             if gate and role == "user" and _user_sentence_is_smalltalk(sentence):
                 _log_drop(sentence, role, "user_smalltalk")
+                _count("gate_dropped")
                 continue
             for clause in split_memory_clauses(sentence, role=role, extraction_policy=extraction_policy):
                 if len(clause.split()) < 3 and role == "assistant":
+                    _count("fragments_dropped")
                     continue
                 facts.append(normalize_fact(clause, role=role, speaker=speaker))
+                _count("facts_raw")
     seen: set[str] = set()
     unique: list[str] = []
     for fact in facts:
@@ -609,6 +627,8 @@ def extract_memories(
         if key not in seen:
             seen.add(key)
             unique.append(fact)
+    _count("batch_deduped", len(facts) - len(unique))
+    _count("facts_extracted", len(unique))
     return unique
 
 

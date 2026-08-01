@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "forget-ai"
-version = "0.3.6"
+version = "0.3.7"
 description = "Memory for your AI. It forgets the junk, keeps what matters."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-server = ["uvicorn>=0.29"]
+server = ["uvicorn>=0.29", "fastembed>=0.4"]  # semantic recall by default — the hash fallback is not a product
 vault = ["pynacl>=1.5"]
 fast = ["numpy>=1.24"]  # optional speedup for rerank/consolidation; pure-Python fallback otherwise
 

@@ -192,6 +192,21 @@ def apply_custom_instructions(facts: list[str], instructions: str | None) -> lis
     return [fact for fact in facts if any(term in fact.lower() for term in selected_terms)]
 
 
+def _provider_counted(
+    accounting: dict[str, Any] | None,
+    messages: list[dict[str, Any]],
+    facts: list[str],
+) -> list[str]:
+    # A remote extractor is sentence-opaque — we cannot count what it dropped.
+    # The marker keeps the accounting honest: conservation checks that depend
+    # on sentence-level counters are skipped for provider-extracted events.
+    if accounting is not None:
+        accounting["provider_extractions"] = accounting.get("provider_extractions", 0) + 1
+        accounting["messages_in"] = accounting.get("messages_in", 0) + len(messages)
+        accounting["facts_out"] = accounting.get("facts_out", 0) + len(facts)
+    return facts
+
+
 def extract_facts(
     messages: list[dict[str, Any]],
     infer: bool,
@@ -200,6 +215,7 @@ def extract_facts(
     extraction_policy: str | None = None,
     assistant_is_subject: bool = False,
     gate_log: list[dict[str, Any]] | None = None,
+    accounting: dict[str, Any] | None = None,
 ) -> list[str]:
     settings = get_project_settings(project_id)
     instructions = custom_instructions or settings.get("custom_instructions")
@@ -210,7 +226,7 @@ def extract_facts(
             if facts:
                 # the model already honored the instructions; the keyword
                 # allowlist below is a heuristic for the local extractor only
-                return facts
+                return _provider_counted(accounting, messages, facts)
         except Exception:
             pass
     if provider in GEMINI_LLM_PROVIDERS and infer and _provider_credentials_available(settings, "llm"):
@@ -219,7 +235,7 @@ def extract_facts(
             if facts:
                 # the model already honored the instructions; the keyword
                 # allowlist below is a heuristic for the local extractor only
-                return facts
+                return _provider_counted(accounting, messages, facts)
         except Exception:
             pass
     if provider in ANTHROPIC_LLM_PROVIDERS and infer and _provider_credentials_available(settings, "llm"):
@@ -228,7 +244,7 @@ def extract_facts(
             if facts:
                 # the model already honored the instructions; the keyword
                 # allowlist below is a heuristic for the local extractor only
-                return facts
+                return _provider_counted(accounting, messages, facts)
         except Exception:
             pass
     if provider in AZURE_OPENAI_LLM_PROVIDERS and infer and _provider_credentials_available(settings, "llm"):
@@ -237,7 +253,7 @@ def extract_facts(
             if facts:
                 # the model already honored the instructions; the keyword
                 # allowlist below is a heuristic for the local extractor only
-                return facts
+                return _provider_counted(accounting, messages, facts)
         except Exception:
             pass
     if provider in AWS_BEDROCK_LLM_PROVIDERS and infer:
@@ -246,19 +262,22 @@ def extract_facts(
             if facts:
                 # the model already honored the instructions; the keyword
                 # allowlist below is a heuristic for the local extractor only
-                return facts
+                return _provider_counted(accounting, messages, facts)
         except Exception:
             pass
-    return apply_custom_instructions(
-        extract_memories(
-            messages,
-            infer=infer,
-            extraction_policy=extraction_policy,
-            assistant_is_subject=assistant_is_subject,
-            gate_log=gate_log,
-        ),
-        instructions,
+    extracted = extract_memories(
+        messages,
+        infer=infer,
+        extraction_policy=extraction_policy,
+        assistant_is_subject=assistant_is_subject,
+        gate_log=gate_log,
+        accounting=accounting,
     )
+    facts = apply_custom_instructions(extracted, instructions)
+    if accounting is not None:
+        accounting["instruction_filtered"] = accounting.get("instruction_filtered", 0) + (len(extracted) - len(facts))
+        accounting["facts_out"] = accounting.get("facts_out", 0) + len(facts)
+    return facts
 
 
 def _provider_credentials_available(settings: dict[str, Any], prefix: str) -> bool:
@@ -895,9 +914,52 @@ def e5_prefixed(text: str, model: str, role: str) -> str:
     return f"{'query' if role == 'query' else 'passage'}: {text}"
 
 
+def _fastembed_available() -> bool:
+    try:
+        import fastembed  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def effective_embedding_stack(project_id: str = "proj_local") -> dict[str, str]:
+    """What embed_text would actually use right now — not what settings store.
+
+    Mirrors embed_text's resolution order so observers (doctor, catalog) can
+    report the running truth. Kept adjacent to embed_text: if the resolution
+    changes there, change it here.
+    """
+    settings = get_project_settings(project_id)
+    env_choice = (os.getenv("MEM1_EMBEDDING_PROVIDER") or "").strip().lower()
+    provider = env_choice or str(settings.get("embedding_provider", "local")).lower()
+    if not env_choice and provider == "local" and _fastembed_available():
+        return {"embedding_provider": "fastembed",
+                "embedding_model": _fastembed_default_model(settings),
+                "resolution": "auto-default (unconfigured + fastembed importable)"}
+    if provider in {"", "local", "deterministic"}:
+        return {"embedding_provider": "local",
+                "embedding_model": "deterministic-128",
+                "resolution": "explicit pin" if env_choice else "fallback (fastembed unavailable)"}
+    return {"embedding_provider": provider,
+            "embedding_model": str(settings.get("embedding_model") or ""),
+            "resolution": "configured"}
+
+
 def embed_text(text: str, project_id: str = "proj_local", role: str = "passage") -> list[float]:
     settings = get_project_settings(project_id)
-    provider = (os.getenv("MEM1_EMBEDDING_PROVIDER") or str(settings.get("embedding_provider", "local"))).lower()
+    env_choice = (os.getenv("MEM1_EMBEDDING_PROVIDER") or "").strip().lower()
+    provider = env_choice or str(settings.get("embedding_provider", "local")).lower()
+    # Semantic-by-default: an *unconfigured* stack was never a choice, only an
+    # absence of keys. When nothing is explicitly chosen and fastembed is
+    # importable, default to the fully-local semantic model. An explicit
+    # MEM1_EMBEDDING_PROVIDER=local (or "deterministic") still pins the hash
+    # fallback — tests and constrained machines need that escape hatch.
+    # (UX ruling, 2026-08-01: users should not need to know these words.)
+    if not env_choice and provider == "local" and _fastembed_available():
+        try:
+            return _embed_with_fastembed_provider(text, settings, role=role)
+        except Exception:
+            pass
     if provider in OPENAI_COMPATIBLE_EMBEDDING_PROVIDERS and _provider_credentials_available(settings, "embedding"):
         try:
             return _embed_with_provider(text, settings)
@@ -1013,12 +1075,30 @@ def _embed_with_aws_bedrock_provider(text: str, settings: dict[str, Any]) -> lis
     return [float(value) for value in (embedding or [])]
 
 
+_FASTEMBED_MODELS: dict[str, Any] = {}
+
+
+def _fastembed_default_model(settings: dict[str, Any]) -> str:
+    configured = settings.get("embedding_model")
+    if configured and str(configured) not in {"deterministic-128"}:
+        return str(configured)
+    # bge-small: 34MB download, strong retrieval, laptop-friendly latency —
+    # the right default for a login service on a user's machine.
+    return os.getenv("FASTEMBED_MODEL") or "BAAI/bge-small-en-v1.5"
+
+
 def _embed_with_fastembed_provider(text: str, settings: dict[str, Any], role: str = "passage") -> list[float]:
     from fastembed import TextEmbedding
 
-    model = settings.get("embedding_model") or os.getenv("FASTEMBED_MODEL") or "thenlper/gte-large"
-    text = e5_prefixed(text, str(model), role)
-    embeddings = list(TextEmbedding(model_name=str(model)).embed(text.replace("\n", " ")))
+    model = _fastembed_default_model(settings)
+    # Model load is the expensive part (ONNX init + file mmap); embedding is
+    # cheap. One instance per model name for the process lifetime.
+    engine = _FASTEMBED_MODELS.get(model)
+    if engine is None:
+        engine = TextEmbedding(model_name=model)
+        _FASTEMBED_MODELS[model] = engine
+    text = e5_prefixed(text, model, role)
+    embeddings = list(engine.embed(text.replace("\n", " ")))
     return [float(value) for value in embeddings[0]]
 
 

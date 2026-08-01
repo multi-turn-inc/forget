@@ -90,6 +90,30 @@ def test_repeat_suppression_and_ledger_extension(monkeypatch, tmp_path, capsys):
     assert capsys.readouterr().out == ""
 
 
+def test_task_state_claims_never_recalled(monkeypatch, tmp_path, capsys):
+    # F2/C2 (cycle 18): fluid-layer task ledger rows farm phrase_bonus with
+    # long claim texts and outrank topical memories. They travel via
+    # get_task_state/capsule only — turn recall must skip them even at high
+    # score, while a plain memory in the same result set still surfaces.
+    results = [
+        {"id": "claim:c-1", "score": 0.61,
+         "memory": "Task heartbeat is in_progress. 상위 목표: devloop...",
+         "metadata": {"source": "claim_ledger", "assertion_kind": "task_state",
+                      "task_state": {"task_id": "heartbeat"}},
+         "trust": {"light": "yellow", "kind": "task_state"}},
+        {"id": "m-2", "score": 0.5, "memory": "임베더는 e5로 교체 예정",
+         "metadata": {}, "trust": {"light": "green"}},
+    ]
+    module = _recall_module(monkeypatch, tmp_path, results)
+    _run_main(module, {"session_id": "s13", "prompt": "임베더 교체 계획이 뭐였지?"}, monkeypatch)
+    out = capsys.readouterr().out
+    assert "heartbeat" not in out
+    assert "(green) 임베더는 e5로" in out
+    # 장부에도 task 클레임은 오르지 않는다 — 억제 상태 오염 방지
+    turns = json.loads((tmp_path / "s13.turns.json").read_text(encoding="utf-8"))
+    assert turns["injected"] == ["m-2"]
+
+
 def test_slash_and_short_prompts_stay_silent(monkeypatch, tmp_path, capsys):
     module = _recall_module(monkeypatch, tmp_path, [{"id": "m", "score": 0.9, "memory": "x", "metadata": {}}])
     for prompt in ("/compact", "ㅇㅋ", "# Update Config Skill 문서..."):

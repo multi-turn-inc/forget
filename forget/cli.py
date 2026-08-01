@@ -337,6 +337,22 @@ def _pypi_latest(timeout: float = 3.0) -> str:
         return ""
 
 
+FALLBACK_STACK = {"deterministic-128", "rule-extractor", "lexical-v1"}
+
+
+def stack_summary(settings: dict[str, Any]) -> tuple[str, bool]:
+    """One line naming the memory stack, and whether any fallback is engaged.
+
+    The LME-V2 lesson: the hash-embedding fallback ran a full benchmark
+    without anyone noticing, because nothing ever *said* which stack was
+    active. Identity is DB + scope + provider stack — so doctor names it.
+    """
+    emb = str(settings.get("embedding_model") or "?")
+    llm = str(settings.get("llm_model") or "?")
+    fallback = emb in FALLBACK_STACK or llm in FALLBACK_STACK
+    return f"embedding={emb} · extractor={llm}", fallback
+
+
 def _mcp_call(host: str, port: int, app: str, user: str, method: str,
               params: dict[str, Any], timeout: float = 8.0) -> dict[str, Any]:
     import json as _json
@@ -415,6 +431,25 @@ def cmd_doctor(args: argparse.Namespace) -> None:
             wired = hooks_wired(_json.loads(settings_path.read_text()))
         except (OSError, ValueError):
             wired = {}
+    if mcp_ok:
+        try:
+            cat = _mcp_call(args.host, args.port, "forget", user, "tools/call",
+                            {"name": "get_provider_catalog", "arguments": {}})
+            import json as _json2
+            payload = _json2.loads(cat["result"]["content"][0]["text"])
+            effective = payload.get("effective") or {}
+            merged = dict(payload.get("settings", {}))
+            if effective.get("embedding_model"):
+                merged["embedding_model"] = effective["embedding_model"]
+            line, fallback = stack_summary(merged)
+            checks.append((not fallback, f"memory stack: {line}",
+                           "semantic recall is OFF (hash fallback). Fix: "
+                           "pip install -U 'forget-ai[server]' && forget-server reembed "
+                           "— backup and receipt are automatic, then restart the service.",
+                           False))
+        except Exception:
+            pass
+
     # Advisory, not failure: MCP-only is a valid standard setup (the capsule
     # arrives via CLAUDE.md instructions); hooks are the deluxe wiring.
     hooks_ok = wired.get("SessionStart", False)
@@ -551,6 +586,63 @@ def cmd_weekly(args: argparse.Namespace) -> None:
     print(f"  = {digest['total']} memories total, all on this machine")
 
 
+def cmd_reembed(args: argparse.Namespace) -> None:
+    """Re-embed every live memory with the currently active embedding stack.
+
+    The one-word migration for stores born on the hash fallback: backup is
+    automatic, progress is visible, a receipt lands next to the database.
+    Search tolerates mixed dimensions meanwhile, so running this live is safe.
+    """
+    import json
+    import shutil
+
+    from .providers import embed_text
+
+    path = db_path()
+    if not path.exists():
+        sys.exit("reembed: no store yet — nothing to do")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    backup = path.with_name(f"{path.stem}.pre-reembed-{stamp}{path.suffix}")
+    shutil.copy2(path, backup)
+    print(f"backup: {backup}")
+
+    probe = embed_text("dimension probe", role="query")
+    conn = sqlite3.connect(path, timeout=30)
+    try:
+        rows = conn.execute(
+            "SELECT id, memory FROM memories WHERE deleted = 0"
+        ).fetchall()
+        total, done, skipped = len(rows), 0, 0
+        print(f"re-embedding {total} memories → {len(probe)}-dim active stack")
+        for mid, text in rows:
+            try:
+                vec = embed_text(str(text or ""))
+            except Exception:
+                skipped += 1
+                continue
+            conn.execute("UPDATE memories SET embedding = ? WHERE id = ?",
+                         (json.dumps(vec), mid))
+            done += 1
+            if done % 100 == 0:
+                conn.commit()
+                print(f"  {done}/{total}", flush=True)
+        conn.commit()
+    finally:
+        conn.close()
+    receipt_dir = path.parent / "migrations"
+    receipt_dir.mkdir(exist_ok=True)
+    receipt = receipt_dir / f"reembed-{stamp}.json"
+    receipt.write_text(json.dumps({
+        "migration": "reembed", "date": stamp, "dimensions": len(probe),
+        "total": total, "reembedded": done, "skipped": skipped,
+        "backup": str(backup),
+    }, indent=1))
+    print(f"done: {done}/{total} re-embedded ({skipped} skipped) · receipt: {receipt}")
+    print("restart the server to pick up a consistent search index: "
+          "launchctl kickstart -k gui/$(id -u)/ai.forget.server" if sys.platform == "darwin"
+          else "restart the server now")
+
+
 def cmd_migrate_scope(args: argparse.Namespace) -> None:
     import json as _json
 
@@ -607,6 +699,8 @@ def main(argv: list[str] | None = None) -> None:
                           "for you to review and send yourself")
     sub.add_parser("weekly", help="what memory did this week — counts only, never content",
                    parents=[shared])
+    sub.add_parser("reembed", help="re-embed all memories with the active embedding stack "
+                                   "(automatic backup + receipt)", parents=[shared])
     mig = sub.add_parser(
         "migrate-scope",
         help="merge a legacy app pool into its canonical successor (dry-run by default)",
@@ -629,6 +723,7 @@ def main(argv: list[str] | None = None) -> None:
      "status": cmd_status,
      "doctor": cmd_doctor,
      "weekly": cmd_weekly,
+     "reembed": cmd_reembed,
      "migrate-scope": cmd_migrate_scope}[command](args)
 
 
