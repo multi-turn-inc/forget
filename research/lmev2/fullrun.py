@@ -29,12 +29,12 @@ from concurrent.futures import ThreadPoolExecutor
 
 TMP = "/Users/junghunkim/.claude/jobs/f6b439e4/tmp"
 BASE = os.environ.get("LMEV2_BASE", "http://127.0.0.1:43917")
-APP = "lmev2full"
+APP = os.environ.get("LMEV2_APP", "lmev2full")
 TOP_K = 8
 SEARCH_K = 40  # 필터 전 여유
 TREE_CHARS = 3000
 WORKERS = 4
-STATE = os.path.join(TMP, "fullrun_state.json")
+STATE = os.path.join(TMP, f"fullrun_state_{APP}.json")
 
 
 def _post(path: str, payload: dict, timeout: int = 120) -> dict:
