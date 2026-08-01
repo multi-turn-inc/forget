@@ -25,3 +25,7 @@ research/longmemeval/observations/
 feedback/
 tmp/
 .playwright-mcp/
+
+# devloop 측정 fixture — 도그푸드 실기억 본문(사적)을 담으므로 커밋 금지 (헌장 원칙 3 격리).
+# 스크립트는 라이브 재생으로 재생성하므로 fixture는 로컬 전용.
+research/devloop/scripts/f2_treatment2_hits*.json
