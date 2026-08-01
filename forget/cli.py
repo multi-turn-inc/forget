@@ -596,9 +596,13 @@ def cmd_reembed(args: argparse.Namespace) -> None:
     import json
     import shutil
 
+    path = db_path()
+    # embed_text reads project settings from the store get_db points at —
+    # pin it to the same database we are re-embedding (first live run failed
+    # here: unset env → wrong settings DB → "no such table: projects").
+    os.environ.setdefault("MEM1_DB_PATH", str(path))
     from .providers import embed_text
 
-    path = db_path()
     if not path.exists():
         sys.exit("reembed: no store yet — nothing to do")
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
