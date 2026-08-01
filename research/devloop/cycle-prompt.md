@@ -6,7 +6,7 @@
 ## 절차
 
 **0. 회상 (restore 실측 — 매 런은 무기억으로 시작하므로 이 단계가 자연실험이다)**
-- 저장소: /Users/junghunkim/orca/workspaces/forget/내-프롬프트를-공유하기-싫어 (main-work)
+- 저장소: 데몬이 프롬프트로 전달하는 체크아웃 경로 ($FORGET_REPO, 브랜치 main-work)
 - LOOP.md를 읽는다 (헌장).
 - forget MCP `get_task_state` (task_id=devloop). MCP 미연결이면
   `curl -X POST localhost:8000/mcp/forget/http/junghunkim` tools/call로 동일 조회.

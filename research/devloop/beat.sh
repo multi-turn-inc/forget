@@ -6,7 +6,7 @@
 #        touch ~/.forget/devloop.pause  → 일시정지 (rm 하면 재개)
 #        launchctl bootout gui/$UID/ai.forget.devloop → 완전 정지
 export PATH="/Users/junghunkim/.forget/venv/bin:/Users/junghunkim/.nvm/versions/node/v22.22.0/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
-REPO="/Users/junghunkim/orca/workspaces/forget/내-프롬프트를-공유하기-싫어"
+REPO="${FORGET_REPO:?set FORGET_REPO to the repo checkout path}"
 STATE_DIR="$HOME/.forget/hooks/state"
 KICK="$HOME/.forget/devloop.kick"
 PAUSE="$HOME/.forget/devloop.pause"

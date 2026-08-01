@@ -11,7 +11,7 @@ from forget.memory_engine import expanded_tokens, score_memory
 
 PROMPT = (
     "devloop 사이클을 정확히 한 바퀴 실행하라. 이 저장소(/Users/junghunkim/orca/"
-    "workspaces/forget/내-프롬프트를-공유하기-싫어, 브랜치 main-work)의 LOOP.md(헌장)와 "
+    "<repo>, 브랜치 main-work)의 LOOP.md(헌장)와 "
     "research/devloop/cycle-prompt.md(지시서)를 먼저 읽고 지시서의 절차 0~5를 그대로 "
     "따른다. 0단계 회상은 forget의 get_task_state(task_id='devloop')로 시작하고, "
     "너는 이 작업의 기억 없이 태어났으므로 복원 품질을 metrics.jsonl에 정직하게 채점해 남겨라"
