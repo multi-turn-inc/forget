@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.3.9 — 2026-08-01
+
+Stale installs must not suffer silently. The 0.3.7↔0.5.0 hook/server
+mismatch shipped the exact bug class this release guards against: newer
+hooks sent `project`, the older server ate it without a word, and the
+feature looked broken. Three layers, in order of principle:
+
+### Update awareness
+- Mismatch canary (zero network): the capsule response now carries
+  `server_version`; hooks compare it against the capability they were
+  built for and put one warning line in the session capsule when the
+  server lags — its very absence marks a server ≤ 0.3.8. npx users get
+  current hooks automatically, so the hooks double as the stale-server
+  detector.
+- Unknown write arguments are never eaten silently: `add_memory` and
+  `record_task_state` accept them for compat but answer with an in-band
+  warning naming the ignored key (and the near-miss suggestion).
+- `doctor`/`status` report the installed vs latest version — one PyPI
+  metadata request, cached 24h in `~/.forget/update-check.json`, only
+  when the user runs those commands (hooks read the cache file but never
+  call out; the server never phones home). `FORGET_UPDATE_CHECK=off`
+  disables it entirely.
+- `forget-server upgrade` — pip upgrade + service restart + doctor in one
+  command; every version warning prescribes exactly this.
+
 ## 0.3.8 — 2026-08-01
 
 The boundary release: one store, project-shaped. Shipped the same day its

@@ -59,6 +59,15 @@ MODEL_ADAPTER_PROMOTION_REPORT_SCHEMA_VERSION = "mem1-model-adapter-promotion-re
 MODEL_ADAPTER_COMPARISON_SCHEMA_VERSION = "mem1-model-adapter-comparison-v1"
 
 
+def _server_version() -> str:
+    try:
+        from . import __version__
+
+        return str(__version__)
+    except Exception:
+        return ""
+
+
 def current_project_id() -> str:
     return CURRENT_PROJECT_ID.get() or "proj_local"
 
@@ -9742,6 +9751,10 @@ def prepare_context_autopilot(payload: dict[str, Any], project_id: str | None = 
     include_debug = _bool_or(payload.get("include_debug"), True)
     result = {
         "schema_version": CONTEXT_AUTOPILOT_SCHEMA_VERSION,
+        # The hooks' canary: they compare this against the capability they
+        # were built for and warn in the capsule when the server lags. Its
+        # absence is itself a signal (server ≤ 0.3.8).
+        "server_version": _server_version(),
         "project_id": assembled.get("project_id"),
         "context_trace_id": assembled.get("context_trace_id"),
         "status": (assembled.get("context_status") or {}).get(

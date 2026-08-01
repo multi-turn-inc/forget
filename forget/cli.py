@@ -450,6 +450,19 @@ def cmd_doctor(args: argparse.Namespace) -> None:
         except Exception:
             pass
 
+    # Advisory, not failure: staying current is a choice, but a stale server
+    # silently drops arguments newer hooks send — say so with a prescription.
+    from . import updatecheck
+
+    installed = _installed_version()
+    latest = updatecheck.fetch_latest()
+    if latest:
+        checks.append((not updatecheck.is_older(installed, latest),
+                       updatecheck.update_line(installed, latest),
+                       "newer hooks against an older server lose features silently — "
+                       "one command fixes it: forget-server upgrade",
+                       False))
+
     # Advisory, not failure: MCP-only is a valid standard setup (the capsule
     # arrives via CLAUDE.md instructions); hooks are the deluxe wiring.
     hooks_ok = wired.get("SessionStart", False)
@@ -670,6 +683,11 @@ def cmd_status(args: argparse.Namespace) -> None:
     print(f"server: {'listening' if listening else 'not listening'} on {args.host}:{args.port}")
     print(f"db:     {db_path()}{'' if db_path().exists() else '  (not created yet)'}")
     print(format_being_line(being_vitals(db_path())))
+    from . import updatecheck
+
+    line = updatecheck.update_line(_installed_version(), updatecheck.fetch_latest())
+    if line:
+        print(line)
     if sys.platform == "darwin":
         plist, _ = _launchd_paths()
         print(f"service: {'installed' if plist.exists() else 'not installed'} ({plist})")
@@ -678,6 +696,50 @@ def cmd_status(args: argparse.Namespace) -> None:
         print(f"service: {'installed' if unit.exists() else 'not installed'} ({unit})")
     if not listening:
         sys.exit(1)
+
+
+def cmd_upgrade(args: argparse.Namespace) -> None:
+    """One command from "stale" to "verified current": pip -U → service
+    restart → doctor. Every version warning in the product prescribes this,
+    so it has to leave the user in a *checked* state, not just a newer one."""
+    from . import updatecheck
+
+    before = _installed_version()
+    print(f"upgrading forget-ai (installed: {before})…")
+    result = subprocess.run(
+        [sys.executable, "-m", "pip", "install", "--upgrade", "forget-ai[server]"],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        tail = (result.stderr or result.stdout or "").strip().splitlines()[-3:]
+        sys.exit("pip upgrade failed:\n  " + "\n  ".join(tail))
+    after = subprocess.run(
+        [sys.executable, "-c", "from importlib.metadata import version; print(version('forget-ai'))"],
+        capture_output=True, text=True,
+    ).stdout.strip() or "unknown"
+    print(f"installed: {before} → {after}")
+
+    restarted = False
+    if sys.platform == "darwin":
+        plist, domain = _launchd_paths()
+        if plist.exists():
+            subprocess.run(["launchctl", "kickstart", "-k", f"{domain}/{SERVICE_LABEL}"], capture_output=True)
+            restarted = True
+    elif sys.platform.startswith("linux"):
+        unit = Path.home() / ".config" / "systemd" / "user" / "forget-server.service"
+        if unit.exists():
+            subprocess.run(["systemctl", "--user", "restart", "forget-server.service"], capture_output=True)
+            restarted = True
+    print("service: restarted" if restarted else "service: not installed — restart your `forget-server run` terminal")
+
+    updatecheck.fetch_latest(force=True)  # refresh the cache so capsules stop nagging
+    print()
+    try:
+        cmd_doctor(args)
+    except SystemExit:
+        raise
+    except Exception:
+        print("doctor skipped (run `forget-server doctor` to verify)")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -701,6 +763,8 @@ def main(argv: list[str] | None = None) -> None:
     doc.add_argument("--report", action="store_true",
                      help="write a diagnostic bundle (no memory content) to ~/.forget "
                           "for you to review and send yourself")
+    sub.add_parser("upgrade", help="pip upgrade + service restart + doctor, in one command",
+                   parents=[shared])
     sub.add_parser("weekly", help="what memory did this week — counts only, never content",
                    parents=[shared])
     sub.add_parser("reembed", help="re-embed all memories with the active embedding stack "
@@ -726,6 +790,7 @@ def main(argv: list[str] | None = None) -> None:
      "uninstall-service": cmd_uninstall_service,
      "status": cmd_status,
      "doctor": cmd_doctor,
+     "upgrade": cmd_upgrade,
      "weekly": cmd_weekly,
      "reembed": cmd_reembed,
      "migrate-scope": cmd_migrate_scope}[command](args)

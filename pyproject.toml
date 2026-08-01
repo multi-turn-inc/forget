@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "forget-ai"
-version = "0.3.8"
+version = "0.3.9"
 description = "Memory for your AI. It forgets the junk, keeps what matters."
 readme = "README.md"
 requires-python = ">=3.11"

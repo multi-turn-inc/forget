@@ -24,6 +24,42 @@ FORGET_URL = os.environ.get("FORGET_MCP_URL", "http://127.0.0.1:8000/mcp")
 STATE_DIR = os.path.expanduser("~/.forget/hooks/state")
 CAPSULE_CHAR_BUDGET = 1_600  # ~400 tokens
 HANDOFF_MAX_AGE_SECONDS = 48 * 3600  # a stale shift-note is worse than none
+# The server capability these hooks are built against. The capsule response
+# carries server_version from 0.3.9 on; older servers silently drop arguments
+# these hooks send (project layering) — that mismatch must never be silent.
+REQUIRED_SERVER_VERSION = "0.3.9"
+
+
+def _version_tuple(value: str) -> tuple:
+    parts = []
+    for chunk in str(value or "").split("."):
+        digits = "".join(ch for ch in chunk if ch.isdigit())
+        parts.append(int(digits) if digits else 0)
+    return tuple(parts or [0])
+
+
+def _version_notice(server_version: str) -> str:
+    """One warning line for the capsule header area, or ''.
+
+    Two signals, no network: the server's self-reported version (mismatch =
+    features silently lost), and the update-check cache that doctor/status
+    maintain (a local file — hooks never call out).
+    """
+    if not server_version:
+        return "⚠ 서버가 버전을 안 밝힘(≤0.3.8) — 훅 기능 일부가 조용히 무시될 수 있음. 처방: forget-server upgrade"
+    if _version_tuple(server_version) < _version_tuple(REQUIRED_SERVER_VERSION):
+        return (
+            f"⚠ 서버 {server_version} < 훅 요구 {REQUIRED_SERVER_VERSION} — "
+            "프로젝트 층 등이 조용히 무시됨. 처방: forget-server upgrade"
+        )
+    try:
+        with open(os.path.expanduser("~/.forget/update-check.json"), encoding="utf-8") as fh:
+            latest = str(json.load(fh).get("latest") or "")
+        if latest and _version_tuple(server_version) < _version_tuple(latest):
+            return f"새 버전 {latest} 나옴 (현재 {server_version}) — forget-server upgrade"
+    except Exception:
+        pass
+    return ""
 
 
 def _consume_handoff() -> str:
@@ -97,10 +133,13 @@ def main() -> None:
         if isinstance(items, list) and items:
             capsule = "\n".join(f"- {item}" for item in items[:6] if isinstance(item, str))
     handoff = _consume_handoff()
+    notice = _version_notice(str(result.get("server_version") or ""))
     if not capsule and not handoff:
-        return  # low confidence → silence
+        return  # low confidence → silence (version nags don't earn a lone injection)
     shown = capsule[:CAPSULE_CHAR_BUDGET]
     parts = []
+    if notice:
+        parts.append(f"[forget 버전] {notice}")
     if handoff:
         parts.append(handoff)
     if shown:
