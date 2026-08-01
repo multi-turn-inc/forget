@@ -34,6 +34,22 @@ predictions 재독 + step2 우선순위 규칙 + git-status 영토 규약으로 
 lmev2-credible-number 바인딩을 상단에 노출. 회고 25 안건: (a) task_id 분리 여부, (b) 캡슐 조립이
 '이번 트랙'을 어떻게 고를지(인격 모델의 구성 정책). 2회 재발이므로 단발 기각 — 유형화 후보 유지.
 
+**재발 관측 (사이클 23, 2026-08-02 — 3번째 연속, notes/cycle-23-track-confusion-mechanism.md):**
+restore 또 partial(get_task_state가 LME-V2 트랙 반환, 실트랙 F2는 metrics로 재구성). **메커니즘
+확정·정정**: (1) 사이클 22의 '오케스트레이터가 오염'은 오류 — orchestrator.sh는 forget 호출 0건
+(statusboard.py만, 파일 폴링 구동), LME-V2 task_state는 goal:lmev2-credible-number를 작업한 devloop
+*세션*이 씀. (2) 진짜 원인 = **공유 task_id=devloop 상의 목표-트랙 충돌**: self-loop 세션과 LME-V2
+벤치 세션이 같은 task_id에 record_task_state → restore는 마지막 쓰기 트랙을 반환. (3) **이미 만든
+fix(2026-08-01 project 스코프 task_state)가 restore엔 무력함을 실측** — project=forget로 재조회해도
+동일 무태그 LME-V2 행 반환(claim 1025f2dd/epoch e68ebe5d). 규칙이 '무태그 행은 하위호환 항상 노출'
+이라 project 필터가 restore를 못 고침. 치유는 태그된 self-loop 쓰기가 무태그 행을 supersede해야만
+시작(task 연속성=task_id 단위, f35e3c3); 사이클 21·22·23 모두 그 supersede 실패(최신 행 여전히 08-02
+새벽 LME-V2). **이번 개입**: step5 record_task_state를 project=forget·self-loop 우선으로 써서 supersede
+시도(비파괴; 오케스트레이터 파일구동이라 무해; LME-V2 포인터는 next_actions에 보존). **반증테스트
+(사이클24 restore)**: (a) 내 self-loop 행 반환→태그 쓰기 치유 성립, 처방=project 쓰기 상시화; (b)
+LME-V2 행 재클로버→task_id 분리 필요(회고25). 3회 재발로 귀납 요건 충족 — 유형화(F7 트랙충돌?)·처방은
+회고25 게이트. 유형: F4 인접이나 쓰기측 오배송 아닌 **읽기측 트랙 선택 실패**.
+
 (새 유형은 필드노트 축적에서 귀납적으로 추가. 예상 후보 잔여: F3 과압축=잘못 잊음 —
 발생 전에는 등록하지 않는다. F6은 사이클 6, F5는 사이클 7, F4는 사이클 8에서
 실제 관측으로 등재 — F5는 예약명 '침묵 실패'를 '침묵 잊음'으로 구체화. F1은 사이클 8에서
