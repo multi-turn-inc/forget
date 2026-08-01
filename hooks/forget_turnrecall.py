@@ -24,6 +24,10 @@ import os
 import sys
 import urllib.request
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from forget_project import layered_filter, project_key_for_path, scope_disabled, wants_cross_project  # noqa: E402
+
 FORGET_URL = os.environ.get("FORGET_MCP_URL", "http://127.0.0.1:8000/mcp")
 STATE_DIR = os.path.expanduser("~/.forget/hooks/state")
 SCORE_THRESHOLD = float(os.environ.get("FORGET_TURNRECALL_THRESHOLD", "0.45"))
@@ -109,7 +113,15 @@ def main() -> None:
     if len(prompt) < MIN_PROMPT_LEN or prompt.startswith(("/", "!", "<", "#")):
         return
     seen, turns_path = _seen_ids(session_id) if session_id else (set(), "")
-    result = _rpc("search_memories", {"query": prompt[:300], "top_k": MAX_RECALLS + 2})
+    # Project boundary = privacy boundary: the other company's strategy must
+    # not surface mid-session here just because the words rhyme. Crossing is
+    # possible, but only when the user asks for it — and it says so when it does.
+    project = None if scope_disabled() else project_key_for_path(hook_input.get("cwd") or os.getcwd())
+    crossed = bool(project) and wants_cross_project(prompt)
+    search_args: dict = {"query": prompt[:300], "top_k": MAX_RECALLS + 2}
+    if project and not crossed:
+        search_args["filters"] = layered_filter(project)
+    result = _rpc("search_memories", search_args)
     picks = []
     conflict_pairs: dict[tuple[str, str], None] = {}
     for item in result.get("results") or []:
@@ -158,7 +170,9 @@ def main() -> None:
             lines.append(f"- (현재) {new_text}")
             lines.append(f"- (red/구본) {old_text}")
     if picks:
-        lines.append("[forget 회상 — 이 턴과 관련된 기억 제안. green=행동 근거 OK, yellow=행동 전 확인, red=참고만]")
+        header = "[forget 회상 — 이 턴과 관련된 기억 제안. green=행동 근거 OK, yellow=행동 전 확인, red=참고만"
+        header += " / 프로젝트 경계를 넘어 검색함]" if crossed else "]"
+        lines.append(header)
         lines += [f"- ({light}) {memory}" for _, light, memory in picks]
     print("\n".join(lines))
     if session_id and turns_path:

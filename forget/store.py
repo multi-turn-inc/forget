@@ -4431,15 +4431,47 @@ def _scope_fallback_requested_user_id(filters: dict[str, Any] | None) -> str | N
     return None
 
 
+def _strip_entity_conditions(filters: Any) -> Any:
+    """The non-entity remainder of a filter tree — what fallback must still honor.
+
+    Scope fallback exists to relax WHO may see a row (entity scope: user_id,
+    agent_id, app_id, run_id). Every other condition — metadata layers, dates,
+    categories — is a content boundary the caller asked for, and fallback
+    re-admitting rows past it is a leak (found 2026-08-01 while layering
+    project scope: another project's rows re-entered as discounted hits).
+    """
+    if not isinstance(filters, dict):
+        return filters
+    stripped: dict[str, Any] = {}
+    for key, value in filters.items():
+        if key in ENTITY_FIELDS:
+            continue
+        if key in {"AND", "OR"} and isinstance(value, list):
+            parts = [_strip_entity_conditions(part) for part in value]
+            parts = [part for part in parts if part]
+            if parts:
+                stripped[key] = parts
+            continue
+        if key == "NOT":
+            parts = value if isinstance(value, list) else [value]
+            kept = [part for part in (_strip_entity_conditions(p) for p in parts) if part]
+            if kept:
+                stripped[key] = kept
+            continue
+        stripped[key] = value
+    return stripped
+
+
 def _scope_fallback_eligible(memory: dict[str, Any], filters: dict[str, Any] | None) -> bool:
     # user_id is a privacy boundary between the customer's end users:
     # fallback may only surface shared rows (no user_id — agent/app/run
     # scoped knowledge) or rows belonging to the requesting user. Another
     # user's personal memories never enter through fallback.
     memory_user = memory.get("user_id")
-    if memory_user in (None, ""):
-        return True
-    return memory_user == _scope_fallback_requested_user_id(filters)
+    if memory_user not in (None, "") and memory_user != _scope_fallback_requested_user_id(filters):
+        return False
+    # Fallback relaxes entity scope only; content conditions still bind.
+    return matches_filters(memory, _strip_entity_conditions(filters))
 
 
 def _semantic_embedding_active() -> bool:
