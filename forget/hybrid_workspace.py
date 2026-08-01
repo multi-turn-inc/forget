@@ -510,18 +510,25 @@ def record_task_observation(
         ),
     )
     observation_inserted = hybrid_insert.rowcount == 1
-    previous_epoch = conn.execute(
+    # Epoch continuity is per task, not per task×scope. Keying the predecessor
+    # on exact scope_json match let any scope change — a project tag arriving,
+    # an agent_id appearing or dropping — fork the task into parallel open
+    # epochs that nothing ever closed (observed live 2026-08-01: one task with
+    # three open epochs, the untagged twin leaking into every project view).
+    # The claims path already treats task_id as the identity (supersede by
+    # subject_key, scope ignored); epochs now match it. All open epochs for
+    # the task are candidates, newest first; every stale fork is closed below.
+    open_epochs = conn.execute(
         """
         SELECT * FROM workspace_epochs
          WHERE project_id = ?
            AND task_id = ?
-           AND scope_json = ?
            AND valid_to IS NULL
          ORDER BY valid_from DESC
-         LIMIT 1
         """,
-        (project_id, task_id, json_dumps(scope)),
-    ).fetchone()
+        (project_id, task_id),
+    ).fetchall()
+    previous_epoch = open_epochs[0] if open_epochs else None
     evidence_refs = [
         {"kind": "claim", "id": claim_id},
         {"kind": "event", "id": event_id},
@@ -544,6 +551,13 @@ def record_task_observation(
     snapshot = workspace_snapshot(payload, item, evidence_refs)
     snapshot_digest = snapshot_hash(snapshot)
     hard_reasons = boundary_reason_codes(previous_epoch, snapshot, snapshot_digest)
+    # The snapshot doesn't cover scope, so a scope transition with identical
+    # content (exactly what a project tag arriving looks like) is invisible to
+    # it — force the boundary or the tag never lands on the live epoch.
+    if previous_epoch is not None and not hard_reasons and previous_epoch["scope_json"] != json_dumps(scope):
+        hard_reasons = ["scope_changed"]
+    if len(open_epochs) > 1 and not hard_reasons:
+        hard_reasons = ["scope_forks_merged"]  # heal old task×scope forks even when nothing else moved
     soft_reasons = soft_boundary_reason_codes(payload)
     if hard_reasons and soft_reasons:
         reasons = list(dict.fromkeys([*hard_reasons, *soft_reasons]))
@@ -612,15 +626,17 @@ def record_task_observation(
                     REDUCER_VERSION,
                 ),
             )
-        if previous_epoch:
+        if open_epochs:
+            # Close every open epoch for this task — the direct predecessor
+            # AND any scope-forked twins left behind by the old continuity key.
             conn.execute(
-                """
+                f"""
                 UPDATE workspace_epochs
                    SET valid_to = ?
                  WHERE project_id = ?
-                   AND workspace_epoch_id = ?
+                   AND workspace_epoch_id IN ({','.join('?' for _ in open_epochs)})
                 """,
-                (now, project_id, previous_epoch["workspace_epoch_id"]),
+                (now, project_id, *[row["workspace_epoch_id"] for row in open_epochs]),
             )
         conn.execute(
             """

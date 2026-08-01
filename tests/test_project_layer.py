@@ -451,6 +451,38 @@ def test_task_ledger_holds_the_project_boundary(monkeypatch, tmp_path):
     assert {"quant-backtest", "forget-release", "legacy-untagged"} <= ids, "no project → cross-project view"
 
 
+def test_scope_transition_supersedes_the_untagged_epoch(monkeypatch, tmp_path):
+    """Live find (2026-08-01, first real-usage test): epoch continuity keyed on
+    exact scope_json let a project tag arriving fork the task — the untagged
+    twin stayed open forever and leaked into every project view. A re-record
+    with identical content but new scope must close the old epoch."""
+    from forget.store import get_task_state, record_task_state
+
+    monkeypatch.delenv("MEM1_REQUIRE_AUTH", raising=False)
+    _fresh_db(tmp_path)
+    record_task_state({"task_id": "t-mig", "status": "in_progress", "summary": "동일 내용"})
+    record_task_state({"task_id": "t-mig", "status": "in_progress", "summary": "동일 내용", "project": "quant-research"})
+
+    rows = get_task_state({"task_id": "t-mig", "limit": 10})["results"]
+    assert len(rows) == 1, f"one open epoch expected, got {len(rows)}"
+    assert rows[0]["scope"].get("project") == "quant-research"
+    forget_view = get_task_state({"project": "forget", "limit": 20})
+    assert "t-mig" not in {r["task_id"] for r in forget_view["results"]}, "untagged twin must not survive the transition"
+
+
+def test_scope_forks_heal_on_next_write(monkeypatch, tmp_path):
+    """The pre-existing fork class (agent_id appearing/disappearing) heals the
+    same way: any write closes every open epoch for the task."""
+    from forget.store import get_task_state, record_task_state
+
+    monkeypatch.delenv("MEM1_REQUIRE_AUTH", raising=False)
+    _fresh_db(tmp_path)
+    record_task_state({"task_id": "t-fork", "status": "in_progress", "summary": "codex가 적음", "agent_id": "codex"})
+    record_task_state({"task_id": "t-fork", "status": "in_progress", "summary": "claude가 적음"})
+    rows = get_task_state({"task_id": "t-fork", "limit": 10})["results"]
+    assert len(rows) == 1 and rows[0]["summary"] == "claude가 적음"
+
+
 def test_task_metadata_passthrough_survives(monkeypatch, tmp_path):
     from forget.store import get_task_state, record_task_state
 
