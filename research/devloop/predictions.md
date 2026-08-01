@@ -168,3 +168,18 @@ P1의 정당한 원기한을 승계한 것이므로 선적용 아님.
   (b) 사이클 recall_misses 평균이 배포 전 5사이클 대비 감소.
 - 대조군: 배포 전 사이클들의 metrics (같은 지시서·같은 데몬).
 - 판정: 5사이클 후. 실패 시 원복은 백업 복원 + 0.3.6 다운그레이드 (수 분).
+
+## P9 — 트랙 혼선 치유 메커니즘: latest-write-wins vs 태그 우선 (등록 2026-08-02 사이클 24)
+- 배경: 사이클 24 restore가 self-loop 행 반환(결과 a) — 트랙 혼선 치유 성립. 그러나 반환 claim의
+  `supersedes_claim_ids: []` + `predecessor_epoch_id: e68ebe5d`(LME-V2 epoch) + workspace-epoch 리듀서가
+  보이듯 실제 메커니즘은 **latest-write-wins**(태그가 아니라 마지막 record_task_state가 epoch head).
+  "태그가 견고히 이긴다"와 "그냥 마지막 쓰기라 이긴다"는 관측 동치이며 **끼어든 LME-V2 쓰기로만 구별**된다.
+- 예측: (a) 사이클 25 restore 이전 LME-V2 세션이 `task_id=devloop`에 record_task_state하면, 사이클 25
+  restore는 **LME-V2 행을 반환(partial)** — latest-write-wins 확정, "step5 project 쓰기 상시화"는 취약(불충분),
+  task_id 분리가 필요(견고). (b) LME-V2 쓰기가 끼지 않으면 사이클 25 restore는 self-loop full 유지 — 치유는
+  지속하나 (a)를 반증하지 못함(비구별: 태그 우선인지 마지막 쓰기인지 못 가름). (c) 만약 self-loop 행이
+  LME-V2 쓰기가 끼었는데도 head를 지키면(=반환 유지) latest-write-wins가 반증되고 태그 우선이 성립.
+- 대조군: 사이클 21·22·23(LME-V2가 마지막 쓰기→partial) vs 사이클 24(self-loop 마지막 쓰기→full).
+- 판정: 사이클 25 restore. 개입 불요 — LME-V2 트랙(goal:lmev2-credible-number)이 자기 박자로 쓰는지가
+  자연 조작. 사이클 25 회고에서 처방(상시 project 쓰기 브리지 + task_id 분리) 확정 근거로 사용.
+- 시계: 가동 — 사이클 24 step5(self-loop head 재설정) 이후.

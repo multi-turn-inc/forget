@@ -50,6 +50,37 @@ fix(2026-08-01 project 스코프 task_state)가 restore엔 무력함을 실측**
 LME-V2 행 재클로버→task_id 분리 필요(회고25). 3회 재발로 귀납 요건 충족 — 유형화(F7 트랙충돌?)·처방은
 회고25 게이트. 유형: F4 인접이나 쓰기측 오배송 아닌 **읽기측 트랙 선택 실패**.
 
+**반증 판정 (사이클 24, 2026-08-02 — notes/cycle-24-track-confusion-falsification.md):** 사이클 24
+restore가 **self-loop 행 반환 → 결과 (a)**. restore_grade 21 partial→22 full→23 partial→**24 full**
+(트랙 혼선 4사이클 중 첫 온트랙; next_actions[0]이 곧 이 사이클 과제). **메커니즘 정정**: 사이클 23의
+'태그된 쓰기가 무태그 행 supersede' 서술은 오류 — 반환 claim `d91c76ae`의 `supersedes_claim_ids: []`
++ `predecessor_epoch_id: e68ebe5d`(=LME-V2 epoch) + `reducer_version: hybrid-workspace-v0`가 보이듯 실제
+규칙은 **latest-write-wins**(매 record_task_state가 새 epoch를 head로; restore=최신 epoch, project 태그
+무관; 태그는 head 아닌 행의 읽기 필터에만 관여). 4사이클 전부 설명(21·22·23=LME-V2 마지막 쓰기→partial,
+24=self-loop 마지막 쓰기→full). **함의: 치유 성립하나 취약(레이스)** — LME-V2가 사이클 25 restore 이전
+`task_id=devloop`에 한 번만 써도 head 되가져가 재클로버. 처방 "step5 project 쓰기 상시화"=**필요조건이나
+불충분**(끼어든 쓰기에 취약); 견고=**task_id 분리**. **부수 판정 1**: 사이클 22 캐비앗 (b)'캡슐 조립 층
+편향' **반증** — 캡슐 헤드라인도 self-loop로 함께 뒤집힘(별도 조립 병리 아닌 동일 근원=같은 최신 epoch),
+회고 25 '캡슐 조립 정책' 안건 강등. **부수 판정 2**: 잔재 — self-loop 내용이 여전히 `goal:lmev2-credible-
+number` 바인딩(내용/goal 불일치). **회고 25 처방 갱신**: 택일(a vs b) 폐기 → **병행**(상시 project 쓰기=브리지
++ task_id 분리=견고 + goal 재바인딩). 다음 반증 P9: 사이클 25 restore 이전 LME-V2 쓰기가 끼면 재클로버=
+latest-write-wins·task_id 분리 확정.
+
+## 미분류 관측 — 회귀 감시 테스트 flaky (사이클 24, 2026-08-02, 유형 판정은 회고 25로 회부)
+
+증상: 사이클 24 검증에서 전체 pytest가 `1 failed, 267 passed` — `test_crypto.py::
+test_recovery_code_format_and_checksum` 실패. 제품 코드 무변경 사이클(내 원인 아님). 재현 조사:
+isolated 30/30 pass, pytest 순서 무관. **직접 계측**(/tmp/crypto_flake_probe.py, 200k 시행): 이 테스트가
+쓰는 '위치 5 단일문자 치환'의 **checksum 충돌률 0.114%**(227/200000) — 즉 매 전체 런이 약 1/878 확률로
+이 테스트에서 실패하는 **확률적 flaky**. 순서/상태 누수 아니라 `generate_recovery_code()`의 per-run
+랜덤성이 원인. 제품측 근원: 복구 코드 알파벳 `ABCDEFGH234567`(14자, 비소수)에 대한 소형 검사 심볼은
+**단일 문자 치환 100% 검출을 보장하지 못함**(mod-소수 설계라야 보장). 테스트는 단일 flip이 항상 잡힌다고
+가정 — 확률적으로 틀림. 기대 동작: 회귀 감시 baseline은 결정적이어야(원칙 7: 루프 연속성=상시 테스트).
+수용 기준: 전체 pytest가 시드/순서 무관 결정적 green. 함의: 사이클 21~23의 "268 passed"는 사실 ~99.89%
+green(확률적)이었고 아무도 몰랐음 — 회귀 감시 계기 자체에 노이즈. 처치는 **코드 사이클**(테스트 결정화:
+고정 시드 또는 충돌쌍 회피; 또는 제품 checksum 강화=설계 변경) — 영토 규약상 이 사이클 금지, gate_pending·
+회고 25 유형 판정 회부. 유형 후보: 기존 F1~F6 밖 '검증 계기 노이즈'(신규). 단발(1회)이므로 재발 관측 후 등록.
+
 (새 유형은 필드노트 축적에서 귀납적으로 추가. 예상 후보 잔여: F3 과압축=잘못 잊음 —
 발생 전에는 등록하지 않는다. F6은 사이클 6, F5는 사이클 7, F4는 사이클 8에서
 실제 관측으로 등재 — F5는 예약명 '침묵 실패'를 '침묵 잊음'으로 구체화. F1은 사이클 8에서
