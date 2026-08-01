@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+### Project-scoped memory layer
+- The project boundary is now detected, never configured: hooks derive a
+  project key from the session's cwd (git common-dir → origin URL, so a
+  worktree and its main clone share one key), stamp every `add_memory`
+  write with `metadata.project` + `scope_layer` via PreToolUse
+  `updatedInput`, and recall reads one store in two layers — this
+  project's rows plus everything global and everything untagged.
+  Backward compatible by construction: untagged rows (everything before
+  the layer) read as global, so day one changes nothing and separation
+  accrues as tagged writes land. The boundary doubles as a privacy gate:
+  turn recall crosses it only on an explicit ask ("다른 프로젝트에서…")
+  and flags the crossing in its header. Escape hatches:
+  `~/.forget/projects.json` (aliases/ignore) for same-name repos,
+  `FORGET_PROJECT_SCOPE=off` to disable.
+- The task ledger carries the layer too (the F2 cure proper — heartbeat
+  and Quant task rows invading a devloop capsule was the founding
+  friction): `record_task_state` accepts `project` (rides the scope blob,
+  so claims and workspace epochs both carry it), and a project-scoped
+  `get_task_state`/capsule hides only tasks tagged with a *different*
+  project. No project argument = the cross-project view.
+- Scope-fallback leak fixed while layering: fallback may relax entity
+  scope (user_id/agent_id/app_id/run_id) only — content conditions
+  (metadata layers, dates, categories) still bind. Before this, enabling
+  `scope_fallback` re-admitted rows past any metadata filter as
+  discounted fallback hits.
+
 ### Scope integrity
 - Write-time scope guard: every memory write (MCP and REST converge in
   `store.add_memories`) is now checked against the canonical pool
