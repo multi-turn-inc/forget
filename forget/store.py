@@ -973,10 +973,31 @@ def _write_observation_and_claim(
     )
 
 
+def _requested_project(payload: dict[str, Any], filters: dict[str, Any]) -> str:
+    """The project key a task-state call carries, if any.
+
+    Accepted as a top-level `project` arg, `metadata.project`, or a scalar
+    metadata.project filter. The layered OR that memory recall uses is
+    deliberately NOT parsed here — its compat branches (untagged, global)
+    have memory-recall semantics; task calls say `project` explicitly.
+    """
+    metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+    value = payload.get("project") or metadata.get("project") or filters.get("metadata.project")
+    return str(value).strip() if isinstance(value, str) and value.strip() else ""
+
+
 def _task_state_scope(payload: dict[str, Any]) -> dict[str, Any]:
     filters = payload.get("filters") if isinstance(payload.get("filters"), dict) else {}
     scope = {field: filters.get(field) or payload.get(field) for field in ENTITY_FIELDS}
-    return {field: value for field, value in scope.items() if value not in (None, "")}
+    scope = {field: value for field, value in scope.items() if value not in (None, "")}
+    # Project rides in the scope blob (a free-form JSON column) so BOTH
+    # storage paths — claims and workspace epochs — carry it without schema
+    # surgery. It is a content boundary, not an entity: matching rules live
+    # in _task_claim_scope_matches_filters.
+    project = _requested_project(payload, filters)
+    if project:
+        scope["project"] = project
+    return scope
 
 
 def _task_state_id(payload: dict[str, Any]) -> str:
@@ -1084,6 +1105,7 @@ def _task_state_payload(payload: dict[str, Any], task_id: str, scope: dict[str, 
         "goal_id": _task_state_normalized_id(goal_id) if goal_id not in (None, "") else "",
         "parent_goal_id": _task_state_normalized_id(parent_goal_id) if parent_goal_id not in (None, "") else "",
         "related_task_ids": related_task_ids,
+        "metadata": payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {},
     }
 
 
@@ -1109,6 +1131,14 @@ def _task_claim_scope_matches_filters(scope: dict[str, Any], filters: dict[str, 
         expected = filters.get(field)
         if expected not in (None, "") and scope.get(field) != expected:
             return False
+    # Project layering, same compat rule as memory recall: a project-scoped
+    # read hides only rows TAGGED with a different project. Untagged rows
+    # (everything before 2026-08-01) stay visible everywhere, and a read with
+    # no project sees everything — that is the explicit cross-project view.
+    requested = filters.get("project")
+    stored = scope.get("project")
+    if requested not in (None, "") and stored not in (None, "") and stored != requested:
+        return False
     return True
 
 
@@ -6069,7 +6099,7 @@ def _resume_workspace_for_context(payload: dict[str, Any], project_id: str) -> d
         "filters": filters,
         "limit": 1,
     }
-    for key in ("task_id", "goal_id", "user_id", "agent_id", "app_id", "run_id"):
+    for key in ("task_id", "goal_id", "user_id", "agent_id", "app_id", "run_id", "project"):
         if payload.get(key):
             workspace_payload[key] = payload[key]
         elif filters.get(key):
@@ -9196,7 +9226,11 @@ def _capsule_scope_filters(payload: dict[str, Any] | None) -> dict[str, Any]:
     filters = (payload or {}).get("filters")
     if not isinstance(filters, dict):
         filters = {}
-    return {field: filters.get(field) for field in ENTITY_FIELDS if filters.get(field)}
+    scope = {field: filters.get(field) for field in ENTITY_FIELDS if filters.get(field)}
+    project = _requested_project(payload or {}, filters)
+    if project:
+        scope["project"] = project
+    return scope
 
 
 def _goal_lines(project_id: str, scope_filters: dict[str, Any] | None = None, limit: int = 2) -> list[str]:

@@ -116,6 +116,53 @@ def test_alias_and_ignore_config(tmp_path, monkeypatch):
     assert project_mod.project_key_for_path(str(loose)) is None
 
 
+def test_submodule_is_its_own_project(tmp_path):
+    """A submodule's .git file points at parent/.git/modules/<name>, which has
+    the submodule's own remote — it keys to itself, not the parent."""
+    parent = _repo(tmp_path / "parent", "https://github.com/acme/parent.git")
+    moddir = parent / ".git" / "modules" / "lib"
+    moddir.mkdir(parents=True)
+    (moddir / "config").write_text('[remote "origin"]\n\turl = https://github.com/acme/lib.git\n', encoding="utf-8")
+    sub = parent / "vendor" / "lib"
+    sub.mkdir(parents=True)
+    (sub / ".git").write_text(f"gitdir: {moddir}\n", encoding="utf-8")
+    assert project_mod.project_key_for_path(str(sub)) == "lib"
+
+
+def test_relative_gitdir_pointer_resolves(tmp_path):
+    """git writes worktree pointers relative sometimes — must still collapse."""
+    main = _repo(tmp_path / "main2", "https://github.com/acme/main2.git")
+    (main / ".git" / "worktrees" / "wt").mkdir(parents=True)
+    checkout = tmp_path / "wt-checkout"
+    checkout.mkdir()
+    (checkout / ".git").write_text("gitdir: ../main2/.git/worktrees/wt\n", encoding="utf-8")
+    assert project_mod.project_key_for_path(str(checkout)) == "main2"
+
+
+def test_symlinked_cwd_and_nested_repo(tmp_path):
+    real = _repo(tmp_path / "realrepo", "https://github.com/acme/realrepo.git")
+    link = tmp_path / "link"
+    link.symlink_to(real)
+    assert project_mod.project_key_for_path(str(link)) == "realrepo"
+    inner = _repo(tmp_path / "realrepo" / "experiments" / "inner", "https://github.com/acme/inner.git")
+    assert project_mod.project_key_for_path(str(inner)) == "inner"  # closest .git wins
+
+
+def test_broken_git_pointer_falls_back_to_directory_name(tmp_path):
+    broken = tmp_path / "broken"
+    broken.mkdir()
+    (broken / ".git").write_text("not a gitdir pointer", encoding="utf-8")
+    assert project_mod.project_key_for_path(str(broken)) == "broken"  # fail-open, no crash
+
+
+def test_container_directories_are_not_projects(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    for name in ("Documents", "workspaces", "src"):
+        loose = tmp_path / name
+        loose.mkdir()
+        assert project_mod.project_key_for_path(str(loose)) is None, name
+
+
 def test_repo_identity_normalizes_url_shapes():
     for url in (
         "https://github.com/multi-turn-inc/forget.git",
@@ -163,7 +210,19 @@ def test_classifier_promotes_facts_about_the_user():
 def test_cross_project_requests_are_recognized():
     assert project_mod.wants_cross_project("다른 프로젝트에서 뭐 했더라?")
     assert project_mod.wants_cross_project("across all projects, what did I decide?")
+    assert project_mod.wants_cross_project("모든 프로젝트 통틀어 열린 루프 보여줘")
     assert not project_mod.wants_cross_project("이 프로젝트 릴리스 상태 알려줘")
+
+
+def test_classifier_misfires_found_in_probe_stay_fixed():
+    """2026-08-01 probe session: the three v1 misclassifications, pinned."""
+    # repo-context anchor outranks the 내가+선호 user pattern
+    assert project_mod.classify_layer("이 레포는 내가 선호하는 패턴대로 정리했다") == "project"
+    # English universal quantifier over projects is a global fact
+    assert project_mod.classify_layer("all projects should use ruff") == "global"
+    # "프로젝트 전체" means THIS project entire — not a boundary crossing
+    assert not project_mod.wants_cross_project("프로젝트 전체 테스트 돌려줘")
+    assert not project_mod.wants_cross_project("레포 전체 검색해줘")
 
 
 # --- write stamp (PreToolUse) ------------------------------------------------
@@ -196,6 +255,30 @@ def test_add_memory_gets_project_and_layer(monkeypatch, capsys):
         "project_tagger": "cwd-git-v1",
     }
     assert updated["infer"] is False  # rest of the input survives untouched
+
+
+def test_record_task_state_gets_top_level_project(monkeypatch, capsys):
+    payload = _tag(
+        monkeypatch,
+        capsys,
+        {
+            "tool_name": "mcp__forget__record_task_state",
+            "cwd": "/somewhere/forget",
+            "tool_input": {"task_id": "release-0.3.8", "status": "in_progress", "summary": "릴리스 준비"},
+        },
+    )
+    updated = payload["hookSpecificOutput"]["updatedInput"]
+    assert updated["project"] == "forget"
+    assert "metadata" not in updated  # task ledger takes the key top-level
+    assert _tag(
+        monkeypatch,
+        capsys,
+        {
+            "tool_name": "mcp__forget__record_task_state",
+            "cwd": "/x",
+            "tool_input": {"task_id": "t", "summary": "s", "project": "quant"},
+        },
+    ) is None  # explicit caller outranks detection
 
 
 def test_user_fact_is_stamped_global(monkeypatch, capsys):
@@ -344,6 +427,38 @@ def test_scope_fallback_may_not_readmit_the_other_project(monkeypatch, tmp_path)
     )["results"]
     texts = " ".join(str(m.get("memory")) for m in hits)
     assert "백테스트" not in texts
+
+
+def test_task_ledger_holds_the_project_boundary(monkeypatch, tmp_path):
+    """The F2 cure, end to end: a Quant task must not surface as the current
+    task of a forget-scoped read — while untagged (pre-layer) tasks stay
+    visible everywhere."""
+    from forget.store import get_task_state, record_task_state
+
+    monkeypatch.delenv("MEM1_REQUIRE_AUTH", raising=False)
+    _fresh_db(tmp_path)
+    record_task_state({"task_id": "quant-backtest", "status": "in_progress", "summary": "Quant 백테스트 주 1회 동결", "project": "quant-research"})
+    record_task_state({"task_id": "forget-release", "status": "in_progress", "summary": "0.3.8 릴리스 큐", "project": "forget"})
+    record_task_state({"task_id": "legacy-untagged", "status": "in_progress", "summary": "레이어 이전 태스크"})
+
+    forget_view = get_task_state({"project": "forget", "limit": 20})
+    ids = {r["task_id"] for r in forget_view["results"]}
+    assert "forget-release" in ids and "legacy-untagged" in ids
+    assert "quant-backtest" not in ids, "the other project's task must stay silent"
+
+    cross_view = get_task_state({"limit": 20})
+    ids = {r["task_id"] for r in cross_view["results"]}
+    assert {"quant-backtest", "forget-release", "legacy-untagged"} <= ids, "no project → cross-project view"
+
+
+def test_task_metadata_passthrough_survives(monkeypatch, tmp_path):
+    from forget.store import get_task_state, record_task_state
+
+    monkeypatch.delenv("MEM1_REQUIRE_AUTH", raising=False)
+    _fresh_db(tmp_path)
+    record_task_state({"task_id": "t1", "status": "in_progress", "summary": "s", "metadata": {"project": "forget", "note": "x"}})
+    view = get_task_state({"project": "quant-research", "limit": 20})
+    assert "t1" not in {r["task_id"] for r in view["results"]}, "metadata.project must scope like top-level project"
 
 
 def test_fallback_still_relaxes_entity_scope(monkeypatch, tmp_path):

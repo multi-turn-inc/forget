@@ -74,6 +74,9 @@ def main() -> None:
     project_filter = layered_filter(project)
     if project_filter:
         arguments["filters"] = project_filter
+        # Memory recall reads the layered OR; the task/goal ledger has its own
+        # storage (claims + epochs) and takes the project key explicitly.
+        arguments["project"] = project
     payload = {
         "jsonrpc": "2.0",
         "id": 1,

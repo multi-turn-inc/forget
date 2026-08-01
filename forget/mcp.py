@@ -331,6 +331,7 @@ TOOLS: list[dict[str, Any]] = [
             "required": ["query"],
             "properties": {
                 "query": {"type": "string"},
+                "project": {"type": "string", "description": "Project layer for task/goal sections; hides tasks tagged with a different project."},
                 "filters": _FILTERS_PROPERTY,
                 "budget_tokens": {"type": "integer"},
                 "working_memory_slots": {"type": "integer"},
@@ -355,6 +356,7 @@ TOOLS: list[dict[str, Any]] = [
             "required": ["query"],
             "properties": {
                 "query": {"type": "string"},
+                "project": {"type": "string", "description": "Project layer for task/goal sections; hides tasks tagged with a different project."},
                 "filters": _FILTERS_PROPERTY,
                 "budget_tokens": {"type": "integer"},
                 "working_memory_slots": {"type": "integer"},
@@ -404,6 +406,8 @@ TOOLS: list[dict[str, Any]] = [
                 "source_role": {"type": "string"},
                 "authority": {"type": "string"},
                 "retention_policy": {"type": "string"},
+                "project": {"type": "string", "description": "Project key this task belongs to (usually stamped by the client hook from cwd). Project-scoped reads hide tasks tagged with a different project."},
+                "metadata": {"type": "object"},
             },
         },
     },
@@ -487,6 +491,7 @@ TOOLS: list[dict[str, Any]] = [
             "type": "object",
             "properties": {
                 "task_id": {"type": "string"},
+                "project": {"type": "string", "description": "Limit to this project's tasks plus untagged ones; omit for the cross-project view."},
                 "filters": _FILTERS_PROPERTY,
                 "user_id": {"type": "string"},
                 "agent_id": {"type": "string"},

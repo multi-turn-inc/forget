@@ -60,7 +60,15 @@ _GLOBAL_PATTERNS = (
     r"(?:선호|좋아|싫어|원해|원한다|스타일|성향|습관|정체성|목표|철학)",
     r"\b(?:i|my)\b[^.\n]{0,40}\b(?:prefer|preference|always|never|habit|style|identity)\b",
     r"(?:모든 프로젝트|어느 프로젝트|어디서나|프로젝트 무관|전역|전체적으로)",
-    r"\b(?:globally|across (?:all )?projects|regardless of (?:the )?project)\b",
+    r"\b(?:globally|(?:across|all|every) projects?\b|across (?:all )?projects|regardless of (?:the )?project)\b",
+)
+
+# "이 레포는 내가 선호하는 패턴대로" — the sentence is ABOUT the repo even
+# though it name-drops a preference. Repo-context anchors outrank user-pattern
+# hits: a fact anchored to "this repo" belongs to it.
+_REPO_ANCHOR_PATTERNS = (
+    r"이 (?:레포|저장소|프로젝트|코드베이스)",
+    r"\bthis (?:repo|repository|project|codebase)\b",
 )
 
 # Explicit permission to cross the boundary. Recall stays inside the current
@@ -69,10 +77,15 @@ _GLOBAL_PATTERNS = (
 # capsule), so crossing has to be asked for, and is flagged when it happens.
 _CROSS_PROJECT_PATTERNS = (
     r"다른 (?:프로젝트|레포|repo|회사)",
-    r"(?:프로젝트|레포)(?:들)? ?(?:전체|전부|통틀어|건너|넘어)",
+    # Plural or explicitly-universal only: "프로젝트 전체 테스트 돌려줘" means
+    # THIS project entire, and loosening the boundary on it would be a leak.
+    r"프로젝트들",
+    r"(?:모든|전체) 프로젝트(?:들)?",
+    r"프로젝트(?:들)? ?(?:통틀어|건너|넘어)",
     r"(?:다른 곳|딴 데|저쪽)에서",
-    r"\b(?:other|another|across|all) (?:project|projects|repo|repos|repositories)\b",
-    r"\b(?:everywhere|any project)\b",
+    r"\b(?:other|another|across|all) (?:projects|repos|repositories)\b",
+    r"\b(?:other|another) (?:project|repo)\b",
+    r"\bany project\b",
 )
 
 
@@ -212,6 +225,9 @@ def layered_filter(project_key: str | None) -> dict | None:
 def classify_layer(text: str) -> str:
     """"global" for facts about the user themself, else "project"."""
     body = str(text or "")
+    for anchor in _REPO_ANCHOR_PATTERNS:
+        if re.search(anchor, body, flags=re.IGNORECASE | re.UNICODE):
+            return "project"
     for pattern in _GLOBAL_PATTERNS:
         if re.search(pattern, body, flags=re.IGNORECASE | re.UNICODE):
             return "global"

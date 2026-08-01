@@ -13,10 +13,10 @@ So the tag is attached mechanically, by rewriting the tool input in flight
 (`updatedInput`). No permissionDecision is returned: the hook adds provenance,
 it does not decide whether a write is allowed.
 
-Only add_memory is tagged. add_memories takes no metadata, and
-record_task_state has no metadata field at all — tagging the task ledger (the
-F2 friction: heartbeat/Quant task rows invading the devloop capsule) needs a
-server-side field first. Deliberately out of scope here.
+add_memory writes get metadata.project + scope_layer; record_task_state gets
+a top-level project key (the task ledger stores it in its scope blob — this
+is the F2 cure: heartbeat/Quant task rows stop invading the devloop capsule).
+add_memories stays untagged: it takes no metadata over MCP.
 
 Fail-open: on any error, print nothing and exit 0 — the write proceeds
 untagged, which recall reads as the global layer.
@@ -32,7 +32,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from forget_project import classify_layer, project_key_for_path, scope_disabled  # noqa: E402
 
-TAGGED_TOOLS = {"mcp__forget__add_memory", "add_memory"}
+MEMORY_TOOLS = {"mcp__forget__add_memory", "add_memory"}
+TASK_TOOLS = {"mcp__forget__record_task_state", "record_task_state"}
+TAGGED_TOOLS = MEMORY_TOOLS | TASK_TOOLS
 TAGGER_VERSION = "cwd-git-v1"
 
 
@@ -48,9 +50,19 @@ def _write_text(tool_input: dict) -> str:
     return ""
 
 
+def _emit(updated_input: dict) -> None:
+    print(
+        json.dumps(
+            {"hookSpecificOutput": {"hookEventName": "PreToolUse", "updatedInput": updated_input}},
+            ensure_ascii=False,
+        )
+    )
+
+
 def main() -> None:
     hook_input = json.load(sys.stdin)
-    if str(hook_input.get("tool_name") or "") not in TAGGED_TOOLS:
+    tool_name = str(hook_input.get("tool_name") or "")
+    if tool_name not in TAGGED_TOOLS:
         return
     if scope_disabled():
         return
@@ -60,6 +72,15 @@ def main() -> None:
     project = project_key_for_path(hook_input.get("cwd") or os.getcwd())
     if not project:
         return  # no project to be about → leave it in the global layer
+
+    if tool_name in TASK_TOOLS:
+        # A task is inherently project work — no layer to classify. The key
+        # rides top-level; the server files it into the task's scope blob.
+        if tool_input.get("project"):
+            return  # an explicit caller outranks detection
+        _emit({**tool_input, "project": project})
+        return
+
     metadata = tool_input.get("metadata")
     metadata = dict(metadata) if isinstance(metadata, dict) else {}
     if metadata.get("project"):
@@ -67,17 +88,7 @@ def main() -> None:
     metadata["project"] = project
     metadata.setdefault("scope_layer", classify_layer(_write_text(tool_input)))
     metadata.setdefault("project_tagger", TAGGER_VERSION)
-    print(
-        json.dumps(
-            {
-                "hookSpecificOutput": {
-                    "hookEventName": "PreToolUse",
-                    "updatedInput": {**tool_input, "metadata": metadata},
-                }
-            },
-            ensure_ascii=False,
-        )
-    )
+    _emit({**tool_input, "metadata": metadata})
 
 
 if __name__ == "__main__":
