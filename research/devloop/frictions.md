@@ -187,6 +187,28 @@ phrase_bonus×장문과 정합) → 회상도달 압축비(0.067%)는 길이-편
 — 이들은 frictions.md·notes/·task_state 디스크 채널로 컨텍스트 진입("회상=무엇을, 디스크=어떻게").
 잠재 처치(phrase_bonus 상한/정규화로 길이-게이팅 완화)는 F2 처치2와 동일 레버, 회고/정훈 게이트.
 
+**backlog #8 침묵-미스 판정: oracle replay로 5건 = silent_miss 0 (사이클 36, 2026-08-03,
+notes/cycle-36-oracle-replay-silent-miss.md):** 사이클 34가 특정한 5 substantive 침묵미스
+후보(필드노트#1·정훈 설계철학·사이클3/15/18 F2 근원)를 backlog #8 정의로 판정 = 회고 35가
+동결로 보류한 승격 판정 집행. 방법: 로컬 재구현 대신 **제품 실제 recall 파이프라인
+(`search_memories`, rerank=on, top_k=8)** 을 각 후보의 **주제-매치 작업 선언문**으로 재생
+(사이클 34는 generic startup 쿼리 하 도달을 쟀음). **결과: 5/5 전부 need-aligned 쿼리에서
+rank 1–2·게이트 0.45 통과**(0.538/0.753/0.631/0.794/0.920). **판정=작업-바꿨을 침묵미스 0
+(이중 보상)**: (b)"못 봄" 이중 탈락 — 회상 채널=필요-정렬 시 rank 1–2 최상위 반환(미도달은
+retrieval 실패 아닌 **startup 쿼리의 주제-generic 성질**), 디스크 채널=5건 전부 LOOP.md/
+frictions.md/amendments/notes 직독 상주. **recall-reach 계열 귀속 정정(한 축 추가)**: 사이클
+33 "96.7% 미도달"·34 "길이가 관련성 압도"는 전부 **generic startup probe 하** 측정 —
+"미도달 ≠ 미검색가능", 같은 기억이 need-aligned 쿼리에서 rank 1. 길이-게이팅은 주제 신호가
+약한 startup 스트림에서만 지배(F2 C1과 모순 아님, 다른 쿼리 레짐). **제품 함의**: 일반 유저
+turnrecall은 실제 프롬프트=주제-정렬로 검색 → 이 oracle replay가 next_actions 후보 (a)
+turnrecall 경로의 프록시, "회상이 스토어 안 건드림"은 startup 경로 진실이지 turnrecall
+진실 아닐 수 있음. 캐비앗: rerank=on(원리상 검색가능 증명)·현재-스토어 재생(시간여행 아님,
+단 5건 홍수 이전 생성이 여전히 rank 1–2=crowd-out 반증 정합)·판정은 이 5건 한정("침묵미스
+없음" 일반 주장 아님, 디스크-없는 유저-대면 forget에선 회상 채널 단독이나 거기서도 주제-정렬
+rank 1–2로 안심). 거버넌스 동결 준수: backlog #8은 헌장 승인 측정이라 판정 집행일 뿐, 새
+유형·amendment 무제안. 단 "metrics silent_misses 필드 추가"(backlog#8 문구)는 스키마 변경이라
+동결 하 보류 — silent_misses=0 인라인 보고, 전용 필드는 회고/정훈 게이트.
+
 ## 미분류 관측 — 영토 규약이 정적 아티팩트를 WIP로 오탐 (사이클 31, 2026-08-03, 유형 판정 회부)
 
 증상: `git status`가 `?? uv.lock` 한 줄을 상시 반환 → 절차 2 영토 규약("devloop 외 미커밋
