@@ -272,6 +272,27 @@ feedback/ .gitignore 추가=amendment-5 A2 미승인 선적용 적발)상 tracke
 **단발이므로 신규 유형 미등록**(귀납 원칙 + 거버넌스 동결 회고25). 규약 카브아웃(정적 아티팩트
 예외) 제안은 절차서 개정이라 회고 35 + 정훈 게이트.
 
+## 미분류 관측 — supersede-contract 런타임: 두 채널 비대칭·이중 집행 (사이클 39, 2026-08-03, 유형 판정 회부)
+
+증상(관찰, 버그 아님): 사이클 38이 코드로 확정한 비대칭(`search_memories`는 superseded를
+×mult 강등하되 잔존, `assemble`는 `_context_memory_is_superseded` store.py:6473로 하드 제거)을
+현재 스토어에서 런타임 확인(read-only·$0, notes/cycle-39-supersede-contract-runtime.md). 실
+superseded episodic 기억 `e815c1aa`("도그푸딩 전환 완료", superseded_by `5b5bd07c`)를 두 채널에
+통과: **검색/이력 채널**엔 표면화(score 0.1977, `trust.light=red` "reference only" — store.py:
+4388-4416 확증), **action 캡슐 채널**(prepare_context_autopilot)엔 raw_candidate 25건에 부재하고
+정정본 `5b5bd07c`가 selected(7)에 진입 → contract end-state 성립. **정직 핵심(격리 실패)**: 동일
+주제-쿼리 plain search top-25 하한 0.4058, `e815c1aa`는 거기도 부재 = `_superseded_score_
+multiplier()=0.45`(store.py:4553) 강등 **하나만으로** 이미 풀컷 아래 → assemble 하드제거는 이
+표본선 **결정적 필터 아닌 잉여 backstop**, 두 기전 confounded. 판정: action 채널 배제는 직교 **2층**
+— L1 상류 ×0.45 강등(확률적, search 공유) + L2 assemble 하드제거(결정적·점수무관 backstop). 대부분
+쿼리는 L1이 충분(본 표본), L2는 raw 점수가 ×0.45 뚫는 희귀 superseded용 belt-and-suspenders. 강건성:
+`MEM1_SUPERSEDED_SCORE_MULT`를 1.0로 올려 L1 무력화해도 L2가 struck-through를 acting prompt 밖에 유지.
+기대 동작: superseded는 이력엔 findable·붉게, action엔 정정본으로 대체(issue#3) — **관측대로 정상**.
+수용 기준(향후 L2 격리): raw 점수 높은 superseded 표본으로 "search엔 top-25, 캡슐엔 부재"를 직접 관측.
+유형 후보: F1(신선도) 인접(supersede=완만층 정정 이력) 또는 신규 'supersede-contract 무결성'. **단발(1회차)
+이므로 신규 유형 미등록** — 귀납 원칙 + 거버넌스 동결(회고25) 준수, 재발/L2-격리 표본 시 재상정. 처치 없음
+(버그 아님, 정상 동작 확증). 스레드는 재발 관측 대기로 열어둠.
+
 (새 유형은 필드노트 축적에서 귀납적으로 추가. 예상 후보 잔여: F3 과압축=잘못 잊음 —
 발생 전에는 등록하지 않는다. F6은 사이클 6, F5는 사이클 7, F4는 사이클 8에서
 실제 관측으로 등재 — F5는 예약명 '침묵 실패'를 '침묵 잊음'으로 구체화. F1은 사이클 8에서
