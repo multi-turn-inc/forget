@@ -209,6 +209,26 @@ rank 1–2로 안심). 거버넌스 동결 준수: backlog #8은 헌장 승인 �
 유형·amendment 무제안. 단 "metrics silent_misses 필드 추가"(backlog#8 문구)는 스키마 변경이라
 동결 하 보류 — silent_misses=0 인라인 보고, 전용 필드는 회고/정훈 게이트.
 
+**turnrecall 경로 실분해: startup↔turnrecall 도달 격차 = 두 기전 (사이클 37, 2026-08-03,
+notes/cycle-37-turnrecall-path-decomposition.md):** 사이클 36이 남긴 next_actions 후보 (a)
+집행 — recall-reach 계측(사이클 32·33·34)이 전부 startup/assemble 경로만 봤으므로, 실제
+UserPromptSubmit 훅(`forget_turnrecall.py`)을 `forget_sessionstart.py`와 직접 대조 분해. **판정:
+격차는 단일 기전이 아니라 직교하는 둘.** (1) **쿼리 레짐** — startup(sessionstart.py:103)=고정
+generic `session {source} in {cwd}…`(주제신호 0), turnrecall(turnrecall.py:121)=`prompt[:300]`=실제
+프롬프트(주제-정렬). (2) **후보풀 필터(코드에서만 보임)** — turnrecall은 `metadata.hook`(auto_capture)와
+`assertion_kind==task_state`를 후보 제외(turnrecall.py:133·135, F2 C2 처치1=사이클19); startup/assemble은
+미제외. **함의: 사이클 33 "저장 바이트 96.7% 미도달·dead-weight 90%=auto_capture"는 assemble/startup
+경로 상한** — turnrecall 경로엔 auto_capture가 애초에 후보가 아니라 도달/crowd-out 불가(분모 자체가 다름).
+**측정(사이클 36 rerank 캐비앗 닫음)**: 5 substantive 후보를 실제 훅 params(top_k=5·rerank=false·gate
+0.45)로 재생 → **5/5 hook-eligible rank 1**(3번은 raw rank2가 task_state claim `1944f735`(0.715)이라
+turnrecall.py:135에서 훅이 드롭 → 후보 제외 기전이 측정 중 실제 발화), score 0.632/0.644/0.656/0.748/0.899
+전부 ≥0.45. rerank 제거+top_k 8→5로도 게이트·순위 불변. **대조군**: generic startup 쿼리는 5건 중 **0건
+도달**(top-5=긴 Quant/릴리스 행+cwd-literal 매치)=startup 경로 도달 격차 재현. **길이-게이팅(사이클34)·C1(F2)은
+주제 신호 약한 startup 스트림에서만 지배 재확인**(같은 기전, 다른 쿼리 레짐). 사이클 36 가설("'회상이 스토어
+안 건드림'은 startup 진실이지 turnrecall 진실 아님")을 코드+측정 수준 확증. 캐비앗: query2 오타(인gran트)에도
+타깃 rank1 유지; assemble 경로가 서버측에서 hook/task_state를 제외하는지는 미검증(향후 관측). 거버넌스 동결
+준수: 새 유형·스키마·amendment 무제안, 경로 귀속 정정만 첨부.
+
 ## 미분류 관측 — 영토 규약이 정적 아티팩트를 WIP로 오탐 (사이클 31, 2026-08-03, 유형 판정 회부)
 
 증상: `git status`가 `?? uv.lock` 한 줄을 상시 반환 → 절차 2 영토 규약("devloop 외 미커밋
