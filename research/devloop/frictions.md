@@ -229,6 +229,29 @@ turnrecall.py:135에서 훅이 드롭 → 후보 제외 기전이 측정 중 실
 타깃 rank1 유지; assemble 경로가 서버측에서 hook/task_state를 제외하는지는 미검증(향후 관측). 거버넌스 동결
 준수: 새 유형·스키마·amendment 무제안, 경로 귀속 정정만 첨부.
 
+**assemble 서버측 필터 실분해: 경로별 회상도달 정량 완결 — CONFIRMED (사이클 38, 2026-08-03,
+notes/cycle-38-assemble-server-side-filter.md):** 사이클 37이 노트 line 104-107에 명시로 남긴 미검증
+캐비앗("서버측 `prepare_context_autopilot`가 hook/task_state를 제외하는지 미검증")을 코드 실분해로
+종결 = next_actions[1] 집행. 후보풀 필터를 **3층**으로 정밀화. (1) **공유 상류 `search_memories`**
+(store.py:4307): `metadata.hook`(auto_capture)=`score×0.5` **연화강등이지 제거 아님**(4396-4403,
+"lexical match still surfaces them"), `superseded_at`=×mult 강등(4388), `assertion_kind==task_state`=
+**미처리**(full score 반환) → 상류는 어느 것도 제거 안 함. (2) **turnrecall**(forget_turnrecall.py:133·135):
+hook·task_state 둘 다 **하드 제외(continue)** — ×0.5 위에 완전 제거. (3) **assemble/startup**
+(assemble_context store.py:11187 → prepare_context_autopilot 얇은 래퍼 :9748): hook/task_state 제외 코드
+**없음** — `_context_memory_is_superseded`(6473)로 superseded**만** 하드 제거(action-context 취소선 금지,
+issue #3), `_context_matches_requested_task`(6272)는 requested_task_id 없으면 `return True`(startup=전통과)이고
+있으면 매칭 task_state를 오히려 **admit**(6280-6285, turnrecall과 정반대), workspace dup 1건 제거.
+**판정=CONFIRMED**: startup/assemble은 auto_capture(×0.5 강등하되 **잔존**)·task_state(**admit**)를 후보풀에
+포함, turnrecall만 하드 배제 → 사이클 37 격차 기전 2(후보풀 필터) **양측 코드 확증**. **사이클 37/33 이진
+'미제외' 프레이밍 정밀화(모순 아닌 완결)**: 실제=상류 ×0.5 연화강등을 양경로 상속 + turnrecall만 하드 제외를
+얹음(제거 0이 아니라 절반 벌점). 사이클 33 "96.7% dead-weight·90%=auto_capture"는 assemble 경로 상한
+**재확증**(auto_capture가 ×0.5에도 2481행 볼륨으로 assemble 후보 28.9% 도달=사이클 29·33 정합), turnrecall
+분모엔 애초 부재. **두 제외 철학의 대칭**: assemble(action)=superseded 하드 제거·세션캡처/task_state 유지(캡슐
+backbone) vs turnrecall(turn recall)=세션캡처/task_state 하드 제거·supersede는 conflict-pair 별도. 캐비앗:
+필터 존재/부재의 코드 사실이지 각 유형의 순위 크기 재측정 아님(그건 사이클36·37 rank1 표본). 거버넌스 동결 준수:
+새 유형·스키마·amendment 무제안, recall-reach 경로 귀속을 **완결**(양측 확증)로 첨부. "회상도달 경로 명시" 규약은
+회고/정훈 게이트 유지.
+
 ## 미분류 관측 — 영토 규약이 정적 아티팩트를 WIP로 오탐 (사이클 31, 2026-08-03, 유형 판정 회부)
 
 증상: `git status`가 `?? uv.lock` 한 줄을 상시 반환 → 절차 2 영토 규약("devloop 외 미커밋
