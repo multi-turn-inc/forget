@@ -49,6 +49,11 @@
   devloop-startup 지배(2325/2406) → dead-weight ≠ 무용, "관측 스트림 하 3.3%만 회상 후보"일 뿐. 스토어는
   미행사 쿼리용 재고 보유. **함의: total 압축비는 회상 실사용을 과대, 회상도달 압축비는 스토어 존재목적을
   과소 — 정직 헤드라인엔 저장(2%)과 회상-행사(0.067%) 두 숫자가 다 필요**(working set vs insurance 재고).
+  - **성질 각주 (사이클 34, notes/cycle-34-distilled-reach-decomposition.md):** 이 "회상도달"이 워킹셋을
+    측정한다는 해석은 반증됐다 — distilled 도달을 topic·recency·length로 분해하면 **도달을 지배하는 것은
+    관련성이 아니라 기억 길이**다(도달률 8%→28.7%@120-300tok 단조; off-topic substrate 14.9% > loop-topic
+    7.6%; recency 널). 사이클 18 C1(무한 phrase_bonus×장문)과 정합. **따라서 회상도달 압축비 0.067%는
+    "워킹셋"이 아니라 길이-편향 검색 아티팩트** — 병기 시 이 캐비앗을 함께 밝혀야 정직.
 
 ## 함께 읽어야 하는 숫자 (rate–distortion, 측정 ② 재료)
 - GPT-4o 풀컨텍스트: 문항당 ~115k 토큰을 읽고 **60.6%** (LongMemEval 논문 베이스라인)
