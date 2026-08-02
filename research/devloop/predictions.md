@@ -197,3 +197,15 @@ P1의 정당한 원기한을 승계한 것이므로 선적용 아님.
   (A7): "24 full→25 full"은 2연속이나 **같은 head의 지속**(사이클 25 full=새 복원 성공 아니라 사이클
   24 쓰기가 head로 남은 것)이라 독립 표본 아님 — "치유 2사이클 지속"으로 계상 안 함. **재개봉 조건**:
   LME-V2가 `task_id=devloop`에 실제 쓴 뒤의 첫 restore(그때 (a)/(c) 판정). 처방은 회고 25 F7 절로 이관.
+- **결과 확정 (사이클 30 판정, audit-30 헤드라인 — 회고 35가 결과란 기재): (a) latest-write-wins 확정.**
+  사이클 25의 재개봉 조건(LME-V2가 `task_id=devloop`에 실제 쓴 뒤의 첫 restore)이 **사이클 30에서 발생**.
+  사이클 30 step 0 `get_task_state(task_id=devloop)`가 head로 반환한 것은 self-loop가 아니라 **LME-V2 벤치
+  트랙**(요약 "RAG 재현 0.398", `goal_id=goal:lmev2-credible-number`, `valid_from 2026-08-02T09:59:01Z`,
+  next_actions "단계 3 forget web 적재"). 타임스탬프 논증: 사이클 29 self-loop 마지막 쓰기(계보상
+  08-01T19:12:14Z 버스트) **이후** LME-V2 쓰기(09:59:01Z)가 끼어 head 획득 → restore가 그것 반환 =
+  **예측 (a) 그대로 latest-write-wins**. 결과 **(c) 반증**(태그 우선이면 self-loop head 생존해야 하나
+  미생존). **함의 확정**: 브리지("step5 project 쓰기 상시화")=**불충분**, `task_id` 분리(견고)=**경험적
+  필요조건 승격**(권고→필요조건). 캐비앗(audit-30, 정직): 4소스에 사이클 29 정확 쓰기 시각이 없어
+  "끼어쓰기"를 시각으로 100% 확증하진 못하나 head 내용(LME-V2 단계 3 진행)+시각(09:59:01Z)이 명백한
+  신선 LME-V2 세션 쓰기 → (a)가 압도적 해석(CONFIRMED, 시각 캐비앗 1줄 병기). 사이클 24 캐비앗
+  ("치유 성립하나 레이스 취약, 미검증")이 6사이클 뒤 자연 발화로 검증됨.
