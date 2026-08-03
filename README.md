@@ -20,9 +20,8 @@ long-term-memory benchmark (full 500-question set, GPT-4o reader and judge):
 | GPT-4o oracle — evidence sessions handed to the reader ([paper ceiling](https://arxiv.org/abs/2410.10813)) | 87.0% |
 
 Knowledge-update questions, where memory products usually fail: **92.3%**
-(best config). Our weakest category, so you don't have to dig for it:
-single-session-preference, 43.3%. Per-question outputs and run configs are
-in [`research/longmemeval/runs/`](research/longmemeval/runs/).
+(best config). Per-question outputs and run configs are in
+[`research/longmemeval/runs/`](research/longmemeval/runs/).
 
 Every LLM session starts from zero. Forget gives your AI a long-term memory
 that it actually maintains: an observation gate decides what is worth keeping
