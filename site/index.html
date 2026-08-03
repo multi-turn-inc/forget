@@ -717,162 +717,11 @@
   </div>
 </section>
 
-<section>
-  <div class="wrap">
-    <div class="sec-head rv">
-      <span class="sec-no">04 · Why local</span>
-      <div>
-        <h2 class="sec-title">Memory is not a chat log.<br><em>It is a profile of you.</em></h2>
-        <p class="sec-sub">A compounding one — and today it lives on other people's servers.</p>
-      </div>
-    </div>
-    <div class="facts">
-      <div class="fact rv">
-        <div class="no">01</div>
-        <h3>It is not privileged.</h3>
-        <p>In February 2026, a US federal court ruled that a defendant's AI
-        conversations were not protected — the provider's terms said data
-        could be used for training and disclosed. What you tell an AI is,
-        legally, what you told a company.</p>
-        <span class="src">U.S. v. Heppner, S.D.N.Y. 2026</span>
-      </div>
-      <div class="fact rv" style="transition-delay:.07s">
-        <div class="no">02</div>
-        <h3>Your memory vendor will change hands.</h3>
-        <p>Rewind promised local-first privacy, pivoted to the cloud, and was
-        acquired — its users were migrated onto the acquirer's terms
-        overnight. Every startup holding your memories is one term sheet
-        away from being someone else's database.</p>
-        <span class="src">Rewind → Limitless → Meta, 2025</span>
-      </div>
-      <div class="fact rv" style="transition-delay:.14s">
-        <div class="no">03</div>
-        <h3>The platforms will not fix this.</h3>
-        <p>A model provider cannot end-to-end encrypt memory its own servers
-        must read, and it will never port your memory to a competitor's
-        tool. Native memory features are silos by design.</p>
-        <span class="src">structural, not a roadmap gap</span>
-      </div>
-    </div>
-  </div>
-</section>
 
-<section class="divide">
-  <div class="wrap">
-    <div class="sec-head rv">
-      <span class="sec-no">05 · The field</span>
-      <div>
-        <h2 class="sec-title">Where forget stands</h2>
-      </div>
-    </div>
-    <div class="cmp rv">
-      <table>
-        <thead>
-          <tr>
-            <th></th>
-            <th class="us-h">forget</th>
-            <th>Mem0</th>
-            <th>Zep</th>
-            <th>Native memory</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>LongMemEval, full 500</td>
-            <td class="us"><a href="#benchmark">78.4% ± 0.4 fully local</a> · 81.8% best</td>
-            <td colspan="2">self-reported, different readers — <a href="#benchmark">see methodology</a></td>
-            <td class="dash">unpublished</td>
-          </tr>
-          <tr>
-            <td>Where your memory lives</td>
-            <td class="us">your machine, always</td>
-            <td>cloud (self-host option)</td>
-            <td>their cloud</td>
-            <td>provider servers</td>
-          </tr>
-          <tr>
-            <td>Trust label on every read</td>
-            <td class="us"><span class="yes">✓</span></td>
-            <td class="dash">—</td>
-            <td class="dash">—</td>
-            <td class="dash">—</td>
-          </tr>
-          <tr>
-            <td>Decision receipts from git</td>
-            <td class="us"><span class="yes">✓</span></td>
-            <td class="dash">—</td>
-            <td class="dash">—</td>
-            <td class="dash">—</td>
-          </tr>
-          <tr>
-            <td>Session hooks: capsule · push recall · conflict alerts</td>
-            <td class="us"><span class="yes">✓</span></td>
-            <td class="dash">—</td>
-            <td class="dash">—</td>
-            <td class="dash">—</td>
-          </tr>
-          <tr>
-            <td>Follows you across tools</td>
-            <td class="us">Claude Code · Codex · Claude Desktop</td>
-            <td>via MCP</td>
-            <td>via SDK</td>
-            <td class="dash">one vendor's silo</td>
-          </tr>
-          <tr>
-            <td>Open source</td>
-            <td class="us">Apache-2.0</td>
-            <td><span class="yes">✓</span></td>
-            <td>core only</td>
-            <td class="dash">—</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="cmp-note rv">Competitor properties as publicly documented, July 2026. Corrections welcome —
-    <a href="https://github.com/multi-turn-inc/forget/issues">open an issue</a>.</p>
-  </div>
-</section>
 
-<section class="divide">
-  <div class="wrap">
-    <div class="sec-head rv">
-      <span class="sec-no">06 · Roadmap</span>
-      <div>
-        <h2 class="sec-title">Works now. <em>Sealed next.</em></h2>
-      </div>
-    </div>
-    <div class="cols">
-      <div class="col today rv">
-        <span class="chip ok">SHIPPED · OPEN SOURCE</span>
-        <h3>Runs on your machine today</h3>
-        <ul>
-          <li>LongMemEval full-500: 78.4% ± 0.4 fully local (three seeds) · 81.8% with cloud observer</li>
-          <li>Hooks push memory into sessions — capsule, recall, conflict alerts</li>
-          <li>One SQLite file you own — offline included</li>
-          <li>Mines your repo's decision history from git</li>
-          <li>Observation gate keeps facts, forgets junk</li>
-          <li>MCP: Claude Code, Codex, Claude Desktop — any MCP client</li>
-        </ul>
-      </div>
-      <div class="col rv" style="transition-delay:.07s">
-        <span class="chip soon">IN DESIGN · E2EE SYNC</span>
-        <h3>Sync that cannot betray you</h3>
-        <ul>
-          <li>Encrypted on your device before it touches a server</li>
-          <li>Embeddings encrypted too — a vector is a paraphrase</li>
-          <li>Scoped layers: grant a session your work memory only</li>
-          <li>No passwords — device keys plus a recovery code</li>
-        </ul>
-        <form class="waitlist-form" action="https://formspree.io/f/mbdnjvjn" method="POST">
-          <input type="email" name="email" required placeholder="you@example.com" aria-label="Email address">
-          <button class="btn red" type="submit" style="background:var(--red)">Join the sync waitlist</button>
-        </form>
-        <p class="form-note" hidden>You're on the list. We'll write when sync ships. ✓</p>
-        <p class="form-hint">No spam — launch news only.</p>
-      </div>
-    </div>
-  </div>
-</section>
+
+
+
 
 <section class="divide">
   <div class="wrap">
@@ -995,11 +844,8 @@
         <li class="rv"><span class="d">Aug 1</span><span><strong>0.3.8 — the boundary release.</strong> Your projects stop leaking into each other: the repo you're in is the memory you get, detected from cwd — never configured. The task ledger honors the same line.</span></li>
         <li class="rv"><span class="d">Jul 31</span><span><strong>0.3.7 — semantic by default.</strong> An unconfigured install now embeds with a real local model out of the box; the hash fallback survives only as an explicit escape hatch.</span></li>
         <li class="rv"><span class="d">Jul 24</span><span><strong>0.2.1 — the supersede contract, sealed.</strong> An agent dogfooding the beta caught superseded facts re-entering action context; fixed the same day, with the repro as a regression test.</span></li>
-      <li class="rv"><span class="d">Jul 24</span><span><strong>Public beta.</strong> forget-ai 0.2.0 on PyPI, forget-connect 0.3.0 on npm — with a login service that survives reboots.</span></li>
+        <li class="rv"><span class="d">Jul 24</span><span><strong>Public beta.</strong> forget-ai 0.2.0 on PyPI, forget-connect 0.3.0 on npm — with a login service that survives reboots.</span></li>
         <li class="rv"><span class="d">Jul 22</span><span><strong>Hooks + trust labels.</strong> Session capsule, per-turn push recall, conflict-zone alerts; every read carries green / yellow / red.</span></li>
-        <li class="rv"><span class="d">Jul 28</span><span><strong>Three seeds, one number: 78.40% ± 0.40</strong> fully local (v3 reader), full 500 × 3 runs — filed as <a href="https://offreco.vercel.app/record/0003">OffReco №0003</a> with every config public.</span></li>
-        <li class="rv"><span class="d">Jul 16</span><span><strong>LongMemEval full-500: 81.8%</strong> best config (GPT-4o observer) · <strong>76.2%</strong> fully local pipeline — against the paper's 60.6% full-context baseline and 87.0% oracle ceiling.</span></li>
-        <li class="rv"><span class="d">Jul 13</span><span><strong>Git decision miner.</strong> A repo's history becomes memory — "why did we choose X?" answered with commit receipts.</span></li>
       </ul>
       <a class="log-more rv" href="https://github.com/multi-turn-inc/forget/commits/main">Follow along on GitHub →</a>
     </div>
@@ -1017,15 +863,7 @@
   </div>
 </section>
 
-<section class="partners">
-  <div class="wrap rv">
-    <h2 class="sec-title">Building AI for therapy, law, or health?</h2>
-    <p>Your users' memories are your liability. A memory layer you
-    cryptographically cannot read can't leak and can't be compelled.
-    We're taking design partners.</p>
-    <a class="btn red" href="mailto:founder@multi-turn.ai?subject=forget%20design%20partner">Talk to us</a>
-  </div>
-</section>
+
 
 <section class="closer">
   <div class="wrap rv">
