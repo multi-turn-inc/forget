@@ -155,6 +155,17 @@ def main() -> None:
     cheap = len(json.dumps(json.loads(lines[-1])['cycle']).encode())
     print(f"  cycle_field_only_bytes={cheap}")
 
+    # --- 6b. 항목 내 규약 위치 대 병행 트랙 컷 (사이클 47 추가) ---
+    # 병행 트랙은 next_actions[0][:90] 이므로, 규약이 항목 어디에 있느냐가 도착 여부를 정한다.
+    print("\n[rule offset within item vs parallel-track cut]")
+    for task_id, i, na in items:
+        if i != 0:
+            continue
+        for label, needle in (("(iii) cycle field", "cycle` 필드"), ("(ii) mtime", "mtime")):
+            pos = na.find(needle)
+            if pos >= 0:
+                print(f"  {task_id}[0] {label:18s} starts_at={pos:4d} vs_cut_90={pos - 90:+5d} len={len(na)}")
+
     # --- 7. 영토 봉쇄 나이 (다른 세션 WIP) ---
     print("\n[territory block age]")
     head_ct = int(subprocess.run("git log -1 --format=%ct", shell=True, cwd=REPO,
@@ -172,6 +183,21 @@ def main() -> None:
         else:
             continue
         print(f"  {p:34s} mtime_epoch={int(mt)}  head_minus_mtime_seconds={head_ct - int(mt)}")
+
+
+    # --- 8. 슬롯 소유: 어느 태스크가 전량 슬롯을 갖는가 (사이클 47 추가, 진단 전용) ---
+    # store.py 는 workspace_current(= 최신 활성 비-goal 태스크)에게 "현재 목표"+"다음 행동"을
+    # 통째로 주고, 나머지는 _parallel_track_lines 가 next_actions[0][:90] 로 자른다.
+    # 즉 마지막에 쓴 태스크가 전량 슬롯을 갖는다 — 순서가 지렛대다.
+    print("\n[slot ownership — listing order decides who gets the full slot]")
+    # 캡슐 조립은 _capsule_scope_filters 를 거치므로 같은 project 스코프로 물어야 일치한다
+    listing = call("get_task_state", {"limit": 12, **({"project": project} if project else {})})
+    for i, item in enumerate(listing.get("results") or []):
+        if not isinstance(item, dict):
+            continue
+        print(f"  [{i}] {str(item.get('task_id')):26s} status={str(item.get('status')):12s}"
+              f" valid_from={item.get('valid_from')}")
+    print(f"  current={(listing.get('current') or {}).get('task_id')}")
 
 
 if __name__ == "__main__":
