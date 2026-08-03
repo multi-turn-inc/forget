@@ -331,6 +331,7 @@ TOOLS: list[dict[str, Any]] = [
             "required": ["query"],
             "properties": {
                 "query": {"type": "string"},
+                "project": {"type": "string", "description": "Project layer for task/goal sections; hides tasks tagged with a different project."},
                 "filters": _FILTERS_PROPERTY,
                 "budget_tokens": {"type": "integer"},
                 "working_memory_slots": {"type": "integer"},
@@ -355,6 +356,7 @@ TOOLS: list[dict[str, Any]] = [
             "required": ["query"],
             "properties": {
                 "query": {"type": "string"},
+                "project": {"type": "string", "description": "Project layer for task/goal sections; hides tasks tagged with a different project."},
                 "filters": _FILTERS_PROPERTY,
                 "budget_tokens": {"type": "integer"},
                 "working_memory_slots": {"type": "integer"},
@@ -404,6 +406,8 @@ TOOLS: list[dict[str, Any]] = [
                 "source_role": {"type": "string"},
                 "authority": {"type": "string"},
                 "retention_policy": {"type": "string"},
+                "project": {"type": "string", "description": "Project key this task belongs to (usually stamped by the client hook from cwd). Project-scoped reads hide tasks tagged with a different project."},
+                "metadata": {"type": "object"},
             },
         },
     },
@@ -487,6 +491,7 @@ TOOLS: list[dict[str, Any]] = [
             "type": "object",
             "properties": {
                 "task_id": {"type": "string"},
+                "project": {"type": "string", "description": "Limit to this project's tasks plus untagged ones; omit for the cross-project view."},
                 "filters": _FILTERS_PROPERTY,
                 "user_id": {"type": "string"},
                 "agent_id": {"type": "string"},
@@ -1262,6 +1267,13 @@ def _dispatch_tool(name: str, arguments: dict[str, Any] | None, context: dict[st
         result = _text_result(add_memories(payload))
         if scope_warning:
             result["content"].append({"type": "text", "text": scope_warning})
+        notes = _unknown_arg_notes(name, args)
+        if notes:
+            # Same contract as record_task_state: accepted for compat, but
+            # never silently — an eaten argument looks like a broken feature.
+            result["content"].append(
+                {"type": "text", "text": "warning: unknown argument ignored: " + "; ".join(notes)}
+            )
         return result
     if name == "add_memories":
         scope = _require_openmemory_scope(args, context)
@@ -1323,7 +1335,15 @@ def _dispatch_tool(name: str, arguments: dict[str, Any] | None, context: dict[st
         return _text_result(prepare_context_autopilot({**args, "filters": _mcp_scoped_filters(args, context)}))
     if name == "record_task_state":
         payload = {**args, "filters": _mcp_scoped_filters(args, context)}
-        return _text_result(record_task_state(payload))
+        result = record_task_state(payload)
+        # A write tool must never eat an argument in silence: the 0.3.7 server
+        # dropped `project` from 0.5.0 hooks without a word, and the layer
+        # looked broken for a day. Unknown args are accepted (compat) but the
+        # response says so — the caller decides whether that's an upgrade cue.
+        notes = _unknown_arg_notes(name, args)
+        if notes:
+            result["warnings"] = [f"unknown argument ignored: {note}" for note in notes]
+        return _text_result(result)
     if name == "record_context_observation":
         return _text_result(record_context_observation(args))
     if name == "record_context_outcome":

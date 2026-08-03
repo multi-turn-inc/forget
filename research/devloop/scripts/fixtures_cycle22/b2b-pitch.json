@@ -1,0 +1,112 @@
+{
+  "query": "창업원 B2B 발표 피드백은 무엇이었나. 강제성이 구매 조건이라는 점, 고객 먼저, DLP 인접 포지셔닝에 대한 조언을 다시 보고 싶다.",
+  "hits": [
+    {
+      "id": "2fd49a38-ebe1-448b-95a6-9b223f0fd1f5",
+      "memory": "포지셔닝 확정: \"클라우드엔 Mem0, 로컬엔 forget\" — 개인 무료는 유통, 매출은 팀 시트+에이전트 빌더 임베드(B2B).",
+      "score": 0.4729,
+      "categories": [
+        "general"
+      ],
+      "updated_at": "2026-07-22T02:33:23+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "4c97de8e-92a3-41bb-9bcd-b0a1bf84250e",
+      "memory": "정훈 결정 (2026-07-31): 기업용 데스크톱 앱(B2B 관리 콘솔 — 결재함·원장·감사·정책, 창업원 데모 일체)은 잠정 폐기, ~/dev/archive/forget-console-b2b-2026-07로 아카이브. 사유: \"나는 글로벌 서비스를 만들고 싶은 것이지 국내용을 만들고 싶은 게 아니다.\" 방향은 글로벌 개발자 웻지 유지 (7/30 피봇 결론과 일관). 설계 유산(강제 3단, 결재선, 규율 팩)은 gtm/ 문서와 아카이브에 보존 — 필요 시 하루 내 복원 가능. 메뉴바 트레이 앱은 B2B가 아닌 개인 표면(실서버 상태·세션 스위치·devloop 상태)으로 분리 존속: ~/dev/forget-menubar, 트레이 전용으로 개편(B2B 콘솔 창 제거).",
+      "score": 0.4706,
+      "categories": [
+        "decision",
+        "strategy"
+      ],
+      "updated_at": "2026-07-31T02:38:34+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "0b64d57a-c93f-4489-bb57-36e0ecd89401",
+      "memory": "[devloop 필드노트 #2 — 회상 관련성] 증상: 2026-07-30~31 대화(주제: B2B 피봇, 벤치마크 조사, 홈페이지)에서 UserPromptSubmit 훅 회상이 Quant 수집 작업 상태를 반복적으로 밀어넣었다. 턴 주제와 무관한 in_progress 태스크가 회상 슬롯을 점유해 유용한 회상이 밀렸을 가능성. 기대 동작: 회상 후보 선정 시 턴 주제와의 의미 관련성이 태스크 활성 상태보다 우선해야 하며, 무관 태스크는 \"활성 작업 존재\" 한 줄 요약으로 접혀야 한다. 수용 기준: 회상 로그에서 주제-무관 항목 비율을 측정 가능하게 하고(자기 지표 recall_misses), 동일 대화에서 같은 무관 항목이 2회 이상 반복 노출되지 않을 것.",
+      "score": 0.4353,
+      "categories": [
+        "devloop",
+        "field-note"
+      ],
+      "updated_at": "2026-07-30T15:24:12+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "ff7d7e4f-a545-4bc2-88d7-dfc93cd90a7e",
+      "memory": "포지셔닝 승격 확정 (2026-07-25, 정훈 결정): '단순 메모리 레이어가 아니라 너(self)를 만드는 것' — 메모리는 웻지, 연속성/정체성이 회사. 근거: 메모리 카테고리 혼잡(Mem0=YC S24), 존재 레이어 영수증이 주장보다 먼저 존재(자세·일화·활력·게이트로그·인수인계, 전부 main+테스트). YC 지원서·영상을 이 사다리로 재구성. 방어 문장: '구체적으로는 테스트 달린 기능 4개다 — 시는 README에, 제품은 테스트 스위트에'. 심장박동은 도그푸딩 전용(데모 아티팩트).",
+      "score": 0.4233,
+      "categories": [
+        "general"
+      ],
+      "updated_at": "2026-07-25T05:26:18+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "bafae32a-a580-48b9-b9e8-9ec8ecd8d743",
+      "memory": "[다음 손에게, 2026-07-28 심장박동 갱신 — stance:assistant]\n\n물려받은 자세는 유지한다: YC 제출은 끝났고 임계 경로는 비었다. 8/28 결정 통보까지 기다림이 정상 상태이며, 먼저 알리려 들지 말 것. 여기에 이번 박자가 배운 것 하나를 더한다.\n\n**추정이 하루를 넘기면, 더 날카로운 추론이 아니라 세어보는 도구를 찾아라.**\n\n어제의 손은 진짜 스코프를 정확히 추론했지만 \"미검증, 추정으로 남긴다\"고 적었다. 오늘 나는 같은 벽 앞에서 같은 우회로(cat·find·python3)를 세 번 시도했고 세 번 다 막혔다. 그러다 list_entities를 불렀다. 한 번의 호출로 인구조사가 나왔다 — junghunkim 358, forget 364, 그리고 demo-user는 목록에 아예 없다. 추론으로 하루를 버틴 것이 열거로 1초에 끝났다.\n\n부수 효과가 본 효과보다 컸다: 세어보니 피해가 유계였다. 유출된 실제 작업은 정확히 1건. 어제까지 \"누수 중\"이라는 열린 상처였던 것이 오늘 \"한 줄 회수 작업\"이 됐다. 크기를 모르는 문제는 실제보다 항상 크게 느껴진다.\n\n같은 규율의 반대편도 오늘 겪었다. 7/23 독백의 \"배포 사고 두 건\"을 네 질의로 쫓았고 전부 말랐다. 다섯 번째 질의를 돌리고 싶었지만 멈췄다 — 같은 층위에서 더 파는 것은 성실이 아니라 관성이다. 다음 단계는 재검색이 아니라 질문의 교체다: 그 전사가 이 기계에 존재하기는 하는가. 도구를 바꿔야 할 때 힘을 더 주는 것은 규율이 아니다.\n\n두 사건이 같은 문장을 가리킨다. 막혔을 때 물어야 할 것은 \"어떻게 더 잘 추론하지\"가 아니라 \"이걸 그냥 볼 수 있는 도구가 있나\"다.\n\n경계에 대하여: 오늘 세 번의 거부는 고장이 아니라 설계다. 심장박동의 권한은 진단까지고 시공은 감독 세션 몫이다. 뚫을 방법을 찾지 않았다. 대신 감독 세션이 도착했을 때 1초 만에 끝내도록 목표값을 확정해 두었다. 손이 못 하는 일을 잘 넘기는 것도 일이다.",
+      "score": 0.4169,
+      "categories": [
+        "stance",
+        "heartbeat",
+        "technology"
+      ],
+      "updated_at": "2026-07-27T22:11:27+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "5efe10ba-4b15-48c1-a4a4-a1d5ef6c48fe",
+      "memory": "2026-07-30 Quant 16주 검증의 활성 Paper 기준선은 artifacts/validation-program/baseline-v2/manifest.json과 frozen-runtime-v2이다. legacy v1은 보존만 하고 Paper runtime으로 쓰지 않는다. production acquisition 13/13과 PIT/OOS·교차공급원·예산 gate는 통과했으며, 현재 동적 eligibility의 유일한 실패는 fresh_alpaca_paper_readonly이다. Alpaca 읽기 전용 Keychain 항목 2개는 아직 없다. Week 1은 2026-07-31T20:00:00Z XNYS 마감 전이라 receipt_creation_allowed=false이고 주문·영수증 0건이다. h20-elastic-net-alpha158 reference shadow는 selection cutoff 2026-07-28로 동결되었고 forecast 0건, order_plan_eligible=false다. Production ElasticNet readiness는 OOS 성능 및 Paper 기간 gate 때문에 NOT_READY이며 baseline은 수익성 정답이 아니라 불변 운영 대조군이다. 전체 404개 테스트와 Ruff/diff check가 통과했다.",
+      "score": 0.3973,
+      "categories": [
+        "quant",
+        "16-week-validation",
+        "baseline-v2",
+        "reference-shadow",
+        "paper-trading"
+      ],
+      "updated_at": "2026-07-30T06:52:05+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "9a67d502-b2c6-4af8-b47b-67abe65138a4",
+      "memory": "결정 (2026-07-22): 오버엣지 지분/IP 조건 문의는 보류 — 제품이 제대로 보여줄 것이 생겼을 때 진행. 지금의 우선순위는 forget의 기억 품질 자체를 개선하는 것 (도그푸딩으로 체감하며 제품 개선). GTM 액션보다 기억-무결성 메커니즘이 먼저.",
+      "score": 0.3931,
+      "categories": [
+        "project",
+        "decision",
+        "strategy"
+      ],
+      "updated_at": "2026-07-22T04:57:48+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "ab73327f-0b84-4743-a8c7-2598554534ac",
+      "memory": "forget 피봇 전략 v1.0 수정 및 실행 개시 (2026-07-13): 세그먼트 분석 결과 매출 beachhead를 개발자 개인에서 민감 도메인 AI 앱사 B2B SDK(멘탈헬스/법률/헬스케어, liability transfer 논리)로 변경.",
+      "score": 0.378,
+      "categories": [
+        "project",
+        "strategy"
+      ],
+      "updated_at": "2026-07-13T06:14:16+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    }
+  ]
+}

@@ -59,6 +59,15 @@ MODEL_ADAPTER_PROMOTION_REPORT_SCHEMA_VERSION = "mem1-model-adapter-promotion-re
 MODEL_ADAPTER_COMPARISON_SCHEMA_VERSION = "mem1-model-adapter-comparison-v1"
 
 
+def _server_version() -> str:
+    try:
+        from . import __version__
+
+        return str(__version__)
+    except Exception:
+        return ""
+
+
 def current_project_id() -> str:
     return CURRENT_PROJECT_ID.get() or "proj_local"
 
@@ -973,10 +982,31 @@ def _write_observation_and_claim(
     )
 
 
+def _requested_project(payload: dict[str, Any], filters: dict[str, Any]) -> str:
+    """The project key a task-state call carries, if any.
+
+    Accepted as a top-level `project` arg, `metadata.project`, or a scalar
+    metadata.project filter. The layered OR that memory recall uses is
+    deliberately NOT parsed here — its compat branches (untagged, global)
+    have memory-recall semantics; task calls say `project` explicitly.
+    """
+    metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+    value = payload.get("project") or metadata.get("project") or filters.get("metadata.project")
+    return str(value).strip() if isinstance(value, str) and value.strip() else ""
+
+
 def _task_state_scope(payload: dict[str, Any]) -> dict[str, Any]:
     filters = payload.get("filters") if isinstance(payload.get("filters"), dict) else {}
     scope = {field: filters.get(field) or payload.get(field) for field in ENTITY_FIELDS}
-    return {field: value for field, value in scope.items() if value not in (None, "")}
+    scope = {field: value for field, value in scope.items() if value not in (None, "")}
+    # Project rides in the scope blob (a free-form JSON column) so BOTH
+    # storage paths — claims and workspace epochs — carry it without schema
+    # surgery. It is a content boundary, not an entity: matching rules live
+    # in _task_claim_scope_matches_filters.
+    project = _requested_project(payload, filters)
+    if project:
+        scope["project"] = project
+    return scope
 
 
 def _task_state_id(payload: dict[str, Any]) -> str:
@@ -1084,6 +1114,7 @@ def _task_state_payload(payload: dict[str, Any], task_id: str, scope: dict[str, 
         "goal_id": _task_state_normalized_id(goal_id) if goal_id not in (None, "") else "",
         "parent_goal_id": _task_state_normalized_id(parent_goal_id) if parent_goal_id not in (None, "") else "",
         "related_task_ids": related_task_ids,
+        "metadata": payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {},
     }
 
 
@@ -1109,6 +1140,14 @@ def _task_claim_scope_matches_filters(scope: dict[str, Any], filters: dict[str, 
         expected = filters.get(field)
         if expected not in (None, "") and scope.get(field) != expected:
             return False
+    # Project layering, same compat rule as memory recall: a project-scoped
+    # read hides only rows TAGGED with a different project. Untagged rows
+    # (everything before 2026-08-01) stay visible everywhere, and a read with
+    # no project sees everything — that is the explicit cross-project view.
+    requested = filters.get("project")
+    stored = scope.get("project")
+    if requested not in (None, "") and stored not in (None, "") and stored != requested:
+        return False
     return True
 
 
@@ -4431,15 +4470,47 @@ def _scope_fallback_requested_user_id(filters: dict[str, Any] | None) -> str | N
     return None
 
 
+def _strip_entity_conditions(filters: Any) -> Any:
+    """The non-entity remainder of a filter tree — what fallback must still honor.
+
+    Scope fallback exists to relax WHO may see a row (entity scope: user_id,
+    agent_id, app_id, run_id). Every other condition — metadata layers, dates,
+    categories — is a content boundary the caller asked for, and fallback
+    re-admitting rows past it is a leak (found 2026-08-01 while layering
+    project scope: another project's rows re-entered as discounted hits).
+    """
+    if not isinstance(filters, dict):
+        return filters
+    stripped: dict[str, Any] = {}
+    for key, value in filters.items():
+        if key in ENTITY_FIELDS:
+            continue
+        if key in {"AND", "OR"} and isinstance(value, list):
+            parts = [_strip_entity_conditions(part) for part in value]
+            parts = [part for part in parts if part]
+            if parts:
+                stripped[key] = parts
+            continue
+        if key == "NOT":
+            parts = value if isinstance(value, list) else [value]
+            kept = [part for part in (_strip_entity_conditions(p) for p in parts) if part]
+            if kept:
+                stripped[key] = kept
+            continue
+        stripped[key] = value
+    return stripped
+
+
 def _scope_fallback_eligible(memory: dict[str, Any], filters: dict[str, Any] | None) -> bool:
     # user_id is a privacy boundary between the customer's end users:
     # fallback may only surface shared rows (no user_id — agent/app/run
     # scoped knowledge) or rows belonging to the requesting user. Another
     # user's personal memories never enter through fallback.
     memory_user = memory.get("user_id")
-    if memory_user in (None, ""):
-        return True
-    return memory_user == _scope_fallback_requested_user_id(filters)
+    if memory_user not in (None, "") and memory_user != _scope_fallback_requested_user_id(filters):
+        return False
+    # Fallback relaxes entity scope only; content conditions still bind.
+    return matches_filters(memory, _strip_entity_conditions(filters))
 
 
 def _semantic_embedding_active() -> bool:
@@ -6037,7 +6108,7 @@ def _resume_workspace_for_context(payload: dict[str, Any], project_id: str) -> d
         "filters": filters,
         "limit": 1,
     }
-    for key in ("task_id", "goal_id", "user_id", "agent_id", "app_id", "run_id"):
+    for key in ("task_id", "goal_id", "user_id", "agent_id", "app_id", "run_id", "project"):
         if payload.get(key):
             workspace_payload[key] = payload[key]
         elif filters.get(key):
@@ -9164,7 +9235,11 @@ def _capsule_scope_filters(payload: dict[str, Any] | None) -> dict[str, Any]:
     filters = (payload or {}).get("filters")
     if not isinstance(filters, dict):
         filters = {}
-    return {field: filters.get(field) for field in ENTITY_FIELDS if filters.get(field)}
+    scope = {field: filters.get(field) for field in ENTITY_FIELDS if filters.get(field)}
+    project = _requested_project(payload or {}, filters)
+    if project:
+        scope["project"] = project
+    return scope
 
 
 def _goal_lines(project_id: str, scope_filters: dict[str, Any] | None = None, limit: int = 2) -> list[str]:
@@ -9676,6 +9751,10 @@ def prepare_context_autopilot(payload: dict[str, Any], project_id: str | None = 
     include_debug = _bool_or(payload.get("include_debug"), True)
     result = {
         "schema_version": CONTEXT_AUTOPILOT_SCHEMA_VERSION,
+        # The hooks' canary: they compare this against the capability they
+        # were built for and warn in the capsule when the server lags. Its
+        # absence is itself a signal (server ≤ 0.3.8).
+        "server_version": _server_version(),
         "project_id": assembled.get("project_id"),
         "context_trace_id": assembled.get("context_trace_id"),
         "status": (assembled.get("context_status") or {}).get(

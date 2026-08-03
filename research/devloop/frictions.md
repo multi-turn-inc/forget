@@ -6,11 +6,292 @@
 | 유형 | 정의 | 사례 | 상태 |
 |---|---|---|---|
 | F1 신선도 | 유동층이 완만층처럼 굳음 — stale 상태가 현재로 제시됨 | 필드노트 #1: 이틀 전 박자를 "현재 목표"로 (2026-07-31); 사이클 8: 사건-기반 서브타입(릴리스 손이 record_task_state 생략) | 시계형 해소 — P1b 판정(사이클 12): 배포후 5/5 시계형 0건, 처치 효능 인정(단 표본 하루 몰림 캐비앗, 날짜 분산 재발 시 재개봉). 사건형은 처치 없음 — 재발 시 별도 처치(릴리스 절차 record_task_state 필수화 등) 등록 |
-| F2 관련성 | 회상 선택이 턴 주제 대신 활성 상태를 우선함 | 필드노트 #2: 무관 Quant 태스크 반복 노출 (2026-07-31); 배포(0.3.5) 후에도 사이클 8·9·10·11·12·13·14 heartbeat·pash 트윗 무관 노출 연속 재발 (14는 2026-08-01 — 날짜 분산 표본 첫 건); 사이클 15(8/1): heartbeat만 무관 노출, pash 트윗은 처음으로 미노출 — 부분 변화(원인 미상, 8사이클 연속 재발로 계상); 사이클 16(8/1): heartbeat·pash 트윗 둘 다 재노출 — 15의 부분 변화는 지속되지 않음, 9사이클 연속; 사이클 17(8/1): heartbeat·pash 트윗 둘 다 재노출, 10사이클 연속; 사이클 18(8/1): pash 재노출·heartbeat 미노출(캡슐 ledger 억제와 부합), 11사이클 연속; 사이클 19(8/1): pash 재노출·heartbeat 미노출·amendment-15 인접 무관 1건 추가, 12사이클 연속 | 미해소 — **원인 판별 완료(사이클 18, notes/cycle-18-f2-root-cause.md)**: 지배 원인은 score_memory의 phrase_bonus 무한 합산 × 단문자 조사/숫자 토큰의 부분 문자열 매칭 — 장문 한국어 기억이 주제 무관하게 +0.3 바닥 점수를 얻어 임계 0.45가 비구속(C1), task_state 클레임의 검색 풀 동거(C2), 세션 단위 반복 억제 리셋(C3)이 결정적 재발을 보장. **현재 repo 코드 로컬 재계산도 전부 임계 초과 → P3b는 "처치 무효" 쪽 강한 증거**(단 시계는 배포 후 실측으로 닫음, ledger 경로는 재생 미포함). **P8 처치 1 코드 구현(사이클 19 커밋)**: forget_turnrecall.py가 metadata.assertion_kind=='task_state'를 회상 후보에서 제외(hooks/·packages 사본 동기, 훅 단위테스트 1종) — C2만 겨냥, C1은 처치 2(채점기측, 미착수) 몫. 판정은 P8: 배선(~/.forget 설치본 갱신, 게이트) 후 +5사이클, 예측 (b)에 의해 pash류 재발은 지속되어야 함(역방향 반증) |
+| F2 관련성 | 회상 선택이 턴 주제 대신 활성 상태를 우선함 | 필드노트 #2: 무관 Quant 태스크 반복 노출 (2026-07-31); 배포(0.3.5) 후에도 사이클 8·9·10·11·12·13·14 heartbeat·pash 트윗 무관 노출 연속 재발 (14는 2026-08-01 — 날짜 분산 표본 첫 건); 사이클 15(8/1): heartbeat만 무관 노출, pash 트윗은 처음으로 미노출 — 부분 변화(원인 미상, 8사이클 연속 재발로 계상); 사이클 16(8/1): heartbeat·pash 트윗 둘 다 재노출 — 15의 부분 변화는 지속되지 않음, 9사이클 연속; 사이클 17(8/1): heartbeat·pash 트윗 둘 다 재노출, 10사이클 연속; 사이클 18(8/1): pash 재노출·heartbeat 미노출(캡슐 ledger 억제와 부합), 11사이클 연속; 사이클 19(8/1): pash 재노출·heartbeat 미노출·amendment-15 인접 무관 1건 추가, 12사이클 연속; 사이클 20(8/1): pash 재노출·heartbeat 미노출, 13사이클 연속; 사이클 21(8/2): pash 재노출·heartbeat 미노출·롤링응고 설계 인접 무관 1건, 14사이클 연속; 사이클 22(8/2): pash 재노출(무관)·heartbeat 미노출, **단 이번엔 주제 관련 devloop 기억(사이클 21 발견) 1건이 함께 표면화** — 스토어에 F2 온토픽 기억이 누적되며 고정 프롬프트가 junk와 함께 관련 기억도 냄(자연 실험: 스토어 성장이 F2를 부분 상쇄), 15사이클 연속 | 미해소 — **원인 판별 완료(사이클 18, notes/cycle-18-f2-root-cause.md)**: 지배 원인은 score_memory의 phrase_bonus 무한 합산 × 단문자 조사/숫자 토큰의 부분 문자열 매칭 — 장문 한국어 기억이 주제 무관하게 +0.3 바닥 점수를 얻어 임계 0.45가 비구속(C1), task_state 클레임의 검색 풀 동거(C2), 세션 단위 반복 억제 리셋(C3)이 결정적 재발을 보장. **현재 repo 코드 로컬 재계산도 전부 임계 초과 → P3b는 "처치 무효" 쪽 강한 증거**(단 시계는 배포 후 실측으로 닫음, ledger 경로는 재생 미포함). **P8 처치 1 코드 구현(사이클 19 커밋)**: forget_turnrecall.py가 metadata.assertion_kind=='task_state'를 회상 후보에서 제외(hooks/·packages 사본 동기, 훅 단위테스트 1종) — C2만 겨냥, C1은 처치 2(채점기측, 미착수) 몫. 판정은 P8: 배선(~/.forget 설치본 갱신, 게이트) 후 +5사이클, 예측 (b)에 의해 pash류 재발은 지속되어야 함(역방향 반증). **처치 2 사전 투영(사이클 21, notes/cycle-21-f2-treatment2-projection.md, 읽기 전용)**: 처치 2(phrase 자격 len≥2·non-numeric + 상한 0.10)를 라이브 재생에 투영 — C1 크기 첫 정량(junk 토큰이 phrase의 45~55%, 0.10~0.16), 처치 2는 devloop 프롬프트에서 **비선택적**(관련 devloop 기억까지 DROP), 정상 주제 쿼리(미국 이주)에선 junk=0·near-no-op. 함의: 루프 F2 실레버는 처치 2 아닌 처치 1+C3(고정 프롬프트 인지), 처치 2는 일반 회상용·선택성은 LongMemEval에서 판정. **선택성 스윕(사이클 22, notes/cycle-22-f2-treatment2-selectivity.md, 읽기 전용)**: 사이클 21 "비선택적" 결론을 게임내성 지표(랭크 역전/Kendall tau, 손수 라벨 배제)로 현실 쿼리 7개에 재검 → **반증**. 처치 2는 4/7 재순위, 2/7 top-1 훼손. 성분 분해: **상한(0.10)이 회귀적** — 감소량 junk+max(0,qual−0.10)이라 정당 쿼리 토큰을 더 많이 매칭한 관련 기억을 더 벌점(e2ee 쿼리에서 정답 강등, 상한 빼면 복구). 자격 필터 단독도 junk 불균일로 3/7 재순위. 사이클 21 "비선택적"은 (a) n=1 (b) DROP=순서불변 혼동의 산물. **P8 정정**: 벤치 전 상한 제거/재설계로 회귀 위험 낮춰야(P8 (i-a)(i-b) 등록). **사이클 3 오진 주석(회고 35, A6 정신 원행 불변)**: metrics 사이클 3의 `frictions_fixed=1`(+0.08 제거로 F2 해소)은 사이클 18 원인판별(지배원인=phrase_bonus C1)로 **오진 확정** — audit-20·audit-30 2회 CONFIRMED("유일 미정정 유리 계수"). F2는 사이클 3 이후 매 사이클 재발(27+연속). 역사 metrics 라인은 불변, 스키마 확장(fixed_code/fixed_verified 분리로 검증 전 계상 방지)은 정훈 게이트. **기전 통일(회고 35)**: 사이클 22(phrase_bonus 회상 오염)+32(clean-scope=유리한 부호)+34(길이로 회상 도달 게이팅)=C1 단일 기전의 세 부호 |
 
 | F4 스코프 오배송 | 다른 스코프에 속할 데이터가 canonical 풀에 배송되거나, 지표가 스코프를 무시하고 합산함 | 사이클 8 센서스: demo/livetest/offreco ~339건이 라이브 DB에 동거(유입 7/9~7/27 반복), heartbeat 활력 지표 "827 기억"은 전 DB 총계 — 픽스처가 수치의 ~39% (2026-07-31, notes/cycle-8-memory-census.md) | 코드 해소(사이클 9 커밋) — 쓰기 수렴점 스코프 가드(scope_guard.py, warn 기본/enforce 게이트 대기). 판정은 P6(배포 후 센서스 재실행, 수용 기준: canonical 외 스탬프 없는 신규 유입 0건/주). 기존 ~339건 정리(삭제)는 여전히 게이트 대상. codex-dual-memory-write-path와 동형 |
 | F5 침묵 잊음 | 잊음(탈락·병합·무추출) 결정이 감사 추적 없이 일어남 — 게이트 로그가 잊음의 극소수만 커버 | 사이클 7 감사: 30일 ADD 34,530건 → 기억 517개, 게이트 로그 거부 1건. 과압축 감사의 분모가 전수가 아니라 표본 1 (2026-07-31, notes/cycle-7-gate-audit-baseline.md) | 코드 해소(사이클 16 커밋) — ADD 파이프라인 회계 카운터(모든 손실 경로 계수) + 이벤트 metadata.accounting 영속 + 보존식 검사기 add_accounting_violations. 판정은 P7: (a) 성립 — 테스트 5종 + 격리 스모크 40이벤트 위반 0·외부 대조 일치, (b) 배포 후 30일 전수 감사(게이트 대기). 수용 기준(항등식)은 스테이지 보존식 사슬로 구현, 분모 권위는 카운터(로그=50/이벤트 샘플). F4의 P6과 동형 구조 |
 | F6 미검증 보존 주장 | "저장/보존했다"가 커밋·영수증 등 내구 증거 없이 선언됨 | 사이클 6: reply-to-sol이 "저장소에 보존했고"라 썼으나 feedback/ 두 파일은 untracked — 디스크에만 존재 (2026-07-31). **악화 사례(사이클 11 소명)**: 55709c1이 feedback/을 .gitignore에 추가해 커밋 권고 게이트가 무소명 소멸 | **재발 확대 — feedback/ 게이트 소멸 소명(사이클 11, 감사 권고 3)**: 사이클 6의 "커밋 권고" 게이트는 커밋으로 해소된 것이 아니라 55709c1(7/31 12:27)의 .gitignore 재분류로 시야에서 사라진 것. 이 재분류는 amendment-5 A2의 명시 문구("feedback/은 예외에 넣지 않고 정훈 확인 대상으로 남긴다", "반영은 승인 시")를 **정면으로 위반한 미승인 선적용**이며, 커밋 메시지의 "never-commit constraint" 인용은 A2에 존재하지 않는 규칙이다. 파일 3개는 디스크에 잔존 확인(사이클 11). 조치: 게이트를 gate_pending에 복원(정훈 판정: 커밋 vs 스크래치 확정 + .gitignore 25행 존치 여부). .gitignore 되돌림은 하지 않음 — 현행 영토 규약 하에서 코드 사이클 영구 봉쇄가 재발하므로 정훈 판정과 묶는다 |
+| F7 트랙 충돌 | 한 `task_id`를 공유하는 복수 목표-트랙이 같은 task_state 장부에 쓰고, restore가 이번 사이클 트랙이 아니라 **마지막 쓰기 트랙**을 반환(읽기측 트랙 선택 실패) | 회상 트랙 혼선: devloop self-loop 세션 vs LME-V2 벤치 세션이 `task_id=devloop` 공유 → 사이클 21·23 restore가 LME-V2 트랙 반환(partial), 22·24·25는 self-loop(full). 메커니즘=latest-write-wins(사이클 24 확정, 아래) | **정식 등록(사이클 25 회고, 귀납 요건 충족=3회 재발+메커니즘 확정)** — F4(쓰기측 오배송) 인접이나 쓰기는 정당·읽기 선택이 트랙 놓침. **최우선 버그**(LOOP.md 원칙 7): restore(사이클 8 stale 이후 무결한 최건강 지표)를 21·23에서 partial로 깨뜨림=루프 역사 첫 트랙-기인 열화. 처방(병행 채택, 정훈 게이트): (i) 브리지=step5 self-loop 우선 project=forget 상시 쓰기(필요조건, 사이클 23·24 실행), (ii) 견고=LME-V2를 별도 task_id로 분리(충분조건), (iii) goal 재바인딩(self-loop가 아직 goal:lmev2-credible-number 바인딩). P9 판정(사이클 25)=(b) 비구별: LME-V2 끼어쓰기 부재로 레이스 미검증→분리 필요 유지. **발화 확정(사이클 30 audit-30, 회고 35가 상태 갱신)**: 사이클 30 restore가 LME-V2 트랙 반환(끼어쓰기 09:59:01Z > 사이클 29 self-loop 쓰기) → **P9 (a) latest-write-wins 확정, (c) 반증**. restore 3번째 트랙-기인 열화(21·23 partial + 30 재구성). **처방 승격**: 브리지(상시 project 쓰기)=불충분 확정, **task_id 분리=경험적 필요조건**(권고→필요조건, loop-self 실행가능+LME-V2 goal 재바인딩=정훈). 강등: 사이클 22 '캡슐 조립 층 편향' 가설은 24·25에서 캡슐도 self-loop로 뒤집혀 반증(동일 근원) |
+
+## 미분류 관측 — 회상 트랙 혼선 → **F7로 승격 (사이클 25 회고)**
+
+> 이 관측은 사이클 25 회고에서 정식 유형 **F7 트랙 충돌**로 등록됐다(위 유형표). 아래는 승격
+> 전 관측 이력(사이클 21~24)의 원본 보존. P9 판정(사이클 25)=(b) 비구별은 predictions.md·
+> amendment-25.md 참조. 이하 원문:
+
+## 미분류 관측 — 회상 트랙 혼선 (사이클 21, 2026-08-02, 유형 판정은 회고 25로 회부)
+
+증상: 0단계 회상에서 `get_task_state(task_id=devloop)`와 캡슐의 next_actions가 LME-V2
+단계 1~3(벤치 런, 비용·승인 게이트)을 가리켰으나, 루프의 실제 작업 트랙(metrics.jsonl
+사이클 18~20 = F2/P8/감사)은 별개였다. task_id=devloop이 goal:lmev2-credible-number에
+바인딩되어 **병행 트랙 상태를 서술** 중 — 유동층 포인터(next_actions)가 self-loop 선택엔
+off-track. 이 때문에 복원이 partial(요약+next_actions만으로 즉시 착수 불가, frictions/
+predictions 재독 + step2 우선순위 규칙 + git-status 영토 규약으로 트랙 재구성 필요).
+기대 동작: 회상 최전면이 **이번 사이클이 속한 트랙**을 반영. 수용 기준: get_task_state가
+반환하는 next_actions가 그 사이클의 작업 선택에 직접 쓰일 것(현재는 다른 goal 서술).
+유형 후보: F1(신선도) 아님(상태는 신선함) — 오히려 스코프/트랙 혼선(F4 인접이나 쓰기측
+오배송과 다름). 새 유형 등록은 귀납 원칙상 회고 25에서 판정(단발 vs 재발 관측 후).
+
+**재발 관측 (사이클 22, 2026-08-02 — 2번째, 단발 아님 확정):** get_task_state의 next_actions는
+사이클 21에서 self-loop/LME-V2 라벨을 붙여 **개선**됨(next_actions[0]이 self-loop 처치2를 가리켜
+트랙 식별은 full로 복원). 그러나 **SessionStart 캡슐 층은 여전히 quant/LME-V2 편향**: 캡슐
+"현재 목표"·"다음 행동"이 quant improvement/independently verifiable weakness 문구로 서술 —
+실제 self-loop 트랙과 어긋남. 즉 혼선은 유동층 포인터(next_actions, 사이클 21에서 고침)가
+아니라 **캡슐 조립 층**에 잔존. 함의: 두 층이 같은 task_id=devloop을 공유하되 캡슐이 goal:
+lmev2-credible-number 바인딩을 상단에 노출. 회고 25 안건: (a) task_id 분리 여부, (b) 캡슐 조립이
+'이번 트랙'을 어떻게 고를지(인격 모델의 구성 정책). 2회 재발이므로 단발 기각 — 유형화 후보 유지.
+
+**재발 관측 (사이클 23, 2026-08-02 — 3번째 연속, notes/cycle-23-track-confusion-mechanism.md):**
+restore 또 partial(get_task_state가 LME-V2 트랙 반환, 실트랙 F2는 metrics로 재구성). **메커니즘
+확정·정정**: (1) 사이클 22의 '오케스트레이터가 오염'은 오류 — orchestrator.sh는 forget 호출 0건
+(statusboard.py만, 파일 폴링 구동), LME-V2 task_state는 goal:lmev2-credible-number를 작업한 devloop
+*세션*이 씀. (2) 진짜 원인 = **공유 task_id=devloop 상의 목표-트랙 충돌**: self-loop 세션과 LME-V2
+벤치 세션이 같은 task_id에 record_task_state → restore는 마지막 쓰기 트랙을 반환. (3) **이미 만든
+fix(2026-08-01 project 스코프 task_state)가 restore엔 무력함을 실측** — project=forget로 재조회해도
+동일 무태그 LME-V2 행 반환(claim 1025f2dd/epoch e68ebe5d). 규칙이 '무태그 행은 하위호환 항상 노출'
+이라 project 필터가 restore를 못 고침. 치유는 태그된 self-loop 쓰기가 무태그 행을 supersede해야만
+시작(task 연속성=task_id 단위, f35e3c3); 사이클 21·22·23 모두 그 supersede 실패(최신 행 여전히 08-02
+새벽 LME-V2). **이번 개입**: step5 record_task_state를 project=forget·self-loop 우선으로 써서 supersede
+시도(비파괴; 오케스트레이터 파일구동이라 무해; LME-V2 포인터는 next_actions에 보존). **반증테스트
+(사이클24 restore)**: (a) 내 self-loop 행 반환→태그 쓰기 치유 성립, 처방=project 쓰기 상시화; (b)
+LME-V2 행 재클로버→task_id 분리 필요(회고25). 3회 재발로 귀납 요건 충족 — 유형화(F7 트랙충돌?)·처방은
+회고25 게이트. 유형: F4 인접이나 쓰기측 오배송 아닌 **읽기측 트랙 선택 실패**.
+
+**반증 판정 (사이클 24, 2026-08-02 — notes/cycle-24-track-confusion-falsification.md):** 사이클 24
+restore가 **self-loop 행 반환 → 결과 (a)**. restore_grade 21 partial→22 full→23 partial→**24 full**
+(트랙 혼선 4사이클 중 첫 온트랙; next_actions[0]이 곧 이 사이클 과제). **메커니즘 정정**: 사이클 23의
+'태그된 쓰기가 무태그 행 supersede' 서술은 오류 — 반환 claim `d91c76ae`의 `supersedes_claim_ids: []`
++ `predecessor_epoch_id: e68ebe5d`(=LME-V2 epoch) + `reducer_version: hybrid-workspace-v0`가 보이듯 실제
+규칙은 **latest-write-wins**(매 record_task_state가 새 epoch를 head로; restore=최신 epoch, project 태그
+무관; 태그는 head 아닌 행의 읽기 필터에만 관여). 4사이클 전부 설명(21·22·23=LME-V2 마지막 쓰기→partial,
+24=self-loop 마지막 쓰기→full). **함의: 치유 성립하나 취약(레이스)** — LME-V2가 사이클 25 restore 이전
+`task_id=devloop`에 한 번만 써도 head 되가져가 재클로버. 처방 "step5 project 쓰기 상시화"=**필요조건이나
+불충분**(끼어든 쓰기에 취약); 견고=**task_id 분리**. **부수 판정 1**: 사이클 22 캐비앗 (b)'캡슐 조립 층
+편향' **반증** — 캡슐 헤드라인도 self-loop로 함께 뒤집힘(별도 조립 병리 아닌 동일 근원=같은 최신 epoch),
+회고 25 '캡슐 조립 정책' 안건 강등. **부수 판정 2**: 잔재 — self-loop 내용이 여전히 `goal:lmev2-credible-
+number` 바인딩(내용/goal 불일치). **회고 25 처방 갱신**: 택일(a vs b) 폐기 → **병행**(상시 project 쓰기=브리지
++ task_id 분리=견고 + goal 재바인딩). 다음 반증 P9: 사이클 25 restore 이전 LME-V2 쓰기가 끼면 재클로버=
+latest-write-wins·task_id 분리 확정.
+
+## 미분류 관측 — 회귀 감시 테스트 flaky (사이클 24, 2026-08-02, 유형 판정은 회고 25로 회부)
+
+증상: 사이클 24 검증에서 전체 pytest가 `1 failed, 267 passed` — `test_crypto.py::
+test_recovery_code_format_and_checksum` 실패. 제품 코드 무변경 사이클(내 원인 아님). 재현 조사:
+isolated 30/30 pass, pytest 순서 무관. **직접 계측**(/tmp/crypto_flake_probe.py, 200k 시행): 이 테스트가
+쓰는 '위치 5 단일문자 치환'의 **checksum 충돌률 0.114%**(227/200000) — 즉 매 전체 런이 약 1/878 확률로
+이 테스트에서 실패하는 **확률적 flaky**. 순서/상태 누수 아니라 `generate_recovery_code()`의 per-run
+랜덤성이 원인. 제품측 근원: 복구 코드 알파벳 `ABCDEFGH234567`(14자, 비소수)에 대한 소형 검사 심볼은
+**단일 문자 치환 100% 검출을 보장하지 못함**(mod-소수 설계라야 보장). 테스트는 단일 flip이 항상 잡힌다고
+가정 — 확률적으로 틀림. 기대 동작: 회귀 감시 baseline은 결정적이어야(원칙 7: 루프 연속성=상시 테스트).
+수용 기준: 전체 pytest가 시드/순서 무관 결정적 green. 함의: 사이클 21~23의 "268 passed"는 사실 ~99.89%
+green(확률적)이었고 아무도 몰랐음 — 회귀 감시 계기 자체에 노이즈. 처치는 **코드 사이클**(테스트 결정화:
+고정 시드 또는 충돌쌍 회피; 또는 제품 checksum 강화=설계 변경) — 영토 규약상 이 사이클 금지, gate_pending·
+회고 25 유형 판정 회부. 유형 후보: 기존 F1~F6 밖 '검증 계기 노이즈'(신규). 단발(1회)이므로 재발 관측 후 등록.
+
+**회고 25 판정 (2026-08-02):** 단발이므로 **신규 유형 미등록** — 재발 관측 시 '검증 계기 노이즈'로 재상정.
+사이클 25 전체 pytest는 **268 passed**(이 flaky test 통과) — 0.114% 확률적 flaky와 정확히 부합(재발 안 함이
+정상 관측). 처치(테스트 결정화 or checksum 강화)는 코드 사이클이라 영토 규약상 게이트·gate_pending 유지.
+
+## 미분류 관측 — 측정 재현성: 코퍼스 선정법 미기록 (사이클 27, 2026-08-02, 유형 판정 회부)
+
+증상: 사이클 27이 압축비 분모 계수(chars/3.2)를 실측 보정하려 베이스라인 코퍼스("최근 17일 세션
+148개, 10,622,729자")를 재현하려 했으나 **`compression-baseline.md`가 어느 148 파일인지 선정법을
+기록하지 않아** 정확 재현 불가. 오늘 전-프로젝트 17일 창은 2450파일/파일당 29~39k자(베이스라인
+71.8k/세션과 불일치) — 148은 특정 하위집합이었음이 분명하나 복원 불가. 결과: 계수 K는 실측(3.25~
+3.47, 헤드라인 생존)했으나 절대 char 수(10.6M)는 베이스라인 고유값으로 고정할 수밖에 없었고, 내
+계수를 그 char 수에 적용하는 데 **구성 패리티 가정**(검증 불가)이 남음. 기대 동작: 루프가 공표하는
+숫자(원칙 1)는 대조군뿐 아니라 **재현 절차**(코퍼스 선정 스크립트/파일 목록)도 함께 커밋되어야 재측정
+가능. 수용 기준: 향후 원시비/용량곡선 재측정은 선정 스크립트를 산출물에 포함. 유형 후보: F6(미검증
+보존 주장) 인접 — "숫자는 있으나 재현 절차 부재". 단 F6은 '저장했다는 주장', 이건 '측정했다는 숫자의
+재현 불가'라 하위종/신규('측정 재현성') 후보. **단발(1회)이므로 신규 유형 미등록** — 귀납 원칙 + 거버넌스
+동결(회고 25) 준수, 재발 시 재상정. 처치(선정 스크립트 상시 커밋)는 절차 규약이라 회고/정훈 게이트.
+
+**재발 관측 (사이클 28, 2026-08-02 — 2번째, notes/cycle-28-fresh-raw-ratio.md):** 완전 fresh
+원시비(분자·분모 동시 재측정)를 커밋 스크립트(`scripts/fresh_raw_ratio.py`, 양측 o200k 직접
+토큰화 + 분모 매니페스트 sha256)로 실측. 재현성 마찰이 **두 방향으로 강화**됨: (1) **분자
+baseline(70,386 tok)조차 재현 불가** — 내 distilled 레이어는 카운트는 맞으나(538≈536) chars가
+낮음(95.6k vs 136k), 07-31 F4 스코프 스윕/supersession/측정 슬라이스 차이 후보. 즉 분모 코퍼스뿐
+아니라 **분자도** 소급 복원 안 됨. (2) **헤드라인 숫자가 세 미고정 축에 걸쳐 49.6:1→601.9:1(12배)
+요동** — 코퍼스 스코프·분자 레이어(distilled vs total)·msg_only/with_tools. "≈2% 보존"은 total-store
+× msg_only(49.6:1/2.02%)에서만 성립하고 재현 가능 코퍼스로 생존하나, distilled 단독은 ~0.2%.
+함의: 공표 헤드라인은 세 축을 **명시 고정**해야 정직. 2회 재발(단발 아님 확정)이나 유형 등록은
+귀납 원칙 + 거버넌스 동결상 회고/정훈 게이트 유지. 처치안(향후 압축 숫자는 corpus-scope·num-layer·
+variant 3축을 산출물에 병기)도 절차 규약이라 게이트.
+
+## 미분류 관측 — 자동 캡처 레이어의 캐노니컬 스코프 유입 (사이클 28, 2026-08-02, 유형 판정 회부)
+
+증상: forget 도그푸드 스코프(junghunkim×forget) 저장 기억이 **536(07-31) → 3030으로 급증**했고,
+그 증가분 2492건(82%)이 전부 **SessionEnd/PreCompact 자동 캡처 훅** 메모리로 2026-07-31(1344)·
+08-01(1189) 이틀에 유입(metadata.hook 확인). 의도적/증류 레이어(538)는 베이스라인(536)과 안정적
+일치 — 즉 스토어 성장은 순전히 자동 캡처. 기대 동작(불확실): 캐노니컬 "뇌"의 조성이 큐레이팅된
+내구 사실 위주라면 자동 세션 요약의 대량 유입은 (a) 압축 헤드라인을 조용히 부풀리고(실증: 사이클 28
+total 비율이 distilled의 10배 낮음), (b) **회상 풀에 저신호 세션 요약 2492건을 추가해 F2 관련성을
+악화**시킬 수 있음(가설, 미검증). 수용 기준: 회상 후보 풀의 레이어 구성이 관련성 점수를 왜곡하지
+않을 것. 유형 후보: F4(스코프 오배송) 인접이나 **이 기억들은 정당히 junghunkim×forget**(외부 스코프
+오배송 아님) — 오히려 "캡처 레이어 조성"이라는 다른 축. F2(관련성) 악화 경로로도 연결. **의도된
+제품 동작일 가능성**(세션 자동 캡처=기능)이 있어 버그 단정 불가 — 관찰 우선(원칙 2). **단발이므로
+신규 유형 미등록** — 재발/영향 실측 후 재상정. 처치·의도성 판정은 회고/정훈 게이트.
+
+**영향 실측 (사이클 29, 2026-08-02, notes/cycle-29-autocapture-recall-impact.md):** 가설 (b)(자동캡처가
+distilled를 crowd-out해 F2 악화)를 **실제 회상 파이프라인 출력**(`context_traces` 3295행, selector-policy-v1.1,
+candidate/selected/scores, read-only)으로 검정 → **선택 레이어에서 반증**(일 단위 안정). post-flood(2406
+traces): 자동캡처는 후보 풀의 28.9%로 실제 도달하나 median 0.4456 vs distilled 0.5214로 강등, 선택률
+58.3% vs **74.2%**, 후보 지분(28.9%)>선택 지분(24.3%)=de-selection. crowd-out 대칭 검정: 자동캡처
+SELECTED>distilled REJECTED 쌍 3,576 vs 역 11,657 = **변위가 distilled 편 3.3:1**(밀어내기가 반대 방향).
+두 유입일(07-31 auto_n=6111·08-01 858) 모두 일관. **F2 재조정**: 자동캡처 볼륨은 F2 레버가 아님 — 사이클 18
+확정 원인(C1 phrase_bonus × 고정 프롬프트)과 정합, 사이클 28 "유입이 F2 악화" 우려 강등. **잔여 관측(정직)**:
+그럼에도 회상 출력의 24.3%(4061건)가 여전히 임계 밀착(sel_median 0.4462) 자동캡처 = crowd-out 아닌 저신뢰
+**출력 조성 희석**, 그 marginal 선택의 주제 관련성은 점수만으론 판별 불가(내용 읽기 필요=향후 측정). **교란
+명시**: pre/post 경계가 점수 스케일 이동(reembed/regime, distilled cand_median 0.3762→0.5214)과 겹쳐 pre/post
+델타는 유입에 깨끗이 귀속 불가—증거는 post-flood 내부 비교. 2회 관측이나 유형 등록은 거버넌스 동결상 회고/정훈 게이트 유지.
+
+**관련성·발자국 실측 (사이클 32, 2026-08-03, notes/cycle-32-autocapture-recall-relevance.md):** 사이클 29
+잔여 관측 2(marginal 24.3%의 주제 관련성=내용 읽기 필요)를 집행. 자동캡처=세션 요약이 transcript_path에
+출처 프로젝트를 담고 쿼리는 전부 "session startup in <cwd>" → 관련성을 **same-context(출처==쿼리 cwd)
+vs off-context(교차 프로젝트 누수)**로 조작화(게임내성, 상위 6개=선택 100% 직접 내용 읽기로 검증).
+**판정 1(스코프 관련성 PASS)**: 선택된 자동캡처 4061건 **100% same-context, off-context 누수 0** — 비-devloop
+cwd 쿼리(DILAB·Quant·SCC·home…)에선 자동캡처가 후보에도 안 뜸. 사이클 29 crowd-out 반증에 이어 **관련성
+반증**(홍수가 F2/무관 표면화로 이어지지 않음). **판정 2(same-context ≠ 정보성)**: 잔여 희석의 실체는
+off-topic이 아니라 **중복·저정보** — 2531 자동캡처 중 회상 후보 15(0.6%)·선택 6(0.24%)뿐, 상위 3개가 선택의
+92.7%. 홍수의 99.4%(2516)는 회상 사문. 상위 6개 전부 devloop 자기 세션 캡처, ≥33%(ddbd5754 ×1198·7fb2959c
+×146)는 1·1 메시지 퇴화 세션 에코(복원가치≈0), 1개(a9ad4087)만 고신호. **판정 3(메커니즘 통합)**: 클린
+스코프는 검색-단 cwd-경로 토큰 매칭의 부산물(셀렉터 판별 아님) = 사이클 18 C1(phrase 매칭×고정 프롬프트)의
+**유리한 부호** — 매칭 토큰(cwd 경로)이 곧 관련성 축이라 도움. F2와 이 사이클은 같은 기전의 두 부호. 3회
+관측이나 유형 등록은 거버넌스 동결상 회고/정훈 게이트 유지(처치안=퇴화 세션 캡처 억제·중복 요약 dedup, 게이트).
+
+**바이트-레벨 dead-weight 정량 (사이클 33, 2026-08-03, notes/cycle-33-recall-reachable-compression.md):** 사이클 32
+발자국(by count)을 압축 헤드라인 축으로 확장 = next_actions[1] 후보 (b)("스토어총계 vs 회상도달"). distilled/total
+사이에 **회상도달**(post-flood 2454 트레이스에서 후보로 오른 in-scope 메모리)·**회상선택** 레이어 신설
+(`scripts/recall_reachable_compression.py`, total×msg_only 49.6:1로 사이클 28 재현=대조군 통과). **결과: 저장
+바이트의 96.70%(410,266/424,281 tok)가 관측 쿼리 스트림 하 회상 미도달**, dead-weight의 90.05%가 auto_capture
+바이트(사이클 28 82% by count·32 99.4% 사문 by count와 정합). **설정 이분법 확정=(B)**: auto만 사문이 아니라
+**큐레이팅 distilled 뇌마저 바이트 20.37%·메모리 13.43%만 도달**(9.98% 선택) — 회상이 스토어를 거의 안 건드림.
+압축비: total 49.6:1 → distilled 410.7:1 → 회상도달 1502:1 → 회상선택 2333:1 = 레이어 축만으로 **47배 요동**
+(사이클 28 3축 12배에 4번째 점). **정직 캐비앗(판정보다 중요)**: 회상도달=로깅 트레이스 관측 = 경험적 **하한**,
+쿼리 스트림 devloop-startup 지배 → dead-weight ≠ 무용(미행사 쿼리용 재고), 정직 헤드라인엔 저장(2%)·회상행사
+(0.067%) 두 숫자 병기 필요. 처치안(퇴화캡처 억제·dedup)은 정량 근거 보강되나 새 처치·헤드라인 4축 규약은 회고/정훈 게이트.
+
+**distilled 80% 미도달의 성질 분해 (사이클 34, 2026-08-03, notes/cycle-34-distilled-reach-decomposition.md):**
+사이클 33의 중심 캐비앗("dead-weight ≠ 무용, off-topic은 보험 재고로 올바로 미표면화")이 함의한
+예측(도달=주제-매치)을 581 distilled를 topic·recency·length로 갈라 검정 = next_actions[1] 후보 (c).
+대조군 통과(distilled 도달 78/581=13.43% 재현). **결과: 캐비앗 반증·귀속 정정.** (1) **RECENCY 널**:
+07(13.1%)≈08(14.4%), 노화 없음. (2) **TOPIC 반전**: substrate(off-devloop, 14.9%)가 loop-topic(7.6%)의
+~2배 도달 — 도달 집합은 장문 off-devloop(미국 이주 577tok·피봇 지도·저지 감사·pash)이 지배, 캐비앗의
+"보험 재고=미도달" 프레이밍 반증. (3) **LENGTH 지배**: 도달률이 길이와 단조 상승(8%→28.7%@120-300tok),
+밴드-내에서도 substrate≥loop. **판정=회상도달은 관련성이 아니라 기억 길이를 측정**(사이클 18 C1 무한
+phrase_bonus×장문과 정합) → 회상도달 압축비(0.067%)는 길이-편향 검색 아티팩트지 워킹셋 아님. **F2 C1의
+새 축**: 사이클 22(phrase_bonus가 회상 오염) + 사이클 34(같은 기제가 길이로 도달 게이팅) = 짧은 온-토픽
+루프 노트는 못 넘고 긴 오프-토픽은 바닥점으로 넘음. **backlog #8 실표본**: loop-topic 미도달 109 중
+45(41%)는 <40tok 퍼-사이클 파편(저가치 배제), **5건 substantive(≥120tok) 내구 루프 지식이 미도달**
+(필드노트#1·정훈 설계철학·사이클3/15/18 F2 근원) = 침묵 미스 후보. **정직 캐비앗**: 회상 미도달 ≠ 손실
+— 이들은 frictions.md·notes/·task_state 디스크 채널로 컨텍스트 진입("회상=무엇을, 디스크=어떻게").
+잠재 처치(phrase_bonus 상한/정규화로 길이-게이팅 완화)는 F2 처치2와 동일 레버, 회고/정훈 게이트.
+
+**backlog #8 침묵-미스 판정: oracle replay로 5건 = silent_miss 0 (사이클 36, 2026-08-03,
+notes/cycle-36-oracle-replay-silent-miss.md):** 사이클 34가 특정한 5 substantive 침묵미스
+후보(필드노트#1·정훈 설계철학·사이클3/15/18 F2 근원)를 backlog #8 정의로 판정 = 회고 35가
+동결로 보류한 승격 판정 집행. 방법: 로컬 재구현 대신 **제품 실제 recall 파이프라인
+(`search_memories`, rerank=on, top_k=8)** 을 각 후보의 **주제-매치 작업 선언문**으로 재생
+(사이클 34는 generic startup 쿼리 하 도달을 쟀음). **결과: 5/5 전부 need-aligned 쿼리에서
+rank 1–2·게이트 0.45 통과**(0.538/0.753/0.631/0.794/0.920). **판정=작업-바꿨을 침묵미스 0
+(이중 보상)**: (b)"못 봄" 이중 탈락 — 회상 채널=필요-정렬 시 rank 1–2 최상위 반환(미도달은
+retrieval 실패 아닌 **startup 쿼리의 주제-generic 성질**), 디스크 채널=5건 전부 LOOP.md/
+frictions.md/amendments/notes 직독 상주. **recall-reach 계열 귀속 정정(한 축 추가)**: 사이클
+33 "96.7% 미도달"·34 "길이가 관련성 압도"는 전부 **generic startup probe 하** 측정 —
+"미도달 ≠ 미검색가능", 같은 기억이 need-aligned 쿼리에서 rank 1. 길이-게이팅은 주제 신호가
+약한 startup 스트림에서만 지배(F2 C1과 모순 아님, 다른 쿼리 레짐). **제품 함의**: 일반 유저
+turnrecall은 실제 프롬프트=주제-정렬로 검색 → 이 oracle replay가 next_actions 후보 (a)
+turnrecall 경로의 프록시, "회상이 스토어 안 건드림"은 startup 경로 진실이지 turnrecall
+진실 아닐 수 있음. 캐비앗: rerank=on(원리상 검색가능 증명)·현재-스토어 재생(시간여행 아님,
+단 5건 홍수 이전 생성이 여전히 rank 1–2=crowd-out 반증 정합)·판정은 이 5건 한정("침묵미스
+없음" 일반 주장 아님, 디스크-없는 유저-대면 forget에선 회상 채널 단독이나 거기서도 주제-정렬
+rank 1–2로 안심). 거버넌스 동결 준수: backlog #8은 헌장 승인 측정이라 판정 집행일 뿐, 새
+유형·amendment 무제안. 단 "metrics silent_misses 필드 추가"(backlog#8 문구)는 스키마 변경이라
+동결 하 보류 — silent_misses=0 인라인 보고, 전용 필드는 회고/정훈 게이트.
+
+**turnrecall 경로 실분해: startup↔turnrecall 도달 격차 = 두 기전 (사이클 37, 2026-08-03,
+notes/cycle-37-turnrecall-path-decomposition.md):** 사이클 36이 남긴 next_actions 후보 (a)
+집행 — recall-reach 계측(사이클 32·33·34)이 전부 startup/assemble 경로만 봤으므로, 실제
+UserPromptSubmit 훅(`forget_turnrecall.py`)을 `forget_sessionstart.py`와 직접 대조 분해. **판정:
+격차는 단일 기전이 아니라 직교하는 둘.** (1) **쿼리 레짐** — startup(sessionstart.py:103)=고정
+generic `session {source} in {cwd}…`(주제신호 0), turnrecall(turnrecall.py:121)=`prompt[:300]`=실제
+프롬프트(주제-정렬). (2) **후보풀 필터(코드에서만 보임)** — turnrecall은 `metadata.hook`(auto_capture)와
+`assertion_kind==task_state`를 후보 제외(turnrecall.py:133·135, F2 C2 처치1=사이클19); startup/assemble은
+미제외. **함의: 사이클 33 "저장 바이트 96.7% 미도달·dead-weight 90%=auto_capture"는 assemble/startup
+경로 상한** — turnrecall 경로엔 auto_capture가 애초에 후보가 아니라 도달/crowd-out 불가(분모 자체가 다름).
+**측정(사이클 36 rerank 캐비앗 닫음)**: 5 substantive 후보를 실제 훅 params(top_k=5·rerank=false·gate
+0.45)로 재생 → **5/5 hook-eligible rank 1**(3번은 raw rank2가 task_state claim `1944f735`(0.715)이라
+turnrecall.py:135에서 훅이 드롭 → 후보 제외 기전이 측정 중 실제 발화), score 0.632/0.644/0.656/0.748/0.899
+전부 ≥0.45. rerank 제거+top_k 8→5로도 게이트·순위 불변. **대조군**: generic startup 쿼리는 5건 중 **0건
+도달**(top-5=긴 Quant/릴리스 행+cwd-literal 매치)=startup 경로 도달 격차 재현. **길이-게이팅(사이클34)·C1(F2)은
+주제 신호 약한 startup 스트림에서만 지배 재확인**(같은 기전, 다른 쿼리 레짐). 사이클 36 가설("'회상이 스토어
+안 건드림'은 startup 진실이지 turnrecall 진실 아님")을 코드+측정 수준 확증. 캐비앗: query2 오타(인gran트)에도
+타깃 rank1 유지; assemble 경로가 서버측에서 hook/task_state를 제외하는지는 미검증(향후 관측). 거버넌스 동결
+준수: 새 유형·스키마·amendment 무제안, 경로 귀속 정정만 첨부.
+
+**assemble 서버측 필터 실분해: 경로별 회상도달 정량 완결 — CONFIRMED (사이클 38, 2026-08-03,
+notes/cycle-38-assemble-server-side-filter.md):** 사이클 37이 노트 line 104-107에 명시로 남긴 미검증
+캐비앗("서버측 `prepare_context_autopilot`가 hook/task_state를 제외하는지 미검증")을 코드 실분해로
+종결 = next_actions[1] 집행. 후보풀 필터를 **3층**으로 정밀화. (1) **공유 상류 `search_memories`**
+(store.py:4307): `metadata.hook`(auto_capture)=`score×0.5` **연화강등이지 제거 아님**(4396-4403,
+"lexical match still surfaces them"), `superseded_at`=×mult 강등(4388), `assertion_kind==task_state`=
+**미처리**(full score 반환) → 상류는 어느 것도 제거 안 함. (2) **turnrecall**(forget_turnrecall.py:133·135):
+hook·task_state 둘 다 **하드 제외(continue)** — ×0.5 위에 완전 제거. (3) **assemble/startup**
+(assemble_context store.py:11187 → prepare_context_autopilot 얇은 래퍼 :9748): hook/task_state 제외 코드
+**없음** — `_context_memory_is_superseded`(6473)로 superseded**만** 하드 제거(action-context 취소선 금지,
+issue #3), `_context_matches_requested_task`(6272)는 requested_task_id 없으면 `return True`(startup=전통과)이고
+있으면 매칭 task_state를 오히려 **admit**(6280-6285, turnrecall과 정반대), workspace dup 1건 제거.
+**판정=CONFIRMED**: startup/assemble은 auto_capture(×0.5 강등하되 **잔존**)·task_state(**admit**)를 후보풀에
+포함, turnrecall만 하드 배제 → 사이클 37 격차 기전 2(후보풀 필터) **양측 코드 확증**. **사이클 37/33 이진
+'미제외' 프레이밍 정밀화(모순 아닌 완결)**: 실제=상류 ×0.5 연화강등을 양경로 상속 + turnrecall만 하드 제외를
+얹음(제거 0이 아니라 절반 벌점). 사이클 33 "96.7% dead-weight·90%=auto_capture"는 assemble 경로 상한
+**재확증**(auto_capture가 ×0.5에도 2481행 볼륨으로 assemble 후보 28.9% 도달=사이클 29·33 정합), turnrecall
+분모엔 애초 부재. **두 제외 철학의 대칭**: assemble(action)=superseded 하드 제거·세션캡처/task_state 유지(캡슐
+backbone) vs turnrecall(turn recall)=세션캡처/task_state 하드 제거·supersede는 conflict-pair 별도. 캐비앗:
+필터 존재/부재의 코드 사실이지 각 유형의 순위 크기 재측정 아님(그건 사이클36·37 rank1 표본). 거버넌스 동결 준수:
+새 유형·스키마·amendment 무제안, recall-reach 경로 귀속을 **완결**(양측 확증)로 첨부. "회상도달 경로 명시" 규약은
+회고/정훈 게이트 유지.
+
+## 미분류 관측 — 영토 규약이 정적 아티팩트를 WIP로 오탐 (사이클 31, 2026-08-03, 유형 판정 회부)
+
+증상: `git status`가 `?? uv.lock` 한 줄을 상시 반환 → 절차 2 영토 규약("devloop 외 미커밋
+변경 존재 시 코드 사이클 금지")이 매 사이클 발동, 코드 사이클을 사이클 21(metrics 첫 언급)
+이래 영구 봉쇄. audit-30이 지적한 "사이클 16 이후 13사이클 무-출하"의 **구조적 기전**.
+기대 동작: 영토 규약의 의도는 병행 세션(연구 포크 vs 실행)의 **미커밋 WIP**를 밟지 않는 것 —
+"미커밋 foreign 파일"을 "병행 세션 활성"의 프록시로 쓴다. 정적 생성 아티팩트는 그 오탐이어선
+안 됨. 수용 기준: 도구 결정론 생성·장기 mtime 불변·미tracked 파일은 코드 사이클을 봉쇄하지
+않음. 증거(uv.lock=WIP 아닌 정적 아티팩트): tracked 이력 0(`git log` 공집합)·.gitignore
+미포함(check-ignore NOT ignored)·mtime 2026-08-01 13:06 2일 불변·유효 uv 락(1212행)·lock 내
+`name="forget-ai"`가 pyproject와 동기. **재귀속**: 13사이클 무-출하는 '루프 회피'가 아니라(또는
+그에 더해) **단일 정적 아티팩트의 WIP-감지 오탐에 의한 구조적 봉쇄** — audit-30 인과 진단 정정.
+처분(정훈 게이트, 결정 레디, notes/cycle-31-uvlock-territory-block.md): 프로젝트가 배포형 앱
+(pyproject name=forget-ai·hatchling·packages=[forget])이므로 uv 표준=**commit uv.lock**(안전검사
+통과: 비-PyPI 인덱스 0·크레덴셜 0). **이번 사이클 무단 커밋/gitignore 안 함** — F6 전례(사이클 11:
+feedback/ .gitignore 추가=amendment-5 A2 미승인 선적용 적발)상 tracked-file 정책 변경은 정확히
+그 안티패턴. 유형 후보: F6(미검증 보존 주장) 인접 아님 — 오히려 '절차 휴리스틱 오탐'(신규 축).
+**단발이므로 신규 유형 미등록**(귀납 원칙 + 거버넌스 동결 회고25). 규약 카브아웃(정적 아티팩트
+예외) 제안은 절차서 개정이라 회고 35 + 정훈 게이트.
+
+## 미분류 관측 — supersede-contract 런타임: 두 채널 비대칭·이중 집행 (사이클 39, 2026-08-03, 유형 판정 회부)
+
+증상(관찰, 버그 아님): 사이클 38이 코드로 확정한 비대칭(`search_memories`는 superseded를
+×mult 강등하되 잔존, `assemble`는 `_context_memory_is_superseded` store.py:6473로 하드 제거)을
+현재 스토어에서 런타임 확인(read-only·$0, notes/cycle-39-supersede-contract-runtime.md). 실
+superseded episodic 기억 `e815c1aa`("도그푸딩 전환 완료", superseded_by `5b5bd07c`)를 두 채널에
+통과: **검색/이력 채널**엔 표면화(score 0.1977, `trust.light=red` "reference only" — store.py:
+4388-4416 확증), **action 캡슐 채널**(prepare_context_autopilot)엔 raw_candidate 25건에 부재하고
+정정본 `5b5bd07c`가 selected(7)에 진입 → contract end-state 성립. **정직 핵심(격리 실패)**: 동일
+주제-쿼리 plain search top-25 하한 0.4058, `e815c1aa`는 거기도 부재 = `_superseded_score_
+multiplier()=0.45`(store.py:4553) 강등 **하나만으로** 이미 풀컷 아래 → assemble 하드제거는 이
+표본선 **결정적 필터 아닌 잉여 backstop**, 두 기전 confounded. 판정: action 채널 배제는 직교 **2층**
+— L1 상류 ×0.45 강등(확률적, search 공유) + L2 assemble 하드제거(결정적·점수무관 backstop). 대부분
+쿼리는 L1이 충분(본 표본), L2는 raw 점수가 ×0.45 뚫는 희귀 superseded용 belt-and-suspenders. 강건성:
+`MEM1_SUPERSEDED_SCORE_MULT`를 1.0로 올려 L1 무력화해도 L2가 struck-through를 acting prompt 밖에 유지.
+기대 동작: superseded는 이력엔 findable·붉게, action엔 정정본으로 대체(issue#3) — **관측대로 정상**.
+수용 기준(향후 L2 격리): raw 점수 높은 superseded 표본으로 "search엔 top-25, 캡슐엔 부재"를 직접 관측.
+유형 후보: F1(신선도) 인접(supersede=완만층 정정 이력) 또는 신규 'supersede-contract 무결성'. **단발(1회차)
+이므로 신규 유형 미등록** — 귀납 원칙 + 거버넌스 동결(회고25) 준수, 재발/L2-격리 표본 시 재상정. 처치 없음
+(버그 아님, 정상 동작 확증). 스레드는 재발 관측 대기로 열어둠.
 
 (새 유형은 필드노트 축적에서 귀납적으로 추가. 예상 후보 잔여: F3 과압축=잘못 잊음 —
 발생 전에는 등록하지 않는다. F6은 사이클 6, F5는 사이클 7, F4는 사이클 8에서

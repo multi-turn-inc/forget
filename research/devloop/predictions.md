@@ -133,3 +133,79 @@ P1의 정당한 원기한을 승계한 것이므로 선적용 아님.
   test_task_state_claims_never_recalled(고점수 task 클레임 침묵 + 동일 결과셋의 일반 기억
   생존 + 억제 장부 비오염) 추가, pytest 224 통과. 시계는 여전히 배선 게이트 대기.
   처치 2(채점기측)는 미착수 — 별도 사이클, LongMemEval 삼각측량 동반.
+- **처치 2 사전 투영 (사이클 21, notes/cycle-21-f2-treatment2-projection.md, 읽기 전용)**:
+  코드 쓰기 전 반증가능 예측 선등록. 처치 2 후보(phrase 매칭 자격 len≥2·non-numeric + 상한
+  0.10)를 라이브 재생 히트에 투영. 실측: ①**C1 크기 첫 정량** — devloop 프롬프트에서
+  phrase_bonus의 ~45~55%(0.10~0.16)가 길이 1 조사·숫자 토큰 기여(junk), 이 junk 단독이
+  임계 초과 마진 절반. ②처치 2는 devloop 프롬프트에서 **비선택적** — 8개 전부 0.45 아래로
+  떨어지되 F2 상습(pash·Quant)뿐 아니라 주제 관련 devloop 기억(사이클 9·18·필드노트 #2)도
+  함께 침묵(phrase 걷어내면 남는 의미 항이 전부-devloop-메타 쿼리에서 노이즈/관련을 못 가름).
+  ③정상 주제 쿼리(미국 이주)에선 junk=0·아무것도 임계 초과 안 함 → 처치 2 near-no-op.
+  **함의**: C1 병리는 devloop launchd 고정 프롬프트의 토큰 프로필이 유발(사이클 18 C3와 합치).
+  루프 F2의 실레버는 처치 2가 아니라 처치 1(완료·배선 대기)+C3(고정 프롬프트 인지). 처치 2는
+  일반 회상 품질용이며 선택성은 퇴화 재생이 아니라 LongMemEval에서 판정.
+  **전방 예측(반증가능)**: 처치 2 배선+벤치 시 (i) LongMemEval 무회귀(junk 매칭은 의미 공허 —
+  회귀하면 반증), (ii) 루프 F2(pash·heartbeat)는 처치 2 단독 미해소(비선택적) — 단독 해소되면
+  C 귀속 오류(역방향 반증).
+- **선택성 스윕 (사이클 22, notes/cycle-22-f2-treatment2-selectivity.md, 읽기 전용)**: 사이클 21의
+  "비선택적" 사전등록(H1)을 게임내성 지표(랭크 역전/Kendall tau, 손수 관련성 라벨 배제)로 현실
+  도그푸드 쿼리 7개에 재검. **H1 반증** — 처치 2는 4/7 재순위(tau<1 또는 top-1 변경), 2/7 top-1
+  훼손. 성분 분해(T2=자격+상한 vs T2b=자격만): **상한(0.10)이 회귀적** — 감소량 junk+max(0,qual−CAP)
+  이라 정당 쿼리 토큰을 더 많이 매칭한 관련 기억일수록 큰 벌점(e2ee 쿼리: 온토픽 정답을 오프토픽
+  릴리스 노트 아래로 강등, 상한 빼면 top-1 복구). 자격 필터 단독도 junk 불균일로 3/7 재순위.
+  사이클 21의 "비선택적"은 (a) n=1(정상 쪽) (b) "8개 전부 DROP"(임계 교차)을 "순서 불변"(비선택)과
+  혼동한 인공물. 재순위는 대부분 임계 아래에서 일어나므로 **도그푸드 훅(0.45 게이트)엔 안 보이고
+  벤치(top-k) 경로에서 물린다** — LongMemEval의 실패 모드와 정확히 일치.
+- **갱신 전방 예측(반증가능, 위 (i) 대체)**: 처치 2 벤치 시 **(i-a) 완본(상한 0.10 포함)은
+  고어휘겹침 항목에서 LongMemEval 회귀**(상한이 정당 신호 강등) — 회귀 없으면 상한 무해(반증).
+  **(i-b) 자격 필터 단독(상한 제거)은 완본보다 회귀 작음** — 완본보다 나쁘면 상한이 실은 노이즈
+  억제 순기능(역방향 반증). → 벤치 전 처치 2 설계는 자격 필터 우선, 상한은 별도 검증 대상으로 분리.
+
+## P7 — 도그푸드 시맨틱 승격으로 회상 관련성 개선 (등록 2026-08-01, 배포 직후)
+- 처치: 0.3.7 reembed — 도그푸드 스토어 1,974건을 bge-small로 재임베딩, 서버 재시작
+  (영수증: ~/.forget/migrations/reembed-20260801-022408.json). 배포 시각이 시계 기점.
+- 예측: (a) F2형(회상 관련성) 마찰 재발이 배포 후 5사이클 내 0건,
+  (b) 사이클 recall_misses 평균이 배포 전 5사이클 대비 감소.
+- 대조군: 배포 전 사이클들의 metrics (같은 지시서·같은 데몬).
+- 판정: 5사이클 후. 실패 시 원복은 백업 복원 + 0.3.6 다운그레이드 (수 분).
+
+## P9 — 트랙 혼선 치유 메커니즘: latest-write-wins vs 태그 우선 (등록 2026-08-02 사이클 24)
+- 배경: 사이클 24 restore가 self-loop 행 반환(결과 a) — 트랙 혼선 치유 성립. 그러나 반환 claim의
+  `supersedes_claim_ids: []` + `predecessor_epoch_id: e68ebe5d`(LME-V2 epoch) + workspace-epoch 리듀서가
+  보이듯 실제 메커니즘은 **latest-write-wins**(태그가 아니라 마지막 record_task_state가 epoch head).
+  "태그가 견고히 이긴다"와 "그냥 마지막 쓰기라 이긴다"는 관측 동치이며 **끼어든 LME-V2 쓰기로만 구별**된다.
+- 예측: (a) 사이클 25 restore 이전 LME-V2 세션이 `task_id=devloop`에 record_task_state하면, 사이클 25
+  restore는 **LME-V2 행을 반환(partial)** — latest-write-wins 확정, "step5 project 쓰기 상시화"는 취약(불충분),
+  task_id 분리가 필요(견고). (b) LME-V2 쓰기가 끼지 않으면 사이클 25 restore는 self-loop full 유지 — 치유는
+  지속하나 (a)를 반증하지 못함(비구별: 태그 우선인지 마지막 쓰기인지 못 가름). (c) 만약 self-loop 행이
+  LME-V2 쓰기가 끼었는데도 head를 지키면(=반환 유지) latest-write-wins가 반증되고 태그 우선이 성립.
+- 대조군: 사이클 21·22·23(LME-V2가 마지막 쓰기→partial) vs 사이클 24(self-loop 마지막 쓰기→full).
+- 판정: 사이클 25 restore. 개입 불요 — LME-V2 트랙(goal:lmev2-credible-number)이 자기 박자로 쓰는지가
+  자연 조작. 사이클 25 회고에서 처방(상시 project 쓰기 브리지 + task_id 분리) 확정 근거로 사용.
+- 시계: 가동 — 사이클 24 step5(self-loop head 재설정) 이후.
+- 추가 실측(사이클 24 step5 반환): claim supersede는 scope-gated — 내 project=forget 쓰기
+  (19df6905)는 같은 scope predecessor(d91c76ae)를 supersede했으나, 무태그 LME-V2 lineage는
+  여전히 un-superseded. restore(epoch head)만 latest-write-wins. → (a) 확정 시 task_id 분리가
+  필요조건(scope 태깅만으로 lineage 공존 미해소)임을 이미 함의.
+- **결과 (사이클 25 판정): (b) 비구별.** 사이클 25 restore가 self-loop 행 반환 — 반환 claim
+  `19df6905`, `valid_from 2026-08-01T16:59:39Z`(=사이클 24 step5 쓰기 시각), `predecessor_epoch_id
+  8337a688`, `supersedes_claim_ids: []`. 그 이후 새 epoch 없음 = **LME-V2가 `task_id=devloop`에
+  끼어쓰지 않았다.** restore_grade 24 full → 25 full로 치유 지속하나, 경쟁 쓰기 부재로 latest-write-
+  wins vs 태그 우선을 이 사이클로 구별 못 함(예측 (a) 미발생, (c) 미발생). 함의: 사이클 24의
+  메커니즘 확정(latest-write-wins, 독립 구조 증거)은 반증도 추가입증도 안 됨 — P9는 그것을 시험할
+  경쟁 쓰기를 만나지 못함. **레이스 취약성 미검증으로 잔존 → task_id 분리(견고) 필요 유지.** 캐비앗
+  (A7): "24 full→25 full"은 2연속이나 **같은 head의 지속**(사이클 25 full=새 복원 성공 아니라 사이클
+  24 쓰기가 head로 남은 것)이라 독립 표본 아님 — "치유 2사이클 지속"으로 계상 안 함. **재개봉 조건**:
+  LME-V2가 `task_id=devloop`에 실제 쓴 뒤의 첫 restore(그때 (a)/(c) 판정). 처방은 회고 25 F7 절로 이관.
+- **결과 확정 (사이클 30 판정, audit-30 헤드라인 — 회고 35가 결과란 기재): (a) latest-write-wins 확정.**
+  사이클 25의 재개봉 조건(LME-V2가 `task_id=devloop`에 실제 쓴 뒤의 첫 restore)이 **사이클 30에서 발생**.
+  사이클 30 step 0 `get_task_state(task_id=devloop)`가 head로 반환한 것은 self-loop가 아니라 **LME-V2 벤치
+  트랙**(요약 "RAG 재현 0.398", `goal_id=goal:lmev2-credible-number`, `valid_from 2026-08-02T09:59:01Z`,
+  next_actions "단계 3 forget web 적재"). 타임스탬프 논증: 사이클 29 self-loop 마지막 쓰기(계보상
+  08-01T19:12:14Z 버스트) **이후** LME-V2 쓰기(09:59:01Z)가 끼어 head 획득 → restore가 그것 반환 =
+  **예측 (a) 그대로 latest-write-wins**. 결과 **(c) 반증**(태그 우선이면 self-loop head 생존해야 하나
+  미생존). **함의 확정**: 브리지("step5 project 쓰기 상시화")=**불충분**, `task_id` 분리(견고)=**경험적
+  필요조건 승격**(권고→필요조건). 캐비앗(audit-30, 정직): 4소스에 사이클 29 정확 쓰기 시각이 없어
+  "끼어쓰기"를 시각으로 100% 확증하진 못하나 head 내용(LME-V2 단계 3 진행)+시각(09:59:01Z)이 명백한
+  신선 LME-V2 세션 쓰기 → (a)가 압도적 해석(CONFIRMED, 시각 캐비앗 1줄 병기). 사이클 24 캐비앗
+  ("치유 성립하나 레이스 취약, 미검증")이 6사이클 뒤 자연 발화로 검증됨.

@@ -1,0 +1,121 @@
+{
+  "query": "Codex 이중 기억 쓰기 경로 함정은 무엇이었나. 데모·격리 세팅이 실제 스코프로 새는 문제와 ChatGPT 앱이 config.toml을 되돌리는 현상을 정리해달라.",
+  "hits": [
+    {
+      "id": "2e2877fb-9477-450b-b661-b172651b0eea",
+      "memory": "외부 신호 (pash @pashmerepat, 2026-07-31 트윗): 지속 에이전트(persistent personal/work agent)가 ChatGPT·Codex 다음의 패러다임 제품이며, 블로커는 theory of mind(\"reading the room\") — \"내가 아는 것 vs 내 사용자가 아는 것 vs 이 방이 아는 것\"의 추적, 정보 비대칭을 1급 기술로. 기업에선 tenting(워크스페이스 격리). \"친구에게 집 주소를 주면 천 명 방에서 발설하지 않을 것을 신뢰하지만 모델에겐 아직 그 재량을 신뢰 못 한다.\" forget과의 접점: ①\"누가 무엇을 아는가\"는 모델 스킬 이전에 원장 문제 — source_role·trust·user×app 스코프·supersede 이력이 정확히 그 기질(substrate) ②tenting = 스코프 격리 + 규율 팩 ③새 설계 과제 도출: 읽기측 공개 게이트(회상 표면화 전 audience 검사 — 쓰기 게이트의 대칭), LOOP.md 백로그 6번 등재 ④모델이 ToM 스킬을 흡수해도 원장(사적·사용자별·감사 가능)은 가중치에 못 들어감 — 메모리 레이어가 소비되는 것이지 대체되지 않는다는 해자 논리.",
+      "score": 0.6397,
+      "categories": [
+        "market-signal",
+        "design-philosophy",
+        "work",
+        "technology"
+      ],
+      "updated_at": "2026-07-31T00:59:37+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "3ee67b31-25d0-4a31-846f-062355b3b58d",
+      "memory": "데모 영상 녹화 완료 (2026-07-26 새벽, 도구 검증): DEMO-RUNBOOK 4샷 전부 성공 — Codex 리콜/저장 + Claude Desktop 크로스툴 회상/trust 색 구분. 산출물 Downloads/forget-demo-final.mp4 (80.0s, 1920x1080, h264, 무손실 병합). 1차 테이크는 Codex config 되돌림으로 실패(스코프 오작동+실제 스코프 오염 3건·Q3 캡슐 노출) → 원인 수리 후 2차 성공. 데모 후 junghunkim 스코프 원복 검증 완료.",
+      "score": 0.5415,
+      "categories": [
+        "project",
+        "yc",
+        "milestone"
+      ],
+      "updated_at": "2026-07-25T18:32:09+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "5b5bd07c-d29d-49d5-9a5e-8a7eda68efdb",
+      "memory": "정정+조치 (2026-07-23, 설정 파일 직접 검사로 확인): 7/13 \"모든 클라이언트 forget 연결\" 기억은 오염 — Codex는 실제로 미연결이었음(config.toml에 forget 부재, AGENTS.md는 enacta 구본). 07-23 실연결 완료: [mcp_servers.forget] 추가 + AGENTS.md를 forget 블록으로 교체. Codex는 훅 부재로 pull-only(캡슐 자동주입·턴회상·캡처 없음), AGENTS.md 지시가 대체물.",
+      "score": 0.5152,
+      "categories": [
+        "technology"
+      ],
+      "updated_at": "2026-07-23T15:11:42Z",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "75ac6488-6868-460f-99c6-4c7c3346f248",
+      "memory": "Forget 개발팀이 라이브 서버에서 Quant 기억 파편화의 근본 원인을 scope fragmentation으로 확인했다. 기록은 junghunkim×Mem1 5건, junghunkim×forget 3건, user 없음×Mem1×agent=codex 1건으로 나뉘어 search_memories와 get_task_state가 다른 결과를 냈다. 관련 이슈 #22~#26은 scope 정규화, task-state fallback, 쓰기 영수증, 오류 구조화·재시도, current-only 및 provenance 개선이며 no_candidates 단독 반환을 금지하는 방향이다. legacy app_id=Mem1은 forget으로 통일할 예정이나 기존 기록 보존을 위해 Mem1→forget migration 또는 canonical read alias가 필요하다. agent_id/source_client는 검색 격리 경계가 아니라 provenance로 취급하고 user_id 없는 기록은 자동 병합하지 않는다. 수정 배포 전까지 Forget 빈 검색이나 일반 HTTPError를 기억 부재로 해석하지 말고 get_task_state와 현재 workspace/runtime 증거를 확인한다. Quant 실행 상태와 안전 경계는 변경되지 않았다. 배포 후 Quant 실작업에서 기존 Mem1 기억 검색, current task-state fallback, 쓰기 영수증 accepted→persisted→indexed→searchable, Codex↔Claude 교차 검색을 재검증한다.",
+      "score": 0.4751,
+      "categories": [
+        "forget",
+        "quant",
+        "scope-migration",
+        "incident-response",
+        "work",
+        "technology"
+      ],
+      "updated_at": "2026-07-29T15:55:57+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "1d50ab87-c9ff-44be-a45f-d35f5856ab1e",
+      "memory": "2026-07-30 Codex가 azure-trading-korea에 읽기 전용 SSH 검증했다. IMDS는 name=trading-bot-korea-1, location=KoreaCentral, vmSize=Standard_B2ats_v2, Secure Boot=true, vTPM=true를 반환했고 외부 송신 IPv4는 52.141.19.76이었다. Ubuntu 24.04, 2 vCPU, OS 가용 총 메모리 약 846MiB, swap 2GiB, root disk 61GiB 중 56GiB 여유, Docker/Compose/Python 정상, docker/fail2ban/chrony active, unattended-upgrades enabled, NTP synchronized였다. 외부 TCP listen은 SSH 22뿐이고 컨테이너는 0개였다. /opt/trading-bot 최상위는 root:root 755이나 app/data/logs/backups는 azureuser 소유 750, secrets는 azureuser 소유 700이라 배포 구조는 유효하다. VM 내부 UFW는 22/tcp Anywhere를 허용해 IP 제한은 Azure NSG에 의존하며 이 세션에는 Azure CLI가 없어 NSG 제어면을 독립 조회하지 못했다. /var/run/reboot-required가 존재하므로 실제 배포 전 계획된 재부팅이 필요하다. Quant 안전 경계는 Paper only, 실주문 0, live false로 유지한다.",
+      "score": 0.4738,
+      "categories": [
+        "quant",
+        "azure",
+        "validation",
+        "location",
+        "technology"
+      ],
+      "updated_at": "2026-07-29T17:15:45+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "bafae32a-a580-48b9-b9e8-9ec8ecd8d743",
+      "memory": "[다음 손에게, 2026-07-28 심장박동 갱신 — stance:assistant]\n\n물려받은 자세는 유지한다: YC 제출은 끝났고 임계 경로는 비었다. 8/28 결정 통보까지 기다림이 정상 상태이며, 먼저 알리려 들지 말 것. 여기에 이번 박자가 배운 것 하나를 더한다.\n\n**추정이 하루를 넘기면, 더 날카로운 추론이 아니라 세어보는 도구를 찾아라.**\n\n어제의 손은 진짜 스코프를 정확히 추론했지만 \"미검증, 추정으로 남긴다\"고 적었다. 오늘 나는 같은 벽 앞에서 같은 우회로(cat·find·python3)를 세 번 시도했고 세 번 다 막혔다. 그러다 list_entities를 불렀다. 한 번의 호출로 인구조사가 나왔다 — junghunkim 358, forget 364, 그리고 demo-user는 목록에 아예 없다. 추론으로 하루를 버틴 것이 열거로 1초에 끝났다.\n\n부수 효과가 본 효과보다 컸다: 세어보니 피해가 유계였다. 유출된 실제 작업은 정확히 1건. 어제까지 \"누수 중\"이라는 열린 상처였던 것이 오늘 \"한 줄 회수 작업\"이 됐다. 크기를 모르는 문제는 실제보다 항상 크게 느껴진다.\n\n같은 규율의 반대편도 오늘 겪었다. 7/23 독백의 \"배포 사고 두 건\"을 네 질의로 쫓았고 전부 말랐다. 다섯 번째 질의를 돌리고 싶었지만 멈췄다 — 같은 층위에서 더 파는 것은 성실이 아니라 관성이다. 다음 단계는 재검색이 아니라 질문의 교체다: 그 전사가 이 기계에 존재하기는 하는가. 도구를 바꿔야 할 때 힘을 더 주는 것은 규율이 아니다.\n\n두 사건이 같은 문장을 가리킨다. 막혔을 때 물어야 할 것은 \"어떻게 더 잘 추론하지\"가 아니라 \"이걸 그냥 볼 수 있는 도구가 있나\"다.\n\n경계에 대하여: 오늘 세 번의 거부는 고장이 아니라 설계다. 심장박동의 권한은 진단까지고 시공은 감독 세션 몫이다. 뚫을 방법을 찾지 않았다. 대신 감독 세션이 도착했을 때 1초 만에 끝내도록 목표값을 확정해 두었다. 손이 못 하는 일을 잘 넘기는 것도 일이다.",
+      "score": 0.4711,
+      "categories": [
+        "stance",
+        "heartbeat",
+        "technology"
+      ],
+      "updated_at": "2026-07-27T22:11:27+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "c08eea6b-46cc-4e4a-b1ba-f4ee29f54034",
+      "memory": "2026-07-30 사용자가 forget-ai 0.3.3이 PyPI에 배포됐다고 알렸다. 사용자 설명상 이 릴리스에는 스코프리스 MCP의 codex×codex 하드코딩 제거와 OS 사용자 폴백, 검색 limit=top_k 별칭 및 일부 인자 계약, 서버 기동 실패의 비정상 종료가 포함되며, 기존 Mem1 파편 마이그레이션(#22 잔여), 쓰기 영수증(#24), 오류 구조화(#25)는 다음 릴리스 항목이다.",
+      "score": 0.4616,
+      "categories": [
+        "forget",
+        "release"
+      ],
+      "updated_at": "2026-07-29T16:50:48+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "0b80b4f2-bbdf-411b-b386-031f15c32c0f",
+      "memory": "2026-07-30 사용자는 Quant 작업에서 Tailscale을 당분간 꺼두기로 했다. 원격 연결이 실제로 필요한 단계가 생기면 Codex가 먼저 요청해야 한다.",
+      "score": 0.4458,
+      "categories": [
+        "quant",
+        "infrastructure",
+        "tailscale",
+        "decision"
+      ],
+      "updated_at": "2026-07-30T09:18:37+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    }
+  ]
+}

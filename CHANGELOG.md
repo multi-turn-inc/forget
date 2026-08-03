@@ -1,6 +1,68 @@
 # Changelog
 
-## Unreleased
+## 0.3.9 — 2026-08-01
+
+Stale installs must not suffer silently. The 0.3.7↔0.5.0 hook/server
+mismatch shipped the exact bug class this release guards against: newer
+hooks sent `project`, the older server ate it without a word, and the
+feature looked broken. Three layers, in order of principle:
+
+### Update awareness
+- Mismatch canary (zero network): the capsule response now carries
+  `server_version`; hooks compare it against the capability they were
+  built for and put one warning line in the session capsule when the
+  server lags — its very absence marks a server ≤ 0.3.8. npx users get
+  current hooks automatically, so the hooks double as the stale-server
+  detector.
+- Unknown write arguments are never eaten silently: `add_memory` and
+  `record_task_state` accept them for compat but answer with an in-band
+  warning naming the ignored key (and the near-miss suggestion).
+- `doctor`/`status` report the installed vs latest version — one PyPI
+  metadata request, cached 24h in `~/.forget/update-check.json`, only
+  when the user runs those commands (hooks read the cache file but never
+  call out; the server never phones home). `FORGET_UPDATE_CHECK=off`
+  disables it entirely.
+- `forget-server upgrade` — pip upgrade + service restart + doctor in one
+  command; every version warning prescribes exactly this.
+
+## 0.3.8 — 2026-08-01
+
+The boundary release: one store, project-shaped. Shipped the same day its
+first real-usage test ran — that test caught a deployment trap and a
+pre-existing epoch-forking defect before either could reach a user.
+
+### Project-scoped memory layer
+- The project boundary is now detected, never configured: hooks derive a
+  project key from the session's cwd (git common-dir → origin URL, so a
+  worktree and its main clone share one key), stamp every `add_memory`
+  write with `metadata.project` + `scope_layer` via PreToolUse
+  `updatedInput`, and recall reads one store in two layers — this
+  project's rows plus everything global and everything untagged.
+  Backward compatible by construction: untagged rows (everything before
+  the layer) read as global, so day one changes nothing and separation
+  accrues as tagged writes land. The boundary doubles as a privacy gate:
+  turn recall crosses it only on an explicit ask ("다른 프로젝트에서…")
+  and flags the crossing in its header. Escape hatches:
+  `~/.forget/projects.json` (aliases/ignore) for same-name repos,
+  `FORGET_PROJECT_SCOPE=off` to disable.
+- The task ledger carries the layer too (the F2 cure proper — heartbeat
+  and Quant task rows invading a devloop capsule was the founding
+  friction): `record_task_state` accepts `project` (rides the scope blob,
+  so claims and workspace epochs both carry it), and a project-scoped
+  `get_task_state`/capsule hides only tasks tagged with a *different*
+  project. No project argument = the cross-project view.
+- Scope-fallback leak fixed while layering: fallback may relax entity
+  scope (user_id/agent_id/app_id/run_id) only — content conditions
+  (metadata layers, dates, categories) still bind. Before this, enabling
+  `scope_fallback` re-admitted rows past any metadata filter as
+  discounted fallback hits.
+- Workspace-epoch continuity is per task, not per task×scope (found by
+  the layer's first real-usage test): epoch predecessors were keyed on
+  exact scope_json, so any scope change — a project tag arriving, an
+  agent_id appearing or dropping — forked the task into parallel open
+  epochs nothing ever closed. Every write now closes all open epochs for
+  the task, and a scope transition with identical content forces a
+  boundary (`scope_changed`) so the tag actually lands.
 
 ### Scope integrity
 - Write-time scope guard: every memory write (MCP and REST converge in

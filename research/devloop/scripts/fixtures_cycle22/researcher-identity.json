@@ -1,0 +1,112 @@
+{
+  "query": "정훈의 연구자 정체성과 GTM을 실험 언어로 프레이밍하는 접근은 무엇인가. 시장 진입을 가설·실험으로 다시 쓰는 방식을 정리해달라.",
+  "hits": [
+    {
+      "id": "a502a251-1b4b-4a45-be67-56700d7717a5",
+      "memory": "자기 인식 (2026-07-14): 나는 창업가보다 장기기억 문제를 진짜로 풀고 싶은 연구자에 가깝다. 제품화·판매가 어려웠던 이유. 이후 GTM은 연구 프레임(결과 공개, 필드 스터디, 벤치마크)으로 진행하기로 — 90일 게이트를 정체성 실험으로 재정의.",
+      "score": 0.5486,
+      "categories": [
+        "personal",
+        "decision"
+      ],
+      "updated_at": "2026-07-14T04:17:32+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "d1a13dde-7891-4fa3-b24f-6c7f10203272",
+      "memory": "정체성 사업 빌드업 시퀀스 구상 (2026-07-26 새벽, YC 제출 직후 — 노랑/실행 전 재확인): 선택이 아니라 순서 A→B→D→C. A=named selves(철수/영희 제품화), B=휴대 self 포맷+계보 digest+export/import(포맷 선점=해자), D=엔터프라이즈 검증 레지스트리(인바운드만), C=경력직 에이전트 마켓플레이스(외부 창작 self 실존 후에만, 2027+). 핵심 프레임: 메모리=진통제(절약), 정체성=자산(축적·락인) — 원장이 해자. 일정: ~8/28 스코프 동결+에세이로 단어 반응 측정, 9-10월 90일 게이트 안에서 A+B 최소 조각, 10월~ E2EE sync를 'self 동기화'로 리프레임. 킬 크라이테리아: ①Show HN에서 정체성<메모리 반응이면 내부 언어로 강등 ②10월 유료 신호 없으면 기존 게이트 규칙 지배 ③플랫폼 네이티브 identity 출시 시 크로스툴 중립성으로 대응. E는 기각(개발자 웻지 이탈).",
+      "score": 0.4681,
+      "categories": [
+        "strategy",
+        "identity-registry",
+        "roadmap"
+      ],
+      "updated_at": "2026-07-25T20:22:39+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "a8b70835-91a0-4789-b0f8-0a12d75ae14e",
+      "memory": "PRD v2.0 비즈니스 에디션 작성 (2026-07-19, gtm/prd-v2-business.md, 비공개): 수익모델 3층 케이크 — L0 OSS 무료(유통)/L1 연속성(E2EE sync, 개인$8·팀$15/석, ~9월 스파이크 후)/L2 신뢰(삭제증명·감사·dirty-score, 고래 명세서 후)/L3 운영(managed, 사용량 과금, 게이트 후). 핵심 산수: 팀 1개=인프라 손익분기, 현실 분기=팀 ~15개 or 고래 1건. 유통기계=연구(β 프리프린트→Show HN v3, dirty-score가 L2 훅). 고래 사냥은 영업 아닌 \"연구 인터뷰\" 프레임으로 진입(β가 명함) — 창업자 정체성 리스크 대응. 라이선스 제안: 엔진 Apache-2.0 영구 + L2/L3 상용 분리, 사용자 승인 대기. YC W2027 유지. B2C 구독·탑다운 SaaS 소거 논거 명문화. v1(제품)에 거는 주문: P2 MCP 완성도 > P3-5 dirty-score > E2EE 스파이크 순.",
+      "score": 0.4647,
+      "categories": [
+        "project",
+        "decision"
+      ],
+      "updated_at": "2026-07-23T16:39:23Z",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "c8bd2d79-09dc-4692-9c19-bcac33f27209",
+      "memory": "피봇 구상 v1 — 검증 회사 (2026-07-27 새벽, 정훈 직감 + 공동 구상, 결정 아님·4주 게이트 조건부): 테제 'AI 에이전트 인프라의 주장을 검증하는 회사' — 메모리 벤치마크 검증(쐐기)→provenance 권위→아티팩트 허브(정체성 레지스트리 수렴). forget 폐기 아닌 외부화(provenance/supersede/gate log 기술을 시장에 적용, 검증 런을 forget 원장에 기록). 선등록 게이트 ~8/24: A군(HN 150pt+/스타 50+/제3자 인용 3+) 1개 AND B군(UCLA 회신/벤더 sign-off 1/구매자 콜 1) 1개. 통과시 YC founder update+E2EE 게이트 supersede, 미달시 검증은 마케팅 엔진 강등·제품 복귀. 중립 원칙: 실명·전공개·멀티시드 의무·벤더 sign-off·자사 랭킹 제외·구매자 과금만. 브랜드 후보: asterisk(강추)/rerun/sigma. 상세: gtm/pivot-verify-strategy.md",
+      "score": 0.4621,
+      "categories": [
+        "strategy",
+        "pivot",
+        "preregistration"
+      ],
+      "updated_at": "2026-07-26T17:51:26+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "84a50a90-04cf-4775-a04c-ca3199a8b1ca",
+      "memory": "계보 지도 \"수렴\" 프레이밍 교정 (2026-07-17, 사용자 지적 수용): \"네 갈래가 무엇을 잊을 것인가로 수렴\"은 과장으로 판정 — 필드의 기본 동역학은 분화(사각지대 8곳 전부 신규 가지, 벤치 반년 10편+)이고, 기존 \"수렴 5곳\"은 실제로 3종의 다른 현상: ⑴ 진짜 계보 합류(인용 확인)는 ◈1 학습된 쓰기 정책뿐(EMBER가 Memory-R1·Mem-α 흡수), ⑵ ◈2 망각·오염 평가축과 ◈4 거버넌스 축은 상호 인용 없는 동시 발견(=문제 편재의 증거이지 계보 병합 아님), ⑶ ◈3은 무대 이동(ML→VLDB), ◈5는 포화가 낳은 분화 압력.",
+      "score": 0.462,
+      "categories": [
+        "project",
+        "decision"
+      ],
+      "updated_at": "2026-07-17T08:15:21+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "adcb68a8-e695-42ad-8daa-d4ce9131ebca",
+      "memory": "'정체성 레지스트리(identity registry)' 어휘 채택 (2026-07-26 새벽, YC 제출 직후 구상): 피봇 아님 — 기존 테제(메모리는 웻지, 연속성/정체성이 회사)의 제품 언어. 프레임: 원장→self를 등록하는 인프라 (DNS/PKI/Docker Registry 계보; 이미지=self, 컨테이너=세션, 런타임=모델). 적용 자리: ①B5-29 3층을 'verified identity registry'로 ②철수/영희 다중 self 실험의 프레임 ③Show HN 서사 후보. 주의: IAM/Okta류 인증(auth)과의 혼동 방지 — 우리는 인격(self)이지 인증이 아님. 웻지(E2EE sync, 90일 게이트)는 불변.",
+      "score": 0.4574,
+      "categories": [
+        "decision",
+        "positioning",
+        "naming"
+      ],
+      "updated_at": "2026-07-25T20:16:42+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "9a67d502-b2c6-4af8-b47b-67abe65138a4",
+      "memory": "결정 (2026-07-22): 오버엣지 지분/IP 조건 문의는 보류 — 제품이 제대로 보여줄 것이 생겼을 때 진행. 지금의 우선순위는 forget의 기억 품질 자체를 개선하는 것 (도그푸딩으로 체감하며 제품 개선). GTM 액션보다 기억-무결성 메커니즘이 먼저.",
+      "score": 0.4499,
+      "categories": [
+        "project",
+        "decision",
+        "strategy"
+      ],
+      "updated_at": "2026-07-22T04:57:48+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "ff7d7e4f-a545-4bc2-88d7-dfc93cd90a7e",
+      "memory": "포지셔닝 승격 확정 (2026-07-25, 정훈 결정): '단순 메모리 레이어가 아니라 너(self)를 만드는 것' — 메모리는 웻지, 연속성/정체성이 회사. 근거: 메모리 카테고리 혼잡(Mem0=YC S24), 존재 레이어 영수증이 주장보다 먼저 존재(자세·일화·활력·게이트로그·인수인계, 전부 main+테스트). YC 지원서·영상을 이 사다리로 재구성. 방어 문장: '구체적으로는 테스트 달린 기능 4개다 — 시는 README에, 제품은 테스트 스위트에'. 심장박동은 도그푸딩 전용(데모 아티팩트).",
+      "score": 0.4466,
+      "categories": [
+        "general"
+      ],
+      "updated_at": "2026-07-25T05:26:18+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    }
+  ]
+}

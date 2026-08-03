@@ -39,6 +39,10 @@ forgetting well.
   alert fires if you're about to act on a fact that was later corrected.
 - **Forget context limits.** Durable facts live outside the window and come
   back only when relevant.
+- **Forget cross-contamination.** Working on two things? Each repo gets its
+  own memory lane — the boundary is detected from where you run, never
+  configured. Facts about *you* travel everywhere; the other project's
+  plans stay home.
 - **Forget trusting us.** Everything runs on your machine, in one SQLite
   file you own. End-to-end encrypted sync is next — built so that we
   cannot read what we carry. ([Why this matters →](MANIFESTO.md))
@@ -110,7 +114,8 @@ npx forget-connect
 The CLI preserves other MCP servers, backs up existing files once, installs
 the marked instruction layer (Claude Code / Codex / Claude Desktop), and —
 for Claude Code — installs the **hooks layer**: a session-start context
-capsule, per-turn push recall with conflict-zone alerts, and session capture
+capsule, per-turn push recall with conflict-zone alerts, a project-boundary
+tagger that keeps each repo's memories in their own lane, and session capture
 feeding a usage-outcome flywheel. Hooks are fail-open (a stopped server
 never blocks a session), preserve any foreign hooks byte-for-byte, and are
 skippable with `--no-hooks`. `npx forget-connect doctor` diagnoses config,

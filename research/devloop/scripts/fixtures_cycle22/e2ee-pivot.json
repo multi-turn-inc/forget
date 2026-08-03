@@ -1,0 +1,119 @@
+{
+  "query": "forget의 E2EE 피봇 전략은 무엇이었나. VC 스케일과 풀타임 솔로, 개발자 웻지, 90일 검증 게이트를 어떻게 잡았는지 다시 확인하고 싶다.",
+  "hits": [
+    {
+      "id": "d1a13dde-7891-4fa3-b24f-6c7f10203272",
+      "memory": "정체성 사업 빌드업 시퀀스 구상 (2026-07-26 새벽, YC 제출 직후 — 노랑/실행 전 재확인): 선택이 아니라 순서 A→B→D→C. A=named selves(철수/영희 제품화), B=휴대 self 포맷+계보 digest+export/import(포맷 선점=해자), D=엔터프라이즈 검증 레지스트리(인바운드만), C=경력직 에이전트 마켓플레이스(외부 창작 self 실존 후에만, 2027+). 핵심 프레임: 메모리=진통제(절약), 정체성=자산(축적·락인) — 원장이 해자. 일정: ~8/28 스코프 동결+에세이로 단어 반응 측정, 9-10월 90일 게이트 안에서 A+B 최소 조각, 10월~ E2EE sync를 'self 동기화'로 리프레임. 킬 크라이테리아: ①Show HN에서 정체성<메모리 반응이면 내부 언어로 강등 ②10월 유료 신호 없으면 기존 게이트 규칙 지배 ③플랫폼 네이티브 identity 출시 시 크로스툴 중립성으로 대응. E는 기각(개발자 웻지 이탈).",
+      "score": 0.6071,
+      "categories": [
+        "strategy",
+        "identity-registry",
+        "roadmap"
+      ],
+      "updated_at": "2026-07-25T20:22:39+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "215adb6f-16a8-40da-8cc2-de7edc76a7d2",
+      "memory": "목표 스케일은 VC 스케일, 리소스는 풀타임 솔로, 첫 타깃은 개발자 개인(Claude Code/Cursor, MCP 경유), 이후 비밀유지 의무 직군·기업 컴플라이언스 B2B로 확장.",
+      "score": 0.6021,
+      "categories": [
+        "project",
+        "strategy"
+      ],
+      "updated_at": "2026-07-13T05:36:44+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "adcb68a8-e695-42ad-8daa-d4ce9131ebca",
+      "memory": "'정체성 레지스트리(identity registry)' 어휘 채택 (2026-07-26 새벽, YC 제출 직후 구상): 피봇 아님 — 기존 테제(메모리는 웻지, 연속성/정체성이 회사)의 제품 언어. 프레임: 원장→self를 등록하는 인프라 (DNS/PKI/Docker Registry 계보; 이미지=self, 컨테이너=세션, 런타임=모델). 적용 자리: ①B5-29 3층을 'verified identity registry'로 ②철수/영희 다중 self 실험의 프레임 ③Show HN 서사 후보. 주의: IAM/Okta류 인증(auth)과의 혼동 방지 — 우리는 인격(self)이지 인증이 아님. 웻지(E2EE sync, 90일 게이트)는 불변.",
+      "score": 0.582,
+      "categories": [
+        "decision",
+        "positioning",
+        "naming"
+      ],
+      "updated_at": "2026-07-25T20:16:42+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "75ac6488-6868-460f-99c6-4c7c3346f248",
+      "memory": "Forget 개발팀이 라이브 서버에서 Quant 기억 파편화의 근본 원인을 scope fragmentation으로 확인했다. 기록은 junghunkim×Mem1 5건, junghunkim×forget 3건, user 없음×Mem1×agent=codex 1건으로 나뉘어 search_memories와 get_task_state가 다른 결과를 냈다. 관련 이슈 #22~#26은 scope 정규화, task-state fallback, 쓰기 영수증, 오류 구조화·재시도, current-only 및 provenance 개선이며 no_candidates 단독 반환을 금지하는 방향이다. legacy app_id=Mem1은 forget으로 통일할 예정이나 기존 기록 보존을 위해 Mem1→forget migration 또는 canonical read alias가 필요하다. agent_id/source_client는 검색 격리 경계가 아니라 provenance로 취급하고 user_id 없는 기록은 자동 병합하지 않는다. 수정 배포 전까지 Forget 빈 검색이나 일반 HTTPError를 기억 부재로 해석하지 말고 get_task_state와 현재 workspace/runtime 증거를 확인한다. Quant 실행 상태와 안전 경계는 변경되지 않았다. 배포 후 Quant 실작업에서 기존 Mem1 기억 검색, current task-state fallback, 쓰기 영수증 accepted→persisted→indexed→searchable, Codex↔Claude 교차 검색을 재검증한다.",
+      "score": 0.5458,
+      "categories": [
+        "forget",
+        "quant",
+        "scope-migration",
+        "incident-response",
+        "work",
+        "technology"
+      ],
+      "updated_at": "2026-07-29T15:55:57+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "c8bd2d79-09dc-4692-9c19-bcac33f27209",
+      "memory": "피봇 구상 v1 — 검증 회사 (2026-07-27 새벽, 정훈 직감 + 공동 구상, 결정 아님·4주 게이트 조건부): 테제 'AI 에이전트 인프라의 주장을 검증하는 회사' — 메모리 벤치마크 검증(쐐기)→provenance 권위→아티팩트 허브(정체성 레지스트리 수렴). forget 폐기 아닌 외부화(provenance/supersede/gate log 기술을 시장에 적용, 검증 런을 forget 원장에 기록). 선등록 게이트 ~8/24: A군(HN 150pt+/스타 50+/제3자 인용 3+) 1개 AND B군(UCLA 회신/벤더 sign-off 1/구매자 콜 1) 1개. 통과시 YC founder update+E2EE 게이트 supersede, 미달시 검증은 마케팅 엔진 강등·제품 복귀. 중립 원칙: 실명·전공개·멀티시드 의무·벤더 sign-off·자사 랭킹 제외·구매자 과금만. 브랜드 후보: asterisk(강추)/rerun/sigma. 상세: gtm/pivot-verify-strategy.md",
+      "score": 0.5315,
+      "categories": [
+        "strategy",
+        "pivot",
+        "preregistration"
+      ],
+      "updated_at": "2026-07-26T17:51:26+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "28eec2af-7905-4c34-98b9-31b22ecc5f4a",
+      "memory": "2026-07-30 Quant 실환경에서 forget-ai 0.3.3을 검증했다. 활성 서버와 PyPI 설치본은 0.3.3이며 점유 포트 기동은 exit 1로 정직하게 실패했다. canonical /mcp/forget/http/junghunkim 검색은 성공하고 legacy Quant task-state는 /mcp/Mem1/http/junghunkim에만 남아 있었다. 신규 문서 기본 /mcp/codex/http/junghunkim은 같은 질의 0건으로 세 번째 app pool을 만들므로 canonical app_id 통일과 충돌한다. user_id=NULL인 Mem1×agent=codex 기록은 OS-user 폴백과 junghunkim scoped 검색에 귀속/반환되지 않았고 원장에서도 NULL을 유지했다. 정상 무결과는 results=[] 성공, 잘못된 filter key는 RPC 오류로 구분됐고 limit 별칭은 동작했다. 그러나 미지 최상위 검색 인자는 거부되지 않고 조용히 무시되어 검색 인자 계약은 부분 미완성이다. Codex 설정은 안전한 canonical URL /mcp/forget/http/junghunkim으로 교정했다.",
+      "score": 0.5186,
+      "categories": [
+        "forget",
+        "validation",
+        "dogfood",
+        "technology"
+      ],
+      "updated_at": "2026-07-29T16:50:58+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "fa455bd3-8813-4cc5-91a1-3b58cff24ecb",
+      "memory": "2026-07-30 사용자 보고: forget-ai 0.3.4가 배포되었고 커넥터는 모든 클라이언트를 /mcp/forget/http/<user>로 통합하며, 미지 최상위 인자는 400과 did-you-mean으로 거부하고, migrate-scope CLI로 Mem1에서 forget으로 병합을 이미 실행했다. 원본 스코프는 metadata.scope_migration에 보존하고 migrations/에 영수증을 남겼으며, 명시 플래그로 고아 레코드를 junghunkim에 귀속했고 Mem1 잔존은 0이라고 사용자가 보고했다. Quant 실작업에서 재검증 시나리오 1과 2를 확인해 달라고 요청했다.",
+      "score": 0.5172,
+      "categories": [
+        "forget",
+        "release",
+        "validation"
+      ],
+      "updated_at": "2026-07-29T17:39:34+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    },
+    {
+      "id": "adc642be-96b3-4611-968d-b81025cfec3f",
+      "memory": "전략 v1.3 확정 (2026-07-13): 웻지를 팀 결정 메모리(스스로 써지는 ADR)로 변경 — ② 직행. 마법의 순간: 신입이 \"우리 왜 X 골랐죠?\" → git/PR에서 자동 채굴된 결정이 근거 링크와 함께 답함. 지불 주체: 팀 per-seat. cold-start 구조적 해결(git은 이미 가득 참). 런칭 지연 리스크는 사용자가 속도로 상쇄 결정(\"빨리하면 되지\"). 아키텍처·E2EE 2막·Day90 게이트 불변. v1 소스는 커밋 메시지, PR 논의·에이전트 세션은 v0.2.",
+      "score": 0.5012,
+      "categories": [
+        "project",
+        "strategy"
+      ],
+      "updated_at": "2026-07-13T10:48:52+00:00",
+      "metadata": {
+        "assertion_kind": null
+      }
+    }
+  ]
+}
