@@ -355,4 +355,7 @@ def memories_search_v3(payload: dict[str, Any]) -> Any:
     if not payload.get("query"):
         return JSONResponse({"error": "query is required"}, status_code=400)
     result = search_memories(payload)
-    return {"results": [_public_search_result(item) for item in result.get("results", [])]}
+    response: dict[str, Any] = {"results": [_public_search_result(item) for item in result.get("results", [])]}
+    if result.get("recall_layer"):
+        response["recall_layer"] = result["recall_layer"]
+    return response

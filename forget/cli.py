@@ -742,6 +742,55 @@ def cmd_upgrade(args: argparse.Namespace) -> None:
         print("doctor skipped (run `forget-server doctor` to verify)")
 
 
+def cmd_recall(args) -> None:
+    """The dial's home: see what gear you're in, change it, wire an LLM."""
+    from .db import init_db
+
+    init_db()
+    from .providers import get_project_settings, update_project_settings
+    from .store import _resolve_recall_llm
+
+    if args.action == "use":
+        gear = str(args.value or "").strip().lower()
+        if gear not in {"low", "medium", "high", "extra"}:
+            print("usage: forget recall use <low|medium|high|extra>")
+            return
+        update_project_settings("proj_local", {"recall_default": gear})
+        print(f"default recall gear → {gear}")
+        if gear in {"high", "extra"} and not _resolve_recall_llm():
+            print("note: no recall LLM available — high/extra will quietly fall back to instant search.")
+            print("      attach one:  forget recall llm --base-url http://127.0.0.1:11434/v1 --model <name>")
+        return
+
+    if args.action == "llm":
+        if args.clear:
+            update_project_settings("proj_local", {"recall_llm": {}})
+            print("stored recall LLM cleared — will auto-attach a local runtime if one is running")
+            return
+        if not args.base_url or not args.model:
+            print("usage: forget recall llm --base-url <url> --model <name> [--api-key-file <path>]")
+            return
+        config = {"base_url": args.base_url, "model": args.model}
+        if args.api_key_file:
+            config["api_key_file"] = args.api_key_file
+        update_project_settings("proj_local", {"recall_llm": config})
+        print(f"recall LLM → {args.model} @ {args.base_url}")
+        return
+
+    settings = get_project_settings("proj_local")
+    gear = settings.get("recall_default") or "low"
+    llm = _resolve_recall_llm()
+    print(f"recall gear   : {gear}   (per-call override: recall=low|medium|high|extra)")
+    if llm:
+        print(f"recall LLM    : {llm['model']} @ {llm['base_url']}  (source: {llm['source']})")
+        print("deep recall   : ready — high (~3s, reads 40 candidates) / extra (~5s, reads 100)")
+    else:
+        print("recall LLM    : none")
+        print("deep recall   : off — instant search only. Two ways to turn it on:")
+        print("  · run a local LLM (Ollama or LM Studio) — free, forget attaches automatically")
+        print("  · or use forget cloud — deep recall without heating your laptop (coming soon)")
+
+
 def main(argv: list[str] | None = None) -> None:
     shared = argparse.ArgumentParser(add_help=False)
     shared.add_argument("--host", default=DEFAULT_HOST)
@@ -769,6 +818,18 @@ def main(argv: list[str] | None = None) -> None:
                    parents=[shared])
     sub.add_parser("reembed", help="re-embed all memories with the active embedding stack "
                                    "(automatic backup + receipt)", parents=[shared])
+    rec = sub.add_parser(
+        "recall",
+        help="show or set the recall budget dial (low/medium/high/extra) and its LLM",
+        parents=[shared],
+    )
+    rec.add_argument("action", nargs="?", default="status", choices=["status", "use", "llm"],
+                     help="status: show current gear + resolved LLM; use: set default gear; llm: set recall LLM endpoint")
+    rec.add_argument("value", nargs="?", help="gear name for 'use' (low|medium|high|extra)")
+    rec.add_argument("--base-url", help="OpenAI-compatible endpoint for 'llm' (e.g. http://127.0.0.1:11434/v1)")
+    rec.add_argument("--model", help="model name for 'llm'")
+    rec.add_argument("--api-key-file", help="path to a file holding the API key (kept out of config)")
+    rec.add_argument("--clear", action="store_true", help="with 'llm': remove the stored recall LLM")
     mig = sub.add_parser(
         "migrate-scope",
         help="merge a legacy app pool into its canonical successor (dry-run by default)",
@@ -793,6 +854,7 @@ def main(argv: list[str] | None = None) -> None:
      "upgrade": cmd_upgrade,
      "weekly": cmd_weekly,
      "reembed": cmd_reembed,
+     "recall": cmd_recall,
      "migrate-scope": cmd_migrate_scope}[command](args)
 
 

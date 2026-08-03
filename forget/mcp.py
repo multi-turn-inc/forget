@@ -287,6 +287,11 @@ TOOLS: list[dict[str, Any]] = [
                 "limit": {"type": "integer", "description": "Alias of top_k (top_k wins when both are given)."},
                 "threshold": {"type": "number"},
                 "rerank": {"type": "boolean"},
+                "recall": {
+                    "type": "string",
+                    "enum": ["low", "medium", "high", "extra"],
+                    "description": "Recall budget dial. low/medium: instant local search (default). high: an LLM gate reads ~40 candidates and keeps what the question needs (~3s). extra: deep read of ~100 candidates at near-full text (~5s). Use high/extra when the answer matters more than latency; requires a configured recall LLM, silently falls back to local search otherwise.",
+                },
             },
         },
     },

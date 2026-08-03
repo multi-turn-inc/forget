@@ -4304,8 +4304,239 @@ def memory_relations(memories: list[dict[str, Any]]) -> list[dict[str, str]]:
     return relations
 
 
+def _reflex_angles(query: str) -> list[str]:
+    """Multi-angle query expansion without an LLM (Recall v2, reflex layer).
+
+    The store is personal-scale, so extra scans are nearly free. Angles:
+    the query itself, its salient-term digest, and up to three individual
+    salient terms — different angles sample different embedding
+    neighborhoods and different keyword hits.
+    """
+    from .utils import tokenize
+
+    tokens = tokenize(query)
+    seen: set[str] = set()
+    unique = [t for t in tokens if not (t in seen or seen.add(t))]
+    # Longer tokens carry more signal ("payments" over "did"); generic verbs
+    # survive tokenize's stopword list but rarely survive a length sort.
+    salient = sorted((t for t in unique if len(t) >= 4), key=len, reverse=True)
+    angles = [query]
+    if len(salient) >= 2:
+        angles.append(" ".join(salient[:8]))
+    angles.extend(salient[:3])
+    deduped: list[str] = []
+    for angle in angles:
+        if angle and angle.lower() not in {a.lower() for a in deduped}:
+            deduped.append(angle)
+    return deduped[:5]
+
+
+def _reflex_mmr(candidates: list[dict[str, Any]], k: int, diversity: float = 0.35) -> list[dict[str, Any]]:
+    """Greedy MMR on token overlap — 'k different pieces of evidence', not
+    'k neighbors of the same moment'. Embedding-free: Jaccard on token sets
+    is enough to stop near-duplicates from monopolizing the budget."""
+    from .utils import tokenize
+
+    token_sets = [set(tokenize(str(c.get("memory") or ""))) for c in candidates]
+    picked: list[int] = []
+    while candidates and len(picked) < k:
+        best_i, best_val = None, None
+        for i, candidate in enumerate(candidates):
+            if i in picked:
+                continue
+            relevance = float(candidate.get("_rrf") or 0.0)
+            redundancy = max(
+                (len(token_sets[i] & token_sets[j]) / max(len(token_sets[i] | token_sets[j]), 1) for j in picked),
+                default=0.0,
+            )
+            value = (1 - diversity) * relevance - diversity * redundancy
+            if best_val is None or value > best_val:
+                best_i, best_val = i, value
+        picked.append(best_i)
+    return [candidates[i] for i in picked]
+
+
+def _search_memories_reflex(payload: dict[str, Any], project_id: str | None) -> dict[str, Any]:
+    """Recall v2 reflex layer: multi-angle → RRF merge → MMR selection.
+
+    Opt-in (MEM1_RECALL_V2=reflex or payload recall="reflex"); each angle
+    reuses the v1 scoring pipeline unchanged, so this wraps rather than
+    forks the ranking logic. RRF merges by rank (score scales across
+    different queries are not comparable); MMR spends the final budget on
+    diverse evidence.
+    """
+    query = str(payload.get("query") or "").strip()
+    top_k = int(payload.get("top_k") or 10)
+    wide_k = max(top_k * 4, 24)
+    base = {key: value for key, value in payload.items() if key not in {"recall"}}
+    merged: dict[str, dict[str, Any]] = {}
+    for angle in _reflex_angles(query):
+        try:
+            outcome = search_memories({**base, "query": angle, "top_k": wide_k, "recall": "v1"}, project_id)
+        except HTTPException:
+            continue
+        for rank, memory in enumerate(outcome.get("results") or [], 1):
+            memory_id = str(memory.get("id") or "")
+            entry = merged.setdefault(memory_id, dict(memory))
+            entry["_rrf"] = float(entry.get("_rrf") or 0.0) + 1.0 / (60 + rank)
+    candidates = sorted(merged.values(), key=lambda m: float(m.get("_rrf") or 0.0), reverse=True)[: wide_k]
+    selected = _reflex_mmr(candidates, top_k)
+    for memory in selected:
+        memory.pop("_rrf", None)
+    return {"results": selected, "recall_layer": "reflex-v2"}
+
+
+_RECALL_LLM_CACHE: dict[str, Any] = {"at": 0.0, "value": None}
+
+
+def _pick_local_model(models: list[Any]) -> str | None:
+    names = [str(m) for m in models if m]
+    for preference in ("qwen", "llama", "gemma", "mistral", "phi"):
+        for name in names:
+            if preference in name.lower() and "embed" not in name.lower():
+                return name
+    return names[0] if names else None
+
+
+def _detect_local_llm() -> dict[str, Any] | None:
+    """Attach to a local runtime if one is already running — never install.
+    An absent runtime is a product surface, not an error: deep recall simply
+    stays off until the user brings a local LLM or a hosted plan."""
+    import urllib.request as _urllib
+
+    probes = [
+        ("http://127.0.0.1:11434", "/api/tags", "models", "name", "ollama"),
+        ("http://127.0.0.1:1234", "/v1/models", "data", "id", "lm-studio"),
+    ]
+    for origin, path, list_key, name_key, token in probes:
+        try:
+            with _urllib.urlopen(f"{origin}{path}", timeout=0.5) as response:
+                body = json_loads(response.read().decode("utf-8"), {})
+            model = _pick_local_model([m.get(name_key) for m in body.get(list_key) or []])
+            if model:
+                return {"base_url": f"{origin}/v1", "model": model, "api_key": token, "source": token}
+        except Exception:
+            continue
+    return None
+
+
+def _resolve_recall_llm() -> dict[str, Any] | None:
+    """The recall gears' LLM, resolved down a ladder: env override →
+    stored settings → auto-detected local runtime → None (v1 fallback)."""
+    base_url = os.getenv("MEM1_GATE_BASE_URL", "").rstrip("/")
+    model = os.getenv("MEM1_GATE_MODEL", "")
+    if base_url and model:
+        api_key = os.environ.get(os.getenv("MEM1_GATE_API_KEY_ENV", "MEM1_GATE_API_KEY"), "")
+        if not api_key:
+            key_file = os.getenv("MEM1_GATE_API_KEY_FILE", "")
+            if key_file and os.path.exists(key_file):
+                api_key = open(key_file).read().strip()
+        return {"base_url": base_url, "model": model, "api_key": api_key, "source": "env"}
+    from .providers import get_project_settings
+
+    stored = get_project_settings().get("recall_llm") or {}
+    if stored.get("base_url") and stored.get("model"):
+        api_key = str(stored.get("api_key") or "")
+        key_file = str(stored.get("api_key_file") or "")
+        if not api_key and key_file and os.path.exists(key_file):
+            api_key = open(key_file).read().strip()
+        return {
+            "base_url": str(stored["base_url"]).rstrip("/"),
+            "model": str(stored["model"]),
+            "api_key": api_key,
+            "source": "settings",
+        }
+    now = time.time()
+    if now - float(_RECALL_LLM_CACHE["at"]) < 300:
+        return _RECALL_LLM_CACHE["value"]
+    detected = _detect_local_llm()
+    _RECALL_LLM_CACHE.update({"at": now, "value": detected})
+    return detected
+
+
+def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_k: int = 40, snippet_chars: int = 280, layer: str = "gate-v2") -> dict[str, Any]:
+    """Recall v2 'high' gear: wide hybrid retrieval, then a small LLM reads
+    the candidates and keeps only what the question actually needs.
+
+    The measured prize (2026-08-04, stratified V1 eval): gold sits in ranks
+    7-40 for +7.5pp of questions — a selector's job, not a retriever's.
+    Config via env (experimental): MEM1_GATE_BASE_URL, MEM1_GATE_MODEL,
+    MEM1_GATE_API_KEY_ENV. Any failure degrades to the v1 top-k.
+    """
+    import urllib.request as _urllib
+
+    query = str(payload.get("query") or "").strip()
+    top_k = int(payload.get("top_k") or 10)
+    base = {key: value for key, value in payload.items() if key != "recall"}
+    wide = search_memories({**base, "top_k": wide_k, "recall": "v1"}, project_id)
+    candidates = list(wide.get("results") or [])
+    if len(candidates) <= top_k:
+        return {"results": candidates, "recall_layer": f"{layer}(passthrough)"}
+    llm = _resolve_recall_llm()
+    if not llm:
+        return {"results": candidates[:top_k], "recall_layer": f"{layer}(unconfigured→v1)"}
+    base_url, model, api_key = llm["base_url"], llm["model"], llm["api_key"]
+    numbered = "\n".join(
+        f"[{i}] {str(c.get('memory') or '')[:snippet_chars]}" for i, c in enumerate(candidates)
+    )
+    prompt = (
+        "Question: " + query + "\n\nCandidate memories:\n" + numbered +
+        f"\n\nReturn ONLY a JSON array of up to {top_k} candidate indices that contain "
+        "information needed to answer the question, most useful first. Example: [3,17,0]"
+    )
+    try:
+        request = _urllib.Request(
+            f"{base_url}/chat/completions",
+            data=json_dumps({
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 256,
+                "temperature": 0,
+                "chat_template_kwargs": {"enable_thinking": False},
+            }).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
+        )
+        with _urllib.urlopen(request, timeout=60) as response:
+            body = json_loads(response.read().decode("utf-8"), {})
+            content = str(((body.get("choices") or [{}])[0].get("message") or {}).get("content") or "")
+        match = re.search(r"\[[\d,\s]*\]", content)
+        parsed = json_loads(match.group(0), []) if match else []
+        indices = [i for i in parsed if isinstance(i, int) and 0 <= i < len(candidates)]
+    except Exception:
+        indices = []
+    if not indices:
+        return {"results": candidates[:top_k], "recall_layer": f"{layer}(fallback→v1)"}
+    seen: set[int] = set()
+    ordered = [i for i in indices if not (i in seen or seen.add(i))][:top_k]
+    for i in range(len(candidates)):
+        if len(ordered) >= top_k:
+            break
+        if i not in seen:
+            ordered.append(i)
+            seen.add(i)
+    return {"results": [candidates[i] for i in ordered], "recall_layer": layer}
+
+
 def search_memories(payload: dict[str, Any], project_id: str | None = None) -> dict[str, Any]:
     project_id = payload.get("project_id") or project_id or current_project_id()
+    recall_mode = str(payload.get("recall") or os.getenv("MEM1_RECALL_V2") or "").strip().lower()
+    if not recall_mode:
+        from .providers import get_project_settings
+
+        recall_mode = str(get_project_settings(project_id).get("recall_default") or "").strip().lower()
+    # Dial names are the stable contract (docs/recall-v2.md); mechanisms are
+    # disposable incumbents. Measured 2026-08-04 (stratified V1 eval):
+    # v1 0.892 / gate 0.950 / reader 0.967, ceiling@100 0.992.
+    recall_mode = {"low": "", "medium": "", "high": "gate", "extra": "reader"}.get(recall_mode, recall_mode)
+    if recall_mode == "reflex":
+        return _search_memories_reflex(payload, project_id)
+    if recall_mode == "gate":
+        return _search_memories_gate(payload, project_id)
+    if recall_mode == "reader":
+        # 'extra' gear: one decade up from gate — the LLM reads ~100
+        # candidates at near-full text instead of 40 keyhole snippets.
+        # Measured prize (2026-08-04): gold recall@100 = 0.992 vs @40 0.967.
+        return _search_memories_gate(payload, project_id, wide_k=100, snippet_chars=500, layer="reader-v2")
     started_at = utc_now()
     start_time = time.perf_counter()
     query = str(payload.get("query") or "").strip()
