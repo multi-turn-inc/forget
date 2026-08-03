@@ -138,7 +138,11 @@ def main() -> None:
     rules = {
         "(i) both task_states": ["devloop-self"],
         "(ii) uncommitted mtime vs HEAD": ["mtime"],
-        "(iii) cycle field not tail": ["cycle` 필드", "cycle 필드"],
+        # 사이클 47: 규약 (iii)의 문구가 바뀌자 원래 니들이 거짓 음성을 냈다. 니들을 새 문구에
+        # 맞추면 계측을 텍스트에 맞추는 것이므로, 두 판본 모두에 등장하는 **금지 자체**를 니들로
+        # 삼는다("tail 금지"). c46·c47의 과거 판정(캡슐 0)은 이 확장으로 바뀌지 않는다 —
+        # 그 사이클들에서는 90자 컷 때문에 어느 문구도 캡슐에 닿지 못했다.
+        "(iii) cycle field not tail": ["cycle` 필드", "cycle 필드", "tail 금지"],
     }
     for label, needles in rules.items():
         in_official = any(nd in official for nd in needles)
