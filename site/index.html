@@ -7,6 +7,8 @@
   readable by you, not by us. No account. No telemetry. This page
   sets zero cookies.
 
+  One visit in fifty, the strike doesn't land. Memory wins that day.
+
   https://github.com/multi-turn-inc/forget
 -->
 <html lang="en">
@@ -139,6 +141,9 @@
     font-size: 15px; font-weight: 800; position: relative;
   }
   .brand .mark::after { content: ""; position: absolute; left: 5px; right: 5px; top: 12.5px; height: 2px; background: #fff; border-radius: 2px; }
+  html.lucky .brand .mark::after { display: none; }
+  html.lucky .brand s::after, html.lucky s::after { transform: scaleX(0) !important; }
+  html.lucky .brand s, html.lucky h1 s { text-decoration: none; }
   /* The strikethrough draws itself — the brand performs the product's
      supersede mechanic every time the page loads. */
   .brand s { text-decoration: none; position: relative; }
@@ -1006,6 +1011,14 @@
       form.submit(); // programmatic submit skips listeners — falls back to Formspree's page
     }
   });
+</script>
+<script>
+  // One visit in fifty: the strike doesn't land.
+  if (Math.random() < 0.02) {
+    document.documentElement.classList.add('lucky');
+    var em = document.querySelector('h1 em');
+    if (em) em.textContent = 'Codex never forgot.';
+  }
 </script>
 </body>
 </html>
