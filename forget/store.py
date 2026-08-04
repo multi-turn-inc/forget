@@ -4562,6 +4562,24 @@ def _byo_recall_llm(settings: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+FORGET_CLOUD_BASE_URL = os.getenv("FORGET_CLOUD_BASE_URL", "https://cloud.forget.sh/v1")
+
+
+def _cloud_recall_llm(settings: dict[str, Any]) -> dict[str, Any] | None:
+    """forget cloud — plumbing ahead of the relay. A stored account token
+    makes this rung live the day the endpoint ships; until then its absence
+    is the signup surface, not an error."""
+    token = str(settings.get("recall_cloud_token") or "").strip()
+    if not token:
+        return None
+    return {
+        "base_url": FORGET_CLOUD_BASE_URL,
+        "model": str(settings.get("recall_cloud_model") or "forget-recall-1"),
+        "api_key": token,
+        "source": "cloud",
+    }
+
+
 def _local_recall_llm() -> dict[str, Any] | None:
     now = time.time()
     if now - float(_RECALL_LLM_CACHE["at"]) < 300:
@@ -4588,7 +4606,9 @@ def _resolve_recall_llm() -> dict[str, Any] | None:
         return _local_recall_llm()
     if engine == "byo":
         return _byo_recall_llm(settings)
-    return _local_recall_llm() or _byo_recall_llm(settings)
+    if engine == "cloud":
+        return _cloud_recall_llm(settings)
+    return _local_recall_llm() or _byo_recall_llm(settings) or _cloud_recall_llm(settings)
 
 
 def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_k: int = 40, snippet_chars: int = 280, layer: str = "gate-v2") -> dict[str, Any]:

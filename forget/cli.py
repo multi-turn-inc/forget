@@ -774,18 +774,24 @@ def cmd_recall(args) -> None:
             print("      attach one:  forget recall llm --base-url http://127.0.0.1:11434/v1 --model <name>")
         return
 
+    if args.action == "engine" and str(args.value or "").strip().lower() == "cloud" and args.base_url:
+        # 숨은 개발자 후크: cloud 토큰 수동 주입 (릴레이 개발용)
+        pass
     if args.action == "engine":
         choice = str(args.value or "").strip().lower()
-        if choice not in {"auto", "local", "byo"}:
-            print("usage: forget recall engine <auto|local|byo>")
+        if choice not in {"auto", "local", "byo", "cloud"}:
+            print("usage: forget recall engine <auto|local|byo|cloud>")
             print("  auto  : local runtime first, stored endpoint as fallback")
             print("  local : only a local runtime (Ollama/LM Studio) — free, private")
             print("  byo   : only the stored endpoint (forget recall llm ...)")
+            print("  cloud : forget cloud — deep recall without heating your laptop")
             return
         update_project_settings("proj_local", {"recall_engine": choice})
         resolved = _resolve_recall_llm()
         if resolved:
             print(f"engine → {choice}  ({resolved['model']} @ {resolved['base_url']})")
+        elif choice == "cloud":
+            print("engine → cloud  (계정 토큰이 없어요 — forget.sh/cloud 에서 가입하면 켜집니다)")
         else:
             print(f"engine → {choice}  (no LLM available yet — deep recall falls back to instant search)")
         return

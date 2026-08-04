@@ -24,6 +24,23 @@ GEARS = ["low", "medium", "high", "extra"]
 DB_ENV = {"MEM1_DB_PATH": __import__("os").path.expanduser("~/.forget/forget.sqlite3")}
 
 
+def _set_gear_direct(gear: str) -> None:
+    """클릭 → 반영 ~10ms: 서브프로세스 대신 같은 venv에서 설정 직접 기록."""
+    import os
+
+    os.environ.setdefault("MEM1_DB_PATH", os.path.expanduser("~/.forget/forget.sqlite3"))
+    from forget import db as app_db
+    from pathlib import Path
+
+    app_db.DB_PATH = Path(os.environ["MEM1_DB_PATH"])
+    from forget.db import init_db
+
+    init_db()
+    from forget.providers import update_project_settings
+
+    update_project_settings("proj_local", {"recall_default": gear})
+
+
 def _run(*args: str) -> str:
     import os
 
@@ -76,6 +93,13 @@ class ForgetMenuBar(rumps.App):
         if _ram_gb() < 16:
             # Hardware gate: no local-LLM hint on small machines — cloud only.
             self.menu.add(rumps.MenuItem("forget cloud — 발열 없는 딥 리콜 (준비 중)"))
+        else:
+            self.local_hint = rumps.MenuItem("로컬 LLM 연결 안내 (Ollama)", callback=self._open_local_guide)
+            self.menu.add(self.local_hint)
+
+    def _open_local_guide(self, _sender) -> None:
+        # 설치는 그들의 손으로 — 문만 열어준다 (2026-08-04 결정)
+        subprocess.run(["open", "https://ollama.com/download"])
         self.gear = "low"
         self.frame = 0
         self.anim = rumps.Timer(self._animate, 0.13)
@@ -109,8 +133,18 @@ class ForgetMenuBar(rumps.App):
             self.icon = icon
 
     def _set_gear(self, sender: rumps.MenuItem) -> None:
-        _run("recall", "use", sender.title)
-        self._refresh(None)
+        import os
+
+        try:
+            _set_gear_direct(sender.title)
+        except Exception:
+            _run("recall", "use", sender.title)
+        self.gear = sender.title
+        icon = os.path.join(self.icon_dir, f"gear-{self.gear}.png")
+        if os.path.exists(icon) and not self.anim.is_alive():
+            self.icon = icon
+        for gear, item in self.gear_items.items():
+            item.state = 1 if gear == self.gear else 0
 
     @rumps.timer(60)
     def _refresh(self, _sender) -> None:
