@@ -57,7 +57,11 @@ def _recall_state() -> dict:
 
 class ForgetMenuBar(rumps.App):
     def __init__(self) -> None:
-        super().__init__("forget", title="f₀", quit_button="종료")
+        import os
+
+        self.icon_dir = os.path.expanduser("~/.forget/menubar-icons")
+        super().__init__("forget", icon=os.path.join(self.icon_dir, "gear-low.png"), quit_button="종료")
+        self.template = False
         self.gear_items = {gear: rumps.MenuItem(gear, callback=self._set_gear) for gear in GEARS}
         self.engine_item = rumps.MenuItem("engine: …")
         self.being_item = rumps.MenuItem("…")
@@ -78,8 +82,12 @@ class ForgetMenuBar(rumps.App):
 
     @rumps.timer(60)
     def _refresh(self, _sender) -> None:
+        import os
+
         state = _recall_state()
-        self.title = f"f₀ {state['gear']}"
+        icon_path = os.path.join(self.icon_dir, f"gear-{state['gear']}.png")
+        if os.path.exists(icon_path):
+            self.icon = icon_path
         for gear, item in self.gear_items.items():
             item.state = 1 if gear == state["gear"] else 0
         engine = state["engine"] or "미설정"
