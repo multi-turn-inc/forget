@@ -106,7 +106,8 @@
   document.getElementById("subscribe").addEventListener("click", function () {
     Paddle.Checkout.open({
       items: [{ priceId: "pri_01kz5r9rj5fa8ahsjz6hwq5z3b", quantity: 1 }],
-      settings: { displayMode: "overlay", theme: "light" },
+      settings: { displayMode: "overlay", theme: "light",
+                  successUrl: "https://cloud.forget.sh/activate" },
       eventCallback: function (event) {
         if (event.name === "checkout.completed") {
           var txn = event.data && event.data.transaction_id;

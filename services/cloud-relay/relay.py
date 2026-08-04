@@ -209,9 +209,10 @@ a fresh token is issued and the old one goes quiet.</p>
 
 
 @app.get("/activate")
-def activate(request: Request, txn: str) -> Any:
+def activate(request: Request, txn: str = "", _ptxn: str = "") -> Any:
     """Checkout success lands here: verify the transaction with Paddle
     directly (never trust the query string), then hand out the token."""
+    txn = txn or _ptxn  # Paddle successUrl appends the id as _ptxn
     if not txn.startswith("txn_"):
         raise HTTPException(status_code=400, detail="invalid transaction id")
     transaction = paddle_query_transaction(txn)
