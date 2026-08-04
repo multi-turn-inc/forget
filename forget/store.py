@@ -4662,20 +4662,40 @@ def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_
     _RECALL_ACTIVITY["active"] += 1
     _RECALL_ACTIVITY["last_started"] = time.time()
     try:
-        request = _urllib.Request(
-            f"{base_url}/chat/completions",
-            data=json_dumps({
-                "model": model,
-                "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 256,
-                "temperature": 0,
-                "chat_template_kwargs": {"enable_thinking": False},
-            }).encode("utf-8"),
-            headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
-        )
-        with _urllib.urlopen(request, timeout=60) as response:
-            body = json_loads(response.read().decode("utf-8"), {})
-            content = str(((body.get("choices") or [{}])[0].get("message") or {}).get("content") or "")
+        if "/v1" in base_url and ":11434" in base_url:
+            # Ollama ignores chat_template_kwargs on its OpenAI facade — the
+            # model then thinks itself past max_tokens and the plan dies
+            # (tier-cert 2026-08-04: 120/120 fallback, 29.6s median). Its
+            # native API has a first-class switch: think=false.
+            request = _urllib.Request(
+                base_url.replace("/v1", "/api/chat"),
+                data=json_dumps({
+                    "model": model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "stream": False,
+                    "think": False,
+                    "options": {"num_predict": 256, "temperature": 0},
+                }).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+            with _urllib.urlopen(request, timeout=120) as response:
+                body = json_loads(response.read().decode("utf-8"), {})
+                content = str((body.get("message") or {}).get("content") or "")
+        else:
+            request = _urllib.Request(
+                f"{base_url}/chat/completions",
+                data=json_dumps({
+                    "model": model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": 256,
+                    "temperature": 0,
+                    "chat_template_kwargs": {"enable_thinking": False},
+                }).encode("utf-8"),
+                headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
+            )
+            with _urllib.urlopen(request, timeout=60) as response:
+                body = json_loads(response.read().decode("utf-8"), {})
+                content = str(((body.get("choices") or [{}])[0].get("message") or {}).get("content") or "")
         match = re.search(r"\[[\d,\s]*\]", content)
         parsed = json_loads(match.group(0), []) if match else []
         indices = [i for i in parsed if isinstance(i, int) and 0 <= i < len(candidates)]
