@@ -45,6 +45,9 @@ UPSTREAM = os.getenv("FORGET_RELAY_UPSTREAM", "https://api.deepinfra.com/v1/open
 UPSTREAM_MODEL = os.getenv("FORGET_RELAY_UPSTREAM_MODEL", "Qwen/Qwen3.5-9B")
 DB_PATH = Path(os.getenv("FORGET_RELAY_DB", "~/.forget/cloud-relay.sqlite3")).expanduser()
 MONTHLY_CALL_CAP = int(os.getenv("FORGET_RELAY_MONTHLY_CAP", "2000"))
+# forget cloud Pro (2026-08-04 생성, 정훈 반환 ②) — 결제 ID는 공개값이라 기본값으로 박음
+PRO_PRICE_ID = os.getenv("FORGET_RELAY_PRICE_ID", "pri_01kz5r9rj5fa8ahsjz6hwq5z3b")
+PRO_PRODUCT_ID = os.getenv("FORGET_RELAY_PRODUCT_ID", "pro_01kz5r87rh4qq9zggk2xah4jk5")
 
 app = FastAPI(title="forget-cloud-relay", docs_url=None, redoc_url=None)
 
@@ -122,6 +125,20 @@ def paddle_query_transaction(transaction_id: str) -> dict[str, Any]:
         return json.loads(response.read()).get("data") or {}
 
 
+def _transaction_buys_pro(transaction: dict[str, Any]) -> bool:
+    """/activate는 '완료된 아무 결제'가 아니라 '우리 Pro를 산 결제'만 믿는다."""
+    for item in transaction.get("items") or []:
+        price = item.get("price") or {}
+        if str(price.get("id") or "") == PRO_PRICE_ID:
+            return True
+        if str(price.get("product_id") or "") == PRO_PRODUCT_ID:
+            return True
+    for line in (transaction.get("details") or {}).get("line_items") or []:
+        if str(line.get("price_id") or "") == PRO_PRICE_ID:
+            return True
+    return False
+
+
 def _issue_token(subscription_id: str, transaction_id: str) -> str:
     """One live token per subscription — re-activation rotates rather than
     recovers (we only store hashes; there is nothing to recover)."""
@@ -171,6 +188,8 @@ def activate(txn: str) -> dict[str, Any]:
     transaction = paddle_query_transaction(txn)
     if str(transaction.get("status") or "") not in {"completed", "paid"}:
         raise HTTPException(status_code=402, detail=f"transaction not completed ({transaction.get('status')})")
+    if not _transaction_buys_pro(transaction):
+        raise HTTPException(status_code=403, detail="transaction is not a forget cloud Pro purchase")
     subscription_id = str(transaction.get("subscription_id") or txn)
     token = _issue_token(subscription_id, txn)
     return {

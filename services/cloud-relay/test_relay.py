@@ -68,6 +68,13 @@ def test_reissue_rotates_previous_token() -> None:
     assert first_status == "rotated" and second_status == "active"
 
 
+def test_activate_requires_pro_purchase() -> None:
+    assert relay._transaction_buys_pro({"items": [{"price": {"id": relay.PRO_PRICE_ID}}]})
+    assert relay._transaction_buys_pro({"details": {"line_items": [{"price_id": relay.PRO_PRICE_ID}]}})
+    assert not relay._transaction_buys_pro({"items": [{"price": {"id": "pri_other"}}]})
+    assert not relay._transaction_buys_pro({})
+
+
 def test_auth_unknown_token_401() -> None:
     response = client.post(
         "/v1/chat/completions",
