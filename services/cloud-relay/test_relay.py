@@ -84,6 +84,26 @@ def test_auth_unknown_token_401() -> None:
     assert response.status_code == 401
 
 
+def test_usage_reports_even_when_capped_or_canceled() -> None:
+    token = relay._issue_token("sub_test4", "txn_c")
+    with relay._db() as conn:
+        conn.executemany(
+            "INSERT INTO usage VALUES (?, ?, ?, ?)",
+            [(relay._hash(token), time.time(), 100, 5)] * 3,
+        )
+    report = client.get("/v1/usage", headers={"Authorization": f"Bearer {token}"}).json()
+    assert report["used"] == 3 and report["remaining"] == 0 and report["cap"] == 3
+    assert report["prompt_tokens"] == 300 and report["completion_tokens"] == 15
+
+    with relay._db() as conn:
+        conn.execute("UPDATE tokens SET status='canceled' WHERE token_hash = ?", (relay._hash(token),))
+    canceled = client.get("/v1/usage", headers={"Authorization": f"Bearer {token}"})
+    assert canceled.status_code == 200 and canceled.json()["status"] == "canceled"
+
+    unknown = client.get("/v1/usage", headers={"Authorization": "Bearer fgc_nope"})
+    assert unknown.status_code == 401
+
+
 def test_monthly_cap_429_and_metering(monkeypatch) -> None:
     token = relay._issue_token("sub_test3", "txn_b")
 

@@ -94,9 +94,9 @@
     </dl>
   </section>
   <div style="padding:0 0 48px; font-size:13.5px; color:var(--muted);">
-    <a href="/terms.html" style="margin-right:14px;">Terms</a>
-    <a href="/privacy.html" style="margin-right:14px;">Privacy</a>
-    <a href="/refunds.html" style="margin-right:14px;">Refunds</a>
+    <a href="/terms" style="margin-right:14px;">Terms</a>
+    <a href="/privacy" style="margin-right:14px;">Privacy</a>
+    <a href="/refunds" style="margin-right:14px;">Refunds</a>
     <a href="mailto:hello@forget.sh">hello@forget.sh</a>
   </div>
 </div>
@@ -106,7 +106,8 @@
   document.getElementById("subscribe").addEventListener("click", function () {
     Paddle.Checkout.open({
       items: [{ priceId: "pri_01kz5r9rj5fa8ahsjz6hwq5z3b", quantity: 1 }],
-      settings: { displayMode: "overlay", theme: "light" },
+      settings: { displayMode: "overlay", theme: "light",
+                  successUrl: "https://cloud.forget.sh/activate" },
       eventCallback: function (event) {
         if (event.name === "checkout.completed") {
           var txn = event.data && event.data.transaction_id;

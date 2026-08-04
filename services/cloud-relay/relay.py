@@ -209,9 +209,10 @@ a fresh token is issued and the old one goes quiet.</p>
 
 
 @app.get("/activate")
-def activate(request: Request, txn: str) -> Any:
+def activate(request: Request, txn: str = "", _ptxn: str = "") -> Any:
     """Checkout success lands here: verify the transaction with Paddle
     directly (never trust the query string), then hand out the token."""
+    txn = txn or _ptxn  # Paddle successUrl appends the id as _ptxn
     if not txn.startswith("txn_"):
         raise HTTPException(status_code=400, detail="invalid transaction id")
     transaction = paddle_query_transaction(txn)
@@ -227,6 +228,36 @@ def activate(request: Request, txn: str) -> Any:
         "token": token,
         "next": "forget recall cloud-token <token>",
         "note": "shown once — revisiting reissues and quiets the old token",
+    }
+
+
+@app.get("/v1/usage")
+def usage_report(request: Request) -> dict[str, Any]:
+    """The account's own window into its meter. Unlike _authorize, this
+    answers even when the cap is hit or the subscription is canceled —
+    seeing *why* recall went quiet is part of the product."""
+    token = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+    with _db() as conn:
+        row = conn.execute(
+            "SELECT plan, status FROM tokens WHERE token_hash = ?", (_hash(token),)
+        ).fetchone()
+        if row is None:
+            raise HTTPException(status_code=401, detail="unknown forget cloud token — forget.sh/cloud")
+        month_start = time.time() - 30 * 86400
+        calls, prompt_tokens, completion_tokens = conn.execute(
+            "SELECT COUNT(*), COALESCE(SUM(prompt_tokens), 0), COALESCE(SUM(completion_tokens), 0)"
+            " FROM usage WHERE token_hash = ? AND at > ?",
+            (_hash(token), month_start),
+        ).fetchone()
+    return {
+        "plan": row["plan"],
+        "status": row["status"],
+        "cap": MONTHLY_CALL_CAP,
+        "used": calls,
+        "remaining": max(0, MONTHLY_CALL_CAP - calls),
+        "window_days": 30,
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
     }
 
 
