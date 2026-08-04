@@ -841,13 +841,14 @@ def cmd_recall(args) -> None:
             print("deep recall   : ready — high (~3s, reads 40 candidates) / extra (~5s, reads 100)")
     else:
         print(f"engine        : {engine} → none")
+    if llm is None:
+        print("deep recall   : off — instant search only. Two ways to turn it on:")
+        print("  · run a local LLM (Ollama or LM Studio) — free, forget attaches automatically")
+        print("  · or use forget cloud — deep recall without heating your laptop (coming soon)")
     if llm is None or llm.get("source") not in ("ollama", "lm-studio"):
         ram = _ram_gb()
         if ram:
             print(f"local 추천    : 이 머신(RAM {ram}GB) → {_local_tier(ram)}  (추천일 뿐 — 상한 없음)")
-        print("deep recall   : off — instant search only. Two ways to turn it on:")
-        print("  · run a local LLM (Ollama or LM Studio) — free, forget attaches automatically")
-        print("  · or use forget cloud — deep recall without heating your laptop (coming soon)")
 
 
 def main(argv: list[str] | None = None) -> None:
