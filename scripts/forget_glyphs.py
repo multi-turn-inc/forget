@@ -39,7 +39,7 @@ def _erase(image: Image.Image, points: list[tuple[float, float, float]], gap: fl
     image.putalpha(alpha)
 
 
-def draw_gear(lobes: int) -> Image.Image:
+def draw_gear(lobes: int, phase: float = 0.0) -> Image.Image:
     width, height = W * SCALE, H * SCALE
     image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     center = height / 2
@@ -57,13 +57,13 @@ def draw_gear(lobes: int) -> Image.Image:
         for i in range(samples + 1):
             u = i / samples
             x = margin + span * u
-            phase = math.pi * lobes * u
+            theta = math.pi * lobes * u + phase
             envelope = math.sin(math.pi * u) ** 0.32 if lobes else 0.0
             # 유기적 비대칭: 마디마다 진폭이 미세하게 다름
             wobble = 1.0 + 0.10 * math.sin(2.1 * math.pi * u + sign * 0.7)
-            y = center + sign * amplitude_max * envelope * wobble * math.sin(phase)
+            y = center + sign * amplitude_max * envelope * wobble * math.sin(theta)
             if lobes:
-                belly = abs(math.sin(phase)) ** 0.9
+                belly = abs(math.sin(theta)) ** 0.9
                 # 교차점에서도 실이 살아 있어야 땋임이 읽힌다 — 최소 굵기 65%
                 radius = base_radius * (0.65 + 0.35 * belly * envelope)
             else:
@@ -80,16 +80,39 @@ def draw_gear(lobes: int) -> Image.Image:
         return image.resize((W, H), Image.LANCZOS)
 
     strand_a, strand_b = path(1), path(-1)
-    # 마디 경계 = 꼭대기(apex). 그래야 각 내부 마디가 교차점을 '한가운데로
-    # 관통'하고, over/under가 실제 땋임으로 읽힌다.
-    apexes = [int((k + 0.5) * samples / lobes) for k in range(lobes)]
-    bounds = [0, *apexes, samples]
+    # 마디 경계 = 꼭대기(apex), 교차점은 마디 한가운데 — 둘 다 위상에서
+    # 동적으로 푼다 (θ = πku + φ; apex: θ≡π/2, crossing: θ≡0 (mod π)).
+    def u_solutions(offset: float) -> list[float]:
+        out = []
+        n = math.floor(phase / math.pi) - 1
+        while True:
+            u = (offset + n * math.pi - phase) / (math.pi * lobes)
+            if u >= 1:
+                break
+            if 0 < u < 1:
+                out.append(u)
+            n += 1
+        return out
+
+    apex_us = u_solutions(math.pi / 2)
+    bounds = [0, *[int(u * samples) for u in apex_us], samples]
+    def crossing_parity(lo: int, hi: int) -> int | None:
+        mid_u_lo, mid_u_hi = lo / samples, hi / samples
+        n = math.floor(phase / math.pi) - 1
+        while True:
+            u = (n * math.pi - phase) / (math.pi * lobes)
+            if u >= mid_u_hi:
+                return None
+            if mid_u_lo < u < mid_u_hi:
+                return n % 2
+            n += 1
+
     segments = []  # (points, is_over)
     for k in range(len(bounds) - 1):
         lo, hi = bounds[k], bounds[k + 1] + 1
-        # 내부 마디 k(1..lobes-1)는 교차점 k를 품는다: 홀수 교차점은 A가 위
-        a_over = 1 <= k <= lobes - 1 and k % 2 == 1
-        b_over = 1 <= k <= lobes - 1 and k % 2 == 0
+        parity = crossing_parity(bounds[k], bounds[k + 1])
+        a_over = parity == 1
+        b_over = parity == 0
         segments.append((strand_a[lo:hi], a_over))
         segments.append((strand_b[lo:hi], b_over))
 
@@ -120,6 +143,9 @@ def draw_gear(lobes: int) -> Image.Image:
     return image.resize((W, H), Image.LANCZOS)
 
 
+FRAMES = 6
+
+
 def main() -> None:
     out_dir = os.path.expanduser("~/.forget/menubar-icons")
     os.makedirs(out_dir, exist_ok=True)
@@ -127,6 +153,11 @@ def main() -> None:
         path = os.path.join(out_dir, f"gear-{gear}.png")
         draw_gear(lobes).save(path)
         print(path)
+        if lobes:
+            # 동작 중 애니메이션: 위상이 흘러 실이 감기는 6프레임
+            for j in range(FRAMES):
+                frame = draw_gear(lobes, phase=math.pi * j / FRAMES)
+                frame.save(os.path.join(out_dir, f"gear-{gear}-f{j}.png"))
 
 
 if __name__ == "__main__":

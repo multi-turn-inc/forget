@@ -12,8 +12,10 @@ Run:  ~/.forget/venv/bin/python scripts/forget_menubar.py &
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
+import urllib.request
 
 import rumps
 
@@ -74,7 +76,37 @@ class ForgetMenuBar(rumps.App):
         if _ram_gb() < 16:
             # Hardware gate: no local-LLM hint on small machines — cloud only.
             self.menu.add(rumps.MenuItem("forget cloud — 발열 없는 딥 리콜 (준비 중)"))
+        self.gear = "low"
+        self.frame = 0
+        self.anim = rumps.Timer(self._animate, 0.13)
         self._refresh(None)
+
+    @rumps.timer(1)
+    def _poll_activity(self, _sender) -> None:
+        """기억을 감는 동안만 실이 돈다 — 쉬는 실은 멈춰 있다."""
+        import os
+
+        try:
+            with urllib.request.urlopen("http://127.0.0.1:8000/v3/recall/activity", timeout=0.4) as response:
+                active = json.loads(response.read()).get("active", 0) > 0
+        except Exception:
+            active = False
+        if active and not self.anim.is_alive():
+            self.anim.start()
+        elif not active and self.anim.is_alive():
+            self.anim.stop()
+            icon = os.path.join(self.icon_dir, f"gear-{self.gear}.png")
+            if os.path.exists(icon):
+                self.icon = icon
+
+    def _animate(self, _sender) -> None:
+        import os
+
+        gear = self.gear if self.gear != "low" else "high"
+        self.frame = (self.frame + 1) % 6
+        icon = os.path.join(self.icon_dir, f"gear-{gear}-f{self.frame}.png")
+        if os.path.exists(icon):
+            self.icon = icon
 
     def _set_gear(self, sender: rumps.MenuItem) -> None:
         _run("recall", "use", sender.title)
@@ -85,9 +117,11 @@ class ForgetMenuBar(rumps.App):
         import os
 
         state = _recall_state()
-        icon_path = os.path.join(self.icon_dir, f"gear-{state['gear']}.png")
-        if os.path.exists(icon_path):
-            self.icon = icon_path
+        self.gear = state["gear"]
+        if not self.anim.is_alive():
+            icon_path = os.path.join(self.icon_dir, f"gear-{state['gear']}.png")
+            if os.path.exists(icon_path):
+                self.icon = icon_path
         for gear, item in self.gear_items.items():
             item.state = 1 if gear == state["gear"] else 0
         engine = state["engine"] or "미설정"

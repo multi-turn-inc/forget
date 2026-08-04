@@ -4467,6 +4467,11 @@ def _search_memories_reflex(payload: dict[str, Any], project_id: str | None) -> 
 
 
 _RECALL_LLM_CACHE: dict[str, Any] = {"at": 0.0, "value": None}
+_RECALL_ACTIVITY: dict[str, Any] = {"active": 0, "last_started": 0.0}
+
+
+def recall_activity() -> dict[str, Any]:
+    return {"active": int(_RECALL_ACTIVITY["active"]), "last_started": float(_RECALL_ACTIVITY["last_started"])}
 
 
 def _pick_local_model(models: list[Any]) -> str | None:
@@ -4625,6 +4630,8 @@ def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_
         f"\n\nReturn ONLY a JSON array of up to {top_k} candidate indices that contain "
         "information needed to answer the question, most useful first. Example: [3,17,0]"
     )
+    _RECALL_ACTIVITY["active"] += 1
+    _RECALL_ACTIVITY["last_started"] = time.time()
     try:
         request = _urllib.Request(
             f"{base_url}/chat/completions",
@@ -4645,6 +4652,8 @@ def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_
         indices = [i for i in parsed if isinstance(i, int) and 0 <= i < len(candidates)]
     except Exception:
         indices = []
+    finally:
+        _RECALL_ACTIVITY["active"] = max(0, int(_RECALL_ACTIVITY["active"]) - 1)
     if not indices:
         return {"results": candidates[:top_k], "recall_layer": f"{layer}(fallback→v1)"}
     seen: set[int] = set()

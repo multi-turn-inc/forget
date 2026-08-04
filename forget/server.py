@@ -347,6 +347,13 @@ def memories_list_v3(payload: dict[str, Any], page: int = 1, page_size: int = 10
     return {**result, "results": [_public_memory(item) for item in result.get("results", [])]}
 
 
+@app.get("/v3/recall/activity", dependencies=[Depends(auth)])
+def recall_activity_view() -> dict[str, Any]:
+    from .store import recall_activity
+
+    return recall_activity()
+
+
 @app.post("/v3/memories/search/", dependencies=[Depends(auth)])
 def memories_search_v3(payload: dict[str, Any]) -> Any:
     top_level_entities = [field for field in ENTITY_FIELDS if field in payload]
