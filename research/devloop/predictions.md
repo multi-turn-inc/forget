@@ -301,8 +301,18 @@ P1의 정당한 원기한을 승계한 것이므로 선적용 아님.
   env-only 시절엔 이들도 폴백 가중이었다 / fastembed 부재 폴백). pytest 279 통과.
   conftest의 `MEM1_EMBEDDING_PROVIDER=local` 핀이 explicit-pin 분기라 기존 테스트
   결정성 불변. **시계는 여전히 미시작** — 설치본(~/.forget) 배선 + sha256 확인
-  시점부터 +5사이클(유령 게이트 방지 규약 유지). 처치 1(health 선언)·처치 3(차원
-  거부)은 미착수 — 별도 사이클.
+  시점부터 +5사이클(유령 게이트 방지 규약 유지). 처치 3(차원 거부)은 미착수 — 별도 사이클.
+- 진행 2: **처치 1 코드 구현 완료 (사이클 54 커밋)** — `provider_health_payload`가
+  catalog(provider_runtime.py:782-784)와 동일 패턴으로 `effective_embedding_stack(project_id)`를
+  `payload["effective"]`에 병기. 수용 기준 ① 코드 충족(라이브 판정은 배선 후: 배선 전
+  라이브 health는 여전히 deterministic-128 선언 — c43 증거 그대로). 이웃 검사: 호출처
+  preflight.py:72(`ready`만 읽음)·mcp.py:1192(전문 반환) 2곳뿐, 키 추가 비파괴.
+  effective 판정의 get_project_settings 직독은 health 1콜당 1회(관측 엔드포인트,
+  per-row 루프 아님 — c53 회귀 유형 비해당). schema_version은 catalog 전례(effective
+  추가 시 미범프)를 따라 유지. 단위테스트 3종 `tests/test_provider_health.py`
+  (semantic-by-default 공시 / health·catalog effective 동일 — c43이 잡은 분기 그 자체를
+  회귀로 고정 / explicit pin 공시). pytest 282 통과. 배선은 처치 2와 동일 게이트
+  (설치본 갱신+서버 재시작)에 합류 — 선언 채널만이라 순위 실변경은 없으나 같은 재시작을 탄다.
 
 ### (d) 결과란 — 판정 완료 (사이클 44, 2026-08-04, `scripts/score_weight_regimes.py`)
 
