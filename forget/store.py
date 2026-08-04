@@ -4622,12 +4622,10 @@ def _resolve_recall_llm() -> dict[str, Any] | None:
 
 def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_k: int = 40, snippet_chars: int = 280, layer: str = "gate-v2") -> dict[str, Any]:
     """Recall v2 'high' gear: wide hybrid retrieval, then a small LLM reads
-    the candidates and keeps only what the question actually needs.
-
-    The measured prize (2026-08-04, stratified V1 eval): gold sits in ranks
-    7-40 for +7.5pp of questions — a selector's job, not a retriever's.
-    Config via env (experimental): MEM1_GATE_BASE_URL, MEM1_GATE_MODEL,
-    MEM1_GATE_API_KEY_ENV. Any failure degrades to the v1 top-k.
+    the candidates and keeps only what the question actually needs —
+    a selector's job, not a retriever's. Config via env (experimental):
+    MEM1_GATE_BASE_URL, MEM1_GATE_MODEL, MEM1_GATE_API_KEY_ENV. Any
+    failure degrades to the v1 top-k.
     """
     import urllib.request as _urllib
 
@@ -4663,10 +4661,9 @@ def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_
     _RECALL_ACTIVITY["last_started"] = time.time()
     try:
         if "/v1" in base_url and ":11434" in base_url:
-            # Ollama ignores chat_template_kwargs on its OpenAI facade — the
-            # model then thinks itself past max_tokens and the plan dies
-            # (tier-cert 2026-08-04: 120/120 fallback, 29.6s median). Its
-            # native API has a first-class switch: think=false.
+            # Ollama ignores chat_template_kwargs on its OpenAI facade —
+            # the model then thinks itself past the token cap and the plan
+            # dies. Its native API has a first-class switch: think=false.
             request = _urllib.Request(
                 base_url.replace("/v1", "/api/chat"),
                 data=json_dumps({
@@ -4723,9 +4720,8 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
         from .providers import get_project_settings
 
         recall_mode = str(get_project_settings(project_id).get("recall_default") or "").strip().lower()
-    # Dial names are the stable contract (docs/recall-v2.md); mechanisms are
-    # disposable incumbents. Measured 2026-08-04 (stratified V1 eval):
-    # v1 0.892 / gate 0.950 / reader 0.967, ceiling@100 0.992.
+    # Dial names are the stable contract; mechanisms are disposable
+    # incumbents, re-seated whenever the harness crowns a better one.
     recall_mode = {"low": "", "medium": "", "high": "gate", "extra": "reader"}.get(recall_mode, recall_mode)
     if recall_mode == "reflex":
         return _search_memories_reflex(payload, project_id)

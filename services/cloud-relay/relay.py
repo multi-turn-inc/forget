@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """forget cloud relay — deep recall without heating your laptop.
 
-The certification (2026-08-04) said it plainly: hosted BF16 wins on both
-quality (0.950 vs local q4 0.908) and speed (2.5s vs 20s). This relay is
-that advantage productized. Billing rides the Paddle account inherited
-from Mem1 — forget.sh's predecessor — whose KYB and live transactions
-already cleared; the webhook signature scheme is ported from its
-battle-tested billing.py.
+Serves deep recall on the model our published benchmark certifies,
+metered per account. Billing rides the Paddle account inherited from
+Mem1 — forget.sh's predecessor — with its battle-tested webhook
+signature scheme.
 
 The privacy contract, in code:
   * memory candidates PASS THROUGH — request and response bodies are never
