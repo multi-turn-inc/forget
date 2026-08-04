@@ -24,6 +24,16 @@ GEARS = ["low", "medium", "high", "extra"]
 DB_ENV = {"MEM1_DB_PATH": __import__("os").path.expanduser("~/.forget/forget.sqlite3")}
 
 
+def _read_gear_direct() -> str:
+    """설정의 현재 기어를 직접 읽기 (~1ms) — 1초 폴링용."""
+    import os
+
+    os.environ.setdefault("MEM1_DB_PATH", os.path.expanduser("~/.forget/forget.sqlite3"))
+    from forget.providers import get_project_settings
+
+    return str(get_project_settings("proj_local").get("recall_default") or "low")
+
+
 def _set_gear_direct(gear: str) -> None:
     """클릭 → 반영 ~10ms: 서브프로세스 대신 같은 venv에서 설정 직접 기록."""
     import os
@@ -131,6 +141,19 @@ class ForgetMenuBar(rumps.App):
                 active = json.loads(response.read()).get("active", 0) > 0
         except Exception:
             active = False
+        # 외부 변경(CLI·다른 세션) 동기화: 기어가 바뀌었으면 1초 안에 실이 바뀐다
+        try:
+            gear_now = _read_gear_direct()
+            if gear_now != self.gear:
+                self.gear = gear_now
+                for gear, item in self.gear_items.items():
+                    item.state = 1 if gear == gear_now else 0
+                if not self.anim.is_alive():
+                    icon = os.path.join(self.icon_dir, f"gear-{gear_now}.png")
+                    if os.path.exists(icon):
+                        self._set_icon(icon)
+        except Exception:
+            pass
         if active and not self.anim.is_alive():
             self.anim.start()
         elif not active and self.anim.is_alive():
