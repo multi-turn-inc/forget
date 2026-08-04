@@ -42,6 +42,27 @@ def call(name: str, arguments: dict) -> dict:
     return json.loads(body["result"]["content"][0]["text"])
 
 
+def part_n() -> None:
+    """c52 재배선(F-절차0 처치): 사이클 번호 N을 이 스크립트가 인쇄한다.
+
+    근본 원인(c52 발견): 지시서 절차 0의 문면("metrics.jsonl 마지막 줄에서 N = 마지막+1")이
+    tail류 접근을 사실상 지시하고, 'cycle 필드만·tail 금지' 규약은 그림자 채널에만 있어
+    문면과 충돌한다 — '알고도' 위반 4연속(c49~c52)의 기전. 금지문 대신 물리 경로를 바꾼다:
+    이미 의무인 영토 검사가 번호를 함께 배달하면 metrics.jsonl을 열 동기 자체가 사라진다.
+    번호는 cycle 필드의 max+1 — 마지막 줄이 아니라 전체 파싱(순서 오염에도 안전).
+    """
+    cycles = []
+    with open(os.path.join(REPO, "research", "devloop", "metrics.jsonl"), encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if line:
+                cycles.append(int(json.loads(line)["cycle"]))
+    n = max(cycles) + 1
+    mode = "적대 감사" if n % 10 == 0 else ("회고" if n % 5 == 0 else "일반")
+    print(f"[N. 사이클 번호 — cycle 필드 max+1]")
+    print(f"  last_cycle={max(cycles)}  N={n}  mode={mode} (N%10={n % 10}, N%5={n % 5})")
+
+
 def part_a() -> None:
     print("[A. 규약 (ii) — 구현 의존성]")
     dotgit = os.path.join(REPO, ".git")
@@ -113,5 +134,6 @@ def part_b() -> None:
 
 
 if __name__ == "__main__":
+    part_n()
     part_a()
     part_b()
