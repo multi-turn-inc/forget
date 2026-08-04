@@ -808,6 +808,27 @@ def cmd_recall(args) -> None:
     settings = get_project_settings("proj_local")
     gear = settings.get("recall_default") or "low"
     engine = settings.get("recall_engine") or "auto"
+
+    def _ram_gb() -> int:
+        try:
+            import subprocess
+            if sys.platform == "darwin":
+                return int(subprocess.check_output(["sysctl", "-n", "hw.memsize"])) // (1 << 30)
+            with open("/proc/meminfo") as f:
+                return int(f.readline().split()[1]) // (1 << 20)
+        except Exception:
+            return 0
+
+    def _local_tier(ram: int) -> str:
+        if ram >= 64:
+            return "26~32B (클라우드 초과 품질)"
+        if ram >= 32:
+            return "14B"
+        if ram >= 16:
+            return "8~9B (현 클라우드와 동급)"
+        if ram >= 8:
+            return "3~4B — 또는 forget cloud (발열 없이 최고 품질)"
+        return "forget cloud 권장"
     llm = _resolve_recall_llm()
     print(f"dial          : {_dial_line(str(gear))}")
     if llm:
@@ -820,6 +841,10 @@ def cmd_recall(args) -> None:
             print("deep recall   : ready — high (~3s, reads 40 candidates) / extra (~5s, reads 100)")
     else:
         print(f"engine        : {engine} → none")
+    if llm is None or llm.get("source") not in ("ollama", "lm-studio"):
+        ram = _ram_gb()
+        if ram:
+            print(f"local 추천    : 이 머신(RAM {ram}GB) → {_local_tier(ram)}  (추천일 뿐 — 상한 없음)")
         print("deep recall   : off — instant search only. Two ways to turn it on:")
         print("  · run a local LLM (Ollama or LM Studio) — free, forget attaches automatically")
         print("  · or use forget cloud — deep recall without heating your laptop (coming soon)")
