@@ -102,7 +102,38 @@ def set_current_auth_context(context: dict[str, Any]) -> None:
     CURRENT_AUTH_CONTEXT.set(context)
 
 
+_ROW_CACHE: dict[tuple[str, str, bool], dict[str, Any]] = {}
+
+
 def row_to_memory(row: Any, include_entities: bool = True, score: float | None = None) -> dict[str, Any]:
+    """Row deserialization is pure in (id, updated_at) — JSON parsing and
+    embedding decode dominated the M5 latency profile, so cache per row
+    version and hand out shallow copies (embedding vectors are shared
+    read-only)."""
+    cache_key = (str(row["id"]), str(row["updated_at"]), include_entities)
+    cached = _ROW_CACHE.get(cache_key)
+    if cached is not None and ("embedding" not in row.keys() or "_embedding" in cached):
+        item = dict(cached)
+        item["metadata"] = dict(cached["metadata"])
+        item["categories"] = list(cached["categories"])
+        if "embedding" not in row.keys():
+            item.pop("_embedding", None)
+        if score is not None:
+            item["score"] = score
+        return item
+    item = _row_to_memory_fresh(row, include_entities)
+    if len(_ROW_CACHE) > 20000:
+        _ROW_CACHE.clear()
+    _ROW_CACHE[cache_key] = item
+    copy = dict(item)
+    copy["metadata"] = dict(item["metadata"])
+    copy["categories"] = list(item["categories"])
+    if score is not None:
+        copy["score"] = score
+    return copy
+
+
+def _row_to_memory_fresh(row: Any, include_entities: bool = True) -> dict[str, Any]:
     metadata = json_loads(row["metadata"], {})
     item = {
         "id": row["id"],
@@ -125,8 +156,6 @@ def row_to_memory(row: Any, include_entities: bool = True, score: float | None =
                 "hash": row["hash"],
             }
         )
-    if score is not None:
-        item["score"] = score
     if "embedding" in row.keys():
         item["_embedding"] = decode_embedding(row["embedding"])
     return item
@@ -3898,7 +3927,28 @@ def link_memory_entities(memory_id: str, text: str, project_id: str, conn: Any |
         return _write_memory_entities(db, memory_id, project_id, entities, now)
 
 
+_ALIAS_MAP_CACHE: dict[str, tuple[tuple[int, int], dict[str, dict[str, Any]]]] = {}
+
+
 def _entity_alias_map(project_id: str, conn: Any | None = None) -> dict[str, dict[str, Any]]:
+    if conn is None:
+        # Read path: alias tables change rarely — epoch-cache the built map.
+        with get_db() as db:
+            probe = db.execute(
+                "SELECT COUNT(*), COALESCE(MAX(rowid), 0) FROM entity_aliases WHERE project_id = ?",
+                (project_id,),
+            ).fetchone()
+        epoch = (probe[0], probe[1])
+        cached = _ALIAS_MAP_CACHE.get(project_id)
+        if cached is not None and cached[0] == epoch:
+            return cached[1]
+        built = _entity_alias_map_fresh(project_id)
+        _ALIAS_MAP_CACHE[project_id] = (epoch, built)
+        return built
+    return _entity_alias_map_fresh(project_id, conn)
+
+
+def _entity_alias_map_fresh(project_id: str, conn: Any | None = None) -> dict[str, dict[str, Any]]:
     if conn is not None:
         rows = conn.execute(
             "SELECT * FROM entity_aliases WHERE project_id = ?",
@@ -4139,24 +4189,54 @@ def feedback_is_negative(feedback: dict[str, Any] | None) -> bool:
     return str((feedback or {}).get("feedback") or "").upper() in {"NEGATIVE", "VERY_NEGATIVE"}
 
 
+_ENTITY_MAP_CACHE: dict[str, tuple[tuple[int, int, int, int], dict[str, set[str]]]] = {}
+
+
+def _entity_tables_epoch(project_id: str) -> tuple[int, int, int, int]:
+    with get_db() as conn:
+        entities = conn.execute(
+            "SELECT COUNT(*), COALESCE(MAX(rowid), 0) FROM memory_entities WHERE project_id = ?",
+            (project_id,),
+        ).fetchone()
+        aliases = conn.execute(
+            "SELECT COUNT(*), COALESCE(MAX(rowid), 0) FROM entity_aliases WHERE project_id = ?",
+            (project_id,),
+        ).fetchone()
+    return (entities[0], entities[1], aliases[0], aliases[1])
+
+
 def memory_entity_map(
     project_id: str,
     feedbacks: dict[str, dict[str, Any]] | None = None,
     suppress_negative: bool = False,
 ) -> dict[str, set[str]]:
-    aliases = _entity_alias_map(project_id)
-    with get_db() as conn:
-        rows = conn.execute(
-            "SELECT memory_id, normalized_entity FROM memory_entities WHERE project_id = ?",
-            (project_id,),
-        ).fetchall()
-    mapping: dict[str, set[str]] = {}
+    """Rebuilding this map was 42% of search latency (M5 profile). The
+    canonicalized pairs only change when entities/aliases change — probe a
+    cheap epoch and reuse; the per-call feedback filter stays live."""
+    epoch = _entity_tables_epoch(project_id)
+    cached = _ENTITY_MAP_CACHE.get(project_id)
+    if cached is None or cached[0] != epoch:
+        aliases = _entity_alias_map(project_id)
+        with get_db() as conn:
+            rows = conn.execute(
+                "SELECT memory_id, normalized_entity FROM memory_entities WHERE project_id = ?",
+                (project_id,),
+            ).fetchall()
+        full: dict[str, set[str]] = {}
+        for row in rows:
+            full.setdefault(row["memory_id"], set()).add(_canonical_entity(row["normalized_entity"], aliases))
+        _ENTITY_MAP_CACHE[project_id] = (epoch, full)
+    else:
+        full = cached[1]
     feedbacks = feedbacks or {}
-    for row in rows:
-        if suppress_negative and feedback_is_negative(feedbacks.get(row["memory_id"])):
-            continue
-        mapping.setdefault(row["memory_id"], set()).add(_canonical_entity(row["normalized_entity"], aliases))
-    return mapping
+    if not (suppress_negative and feedbacks):
+        # Callers only read (lookups + set algebra) — hand out the cached
+        # mapping directly rather than re-assembling 100k+ pairs per query.
+        return full
+    negative_ids = {memory_id for memory_id, feedback in feedbacks.items() if feedback_is_negative(feedback)}
+    if not negative_ids:
+        return full
+    return {memory_id: entities for memory_id, entities in full.items() if memory_id not in negative_ids}
 
 
 def list_entity_links(

@@ -102,6 +102,20 @@ def parse_datetime(value: Any) -> datetime | None:
     if isinstance(value, (int, float)):
         return datetime.fromtimestamp(value, tz=UTC)
     if isinstance(value, str):
+        return _parse_datetime_str(value)
+    return _parse_datetime_any(value)
+
+
+from functools import lru_cache
+
+
+@lru_cache(maxsize=65536)
+def _parse_datetime_str(value: str) -> datetime | None:
+    return _parse_datetime_any(value)
+
+
+def _parse_datetime_any(value: Any) -> datetime | None:
+    if isinstance(value, str):
         raw = value.strip()
         if not raw:
             return None
