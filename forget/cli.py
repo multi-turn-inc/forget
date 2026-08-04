@@ -900,7 +900,7 @@ def main(argv: list[str] | None = None) -> None:
         help="show or set the recall budget dial (low/medium/high/extra) and its LLM",
         parents=[shared],
     )
-    rec.add_argument("action", nargs="?", default="status", choices=["status", "use", "llm", "engine"],
+    rec.add_argument("action", nargs="?", default="status", choices=["status", "use", "llm", "engine", "cloud-token"],
                      help="status: show gear + engine; use: set default gear; llm: set BYO endpoint; engine: auto|local|byo")
     rec.add_argument("value", nargs="?", help="gear for 'use': low|medium|high|extra, or +/- to step")
     rec.add_argument("--base-url", help="OpenAI-compatible endpoint for 'llm' (e.g. http://127.0.0.1:11434/v1)")
