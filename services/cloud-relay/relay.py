@@ -40,6 +40,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse
 
 UPSTREAM = os.getenv("FORGET_RELAY_UPSTREAM", "https://api.deepinfra.com/v1/openai").rstrip("/")
 UPSTREAM_MODEL = os.getenv("FORGET_RELAY_UPSTREAM_MODEL", "Qwen/Qwen3.5-9B")
@@ -179,8 +180,38 @@ async def paddle_webhook(request: Request) -> dict[str, Any]:
     return {"ok": True, "applied": "noted"}
 
 
+ACTIVATE_HTML = """<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>forget cloud — welcome</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body { background:#faf9f7; color:#1a1c20; font:16px/1.7 "Inter",-apple-system,sans-serif; -webkit-font-smoothing:antialiased; }
+  ::selection { background:#d31126; color:#fff; }
+  .wrap { max-width:640px; margin:0 auto; padding:64px 32px; }
+  h1 { font-family:"Instrument Serif",Georgia,serif; font-weight:400; font-size:40px; }
+  h1 s { text-decoration-color:#d31126; text-decoration-thickness:2px; }
+  p.sub { font-family:"Instrument Serif",serif; font-style:italic; color:#4e5359; font-size:20px; margin-top:10px; }
+  .token { font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:14px; background:#fff;
+           border:1px solid #e5e2dc; border-radius:8px; padding:16px; margin:32px 0 8px; word-break:break-all;
+           cursor:pointer; }
+  .hint { font-size:13px; color:#71767d; }
+  .steps { margin-top:32px; color:#4e5359; font-size:15px; }
+  .steps code { font-family:ui-monospace,Menlo,monospace; font-size:13.5px; background:#f8e9e7; border-radius:4px; padding:2px 6px; }
+  .warn { margin-top:24px; font-size:13.5px; color:#71767d; border-left:2px solid #e5e2dc; padding-left:14px; }
+</style></head><body><div class="wrap">
+<h1>Welcome to <s>forget</s> cloud.</h1>
+<p class="sub">Depth when you need it. Speed when you don&rsquo;t.</p>
+<div class="token" onclick="navigator.clipboard.writeText(this.textContent.trim());this.style.borderColor='#d31126'">__TOKEN__</div>
+<p class="hint">click to copy</p>
+<div class="steps">One line in your terminal:<br>
+<code>forget recall cloud-token __TOKEN__</code><br><br>
+That&rsquo;s it &mdash; your dial&rsquo;s high and extra gears now answer from the cloud.</div>
+<p class="warn">This token is shown once. If you lose it, revisit this page from your receipt link &mdash;
+a fresh token is issued and the old one goes quiet.</p>
+</div></body></html>"""
+
+
 @app.get("/activate")
-def activate(txn: str) -> dict[str, Any]:
+def activate(request: Request, txn: str) -> Any:
     """Checkout success lands here: verify the transaction with Paddle
     directly (never trust the query string), then hand out the token."""
     if not txn.startswith("txn_"):
@@ -192,11 +223,12 @@ def activate(txn: str) -> dict[str, Any]:
         raise HTTPException(status_code=403, detail="transaction is not a forget cloud Pro purchase")
     subscription_id = str(transaction.get("subscription_id") or txn)
     token = _issue_token(subscription_id, txn)
+    if "text/html" in str(request.headers.get("accept") or ""):
+        return HTMLResponse(ACTIVATE_HTML.replace("__TOKEN__", token))
     return {
         "token": token,
-        "next": "forget recall engine cloud 를 실행하고, 설정에 이 토큰을 저장하세요: "
-                "forget recall cloud-token <token>",
-        "note": "토큰은 다시 볼 수 없습니다 — 잃어버리면 이 페이지에서 재발급(기존 토큰은 무효화).",
+        "next": "forget recall cloud-token <token>",
+        "note": "shown once — revisiting reissues and quiets the old token",
     }
 
 
