@@ -796,6 +796,17 @@ def cmd_recall(args) -> None:
             print(f"engine → {choice}  (no LLM available yet — deep recall falls back to instant search)")
         return
 
+    if args.action == "cloud-token":
+        token = str(args.value or "").strip()
+        if not token.startswith("fgc_"):
+            print("usage: forget recall cloud-token <fgc_...>  (발급: forget.sh/cloud)")
+            return
+        update_project_settings("proj_local", {"recall_cloud_token": token, "recall_engine": "cloud"})
+        resolved = _resolve_recall_llm()
+        state = "연결됨" if resolved and resolved.get("source") == "cloud" else "저장됨 (릴레이 미배포 시 폴백)"
+        print(f"forget cloud 토큰 저장 → engine cloud ({state})")
+        return
+
     if args.action == "llm":
         if args.clear:
             update_project_settings("proj_local", {"recall_llm": {}})
