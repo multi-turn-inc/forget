@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>forget cloud — depth when you need it</title>
+<meta name="description" content="Stop re-explaining yourself to your AI. Deep recall on the certified model, $8/month.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+<style>
+  :root {
+    --paper: #faf9f7; --ink: #1a1c20; --body: #4e5359; --muted: #71767d;
+    --hair: #e5e2dc; --red: #d31126; --red-soft: #f8e9e7;
+    --serif: "Instrument Serif", Georgia, serif;
+    --sans: "Inter", -apple-system, "Noto Sans KR", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--paper); color: var(--ink); font: 16px/1.7 var(--sans); -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--red); color: #fff; }
+  a { color: inherit; text-decoration: none; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 32px; }
+  header { padding: 28px 0; }
+  header a { font-family: var(--mono); font-size: 14px; color: var(--muted); }
+  header s { color: var(--ink); text-decoration-color: var(--red); text-decoration-thickness: 2px; }
+  .hero { padding: 72px 0 40px; }
+  h1 { font-family: var(--serif); font-size: clamp(38px, 6vw, 56px); line-height: 1.1; font-weight: 400; }
+  .sub { margin-top: 18px; font-family: var(--serif); font-style: italic; font-size: 22px; color: var(--body); }
+  .thread { margin: 48px 0; }
+  .bench { font-family: var(--mono); font-size: 13.5px; color: var(--muted); border-left: 2px solid var(--hair); padding-left: 16px; margin: 40px 0; }
+  .bench b { color: var(--ink); }
+  .card { border: 1px solid var(--hair); border-radius: 10px; padding: 32px; margin: 40px 0; background: #fff; }
+  .card .plan { font-family: var(--mono); font-size: 13px; color: var(--red); letter-spacing: .08em; }
+  .card .price { font-family: var(--serif); font-size: 44px; margin: 10px 0 4px; }
+  .card .price span { font-size: 17px; color: var(--muted); font-family: var(--sans); }
+  .card ul { list-style: none; margin: 18px 0 26px; color: var(--body); font-size: 15px; }
+  .card li { padding: 4px 0 4px 22px; position: relative; }
+  .card li::before { content: "—"; position: absolute; left: 0; color: var(--red); }
+  .cta { display: inline-block; background: var(--ink); color: #fff; font-weight: 600; font-size: 15px;
+         padding: 13px 28px; border-radius: 8px; border: 0; cursor: pointer; }
+  .cta:hover { background: var(--red); }
+  .note { font-size: 13px; color: var(--muted); margin-top: 14px; }
+  .faq { margin: 64px 0 80px; border-top: 1px solid var(--hair); padding-top: 40px; }
+  .faq h2 { font-family: var(--serif); font-weight: 400; font-size: 24px; margin-bottom: 24px; }
+  .faq dt { font-weight: 600; font-size: 15px; margin-top: 20px; }
+  .faq dd { color: var(--body); font-size: 15px; margin-top: 4px; }
+  .faq dd em { font-style: normal; color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a href="/"><s>forget</s>.sh</a></header>
+
+  <section class="hero">
+    <h1>Stop re&#8209;explaining yourself to&nbsp;your&nbsp;AI.</h1>
+    <p class="sub">Depth when you need it. Speed when you don&rsquo;t.</p>
+  </section>
+
+  <svg class="thread" width="220" height="28" viewBox="0 0 220 28" aria-hidden="true">
+    <path d="M0,14 C20,14 24,4 42,4 S64,24 82,24 104,4 122,4 144,24 162,24 184,4 202,4 216,14 220,14"
+          fill="none" stroke="#d31126" stroke-width="3" stroke-linecap="round"/>
+    <path d="M0,14 C20,14 24,24 42,24 S64,4 82,4 104,24 122,24 144,4 162,4 184,24 202,24 216,14 220,14"
+          fill="none" stroke="#d31126" stroke-width="3" stroke-linecap="round" opacity=".45"/>
+  </svg>
+
+  <p class="bench">Measured, not promised: deep recall finds the right memory in <b>95% of top&#8209;6 results</b>
+  on our hardest 120&#8209;question benchmark &mdash; instant search alone stops at 89%.
+  We run the numbers and publish them.</p>
+
+  <div class="card">
+    <div class="plan">FORGET CLOUD PRO</div>
+    <div class="price">$8<span> / month</span></div>
+    <ul>
+      <li>2,000 deep recalls a month on the certified model</li>
+      <li>high and extra gears, ~2.5s answers &mdash; no GPU, no fan noise</li>
+      <li>works everywhere forget does: Claude Code, Codex, the menu bar dial</li>
+    </ul>
+    <button class="cta" id="subscribe">Subscribe</button>
+    <p class="note">Checkout by Paddle. Cancel anytime &mdash; your token simply goes quiet.</p>
+  </div>
+
+  <section class="faq">
+    <h2>Asked, answered</h2>
+    <dl>
+      <dt>Is my memory stored on your servers?</dt>
+      <dd><em>No. We keep the bill, not the memory.</em> Deep recall is stateless &mdash;
+          candidates are computed on, answered, and gone. The memory itself never leaves your machine.</dd>
+      <dt>Will local stay free?</dt>
+      <dd><em>Local runs without us</em> &mdash; no server, no account, nothing to expire.
+          It isn&rsquo;t a free plan. It&rsquo;s yours.</dd>
+      <dt>What model answers my recalls?</dt>
+      <dd>The exact model our published benchmark certifies &mdash; upgraded whenever a better one wins the harness.</dd>
+    </dl>
+  </section>
+</div>
+
+<script>
+  Paddle.Initialize({ token: "live_80612a0f07107123db8ad9b3b83" });
+  document.getElementById("subscribe").addEventListener("click", function () {
+    Paddle.Checkout.open({
+      items: [{ priceId: "pri_01kz5r9rj5fa8ahsjz6hwq5z3b", quantity: 1 }],
+      settings: { displayMode: "overlay", theme: "light" },
+      eventCallback: function (event) {
+        if (event.name === "checkout.completed") {
+          var txn = event.data && event.data.transaction_id;
+          if (txn) window.location.href = "https://cloud.forget.sh/activate?txn=" + txn;
+        }
+      }
+    });
+  });
+</script>
+</body>
+</html>

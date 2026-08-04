@@ -102,7 +102,38 @@ def set_current_auth_context(context: dict[str, Any]) -> None:
     CURRENT_AUTH_CONTEXT.set(context)
 
 
+_ROW_CACHE: dict[tuple[str, str, bool], dict[str, Any]] = {}
+
+
 def row_to_memory(row: Any, include_entities: bool = True, score: float | None = None) -> dict[str, Any]:
+    """Row deserialization is pure in (id, updated_at) — JSON parsing and
+    embedding decode dominated the M5 latency profile, so cache per row
+    version and hand out shallow copies (embedding vectors are shared
+    read-only)."""
+    cache_key = (str(row["id"]), str(row["updated_at"]), include_entities)
+    cached = _ROW_CACHE.get(cache_key)
+    if cached is not None and ("embedding" not in row.keys() or "_embedding" in cached):
+        item = dict(cached)
+        item["metadata"] = dict(cached["metadata"])
+        item["categories"] = list(cached["categories"])
+        if "embedding" not in row.keys():
+            item.pop("_embedding", None)
+        if score is not None:
+            item["score"] = score
+        return item
+    item = _row_to_memory_fresh(row, include_entities)
+    if len(_ROW_CACHE) > 20000:
+        _ROW_CACHE.clear()
+    _ROW_CACHE[cache_key] = item
+    copy = dict(item)
+    copy["metadata"] = dict(item["metadata"])
+    copy["categories"] = list(item["categories"])
+    if score is not None:
+        copy["score"] = score
+    return copy
+
+
+def _row_to_memory_fresh(row: Any, include_entities: bool = True) -> dict[str, Any]:
     metadata = json_loads(row["metadata"], {})
     item = {
         "id": row["id"],
@@ -125,8 +156,6 @@ def row_to_memory(row: Any, include_entities: bool = True, score: float | None =
                 "hash": row["hash"],
             }
         )
-    if score is not None:
-        item["score"] = score
     if "embedding" in row.keys():
         item["_embedding"] = decode_embedding(row["embedding"])
     return item
@@ -3898,7 +3927,28 @@ def link_memory_entities(memory_id: str, text: str, project_id: str, conn: Any |
         return _write_memory_entities(db, memory_id, project_id, entities, now)
 
 
+_ALIAS_MAP_CACHE: dict[str, tuple[tuple[int, int], dict[str, dict[str, Any]]]] = {}
+
+
 def _entity_alias_map(project_id: str, conn: Any | None = None) -> dict[str, dict[str, Any]]:
+    if conn is None:
+        # Read path: alias tables change rarely — epoch-cache the built map.
+        with get_db() as db:
+            probe = db.execute(
+                "SELECT COUNT(*), COALESCE(MAX(rowid), 0) FROM entity_aliases WHERE project_id = ?",
+                (project_id,),
+            ).fetchone()
+        epoch = (probe[0], probe[1])
+        cached = _ALIAS_MAP_CACHE.get(project_id)
+        if cached is not None and cached[0] == epoch:
+            return cached[1]
+        built = _entity_alias_map_fresh(project_id)
+        _ALIAS_MAP_CACHE[project_id] = (epoch, built)
+        return built
+    return _entity_alias_map_fresh(project_id, conn)
+
+
+def _entity_alias_map_fresh(project_id: str, conn: Any | None = None) -> dict[str, dict[str, Any]]:
     if conn is not None:
         rows = conn.execute(
             "SELECT * FROM entity_aliases WHERE project_id = ?",
@@ -4139,24 +4189,54 @@ def feedback_is_negative(feedback: dict[str, Any] | None) -> bool:
     return str((feedback or {}).get("feedback") or "").upper() in {"NEGATIVE", "VERY_NEGATIVE"}
 
 
+_ENTITY_MAP_CACHE: dict[str, tuple[tuple[int, int, int, int], dict[str, set[str]]]] = {}
+
+
+def _entity_tables_epoch(project_id: str) -> tuple[int, int, int, int]:
+    with get_db() as conn:
+        entities = conn.execute(
+            "SELECT COUNT(*), COALESCE(MAX(rowid), 0) FROM memory_entities WHERE project_id = ?",
+            (project_id,),
+        ).fetchone()
+        aliases = conn.execute(
+            "SELECT COUNT(*), COALESCE(MAX(rowid), 0) FROM entity_aliases WHERE project_id = ?",
+            (project_id,),
+        ).fetchone()
+    return (entities[0], entities[1], aliases[0], aliases[1])
+
+
 def memory_entity_map(
     project_id: str,
     feedbacks: dict[str, dict[str, Any]] | None = None,
     suppress_negative: bool = False,
 ) -> dict[str, set[str]]:
-    aliases = _entity_alias_map(project_id)
-    with get_db() as conn:
-        rows = conn.execute(
-            "SELECT memory_id, normalized_entity FROM memory_entities WHERE project_id = ?",
-            (project_id,),
-        ).fetchall()
-    mapping: dict[str, set[str]] = {}
+    """Rebuilding this map was 42% of search latency (M5 profile). The
+    canonicalized pairs only change when entities/aliases change — probe a
+    cheap epoch and reuse; the per-call feedback filter stays live."""
+    epoch = _entity_tables_epoch(project_id)
+    cached = _ENTITY_MAP_CACHE.get(project_id)
+    if cached is None or cached[0] != epoch:
+        aliases = _entity_alias_map(project_id)
+        with get_db() as conn:
+            rows = conn.execute(
+                "SELECT memory_id, normalized_entity FROM memory_entities WHERE project_id = ?",
+                (project_id,),
+            ).fetchall()
+        full: dict[str, set[str]] = {}
+        for row in rows:
+            full.setdefault(row["memory_id"], set()).add(_canonical_entity(row["normalized_entity"], aliases))
+        _ENTITY_MAP_CACHE[project_id] = (epoch, full)
+    else:
+        full = cached[1]
     feedbacks = feedbacks or {}
-    for row in rows:
-        if suppress_negative and feedback_is_negative(feedbacks.get(row["memory_id"])):
-            continue
-        mapping.setdefault(row["memory_id"], set()).add(_canonical_entity(row["normalized_entity"], aliases))
-    return mapping
+    if not (suppress_negative and feedbacks):
+        # Callers only read (lookups + set algebra) — hand out the cached
+        # mapping directly rather than re-assembling 100k+ pairs per query.
+        return full
+    negative_ids = {memory_id for memory_id, feedback in feedbacks.items() if feedback_is_negative(feedback)}
+    if not negative_ids:
+        return full
+    return {memory_id: entities for memory_id, entities in full.items() if memory_id not in negative_ids}
 
 
 def list_entity_links(
@@ -4304,8 +4384,354 @@ def memory_relations(memories: list[dict[str, Any]]) -> list[dict[str, str]]:
     return relations
 
 
+def _reflex_angles(query: str) -> list[str]:
+    """Multi-angle query expansion without an LLM (Recall v2, reflex layer).
+
+    The store is personal-scale, so extra scans are nearly free. Angles:
+    the query itself, its salient-term digest, and up to three individual
+    salient terms — different angles sample different embedding
+    neighborhoods and different keyword hits.
+    """
+    from .utils import tokenize
+
+    tokens = tokenize(query)
+    seen: set[str] = set()
+    unique = [t for t in tokens if not (t in seen or seen.add(t))]
+    # Longer tokens carry more signal ("payments" over "did"); generic verbs
+    # survive tokenize's stopword list but rarely survive a length sort.
+    salient = sorted((t for t in unique if len(t) >= 4), key=len, reverse=True)
+    angles = [query]
+    if len(salient) >= 2:
+        angles.append(" ".join(salient[:8]))
+    angles.extend(salient[:3])
+    deduped: list[str] = []
+    for angle in angles:
+        if angle and angle.lower() not in {a.lower() for a in deduped}:
+            deduped.append(angle)
+    return deduped[:5]
+
+
+def _reflex_mmr(candidates: list[dict[str, Any]], k: int, diversity: float = 0.35) -> list[dict[str, Any]]:
+    """Greedy MMR on token overlap — 'k different pieces of evidence', not
+    'k neighbors of the same moment'. Embedding-free: Jaccard on token sets
+    is enough to stop near-duplicates from monopolizing the budget."""
+    from .utils import tokenize
+
+    token_sets = [set(tokenize(str(c.get("memory") or ""))) for c in candidates]
+    picked: list[int] = []
+    while candidates and len(picked) < k:
+        best_i, best_val = None, None
+        for i, candidate in enumerate(candidates):
+            if i in picked:
+                continue
+            relevance = float(candidate.get("_rrf") or 0.0)
+            redundancy = max(
+                (len(token_sets[i] & token_sets[j]) / max(len(token_sets[i] | token_sets[j]), 1) for j in picked),
+                default=0.0,
+            )
+            value = (1 - diversity) * relevance - diversity * redundancy
+            if best_val is None or value > best_val:
+                best_i, best_val = i, value
+        picked.append(best_i)
+    return [candidates[i] for i in picked]
+
+
+def _search_memories_reflex(payload: dict[str, Any], project_id: str | None) -> dict[str, Any]:
+    """Recall v2 reflex layer: multi-angle → RRF merge → MMR selection.
+
+    Opt-in (MEM1_RECALL_V2=reflex or payload recall="reflex"); each angle
+    reuses the v1 scoring pipeline unchanged, so this wraps rather than
+    forks the ranking logic. RRF merges by rank (score scales across
+    different queries are not comparable); MMR spends the final budget on
+    diverse evidence.
+    """
+    query = str(payload.get("query") or "").strip()
+    top_k = int(payload.get("top_k") or 10)
+    wide_k = max(top_k * 4, 24)
+    base = {key: value for key, value in payload.items() if key not in {"recall"}}
+    merged: dict[str, dict[str, Any]] = {}
+    for angle in _reflex_angles(query):
+        try:
+            outcome = search_memories({**base, "query": angle, "top_k": wide_k, "recall": "v1"}, project_id)
+        except HTTPException:
+            continue
+        for rank, memory in enumerate(outcome.get("results") or [], 1):
+            memory_id = str(memory.get("id") or "")
+            entry = merged.setdefault(memory_id, dict(memory))
+            entry["_rrf"] = float(entry.get("_rrf") or 0.0) + 1.0 / (60 + rank)
+    candidates = sorted(merged.values(), key=lambda m: float(m.get("_rrf") or 0.0), reverse=True)[: wide_k]
+    selected = _reflex_mmr(candidates, top_k)
+    for memory in selected:
+        memory.pop("_rrf", None)
+    return {"results": selected, "recall_layer": "reflex-v2"}
+
+
+_RECALL_LLM_CACHE: dict[str, Any] = {"at": 0.0, "value": None}
+_RECALL_ACTIVITY: dict[str, Any] = {"active": 0, "last_started": 0.0}
+
+
+def recall_activity() -> dict[str, Any]:
+    return {"active": int(_RECALL_ACTIVITY["active"]), "last_started": float(_RECALL_ACTIVITY["last_started"])}
+
+
+def _pick_local_model(models: list[Any]) -> str | None:
+    """Prefer the trusted families, and within a family the largest model
+    the user pulled — they downloaded it to use it (성능 우선, 2026-08-04)."""
+    import re as _re
+
+    names = [str(m) for m in models if m and "embed" not in str(m).lower()]
+
+    def parameter_billions(name: str) -> float:
+        matches = _re.findall(r"(\d+(?:\.\d+)?)b", name.lower())
+        return max((float(m) for m in matches), default=0.0)
+
+    for preference in ("qwen", "llama", "gemma", "mistral", "phi"):
+        family = [n for n in names if preference in n.lower()]
+        if family:
+            return max(family, key=parameter_billions)
+    return names[0] if names else None
+
+
+def _detect_local_llm() -> dict[str, Any] | None:
+    """Attach to a local runtime if one is already running — never install.
+    An absent runtime is a product surface, not an error: deep recall simply
+    stays off until the user brings a local LLM or a hosted plan."""
+    import urllib.request as _urllib
+
+    probes = [
+        ("http://127.0.0.1:11434", "/api/tags", "models", "name", "ollama"),
+        ("http://127.0.0.1:1234", "/v1/models", "data", "id", "lm-studio"),
+    ]
+    for origin, path, list_key, name_key, token in probes:
+        try:
+            with _urllib.urlopen(f"{origin}{path}", timeout=0.5) as response:
+                body = json_loads(response.read().decode("utf-8"), {})
+            model = _pick_local_model([m.get(name_key) for m in body.get(list_key) or []])
+            if model:
+                return {
+                    "base_url": f"{origin}/v1",
+                    "model": model,
+                    "api_key": token,
+                    "source": token,
+                    "context_window": _probe_context_window(origin, token, model),
+                }
+        except Exception:
+            continue
+    return None
+
+
+def _probe_context_window(origin: str, runtime: str, model: str) -> int:
+    """A local model's context window bounds which gears fit as designed —
+    the reader gear alone is a ~15k-token prompt. Unknown → assume small."""
+    import urllib.request as _urllib
+
+    try:
+        if runtime == "ollama":
+            request = _urllib.Request(
+                f"{origin}/api/show",
+                data=json_dumps({"model": model}).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+            with _urllib.urlopen(request, timeout=1.0) as response:
+                body = json_loads(response.read().decode("utf-8"), {})
+            for key, value in (body.get("model_info") or {}).items():
+                if key.endswith("context_length"):
+                    return int(value)
+    except Exception:
+        pass
+    return 8192
+
+
+def _env_recall_llm() -> dict[str, Any] | None:
+    base_url = os.getenv("MEM1_GATE_BASE_URL", "").rstrip("/")
+    model = os.getenv("MEM1_GATE_MODEL", "")
+    if not (base_url and model):
+        return None
+    api_key = os.environ.get(os.getenv("MEM1_GATE_API_KEY_ENV", "MEM1_GATE_API_KEY"), "")
+    if not api_key:
+        key_file = os.getenv("MEM1_GATE_API_KEY_FILE", "")
+        if key_file and os.path.exists(key_file):
+            api_key = open(key_file).read().strip()
+    return {"base_url": base_url, "model": model, "api_key": api_key, "source": "env"}
+
+
+def _byo_recall_llm(settings: dict[str, Any]) -> dict[str, Any] | None:
+    stored = settings.get("recall_llm") or {}
+    if not (stored.get("base_url") and stored.get("model")):
+        return None
+    api_key = str(stored.get("api_key") or "")
+    key_file = str(stored.get("api_key_file") or "")
+    if not api_key and key_file and os.path.exists(key_file):
+        api_key = open(key_file).read().strip()
+    return {
+        "base_url": str(stored["base_url"]).rstrip("/"),
+        "model": str(stored["model"]),
+        "api_key": api_key,
+        "source": "byo",
+    }
+
+
+FORGET_CLOUD_BASE_URL = os.getenv("FORGET_CLOUD_BASE_URL", "https://cloud.forget.sh/v1")
+
+
+def _cloud_recall_llm(settings: dict[str, Any]) -> dict[str, Any] | None:
+    """forget cloud — plumbing ahead of the relay. A stored account token
+    makes this rung live the day the endpoint ships; until then its absence
+    is the signup surface, not an error."""
+    token = str(settings.get("recall_cloud_token") or "").strip()
+    if not token:
+        return None
+    return {
+        "base_url": FORGET_CLOUD_BASE_URL,
+        "model": str(settings.get("recall_cloud_model") or "forget-recall-1"),
+        "api_key": token,
+        "source": "cloud",
+    }
+
+
+def _local_recall_llm() -> dict[str, Any] | None:
+    now = time.time()
+    if now - float(_RECALL_LLM_CACHE["at"]) < 300:
+        return _RECALL_LLM_CACHE["value"]
+    detected = _detect_local_llm()
+    _RECALL_LLM_CACHE.update({"at": now, "value": detected})
+    return detected
+
+
+def _resolve_recall_llm() -> dict[str, Any] | None:
+    """Engine axis (docs/recall-v2.md): the dial says how deep, the engine
+    says whose compute. auto = local runtime first, stored endpoint as the
+    fallback; local = local only; byo = stored endpoint only. Env config
+    overrides everything (ops escape hatch). Cloud lands later as one more
+    rung — the dial contract never changes."""
+    env_config = _env_recall_llm()
+    if env_config:
+        return env_config
+    from .providers import get_project_settings
+
+    settings = get_project_settings()
+    engine = str(settings.get("recall_engine") or "auto").strip().lower()
+    if engine == "local":
+        return _local_recall_llm()
+    if engine == "byo":
+        return _byo_recall_llm(settings)
+    if engine == "cloud":
+        return _cloud_recall_llm(settings)
+    return _local_recall_llm() or _byo_recall_llm(settings) or _cloud_recall_llm(settings)
+
+
+def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_k: int = 40, snippet_chars: int = 280, layer: str = "gate-v2") -> dict[str, Any]:
+    """Recall v2 'high' gear: wide hybrid retrieval, then a small LLM reads
+    the candidates and keeps only what the question actually needs —
+    a selector's job, not a retriever's. Config via env (experimental):
+    MEM1_GATE_BASE_URL, MEM1_GATE_MODEL, MEM1_GATE_API_KEY_ENV. Any
+    failure degrades to the v1 top-k.
+    """
+    import urllib.request as _urllib
+
+    query = str(payload.get("query") or "").strip()
+    top_k = int(payload.get("top_k") or 10)
+    base = {key: value for key, value in payload.items() if key != "recall"}
+    wide = search_memories({**base, "top_k": wide_k, "recall": "v1"}, project_id)
+    candidates = list(wide.get("results") or [])
+    if len(candidates) <= top_k:
+        return {"results": candidates, "recall_layer": f"{layer}(passthrough)"}
+    llm = _resolve_recall_llm()
+    if not llm:
+        return {"results": candidates[:top_k], "recall_layer": f"{layer}(unconfigured→v1)"}
+    base_url, model, api_key = llm["base_url"], llm["model"], llm["api_key"]
+    context_window = int(llm.get("context_window") or 131072)
+    # Fit the candidate list to the model's window (chars ≈ tokens × ~3.4,
+    # keep ~1.5k tokens for instructions and headroom). A small local model
+    # quietly reads fewer candidates instead of overflowing.
+    budget_chars = max((context_window - 1536) * 3, 8000)
+    if len(candidates) * snippet_chars > budget_chars:
+        fitted = max(budget_chars // snippet_chars, 10)
+        candidates = candidates[:fitted]
+        layer = f"{layer}(fit:{fitted})"
+    numbered = "\n".join(
+        f"[{i}] {str(c.get('memory') or '')[:snippet_chars]}" for i, c in enumerate(candidates)
+    )
+    prompt = (
+        "Question: " + query + "\n\nCandidate memories:\n" + numbered +
+        f"\n\nReturn ONLY a JSON array of up to {top_k} candidate indices that contain "
+        "information needed to answer the question, most useful first. Example: [3,17,0]"
+    )
+    _RECALL_ACTIVITY["active"] += 1
+    _RECALL_ACTIVITY["last_started"] = time.time()
+    try:
+        if "/v1" in base_url and ":11434" in base_url:
+            # Ollama ignores chat_template_kwargs on its OpenAI facade —
+            # the model then thinks itself past the token cap and the plan
+            # dies. Its native API has a first-class switch: think=false.
+            request = _urllib.Request(
+                base_url.replace("/v1", "/api/chat"),
+                data=json_dumps({
+                    "model": model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "stream": False,
+                    "think": False,
+                    "options": {"num_predict": 256, "temperature": 0},
+                }).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+            with _urllib.urlopen(request, timeout=120) as response:
+                body = json_loads(response.read().decode("utf-8"), {})
+                content = str((body.get("message") or {}).get("content") or "")
+        else:
+            request = _urllib.Request(
+                f"{base_url}/chat/completions",
+                data=json_dumps({
+                    "model": model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": 256,
+                    "temperature": 0,
+                    "chat_template_kwargs": {"enable_thinking": False},
+                }).encode("utf-8"),
+                headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
+            )
+            with _urllib.urlopen(request, timeout=60) as response:
+                body = json_loads(response.read().decode("utf-8"), {})
+                content = str(((body.get("choices") or [{}])[0].get("message") or {}).get("content") or "")
+        match = re.search(r"\[[\d,\s]*\]", content)
+        parsed = json_loads(match.group(0), []) if match else []
+        indices = [i for i in parsed if isinstance(i, int) and 0 <= i < len(candidates)]
+    except Exception:
+        indices = []
+    finally:
+        _RECALL_ACTIVITY["active"] = max(0, int(_RECALL_ACTIVITY["active"]) - 1)
+    if not indices:
+        return {"results": candidates[:top_k], "recall_layer": f"{layer}(fallback→v1)"}
+    seen: set[int] = set()
+    ordered = [i for i in indices if not (i in seen or seen.add(i))][:top_k]
+    for i in range(len(candidates)):
+        if len(ordered) >= top_k:
+            break
+        if i not in seen:
+            ordered.append(i)
+            seen.add(i)
+    return {"results": [candidates[i] for i in ordered], "recall_layer": layer}
+
+
 def search_memories(payload: dict[str, Any], project_id: str | None = None) -> dict[str, Any]:
     project_id = payload.get("project_id") or project_id or current_project_id()
+    recall_mode = str(payload.get("recall") or os.getenv("MEM1_RECALL_V2") or "").strip().lower()
+    if not recall_mode:
+        from .providers import get_project_settings
+
+        recall_mode = str(get_project_settings(project_id).get("recall_default") or "").strip().lower()
+    # Dial names are the stable contract; mechanisms are disposable
+    # incumbents, re-seated whenever the harness crowns a better one.
+    recall_mode = {"low": "", "medium": "", "high": "gate", "extra": "reader"}.get(recall_mode, recall_mode)
+    if recall_mode == "reflex":
+        return _search_memories_reflex(payload, project_id)
+    if recall_mode == "gate":
+        return _search_memories_gate(payload, project_id)
+    if recall_mode == "reader":
+        # 'extra' gear: one decade up from gate — the LLM reads ~100
+        # candidates at near-full text instead of 40 keyhole snippets.
+        # Measured prize (2026-08-04): gold recall@100 = 0.992 vs @40 0.967.
+        return _search_memories_gate(payload, project_id, wide_k=100, snippet_chars=500, layer="reader-v2")
     started_at = utc_now()
     start_time = time.perf_counter()
     query = str(payload.get("query") or "").strip()
@@ -5506,7 +5932,7 @@ def _candidate_memories_for_claim(
         return [dict(memory) for memory in context_memories if isinstance(memory, dict)]
     filters = payload.get("filters") if isinstance(payload.get("filters"), dict) else {}
     search = search_memories(
-        {
+        {"recall": "low", 
             "query": claim,
             "filters": filters,
             "top_k": payload.get("top_k", payload.get("limit", 5)),
@@ -6532,7 +6958,7 @@ def _context_role_backfill_candidates(
     payload = dict(search_payload)
     payload["filters"] = backfill_filters
     payload["top_k"] = max(_int_or(search_payload.get("top_k"), 10), max_backfill * 4, 12)
-    search = search_memories(payload, project_id=project_id)
+    search = search_memories({**payload, "recall": "low"}, project_id=project_id)
     raw_candidates = search.get("results") or []
     current_candidates = [memory for memory in raw_candidates if not _context_memory_is_superseded(memory)]
     backfill_state["applied"] = True
@@ -11263,7 +11689,7 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
             workspace_current = None
     workspace_line = _workspace_context_line(workspace_current) if isinstance(workspace_current, dict) else ""
     workspace_tokens = min(token_estimate(workspace_line), budget_tokens) if workspace_line else 0
-    search = search_memories(search_payload, project_id=project_id)
+    search = search_memories({**search_payload, "recall": "low"}, project_id=project_id)
     search_candidates = search["results"]
     current_candidates = [memory for memory in search_candidates if not _context_memory_is_superseded(memory)]
     requested_task_id = _context_requested_task_id(payload)
@@ -11667,7 +12093,7 @@ def _summary_candidates(
         top_k = _validated_search_top_k_value(top_k_raw, default=max_memories)
         threshold = 0 if payload.get("threshold") is None else _validated_search_threshold(payload, default=0)
         search = search_memories(
-            {
+            {"recall": "low", 
                 "query": query,
                 "filters": filters,
                 "top_k": top_k,
@@ -16506,7 +16932,7 @@ def create_evaluation(payload: dict[str, Any], project_id: str | None = None) ->
             continue
         try:
             search = search_memories(
-                {
+                {"recall": "low", 
                     "query": query,
                     "filters": filters,
                     "top_k": top_k,

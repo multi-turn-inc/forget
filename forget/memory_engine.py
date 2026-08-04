@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+from functools import lru_cache
 import os
 import re
 from datetime import datetime, timedelta, timezone
@@ -655,12 +656,17 @@ def categorize(text: str, metadata: dict[str, Any] | None = None) -> list[str]:
     return deduped
 
 
-def expanded_tokens(text: str) -> set[str]:
+@lru_cache(maxsize=32768)
+def expanded_tokens(text: str) -> frozenset[str]:
+    """Tokenization dominates search latency when recomputed per row per
+    query (M5 profile: ~26% of a 1.1s search). Memory texts and the query
+    string repeat massively across calls — cache them. Frozenset: every
+    caller does read-only set algebra."""
     base = set(tokenize(text))
     expanded = set(base)
     for token in list(base):
         expanded.update(QUERY_SYNONYMS.get(token, set()))
-    return {t for t in expanded if t not in STOPWORDS}
+    return frozenset(t for t in expanded if t not in STOPWORDS)
 
 
 def score_memory(query: str, memory: dict[str, Any], reference_date: Any = None) -> float:

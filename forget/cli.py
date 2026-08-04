@@ -742,6 +742,132 @@ def cmd_upgrade(args: argparse.Namespace) -> None:
         print("doctor skipped (run `forget-server doctor` to verify)")
 
 
+_GEARS = ["low", "medium", "high", "extra"]
+
+
+def _dial_line(current: str) -> str:
+    return "  ".join(f"[{g}]" if g == current else f" {g} " for g in _GEARS)
+
+
+def cmd_recall(args) -> None:
+    """The dial's home: see what gear you're in, change it, wire an LLM."""
+    from .db import init_db
+
+    init_db()
+    from .providers import get_project_settings, update_project_settings
+    from .store import _resolve_recall_llm
+
+    if args.action == "use":
+        gear = str(args.value or "").strip().lower()
+        if gear in {"+", "-"}:
+            current = str(get_project_settings("proj_local").get("recall_default") or "low")
+            index = _GEARS.index(current) if current in _GEARS else 0
+            index = min(index + 1, len(_GEARS) - 1) if gear == "+" else max(index - 1, 0)
+            gear = _GEARS[index]
+        if gear not in _GEARS:
+            print("usage: forget recall use <low|medium|high|extra|+|->")
+            return
+        update_project_settings("proj_local", {"recall_default": gear})
+        print(_dial_line(gear))
+        if gear in {"high", "extra"} and not _resolve_recall_llm():
+            print("note: no recall LLM available — high/extra will quietly fall back to instant search.")
+            print("      attach one:  forget recall llm --base-url http://127.0.0.1:11434/v1 --model <name>")
+        return
+
+    if args.action == "engine" and str(args.value or "").strip().lower() == "cloud" and args.base_url:
+        # 숨은 개발자 후크: cloud 토큰 수동 주입 (릴레이 개발용)
+        pass
+    if args.action == "engine":
+        choice = str(args.value or "").strip().lower()
+        if choice not in {"auto", "local", "byo", "cloud"}:
+            print("usage: forget recall engine <auto|local|byo|cloud>")
+            print("  auto  : local runtime first, stored endpoint as fallback")
+            print("  local : only a local runtime (Ollama/LM Studio) — free, private")
+            print("  byo   : only the stored endpoint (forget recall llm ...)")
+            print("  cloud : forget cloud — deep recall without heating your laptop")
+            return
+        update_project_settings("proj_local", {"recall_engine": choice})
+        resolved = _resolve_recall_llm()
+        if resolved:
+            print(f"engine → {choice}  ({resolved['model']} @ {resolved['base_url']})")
+        elif choice == "cloud":
+            print("engine → cloud  (계정 토큰이 없어요 — forget.sh/cloud 에서 가입하면 켜집니다)")
+        else:
+            print(f"engine → {choice}  (no LLM available yet — deep recall falls back to instant search)")
+        return
+
+    if args.action == "cloud-token":
+        token = str(args.value or "").strip()
+        if not token.startswith("fgc_"):
+            print("usage: forget recall cloud-token <fgc_...>  (발급: forget.sh/cloud)")
+            return
+        update_project_settings("proj_local", {"recall_cloud_token": token, "recall_engine": "cloud"})
+        resolved = _resolve_recall_llm()
+        state = "연결됨" if resolved and resolved.get("source") == "cloud" else "저장됨 (릴레이 미배포 시 폴백)"
+        print(f"forget cloud 토큰 저장 → engine cloud ({state})")
+        return
+
+    if args.action == "llm":
+        if args.clear:
+            update_project_settings("proj_local", {"recall_llm": {}})
+            print("stored recall LLM cleared — will auto-attach a local runtime if one is running")
+            return
+        if not args.base_url or not args.model:
+            print("usage: forget recall llm --base-url <url> --model <name> [--api-key-file <path>]")
+            return
+        config = {"base_url": args.base_url, "model": args.model}
+        if args.api_key_file:
+            config["api_key_file"] = args.api_key_file
+        update_project_settings("proj_local", {"recall_llm": config})
+        print(f"recall LLM → {args.model} @ {args.base_url}")
+        return
+
+    settings = get_project_settings("proj_local")
+    gear = settings.get("recall_default") or "low"
+    engine = settings.get("recall_engine") or "auto"
+
+    def _ram_gb() -> int:
+        try:
+            import subprocess
+            if sys.platform == "darwin":
+                return int(subprocess.check_output(["sysctl", "-n", "hw.memsize"])) // (1 << 30)
+            with open("/proc/meminfo") as f:
+                return int(f.readline().split()[1]) // (1 << 20)
+        except Exception:
+            return 0
+
+    def _local_tier(ram: int) -> str:
+        if ram >= 64:
+            return "26~32B (클라우드 초과 품질)"
+        if ram >= 32:
+            return "14B"
+        if ram >= 16:
+            return "8~9B (현 클라우드와 동급)"
+        if ram >= 8:
+            return "3~4B — 또는 forget cloud (발열 없이 최고 품질)"
+        return "forget cloud 권장"
+    llm = _resolve_recall_llm()
+    print(f"dial          : {_dial_line(str(gear))}")
+    if llm:
+        window = int(llm.get("context_window") or 131072)
+        window_note = f", ctx {window//1024}k" if window < 32768 else ""
+        print(f"engine        : {engine} → {llm['source']} ({llm['model']}{window_note})")
+        if window < 32768:
+            print("deep recall   : ready — 작은 컨텍스트 창에 맞춰 후보 수 자동 축소")
+        else:
+            print("deep recall   : ready — high (~3s, reads 40 candidates) / extra (~5s, reads 100)")
+    else:
+        print(f"engine        : {engine} → none")
+    if llm is None:
+        print("deep recall   : off — instant search only. Two ways to turn it on:")
+        print("  · run a local LLM (Ollama or LM Studio) — free, forget attaches automatically")
+        print("  · or use forget cloud — deep recall without heating your laptop (coming soon)")
+    if llm is None or llm.get("source") not in ("ollama", "lm-studio"):
+        ram = _ram_gb()
+        if ram:
+            print(f"local 추천    : 이 머신(RAM {ram}GB) → {_local_tier(ram)}  (추천일 뿐 — 상한 없음)")
+
+
 def main(argv: list[str] | None = None) -> None:
     shared = argparse.ArgumentParser(add_help=False)
     shared.add_argument("--host", default=DEFAULT_HOST)
@@ -769,6 +895,18 @@ def main(argv: list[str] | None = None) -> None:
                    parents=[shared])
     sub.add_parser("reembed", help="re-embed all memories with the active embedding stack "
                                    "(automatic backup + receipt)", parents=[shared])
+    rec = sub.add_parser(
+        "recall",
+        help="show or set the recall budget dial (low/medium/high/extra) and its LLM",
+        parents=[shared],
+    )
+    rec.add_argument("action", nargs="?", default="status", choices=["status", "use", "llm", "engine"],
+                     help="status: show gear + engine; use: set default gear; llm: set BYO endpoint; engine: auto|local|byo")
+    rec.add_argument("value", nargs="?", help="gear for 'use': low|medium|high|extra, or +/- to step")
+    rec.add_argument("--base-url", help="OpenAI-compatible endpoint for 'llm' (e.g. http://127.0.0.1:11434/v1)")
+    rec.add_argument("--model", help="model name for 'llm'")
+    rec.add_argument("--api-key-file", help="path to a file holding the API key (kept out of config)")
+    rec.add_argument("--clear", action="store_true", help="with 'llm': remove the stored recall LLM")
     mig = sub.add_parser(
         "migrate-scope",
         help="merge a legacy app pool into its canonical successor (dry-run by default)",
@@ -793,6 +931,7 @@ def main(argv: list[str] | None = None) -> None:
      "upgrade": cmd_upgrade,
      "weekly": cmd_weekly,
      "reembed": cmd_reembed,
+     "recall": cmd_recall,
      "migrate-scope": cmd_migrate_scope}[command](args)
 
 
