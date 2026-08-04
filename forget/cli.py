@@ -774,6 +774,22 @@ def cmd_recall(args) -> None:
             print("      attach one:  forget recall llm --base-url http://127.0.0.1:11434/v1 --model <name>")
         return
 
+    if args.action == "engine":
+        choice = str(args.value or "").strip().lower()
+        if choice not in {"auto", "local", "byo"}:
+            print("usage: forget recall engine <auto|local|byo>")
+            print("  auto  : local runtime first, stored endpoint as fallback")
+            print("  local : only a local runtime (Ollama/LM Studio) — free, private")
+            print("  byo   : only the stored endpoint (forget recall llm ...)")
+            return
+        update_project_settings("proj_local", {"recall_engine": choice})
+        resolved = _resolve_recall_llm()
+        if resolved:
+            print(f"engine → {choice}  ({resolved['model']} @ {resolved['base_url']})")
+        else:
+            print(f"engine → {choice}  (no LLM available yet — deep recall falls back to instant search)")
+        return
+
     if args.action == "llm":
         if args.clear:
             update_project_settings("proj_local", {"recall_llm": {}})
@@ -791,13 +807,19 @@ def cmd_recall(args) -> None:
 
     settings = get_project_settings("proj_local")
     gear = settings.get("recall_default") or "low"
+    engine = settings.get("recall_engine") or "auto"
     llm = _resolve_recall_llm()
     print(f"dial          : {_dial_line(str(gear))}")
     if llm:
-        print(f"recall LLM    : {llm['model']} @ {llm['base_url']}  (source: {llm['source']})")
-        print("deep recall   : ready — high (~3s, reads 40 candidates) / extra (~5s, reads 100)")
+        window = int(llm.get("context_window") or 131072)
+        window_note = f", ctx {window//1024}k" if window < 32768 else ""
+        print(f"engine        : {engine} → {llm['source']} ({llm['model']}{window_note})")
+        if window < 32768:
+            print("deep recall   : ready — 작은 컨텍스트 창에 맞춰 후보 수 자동 축소")
+        else:
+            print("deep recall   : ready — high (~3s, reads 40 candidates) / extra (~5s, reads 100)")
     else:
-        print("recall LLM    : none")
+        print(f"engine        : {engine} → none")
         print("deep recall   : off — instant search only. Two ways to turn it on:")
         print("  · run a local LLM (Ollama or LM Studio) — free, forget attaches automatically")
         print("  · or use forget cloud — deep recall without heating your laptop (coming soon)")
@@ -835,8 +857,8 @@ def main(argv: list[str] | None = None) -> None:
         help="show or set the recall budget dial (low/medium/high/extra) and its LLM",
         parents=[shared],
     )
-    rec.add_argument("action", nargs="?", default="status", choices=["status", "use", "llm"],
-                     help="status: show current gear + resolved LLM; use: set default gear; llm: set recall LLM endpoint")
+    rec.add_argument("action", nargs="?", default="status", choices=["status", "use", "llm", "engine"],
+                     help="status: show gear + engine; use: set default gear; llm: set BYO endpoint; engine: auto|local|byo")
     rec.add_argument("value", nargs="?", help="gear for 'use': low|medium|high|extra, or +/- to step")
     rec.add_argument("--base-url", help="OpenAI-compatible endpoint for 'llm' (e.g. http://127.0.0.1:11434/v1)")
     rec.add_argument("--model", help="model name for 'llm'")

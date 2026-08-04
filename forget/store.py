@@ -4494,44 +4494,96 @@ def _detect_local_llm() -> dict[str, Any] | None:
                 body = json_loads(response.read().decode("utf-8"), {})
             model = _pick_local_model([m.get(name_key) for m in body.get(list_key) or []])
             if model:
-                return {"base_url": f"{origin}/v1", "model": model, "api_key": token, "source": token}
+                return {
+                    "base_url": f"{origin}/v1",
+                    "model": model,
+                    "api_key": token,
+                    "source": token,
+                    "context_window": _probe_context_window(origin, token, model),
+                }
         except Exception:
             continue
     return None
 
 
-def _resolve_recall_llm() -> dict[str, Any] | None:
-    """The recall gears' LLM, resolved down a ladder: env override →
-    stored settings → auto-detected local runtime → None (v1 fallback)."""
+def _probe_context_window(origin: str, runtime: str, model: str) -> int:
+    """A local model's context window bounds which gears fit as designed —
+    the reader gear alone is a ~15k-token prompt. Unknown → assume small."""
+    import urllib.request as _urllib
+
+    try:
+        if runtime == "ollama":
+            request = _urllib.Request(
+                f"{origin}/api/show",
+                data=json_dumps({"model": model}).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+            with _urllib.urlopen(request, timeout=1.0) as response:
+                body = json_loads(response.read().decode("utf-8"), {})
+            for key, value in (body.get("model_info") or {}).items():
+                if key.endswith("context_length"):
+                    return int(value)
+    except Exception:
+        pass
+    return 8192
+
+
+def _env_recall_llm() -> dict[str, Any] | None:
     base_url = os.getenv("MEM1_GATE_BASE_URL", "").rstrip("/")
     model = os.getenv("MEM1_GATE_MODEL", "")
-    if base_url and model:
-        api_key = os.environ.get(os.getenv("MEM1_GATE_API_KEY_ENV", "MEM1_GATE_API_KEY"), "")
-        if not api_key:
-            key_file = os.getenv("MEM1_GATE_API_KEY_FILE", "")
-            if key_file and os.path.exists(key_file):
-                api_key = open(key_file).read().strip()
-        return {"base_url": base_url, "model": model, "api_key": api_key, "source": "env"}
-    from .providers import get_project_settings
-
-    stored = get_project_settings().get("recall_llm") or {}
-    if stored.get("base_url") and stored.get("model"):
-        api_key = str(stored.get("api_key") or "")
-        key_file = str(stored.get("api_key_file") or "")
-        if not api_key and key_file and os.path.exists(key_file):
+    if not (base_url and model):
+        return None
+    api_key = os.environ.get(os.getenv("MEM1_GATE_API_KEY_ENV", "MEM1_GATE_API_KEY"), "")
+    if not api_key:
+        key_file = os.getenv("MEM1_GATE_API_KEY_FILE", "")
+        if key_file and os.path.exists(key_file):
             api_key = open(key_file).read().strip()
-        return {
-            "base_url": str(stored["base_url"]).rstrip("/"),
-            "model": str(stored["model"]),
-            "api_key": api_key,
-            "source": "settings",
-        }
+    return {"base_url": base_url, "model": model, "api_key": api_key, "source": "env"}
+
+
+def _byo_recall_llm(settings: dict[str, Any]) -> dict[str, Any] | None:
+    stored = settings.get("recall_llm") or {}
+    if not (stored.get("base_url") and stored.get("model")):
+        return None
+    api_key = str(stored.get("api_key") or "")
+    key_file = str(stored.get("api_key_file") or "")
+    if not api_key and key_file and os.path.exists(key_file):
+        api_key = open(key_file).read().strip()
+    return {
+        "base_url": str(stored["base_url"]).rstrip("/"),
+        "model": str(stored["model"]),
+        "api_key": api_key,
+        "source": "byo",
+    }
+
+
+def _local_recall_llm() -> dict[str, Any] | None:
     now = time.time()
     if now - float(_RECALL_LLM_CACHE["at"]) < 300:
         return _RECALL_LLM_CACHE["value"]
     detected = _detect_local_llm()
     _RECALL_LLM_CACHE.update({"at": now, "value": detected})
     return detected
+
+
+def _resolve_recall_llm() -> dict[str, Any] | None:
+    """Engine axis (docs/recall-v2.md): the dial says how deep, the engine
+    says whose compute. auto = local runtime first, stored endpoint as the
+    fallback; local = local only; byo = stored endpoint only. Env config
+    overrides everything (ops escape hatch). Cloud lands later as one more
+    rung — the dial contract never changes."""
+    env_config = _env_recall_llm()
+    if env_config:
+        return env_config
+    from .providers import get_project_settings
+
+    settings = get_project_settings()
+    engine = str(settings.get("recall_engine") or "auto").strip().lower()
+    if engine == "local":
+        return _local_recall_llm()
+    if engine == "byo":
+        return _byo_recall_llm(settings)
+    return _local_recall_llm() or _byo_recall_llm(settings)
 
 
 def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_k: int = 40, snippet_chars: int = 280, layer: str = "gate-v2") -> dict[str, Any]:
@@ -4556,6 +4608,15 @@ def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_
     if not llm:
         return {"results": candidates[:top_k], "recall_layer": f"{layer}(unconfigured→v1)"}
     base_url, model, api_key = llm["base_url"], llm["model"], llm["api_key"]
+    context_window = int(llm.get("context_window") or 131072)
+    # Fit the candidate list to the model's window (chars ≈ tokens × ~3.4,
+    # keep ~1.5k tokens for instructions and headroom). A small local model
+    # quietly reads fewer candidates instead of overflowing.
+    budget_chars = max((context_window - 1536) * 3, 8000)
+    if len(candidates) * snippet_chars > budget_chars:
+        fitted = max(budget_chars // snippet_chars, 10)
+        candidates = candidates[:fitted]
+        layer = f"{layer}(fit:{fitted})"
     numbered = "\n".join(
         f"[{i}] {str(c.get('memory') or '')[:snippet_chars]}" for i, c in enumerate(candidates)
     )
