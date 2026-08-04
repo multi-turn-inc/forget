@@ -90,12 +90,12 @@
 
   <h1>Tell Claude Code once.<br><em>Codex remembers.</em></h1>
 
-  <div class="bench" style="top:330px;">
-    <div style="font-family:'Instrument Serif',Georgia,serif;font-size:44px;line-height:1.25;">
-      <span style="color:#d31126;font-weight:400;">78.4% &plusmn; 0.4</span> <span style="font-style:italic;color:#4e5359;">fully local.</span><br>
-      <span style="color:#1a1c20;font-size:34px;">three seeds, spread published.</span>
+  <div class="bench" style="top:326px; width:600px;">
+    <div style="font-family:'Instrument Serif',Georgia,serif;font-size:46px;line-height:1.22;">
+      <span style="color:#d31126;font-weight:400;">89 &rarr; 95 &rarr; 97%</span> <span style="font-style:italic;color:#4e5359;">on a dial.</span><br>
+      <span style="color:#1a1c20;font-size:33px;">every gear measured.</span>
     </div>
-    <div class="caption" style="margin-top:14px;">LongMemEval full-500 &times; 3 runs · baseline 60.6 · oracle 87.0</div>
+    <div class="caption" style="margin-top:16px;">top-6 recall · 120-question harness · ceiling 99.2</div>
   </div>
 
   <span class="site">forget.sh</span>

@@ -16,7 +16,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>forget — tell Claude Code once, Codex remembers</title>
-<meta name="description" content="One memory for your AI across Claude Code, Codex, and Claude Desktop — open source, local-first, 78.4% on LongMemEval fully local (three seeds, spread published). Nobody can read it but you.">
+<meta name="description" content="One memory for your AI across Claude Code, Codex, and Claude Desktop — with a measured recall dial: 89% instant, 95% deep, 97% max on our hardest 120-question benchmark. Open source, local-first.">
 <link rel="canonical" href="https://forget.sh/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23e5122e'/%3E%3Ctext x='32' y='45' font-family='-apple-system,sans-serif' font-size='38' font-weight='800' fill='%23fff' text-anchor='middle'%3Ef%3C/text%3E%3Crect x='12' y='30' width='40' height='5' rx='2.5' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,13 +26,13 @@
 <meta property="og:url" content="https://forget.sh/">
 <meta property="og:site_name" content="forget">
 <meta property="og:title" content="forget — tell Claude Code once, Codex remembers">
-<meta property="og:description" content="One memory for your AI across Claude Code, Codex, and Claude Desktop — open source, local-first, 78.4% on LongMemEval fully local (three seeds, spread published). Nobody can read it but you.">
+<meta property="og:description" content="One memory for your AI across Claude Code, Codex, and Claude Desktop — with a measured recall dial: 89% instant, 95% deep, 97% max on our hardest 120-question benchmark. Open source, local-first.">
 <meta property="og:image" content="https://forget.sh/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="forget — tell Claude Code once, Codex remembers">
-<meta name="twitter:description" content="One memory for your AI across Claude Code, Codex, and Claude Desktop — open source, local-first, 78.4% on LongMemEval fully local (three seeds, spread published). Nobody can read it but you.">
+<meta name="twitter:description" content="One memory for your AI across Claude Code, Codex, and Claude Desktop — with a measured recall dial: 89% instant, 95% deep, 97% max on our hardest 120-question benchmark. Open source, local-first.">
 <meta name="twitter:image" content="https://forget.sh/og.png">
 <meta name="theme-color" content="#faf9f7">
 <link rel="alternate" type="text/plain" title="llms.txt" href="/llms.txt">
@@ -58,7 +58,7 @@
     {
       "@type": "Question",
       "name": "Is my memory really local?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Everything lives in one SQLite file at ~/.forget — storage, search, and memory building all run on the user's machine, offline included. On LongMemEval the fully-local pipeline scores 78.4% ± 0.4 across three seeds (81.8% with a GPT-4o observer), against the paper's 60.6% full-context baseline. No account, no telemetry." }
+      "acceptedAnswer": { "@type": "Answer", "text": "Everything lives in one SQLite file at ~/.forget — storage, search, and memory building all run on the user's machine, offline included. Instant search alone finds the right memory in the top-6 results 89% of the time on our 120-question benchmark; the deep gears reach 95–97% with a local LLM or the optional cloud engine. No account, no telemetry." }
     },
     {
       "@type": "Question",
@@ -73,7 +73,7 @@
     {
       "@type": "Question",
       "name": "What does forget cost?",
-      "acceptedAnswer": { "@type": "Answer", "text": "The local product is free and Apache-2.0 open source, permanently. End-to-end encrypted sync across devices will be the paid layer when it ships." }
+      "acceptedAnswer": { "@type": "Answer", "text": "The local product is free and Apache-2.0 open source, permanently. The paid layer is forget cloud Pro: $8/month for 2,000 deep recalls on the certified model — depth without a GPU. End-to-end encrypted sync remains on the roadmap." }
     },
     {
       "@type": "Question",
@@ -489,6 +489,7 @@
       <nav>
         <a class="link" href="#benchmark">Benchmark</a>
         <a class="link" href="#how">How it works</a>
+        <a class="link" href="/cloud">Cloud</a>
         <a class="link" href="#faq">FAQ</a>
         <a class="link" href="https://github.com/multi-turn-inc/forget/blob/main/MANIFESTO.md">Manifesto</a>
         <a class="btn ghost" href="https://github.com/multi-turn-inc/forget">GitHub</a>
@@ -500,11 +501,12 @@
 
 <div class="wrap">
   <div class="hero">
-    <a class="eyebrow" href="#benchmark">LongMemEval: 78.4% ± 0.4 fully local · three seeds →</a>
+    <a class="eyebrow" href="#benchmark">Measured, not promised: the recall dial — 89% instant · 95% deep · 97% max →</a>
     <h1>Tell Claude Code once.<br><em>Codex remembers.</em></h1>
-    <p class="sub">One memory across your AI tools — and every session opens
+    <p class="sub">One memory across your AI tools — every session opens
     already briefed: current goal, next action, what changed while you were
-    gone. Local. Auditable. We couldn't read it if we tried.</p>
+    gone. And when a question deserves depth, turn the dial: deep recall
+    reads a hundred memories and answers in seconds.</p>
 
     <div class="hero-ctas" id="install">
       <span class="cmd-pill"><span><span class="k">curl</span> -fsSL forget.sh | <span class="k">sh</span></span><button id="copyBtn" type="button">copy</button></span>
@@ -524,7 +526,7 @@
   <span class="cy">Next:</span> record the demo video
   <span class="yl">Open loop:</span> "sent the pricing inquiry" <span class="dim">— 6 days, unverified</span></span><span class="step">
 <span class="you">&gt; </span><span class="you" id="type1"></span><span class="caret" id="caret1" hidden></span></span><span class="step">
-<span class="lbl">⏺ forget · search_memories</span></span><span class="step"><span class="g">✓</span> Paddle was chosen as merchant of record — KYB review
+<span class="lbl">⏺ forget · search_memories · dial <span class="cy">high</span></span> <span class="dim">reading 40 candidates…</span></span><span class="step"><span class="g">✓</span> Paddle was chosen as merchant of record — KYB review
   passed, and it handles global tax remittance for you.
   <span class="dim">[decision · Jul 13 · via Claude Code]</span></span><span class="step">
 <span class="you">&gt; </span><span class="you" id="type2"></span><span class="caret" id="caret2" hidden></span></span><span class="step">
@@ -550,47 +552,50 @@
 <section id="benchmark">
   <div class="wrap">
     <div class="sec-head rv">
-      <span class="sec-no">01 · Proof</span>
+      <span class="sec-no">01 · The dial</span>
       <div>
-        <h2 class="sec-title">Don't take our word for it.<br><em>Take the benchmark's.</em></h2>
-        <p class="sec-sub">LongMemEval, the standard long-term-memory benchmark.
-        Full 500-question set, GPT-4o reader and judge for every row.</p>
+        <h2 class="sec-title">One dial. Four gears.<br><em>Every gear measured.</em></h2>
+        <p class="sec-sub">How often the right memory lands in the top-6 results —
+        on our hardest benchmark: 120 questions, six question types, multi-part
+        answers scored by coverage.</p>
       </div>
     </div>
     <div class="sec-body">
       <div class="bench rv">
         <div class="row">
-          <span class="name">GPT-4o full-context</span>
-          <div class="track"><div class="bar" style="--w:60.6%"></div></div>
-          <span class="val">60.6%</span>
+          <span class="name">low · instant search, no LLM</span>
+          <div class="track"><div class="bar" style="--w:89.2%"></div></div>
+          <span class="val">89.2%</span>
         </div>
         <div class="row us">
-          <span class="name">forget · fully local, three seeds</span>
-          <div class="track"><div class="bar" style="--w:78.4%"><span class="in-label">100% LOCAL</span></div></div>
-          <span class="val">78.4% ± 0.4</span>
+          <span class="name">high · an LLM reads 40 candidates</span>
+          <div class="track"><div class="bar" style="--w:95%"><span class="in-label">~3 SECONDS</span></div></div>
+          <span class="val">95.0%</span>
         </div>
         <div class="row us">
-          <span class="name">forget · with a cloud observer (optional)</span>
-          <div class="track"><div class="bar" style="--w:81.8%"></div></div>
-          <span class="val">81.8%</span>
+          <span class="name">extra · reads 100, full text</span>
+          <div class="track"><div class="bar" style="--w:96.7%"><span class="in-label">~5 SECONDS</span></div></div>
+          <span class="val">96.7%</span>
         </div>
         <div class="row ceil">
-          <span class="name">GPT-4o oracle</span>
-          <div class="track"><div class="bar" style="--w:87%"></div></div>
-          <span class="val">87.0%</span>
+          <span class="name">ceiling · exhaustive read</span>
+          <div class="track"><div class="bar" style="--w:99.2%"></div></div>
+          <span class="val">99.2%</span>
         </div>
       </div>
-      <p class="bench-kicker rv">Knowledge-update questions — where memory products
-      usually fail because stale facts survive: <strong>92.3%</strong> (cloud-observer config)</p>
-      <p class="bench-note rv">Baseline and ceiling are from the
-      <a href="https://arxiv.org/abs/2410.10813">LongMemEval paper</a>: full-context
-      is GPT-4o reading the entire transcript with no memory system; oracle is GPT-4o
-      handed only the evidence sessions. The local row builds and retrieves
-      memory entirely on-device (Qwen 14B observer, v3 reader) — run three times
-      with different seeds: 78.4, 78.8, 78.0. We publish the spread; nobody else
-      in this market does. The optional cloud-observer config (GPT-4o) reaches 81.8%.
-      Our weakest category is single-session-preference — it's in the runs too.
-      <a href="https://github.com/multi-turn-inc/forget/tree/main/research/longmemeval/runs">Per-question outputs and configs →</a></p>
+      <p class="bench-kicker rv">The dial lives where you work — <strong>/forget</strong>
+      in your editor, a red-thread gauge in the menu bar. Instant answers all day;
+      depth for the questions that deserve it.</p>
+      <p class="bench-note rv">Top-6 recall, stratified across six question types
+      (20 each); questions with multi-part answers are scored by coverage. The gear
+      names are the contract — the engines behind them are replaceable, and every
+      number above was measured before its engine shipped
+      (<a href="https://github.com/multi-turn-inc/forget/tree/main/research/recall-eval">the harness is public →</a>).
+      Deep gears run on a local
+      LLM or the certified cloud model; the ceiling row reads every stored memory in
+      full, priced beyond any dial stop. Our earlier end-to-end result — 78.4% ± 0.4
+      on LongMemEval, three seeds, spread published —
+      <a href="https://github.com/multi-turn-inc/forget/tree/main/research/longmemeval/runs">remains in the archive →</a></p>
     </div>
   </div>
 </section>
@@ -691,10 +696,46 @@
   </div>
 </section>
 
+<section class="divide" id="cloud-engines">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="sec-no">04 · Engines</span>
+      <div>
+        <h2 class="sec-title">Deep recall needs a model.<br><em>Yours, or ours.</em></h2>
+        <p class="sec-sub">The dial's high and extra gears read your memories with an
+        LLM. Two ways to power them — both measured, both optional.</p>
+      </div>
+    </div>
+    <div class="sec-body">
+      <div class="cols rv">
+        <div class="col today">
+          <span class="chip ok">FREE · FOREVER</span>
+          <h3>Bring your own GPU</h3>
+          <ul>
+            <li>Run Ollama or LM Studio — forget attaches automatically, installs nothing</li>
+            <li>Certified model tiers by hardware, so a MacBook Air never gets a bad default</li>
+            <li>Everything stays on your machine, fan noise included</li>
+          </ul>
+        </div>
+        <div class="col">
+          <span class="chip soon">FORGET CLOUD · $8/MO</span>
+          <h3>Depth without the heat</h3>
+          <ul>
+            <li>2,000 deep recalls a month on the certified model, ~2.5&thinsp;s answers</li>
+            <li>Recall requests pass through and are gone — we keep the bill, not the memory</li>
+            <li>Cancel anytime; the dial quietly returns to local</li>
+          </ul>
+          <a class="btn red" href="/cloud" style="margin-top:18px; display:inline-block;">See forget cloud →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="divide" id="field-report">
   <div class="wrap">
     <div class="sec-head rv">
-      <span class="sec-no">04 · Field report</span>
+      <span class="sec-no">05 · Field report</span>
       <h2 class="sec-title">Our first user review<br><em>was written by an agent.</em></h2>
     </div>
     <div class="sec-body rv">
@@ -733,7 +774,7 @@
 <section class="divide" id="faq">
   <div class="wrap">
     <div class="sec-head rv">
-      <span class="sec-no">08 · FAQ</span>
+      <span class="sec-no">06 · FAQ</span>
       <div>
         <h2 class="sec-title">Questions, answered straight</h2>
       </div>
@@ -745,10 +786,20 @@
           <div class="a">Everything lives in one SQLite file at <code>~/.forget</code> —
           storage, search, and memory building all run on your machine, offline
           included. Local isn't a demo mode; it's a configuration we benchmark:
-          the fully-local pipeline scores 78.4% ± 0.4 on LongMemEval — three seeds,
-          spread published (81.8% with a GPT-4o observer), against the paper's
-          60.6% full-context baseline.
-          There is no account, no telemetry, and no server of ours in the loop.</div>
+          instant search alone lands the right memory in the top-6 results 89% of
+          the time, and the deep gears run on a local LLM if one is running.
+          There is no account, no telemetry, and no server of ours in the loop
+          unless you explicitly turn the cloud engine on.</div>
+        </details>
+        <details>
+          <summary>Do local and cloud score the same on the deep gears?</summary>
+          <div class="a">Almost — and we publish the gap instead of hiding it. The
+          numbers above were measured on the certified model at full precision,
+          which is what forget cloud runs. The same model quantized for a
+          16–24&thinsp;GB laptop lands about four points lower and takes ~20&thinsp;s
+          instead of ~3&thinsp;s — a real cost, labeled, not a paywall: your hardware,
+          your trade. On a 64&thinsp;GB machine a larger local model matches or beats
+          the cloud.</div>
         </details>
         <details>
           <summary>How is this different from ChatGPT or Claude's built-in memory?</summary>
@@ -781,17 +832,20 @@
         <details>
           <summary>Does anything ever leave my machine?</summary>
           <div class="a">Not by default, and never silently. Local processing is the
-          default; pointing extraction at a cloud model is an explicit, labeled
-          opt-in. When E2EE sync ships, memories will be encrypted on your device
-          before touching any server — ours included — so even then, what leaves
-          your machine is ciphertext.</div>
+          default; the cloud engine is an explicit, labeled opt-in — and when it's on,
+          deep-recall requests pass through our relay to be answered and are gone:
+          not stored, not logged. We keep the bill, not the memory. When E2EE sync
+          ships, memories will be encrypted on your device before touching any
+          server — ours included.</div>
         </details>
         <details>
           <summary>What does it cost?</summary>
           <div class="a">The local product is free and Apache-2.0 open source — that's
-          permanent, not a promotional period. End-to-end encrypted sync across your
-          devices will be the paid layer when it ships. You never pay for your own
-          machine remembering things.</div>
+          permanent, not a promotional period. You never pay for your own machine
+          remembering things. The paid layer is
+          <a href="/cloud">forget cloud Pro</a>: $8/month for 2,000 deep recalls on
+          the certified model, for people who want depth without the fan noise.
+          E2EE sync across devices remains on the roadmap.</div>
         </details>
         <details>
           <summary>How do I get rid of it?</summary>
@@ -805,7 +859,8 @@
           <summary>What's supported today, honestly?</summary>
           <div class="a">macOS and Linux; Claude Code, Codex, and Claude Desktop
           via MCP. The hooks layer (session capsule, push recall, conflict alerts) runs
-          on Claude Code today. Not shipped yet: Windows, E2EE sync, hosted anything —
+          on Claude Code today. Hosted: exactly one thing — the optional cloud engine
+          behind the dial's deep gears. Not shipped yet: Windows, E2EE sync —
           the same list we publish in <a href="/llms.txt">llms.txt</a>.</div>
         </details>
       </div>
@@ -816,13 +871,14 @@
 <section class="divide">
   <div class="wrap">
     <div class="sec-head rv">
-      <span class="sec-no">09 · Trajectory</span>
+      <span class="sec-no">07 · Trajectory</span>
       <div>
         <h2 class="sec-title">Shipping in the open</h2>
       </div>
     </div>
     <div class="sec-body">
       <ul class="log">
+        <li class="rv"><span class="d">Aug 4</span><span><strong>The recall dial + forget cloud.</strong> Four measured gears on one dial — <code>/forget</code> in your editor, a red-thread gauge in the menu bar — an engine axis (local · BYO · cloud), and forget cloud Pro live at <a href="/cloud" style="color:var(--red);font-weight:600">$8/month</a>.</span></li>
         <li class="rv"><span class="d">Aug 1</span><span><strong>0.3.9 — stale installs stop suffering silently.</strong> A version canary rides every session capsule, unknown arguments are never eaten without a word, and <code>forget-server upgrade</code> is the one prescription.</span></li>
         <li class="rv"><span class="d">Aug 1</span><span><strong>0.3.8 — the boundary release.</strong> Your projects stop leaking into each other: the repo you're in is the memory you get, detected from cwd — never configured. The task ledger honors the same line.</span></li>
         <li class="rv"><span class="d">Jul 31</span><span><strong>0.3.7 — semantic by default.</strong> An unconfigured install now embeds with a real local model out of the box; the hash fallback survives only as an explicit escape hatch.</span></li>
@@ -870,6 +926,7 @@
       <div class="foot-links">
         <div>
           <h4>Project</h4>
+          <a href="/cloud">forget cloud</a>
           <a href="https://github.com/multi-turn-inc/forget">GitHub</a>
           <a href="https://github.com/multi-turn-inc/forget/blob/main/MANIFESTO.md">Manifesto</a>
           <a href="/llms.txt">llms.txt</a>
@@ -995,7 +1052,7 @@
   wireCopy("copyBtn"); wireCopy("copyBtn2");
 
   const form = document.querySelector(".waitlist-form");
-  form.addEventListener("submit", async (event) => {
+  if (form) form.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
       const response = await fetch(form.action, {

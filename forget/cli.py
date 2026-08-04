@@ -807,6 +807,42 @@ def cmd_recall(args) -> None:
         print(f"forget cloud 토큰 저장 → engine cloud ({state})")
         return
 
+    if args.action == "cloud-usage":
+        import json as _json
+        import urllib.error
+        import urllib.request
+
+        from .store import FORGET_CLOUD_BASE_URL
+
+        token = str(get_project_settings("proj_local").get("recall_cloud_token") or "")
+        if not token:
+            print("클라우드 미연결 — forget.sh/cloud 에서 가입하면 잔여량이 생깁니다")
+            return
+        request = urllib.request.Request(
+            FORGET_CLOUD_BASE_URL.rstrip("/") + "/usage",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=10) as response:
+                report = _json.loads(response.read())
+        except urllib.error.HTTPError as exc:
+            if exc.code == 401:
+                print("토큰이 잠겼거나 알 수 없음 — forget.sh/cloud 에서 재발급하세요")
+            else:
+                print(f"forget cloud 응답 오류 ({exc.code})")
+            return
+        except Exception as exc:
+            print(f"forget cloud에 닿지 못했어요 ({exc}) — 로컬 회상은 계속 동작합니다")
+            return
+        status = str(report.get("status") or "?")
+        print(f"plan          : {report.get('plan', 'pro')} ({status})")
+        print(f"deep recalls  : {report.get('remaining', 0):,} / {report.get('cap', 0):,}"
+              f" remaining ({report.get('window_days', 30)}-day window)")
+        print(f"tokens        : {report.get('prompt_tokens', 0):,} in · {report.get('completion_tokens', 0):,} out")
+        if status != "active":
+            print("note          : 구독이 잠겨 있어요 — 딥 리콜은 로컬로 폴백 중 (forget.sh/cloud)")
+        return
+
     if args.action == "llm":
         if args.clear:
             update_project_settings("proj_local", {"recall_llm": {}})
@@ -900,8 +936,10 @@ def main(argv: list[str] | None = None) -> None:
         help="show or set the recall budget dial (low/medium/high/extra) and its LLM",
         parents=[shared],
     )
-    rec.add_argument("action", nargs="?", default="status", choices=["status", "use", "llm", "engine", "cloud-token"],
-                     help="status: show gear + engine; use: set default gear; llm: set BYO endpoint; engine: auto|local|byo")
+    rec.add_argument("action", nargs="?", default="status",
+                     choices=["status", "use", "llm", "engine", "cloud-token", "cloud-usage"],
+                     help="status: show gear + engine; use: set default gear; llm: set BYO endpoint; "
+                          "engine: auto|local|byo|cloud; cloud-usage: remaining deep recalls")
     rec.add_argument("value", nargs="?", help="gear for 'use': low|medium|high|extra, or +/- to step")
     rec.add_argument("--base-url", help="OpenAI-compatible endpoint for 'llm' (e.g. http://127.0.0.1:11434/v1)")
     rec.add_argument("--model", help="model name for 'llm'")

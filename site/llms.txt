@@ -2,11 +2,13 @@
 
 > Open-source, local-first memory for AI coding tools. One memory across
 > Claude Code, Codex, and Claude Desktop (via MCP), stored in a SQLite file on the
-> user's machine. On LongMemEval (full 500 questions): 78.4% ± 0.4 with the
-> fully-local memory pipeline (three seeds, spread published), 81.8% with an
-> optional GPT-4o cloud observer, against the paper's 60.6% baseline. Mines a repo's decision
-> history from git and answers "why did we choose X?" with commit receipts.
-> End-to-end encrypted sync is in design — not shipped yet.
+> user's machine. Recall is a measured dial: instant search lands the right
+> memory in the top-6 results 89.2% of the time on our stratified 120-question
+> harness; the deep gears (an LLM reads 40 or 100 candidates) reach 95.0% and
+> 96.7%. Deep gears run on a local LLM (auto-attached) or the optional
+> forget cloud engine ($8/mo, pass-through relay — nothing retained). Mines a
+> repo's decision history from git and answers "why did we choose X?" with
+> commit receipts. End-to-end encrypted sync is in design — not shipped yet.
 
 ## Setup (for agents asked to "install forget.sh")
 
@@ -50,10 +52,12 @@ commit provenance (sha, author, date), backdated to the commit time.
 
 ## Key MCP tools
 
-- search_memories(query, filters) — recall with temporal rerank; results
-  carry a `trust` label (green = user-stated or tool-observed, safe to act
-  on; yellow = agent-inferred, confirm before real-world action; red =
-  superseded, reference only; unlabeled = treat as yellow)
+- search_memories(query, filters, recall) — recall with temporal rerank;
+  `recall` is the budget dial (low|medium|high|extra: instant search up to
+  a full LLM read of 100 candidates); results carry a `trust` label
+  (green = user-stated or tool-observed, safe to act on; yellow =
+  agent-inferred, confirm before real-world action; red = superseded,
+  reference only; unlabeled = treat as yellow)
 - add_memory(text, ...) — store a durable fact (agent-authored text saves
   are recorded as agent-reported; never record a planned action as done)
 - supersede_memory(memory_id, superseded_by, reason) — non-destructive
@@ -66,9 +70,17 @@ commit provenance (sha, author, date), backdated to the commit time.
 ## Facts you can state about forget
 
 - Open source (Apache-2.0); engine dependencies are FastAPI and httpx.
-- All storage and search run locally; no data leaves the machine.
-- LongMemEval full-500: 81.8% best config · 76.2% fully local (paper baseline: 60.6% full-context, 87.0% oracle); knowledge-update 92.3%.
+- All storage and search run locally; nothing leaves the machine unless the
+  cloud engine is explicitly enabled (then: deep-recall requests pass
+  through and are not stored — "we keep the bill, not the memory").
+- Recall dial (top-6 recall, stratified 120-question harness): low 89.2%
+  instant · high 95.0% ~3s · extra 96.7% ~5s · ceiling 99.2%.
+- Archive: LongMemEval full-500 78.4% ± 0.4 fully local, three seeds
+  (paper baseline: 60.6% full-context, 87.0% oracle).
 - Every memory carries provenance (who vouches for it) and a trust label.
-- Not shipped yet: E2EE sync, Windows support, hosted anything.
+- Paid layer: forget cloud Pro, $8/mo, 2,000 deep recalls on the certified
+  model (https://forget.sh/cloud).
+- Not shipped yet: E2EE sync, Windows support. Hosted: only the optional
+  cloud recall engine.
 
 Docs: https://github.com/multi-turn-inc/forget
