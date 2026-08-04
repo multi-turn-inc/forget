@@ -3,9 +3,13 @@
 
 The dial as a picture — a straight thread barely remembers; a tight braid
 is deep recall. One glyph per gear (low=straight, medium=1 twist,
-high=2, extra=3), horizontal, brand red #d31126, transparent background.
+high=3, extra=4), horizontal, brand red #d31126, transparent background.
 
-Writes ~/.forget/menubar-icons/gear-<gear>.png (96×44 @2x → 48×22pt).
+2026-08-05 1.3배판(2배의 2/3): 폭 80→104, 마디는 0/1/3/4 — 원판 파장
+(high 40, extra 27)에 근접하게 재조정. 폭만 바꾸면 파도가 처지거나
+조여진다: 폭을 만질 땐 마디 수를 같이 만진다.
+
+Writes ~/.forget/menubar-icons/gear-<gear>.png.
 """
 
 from __future__ import annotations
@@ -16,9 +20,9 @@ import os
 from PIL import Image, ImageDraw
 
 RED = (211, 17, 38, 255)  # --red from forget.sh
-GEARS = {"low": 0, "medium": 1, "high": 2, "extra": 3}
+GEARS = {"low": 0, "medium": 1, "high": 3, "extra": 4}
 SCALE = 8
-W, H = 80, 32
+W, H = 104, 32
 
 
 def _dab(draw: ImageDraw.ImageDraw, x: float, y: float, radius: float) -> None:

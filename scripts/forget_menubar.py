@@ -71,6 +71,35 @@ def _ram_gb() -> int:
         return 0
 
 
+def _cloud_status() -> dict:
+    """구독 상태 한 줄 — 토큰이 있으면 잔여량까지, 없으면 구독 안내.
+
+    실패는 조용히: 메뉴바는 알림판이지 에러 콘솔이 아니다."""
+    import os
+
+    os.environ.setdefault("MEM1_DB_PATH", os.path.expanduser("~/.forget/forget.sqlite3"))
+    try:
+        from forget.providers import get_project_settings
+
+        token = str(get_project_settings("proj_local").get("recall_cloud_token") or "")
+    except Exception:
+        token = ""
+    if not token:
+        return {"label": "forget cloud 구독 — 발열 없는 딥 리콜"}
+    try:
+        request = urllib.request.Request(
+            "https://cloud.forget.sh/v1/usage",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        with urllib.request.urlopen(request, timeout=3) as response:
+            report = json.loads(response.read())
+        if report.get("status") == "active":
+            return {"label": f"cloud: {report.get('plan', 'pro')} · 딥 리콜 {report.get('remaining', 0):,}회 남음"}
+        return {"label": "cloud: 구독 잠김 — 재구독하기"}
+    except Exception:
+        return {"label": "cloud: 상태 확인 불가 — 페이지 열기"}
+
+
 def _recall_state() -> dict:
     out = _run("recall", "status")
     state = {"gear": "low", "engine": "", "ready": "deep recall   : ready" in out}
@@ -84,15 +113,17 @@ def _recall_state() -> dict:
     return state
 
 
-ICON_PT = (40, 16)  # 메뉴바 표시 치수(pt) — 가로 실이 눌리지 않게 직접 지정
+ICON_PT = (52, 16)  # 메뉴바 표시 치수(pt) — 가로 실이 눌리지 않게 직접 지정 (2026-08-05 2배의 2/3)
 
 
 class ForgetMenuBar(rumps.App):
     def _set_icon(self, path: str) -> None:
         try:
-            from rumps import _internal
+            # _nsimage_from_file은 rumps._internal이 아니라 rumps.rumps에 산다 —
+            # 잘못된 주소는 AttributeError → 폴백 → 20×20 스쿼시로 조용히 샌다.
+            from rumps.rumps import _nsimage_from_file
 
-            image = _internal._nsimage_from_file(path, dimensions=ICON_PT)
+            image = _nsimage_from_file(path, dimensions=ICON_PT)
             self._icon_nsimage = image
             try:
                 self._nsapp.setStatusBarIcon()
@@ -110,16 +141,17 @@ class ForgetMenuBar(rumps.App):
         self.gear_items = {gear: rumps.MenuItem(gear, callback=self._set_gear) for gear in GEARS}
         self.engine_item = rumps.MenuItem("engine: …")
         self.being_item = rumps.MenuItem("…")
+        self.cloud_item = rumps.MenuItem("forget cloud 구독 — 발열 없는 딥 리콜", callback=self._open_cloud)
         self.menu = [
             *self.gear_items.values(),
             None,
             self.engine_item,
             self.being_item,
+            None,
+            self.cloud_item,
         ]
-        if _ram_gb() < 16:
-            # Hardware gate: no local-LLM hint on small machines — cloud only.
-            self.menu.add(rumps.MenuItem("forget cloud — 발열 없는 딥 리콜 (준비 중)"))
-        else:
+        if _ram_gb() >= 16:
+            # Hardware gate: local-LLM hint only where it would feel good.
             self.local_hint = rumps.MenuItem("로컬 LLM 연결 안내 (Ollama)", callback=self._open_local_guide)
             self.menu.add(self.local_hint)
         self.gear = "low"
@@ -130,6 +162,9 @@ class ForgetMenuBar(rumps.App):
     def _open_local_guide(self, _sender) -> None:
         # 설치는 그들의 손으로 — 문만 열어준다 (2026-08-04 결정)
         subprocess.run(["open", "https://ollama.com/download"])
+
+    def _open_cloud(self, _sender) -> None:
+        subprocess.run(["open", "https://forget.sh/cloud"])
 
     @rumps.timer(1)
     def _poll_activity(self, _sender) -> None:
@@ -204,6 +239,7 @@ class ForgetMenuBar(rumps.App):
             if line.startswith("being:"):
                 self.being_item.title = line.replace("being:", "").strip()
                 break
+        self.cloud_item.title = _cloud_status()["label"]
 
 
 if __name__ == "__main__":
