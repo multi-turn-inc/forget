@@ -32,6 +32,7 @@ from .memory_engine import (
     score_memory,
 )
 from .providers import (
+    effective_embedding_stack,
     embed_text,
     extract_facts,
     generate_action_hint_targets,
@@ -4775,6 +4776,7 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
     temporal_rerank = _temporal_rerank_enabled(payload, project_id)
     scored_embeddings: dict[str, list[float] | None] = {}
     superseded_ids: set[str] = set()
+    rule_weight, vector_weight = _search_score_weights(project_id)
     for memory in candidates:
         if memory_as_of and (
             str(memory.get("created_at") or "") > memory_as_of
@@ -4791,7 +4793,6 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
         if vector_score is None:
             memory_embedding = memory.get("_embedding") or deterministic_embedding(memory.get("memory", ""))
             vector_score = cosine_similarity(query_embedding, memory_embedding)
-        rule_weight, vector_weight = _search_score_weights()
         score = round((rule_score * rule_weight) + (vector_score * vector_weight), 4)
         score_breakdown: dict[str, Any] = {"rule": rule_score, "vector": round(float(vector_score), 4)}
         entity_overlap = query_entities.intersection(entity_links.get(memory["id"], set()))
@@ -4939,19 +4940,24 @@ def _scope_fallback_eligible(memory: dict[str, Any], filters: dict[str, Any] | N
     return matches_filters(memory, _strip_entity_conditions(filters))
 
 
-def _semantic_embedding_active() -> bool:
-    provider = (os.getenv("MEM1_EMBEDDING_PROVIDER") or "").strip().lower()
-    return bool(provider) and provider not in {"local", "deterministic"}
+def _semantic_embedding_active(project_id: str = "proj_local") -> bool:
+    # "Is semantic on" must share embed_text's resolution, not re-derive it
+    # from the env var: semantic-by-default promotes an unconfigured stack to
+    # fastembed with no env set, and settings-configured providers never touch
+    # the env either. Judging by env alone left exactly those users on the
+    # fallback weights (cycle 43).
+    return effective_embedding_stack(project_id).get("embedding_provider") not in ("", "local")
 
 
-def _search_score_weights() -> tuple[float, float]:
+def _search_score_weights(project_id: str = "proj_local") -> tuple[float, float]:
     # The legacy 0.72/0.28 rule/vector split dates from the deterministic
     # hash-bag fallback era, when the vector channel carried almost no
     # meaning. With a real semantic model the vector becomes the stronger
     # signal (2026-07-04 real-corpus eval: 3/6 queries ranked strictly
     # better in pure semantic order, 0/6 worse), so rebalance toward it —
-    # but only when a semantic provider is actually active.
-    if _semantic_embedding_active():
+    # but only when a semantic provider is actually active. Reads project
+    # settings — resolve once per search, not per candidate.
+    if _semantic_embedding_active(project_id):
         return 0.45, 0.55
     return 0.72, 0.28
 

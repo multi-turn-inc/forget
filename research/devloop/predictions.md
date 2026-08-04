@@ -290,6 +290,19 @@ P1의 정당한 원기한을 승계한 것이므로 선적용 아님.
   이월된 전례(사이클 42 적발)를 반복하지 않기 위해.
 - 우선순위 주: **P10이 P11보다 앞선다.** 회상 채널이 꺼져 있는 것(주입 0건)이
   가중치가 기울어 있는 것보다 크다.
+  **→ 해제 (사이클 53)**: P10이 c52에서 보류 확정(전제 소멸·백필 처치 no-op)이므로
+  P11이 실행 가능한 선순위로 승격 — 재무장 조건(주입 <3 재출현) 발화 시 재역전.
+- 진행: **처치 2 코드 구현 완료 (사이클 53 커밋)** — `_semantic_embedding_active(project_id)`가
+  env 단독이 아니라 `effective_embedding_stack(project_id)`(embed_text와 동일 해석 순서)로
+  판정, `_search_score_weights`에 project_id 관통. 부수 수리: 종전엔 후보 루프 안에서
+  per-row 호출이었는데 effective 판정은 `get_project_settings`(무캐시 DB 직독)를 타므로
+  검색당 1회로 호이스트(store.py). 단위테스트 4종 `tests/test_score_weights.py`
+  (semantic-by-default 활성 / 명시 local 핀 유지 / 설정 구성 프로바이더 활성 —
+  env-only 시절엔 이들도 폴백 가중이었다 / fastembed 부재 폴백). pytest 279 통과.
+  conftest의 `MEM1_EMBEDDING_PROVIDER=local` 핀이 explicit-pin 분기라 기존 테스트
+  결정성 불변. **시계는 여전히 미시작** — 설치본(~/.forget) 배선 + sha256 확인
+  시점부터 +5사이클(유령 게이트 방지 규약 유지). 처치 1(health 선언)·처치 3(차원
+  거부)은 미착수 — 별도 사이클.
 
 ### (d) 결과란 — 판정 완료 (사이클 44, 2026-08-04, `scripts/score_weight_regimes.py`)
 
