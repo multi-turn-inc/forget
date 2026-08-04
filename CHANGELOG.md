@@ -1,5 +1,56 @@
 # Changelog
 
+## 0.4.0 — 2026-08-04
+
+The dial release. Recall stops being one behavior and becomes a measured
+curve you stand on: four gear names that are a stable contract, engines
+behind them that are disposable — every gear's number measured before its
+engine shipped (top-6 recall, stratified 120-question harness, public in
+`research/recall-eval/`).
+
+### The recall dial
+- `search_memories` accepts `recall`: `low` (instant search, no LLM —
+  89.2%) · `medium` (shares low's engine today) · `high` (an LLM reads 40
+  candidates, ~3 s — 95.0%) · `extra` (reads 100 in full text, ~5 s —
+  96.7%). Ceiling measured at 99.2%.
+- A per-project default gear (`forget-server recall use <gear>`), so the
+  dial is a setting, not a per-call chore. Ambient callers — hooks,
+  capsule, consolidation, dedupe — pin `recall: low` explicitly: the dial
+  is a choice, not a tax collected on every keystroke.
+- Slash commands for the editor: `/forget` (pick a gear) and
+  `/forget-settings` (status · doctor · weekly · cloud usage), shipped
+  with forget-connect 0.5.2 — installed with the same ownership rule as
+  hooks: a file without our marker is yours and is never touched.
+
+### The engine axis
+- `forget-server recall engine auto|local|byo|cloud`. `auto` prefers a
+  local runtime; `local` attaches a running Ollama or LM Studio —
+  attach-only, forget never installs one. Model pick prefers the largest
+  qwen/llama/gemma; a context-window probe shrinks the candidate set to
+  fit small windows (`fit:N` in `recall_layer`).
+- Ollama is driven natively (`/api/chat`, `think: false`) — the OpenAI
+  facade silently ignores thinking controls and burns the token budget on
+  reasoning that never surfaces.
+- `cloud`: forget cloud Pro ($8/mo, 2,000 deep recalls on the certified
+  model). `recall cloud-token` connects, `recall cloud-usage` shows the
+  meter (plan, remaining, token counts) — and reports even when the cap
+  is hit or the subscription is canceled, because seeing *why* recall
+  went quiet is part of the product. Over cap or offline, deep gears
+  degrade to instant search — quietly, never with an error.
+
+### Performance
+- Write-epoch caches on the hot read path (row cache, entity/alias maps,
+  parsed datetimes): a search that cost 1,165 ms in-process now costs
+  171 ms; over HTTP 1,900 → 175 ms. Caches invalidate on write epoch, so
+  a stale read is structurally impossible.
+
+### Server
+- `GET /v3/recall/activity` — a counter that ticks while a deep recall is
+  reading, feeding the menu-bar gauge's animation.
+- v3 search responses carry `recall_layer` — which engine actually
+  answered, fallbacks included (`gate-v2(fallback→v1)`), so a degraded
+  answer is never mistaken for a deep one.
+
 ## 0.3.9 — 2026-08-01
 
 Stale installs must not suffer silently. The 0.3.7↔0.5.0 hook/server

@@ -22,11 +22,14 @@ import {
 } from "./core.js";
 import { doctorRemote } from "./doctor.js";
 import {
+  commandsDirFor,
   connectHooksSettings,
   disconnectHooksSettings,
   hooksDirFor,
   inspectHooks,
+  installCommandAssets,
   installHookScripts,
+  removeCommandAssets,
   removeHookScripts,
   settingsPathFor,
 } from "./hooks.js";
@@ -643,9 +646,11 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
     }
     if (manageHooks && options.action === "connect") {
       stdout.write(`Would install hook scripts into ${hooksDir}\n`);
+      stdout.write(`Would install slash commands (/forget, /forget-settings) into ${commandsDirFor({ env })}\n`);
     }
     if (manageHooks && options.action === "disconnect") {
       stdout.write(`Would remove hook scripts from ${hooksDir}\n`);
+      stdout.write(`Would remove our slash commands from ${commandsDirFor({ env })} (user-edited files are kept)\n`);
     }
     return;
   }
@@ -656,6 +661,11 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
     hookScriptPaths = options.action === "connect"
       ? await installHookScripts(hooksDir)
       : await removeHookScripts(hooksDir);
+    const commandsDir = commandsDirFor({ env });
+    const commandPaths = options.action === "connect"
+      ? await installCommandAssets(commandsDir)
+      : await removeCommandAssets(commandsDir);
+    hookScriptPaths = hookScriptPaths.concat(commandPaths);
   }
   const verb = options.action === "connect" ? "Connected" : "Disconnected";
   if (!result.changed.length && !hookScriptPaths.length) {
@@ -677,6 +687,7 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
     }
     if (manageHooks) {
       stdout.write("  hooks: session capsule, per-turn recall, conflict alerts, session capture (needs python3 on PATH)\n");
+      stdout.write("  commands: /forget (the recall dial) · /forget-settings (status, doctor, cloud usage)\n");
     }
     if (options.hosted && !options.scope) {
       stdout.write(

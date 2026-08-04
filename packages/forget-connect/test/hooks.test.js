@@ -134,3 +134,42 @@ test("hook scripts carry no hardcoded personal scope", async () => {
     assert.ok(!asset.content.includes("junghunkim"), `${asset.name} contains a personal scope`);
   }
 });
+
+test("command assets: install, respect user-owned files, remove only ours", async (t) => {
+  const { mkdtemp, rm, writeFile } = await import("node:fs/promises");
+  const os = await import("node:os");
+  const { COMMAND_ASSETS, COMMAND_MARKER, installCommandAssets, removeCommandAssets } =
+    await import("../src/hooks.js");
+
+  const dir = await mkdtemp(path.join(os.tmpdir(), "forget-cmd-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+
+  // fresh install writes both commands, marker included
+  const written = await installCommandAssets(dir);
+  assert.equal(written.length, COMMAND_ASSETS.length);
+  for (const name of COMMAND_ASSETS) {
+    const content = await readFile(path.join(dir, name), "utf8");
+    assert.ok(content.includes(COMMAND_MARKER), `${name} lacks ownership marker`);
+  }
+
+  // an identical re-install is a no-op
+  assert.equal((await installCommandAssets(dir)).length, 0);
+
+  // a user-owned file (no marker) is never overwritten, never removed
+  const userFile = path.join(dir, COMMAND_ASSETS[0]);
+  await writeFile(userFile, "my own /forget command\n");
+  assert.equal((await installCommandAssets(dir)).length, 0);
+  const removed = await removeCommandAssets(dir);
+  assert.equal(removed.length, COMMAND_ASSETS.length - 1);
+  assert.equal(await readFile(userFile, "utf8"), "my own /forget command\n");
+});
+
+test("command assets carry no hardcoded personal scope or dogfood env", async () => {
+  const { COMMAND_ASSETS } = await import("../src/hooks.js");
+  const assetsDir = fileURLToPath(new URL("../assets/commands/", import.meta.url));
+  for (const name of COMMAND_ASSETS) {
+    const content = await readFile(path.join(assetsDir, name), "utf8");
+    assert.ok(!content.includes("junghunkim"), `${name} contains a personal scope`);
+    assert.ok(!content.includes("MEM1_DB_PATH"), `${name} pins the dogfood database`);
+  }
+});

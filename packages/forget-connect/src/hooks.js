@@ -258,3 +258,57 @@ export async function removeHookScripts(hooksDir) {
   }
   return removed;
 }
+
+// --- slash commands (/forget, /forget-settings) — the dial in the editor ---
+//
+// Same file-ownership rule as settings.json: a command file without our
+// marker is the user's (hand-written or edited with the marker removed) and
+// is never touched — not on connect, not on disconnect.
+
+export const COMMAND_ASSETS = ["forget.md", "forget-settings.md"];
+export const COMMAND_MARKER = "forget-connect:command";
+
+export function commandsDirFor(options = {}) {
+  const env = options.env ?? process.env;
+  const home = options.home ?? env.HOME ?? env.USERPROFILE ?? os.homedir();
+  return path.join(home, ".claude", "commands");
+}
+
+function commandAssetsDir() {
+  return fileURLToPath(new URL("../assets/commands/", import.meta.url));
+}
+
+export async function installCommandAssets(commandsDir) {
+  const written = [];
+  for (const name of COMMAND_ASSETS) {
+    const target = path.join(commandsDir, name);
+    let existing = null;
+    try {
+      existing = await readFile(target, "utf8");
+    } catch (error) {
+      if (!error || error.code !== "ENOENT") throw error;
+    }
+    if (existing !== null && !existing.includes(COMMAND_MARKER)) continue;
+    const content = await readFile(path.join(commandAssetsDir(), name), "utf8");
+    if (existing === content) continue;
+    await atomicWrite(target, content, 0o644);
+    written.push(target);
+  }
+  return written;
+}
+
+export async function removeCommandAssets(commandsDir) {
+  const removed = [];
+  for (const name of COMMAND_ASSETS) {
+    const target = path.join(commandsDir, name);
+    try {
+      const existing = await readFile(target, "utf8");
+      if (!existing.includes(COMMAND_MARKER)) continue;
+      await unlink(target);
+      removed.push(target);
+    } catch (error) {
+      if (!error || error.code !== "ENOENT") throw error;
+    }
+  }
+  return removed;
+}
