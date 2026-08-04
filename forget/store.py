@@ -5737,7 +5737,7 @@ def _candidate_memories_for_claim(
         return [dict(memory) for memory in context_memories if isinstance(memory, dict)]
     filters = payload.get("filters") if isinstance(payload.get("filters"), dict) else {}
     search = search_memories(
-        {
+        {"recall": "low", 
             "query": claim,
             "filters": filters,
             "top_k": payload.get("top_k", payload.get("limit", 5)),
@@ -6763,7 +6763,7 @@ def _context_role_backfill_candidates(
     payload = dict(search_payload)
     payload["filters"] = backfill_filters
     payload["top_k"] = max(_int_or(search_payload.get("top_k"), 10), max_backfill * 4, 12)
-    search = search_memories(payload, project_id=project_id)
+    search = search_memories({**payload, "recall": "low"}, project_id=project_id)
     raw_candidates = search.get("results") or []
     current_candidates = [memory for memory in raw_candidates if not _context_memory_is_superseded(memory)]
     backfill_state["applied"] = True
@@ -11494,7 +11494,7 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
             workspace_current = None
     workspace_line = _workspace_context_line(workspace_current) if isinstance(workspace_current, dict) else ""
     workspace_tokens = min(token_estimate(workspace_line), budget_tokens) if workspace_line else 0
-    search = search_memories(search_payload, project_id=project_id)
+    search = search_memories({**search_payload, "recall": "low"}, project_id=project_id)
     search_candidates = search["results"]
     current_candidates = [memory for memory in search_candidates if not _context_memory_is_superseded(memory)]
     requested_task_id = _context_requested_task_id(payload)
@@ -11898,7 +11898,7 @@ def _summary_candidates(
         top_k = _validated_search_top_k_value(top_k_raw, default=max_memories)
         threshold = 0 if payload.get("threshold") is None else _validated_search_threshold(payload, default=0)
         search = search_memories(
-            {
+            {"recall": "low", 
                 "query": query,
                 "filters": filters,
                 "top_k": top_k,
@@ -16737,7 +16737,7 @@ def create_evaluation(payload: dict[str, Any], project_id: str | None = None) ->
             continue
         try:
             search = search_memories(
-                {
+                {"recall": "low", 
                     "query": query,
                     "filters": filters,
                     "top_k": top_k,

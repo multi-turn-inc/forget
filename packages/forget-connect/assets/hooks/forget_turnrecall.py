@@ -118,7 +118,9 @@ def main() -> None:
     # possible, but only when the user asks for it — and it says so when it does.
     project = None if scope_disabled() else project_key_for_path(hook_input.get("cwd") or os.getcwd())
     crossed = bool(project) and wants_cross_project(prompt)
-    search_args: dict = {"query": prompt[:300], "top_k": MAX_RECALLS + 2}
+    # Per-turn ambient recall stays on the instant path — the recall dial is
+    # the user's explicit choice, not a tax on every keystroke.
+    search_args: dict = {"query": prompt[:300], "top_k": MAX_RECALLS + 2, "recall": "low"}
     if project and not crossed:
         search_args["filters"] = layered_filter(project)
     result = _rpc("search_memories", search_args)
