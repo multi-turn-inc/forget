@@ -4475,11 +4475,20 @@ def recall_activity() -> dict[str, Any]:
 
 
 def _pick_local_model(models: list[Any]) -> str | None:
-    names = [str(m) for m in models if m]
+    """Prefer the trusted families, and within a family the largest model
+    the user pulled — they downloaded it to use it (성능 우선, 2026-08-04)."""
+    import re as _re
+
+    names = [str(m) for m in models if m and "embed" not in str(m).lower()]
+
+    def parameter_billions(name: str) -> float:
+        matches = _re.findall(r"(\d+(?:\.\d+)?)b", name.lower())
+        return max((float(m) for m in matches), default=0.0)
+
     for preference in ("qwen", "llama", "gemma", "mistral", "phi"):
-        for name in names:
-            if preference in name.lower() and "embed" not in name.lower():
-                return name
+        family = [n for n in names if preference in n.lower()]
+        if family:
+            return max(family, key=parameter_billions)
     return names[0] if names else None
 
 
