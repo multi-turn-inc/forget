@@ -74,7 +74,23 @@ def _recall_state() -> dict:
     return state
 
 
+ICON_PT = (40, 16)  # 메뉴바 표시 치수(pt) — 가로 실이 눌리지 않게 직접 지정
+
+
 class ForgetMenuBar(rumps.App):
+    def _set_icon(self, path: str) -> None:
+        try:
+            from rumps import _internal
+
+            image = _internal._nsimage_from_file(path, dimensions=ICON_PT)
+            self._icon_nsimage = image
+            try:
+                self._nsapp.setStatusBarIcon()
+            except AttributeError:
+                pass  # run() 이전 — 초기 아이콘은 run 시점에 반영됨
+        except Exception:
+            self.icon = path  # 어떤 rumps 내부 변경에도 폴백
+
     def __init__(self) -> None:
         import os
 
@@ -96,14 +112,14 @@ class ForgetMenuBar(rumps.App):
         else:
             self.local_hint = rumps.MenuItem("로컬 LLM 연결 안내 (Ollama)", callback=self._open_local_guide)
             self.menu.add(self.local_hint)
-
-    def _open_local_guide(self, _sender) -> None:
-        # 설치는 그들의 손으로 — 문만 열어준다 (2026-08-04 결정)
-        subprocess.run(["open", "https://ollama.com/download"])
         self.gear = "low"
         self.frame = 0
         self.anim = rumps.Timer(self._animate, 0.13)
         self._refresh(None)
+
+    def _open_local_guide(self, _sender) -> None:
+        # 설치는 그들의 손으로 — 문만 열어준다 (2026-08-04 결정)
+        subprocess.run(["open", "https://ollama.com/download"])
 
     @rumps.timer(1)
     def _poll_activity(self, _sender) -> None:
@@ -121,7 +137,7 @@ class ForgetMenuBar(rumps.App):
             self.anim.stop()
             icon = os.path.join(self.icon_dir, f"gear-{self.gear}.png")
             if os.path.exists(icon):
-                self.icon = icon
+                self._set_icon(icon)
 
     def _animate(self, _sender) -> None:
         import os
@@ -130,7 +146,7 @@ class ForgetMenuBar(rumps.App):
         self.frame = (self.frame + 1) % 6
         icon = os.path.join(self.icon_dir, f"gear-{gear}-f{self.frame}.png")
         if os.path.exists(icon):
-            self.icon = icon
+            self._set_icon(icon)
 
     def _set_gear(self, sender: rumps.MenuItem) -> None:
         import os
@@ -142,7 +158,7 @@ class ForgetMenuBar(rumps.App):
         self.gear = sender.title
         icon = os.path.join(self.icon_dir, f"gear-{self.gear}.png")
         if os.path.exists(icon) and not self.anim.is_alive():
-            self.icon = icon
+            self._set_icon(icon)
         for gear, item in self.gear_items.items():
             item.state = 1 if gear == self.gear else 0
 
@@ -155,7 +171,7 @@ class ForgetMenuBar(rumps.App):
         if not self.anim.is_alive():
             icon_path = os.path.join(self.icon_dir, f"gear-{state['gear']}.png")
             if os.path.exists(icon_path):
-                self.icon = icon_path
+                self._set_icon(icon_path)
         for gear, item in self.gear_items.items():
             item.state = 1 if gear == state["gear"] else 0
         engine = state["engine"] or "미설정"

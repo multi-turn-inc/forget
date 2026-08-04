@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw
 RED = (211, 17, 38, 255)  # --red from forget.sh
 GEARS = {"low": 0, "medium": 1, "high": 2, "extra": 3}
 SCALE = 8
-W, H = 96, 44
+W, H = 80, 32
 
 
 def _dab(draw: ImageDraw.ImageDraw, x: float, y: float, radius: float) -> None:
@@ -43,10 +43,10 @@ def draw_gear(lobes: int, phase: float = 0.0) -> Image.Image:
     width, height = W * SCALE, H * SCALE
     image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     center = height / 2
-    margin = 7 * SCALE
+    margin = 5 * SCALE
     span = width - 2 * margin
-    amplitude_max = height * 0.315
-    base_radius = 2.6 * SCALE
+    amplitude_max = height * 0.335
+    base_radius = 2.9 * SCALE
 
     samples = 720
 
@@ -64,8 +64,8 @@ def draw_gear(lobes: int, phase: float = 0.0) -> Image.Image:
             y = center + sign * amplitude_max * envelope * wobble * math.sin(theta)
             if lobes:
                 belly = abs(math.sin(theta)) ** 0.9
-                # 교차점에서도 실이 살아 있어야 땋임이 읽힌다 — 최소 굵기 65%
-                radius = base_radius * (0.65 + 0.35 * belly * envelope)
+                # 소형 크기 판독성: 최소 굵기 72%, 변화폭 축소
+                radius = base_radius * (0.72 + 0.28 * belly * envelope)
             else:
                 # low: 곧은 실도 죽은 직선이 아니라 숨 쉬는 획으로
                 y = center + 1.1 * SCALE * math.sin(math.pi * u * 2) * math.sin(math.pi * u)
@@ -123,7 +123,7 @@ def draw_gear(lobes: int, phase: float = 0.0) -> Image.Image:
             for x, y, radius in points:
                 _dab(draw, x, y, radius)
     # 2) 위로 지나가는 마디: 아래 실을 끊고(케이싱) 그 위에 얹기
-    gap = 1.8 * SCALE
+    gap = 2.0 * SCALE
     for points, over in segments:
         if over:
             _erase(image, points, gap)
