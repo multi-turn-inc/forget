@@ -53,7 +53,8 @@ def _version_notice(server_version: str) -> str:
             "프로젝트 층 등이 조용히 무시됨. 처방: forget-server upgrade"
         )
     try:
-        with open(os.path.expanduser("~/.forget/update-check.json"), encoding="utf-8") as fh:
+        forget_home = os.environ.get("FORGET_HOME") or os.path.expanduser("~/.forget")
+        with open(os.path.join(forget_home, "update-check.json"), encoding="utf-8") as fh:
             latest = str(json.load(fh).get("latest") or "")
         if latest and _version_tuple(server_version) < _version_tuple(latest):
             return f"새 버전 {latest} 나옴 (현재 {server_version}) — forget-server upgrade"
