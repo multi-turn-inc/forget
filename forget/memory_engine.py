@@ -780,10 +780,16 @@ def deterministic_embedding(text: str, dimensions: int = 128) -> list[float]:
 def cosine_similarity(left: list[float], right: list[float]) -> float:
     if not left or not right:
         return 0.0
-    size = min(len(left), len(right))
+    if len(left) != len(right):
+        # Vectors from different embedding spaces carry no comparable signal.
+        # Truncating to min(len) yields near-neutral noise that lands ~0.5 on
+        # the (cos+1)/2 scale — above the 0.45 recall gate — so mismatches are
+        # rejected outright instead of silently scored.
+        return 0.0
+    size = len(left)
     dot = sum(left[i] * right[i] for i in range(size))
-    left_norm = math.sqrt(sum(value * value for value in left[:size])) or 1.0
-    right_norm = math.sqrt(sum(value * value for value in right[:size])) or 1.0
+    left_norm = math.sqrt(sum(value * value for value in left)) or 1.0
+    right_norm = math.sqrt(sum(value * value for value in right)) or 1.0
     return max(0.0, min(1.0, round((dot / (left_norm * right_norm) + 1.0) / 2.0, 4)))
 
 

@@ -313,6 +313,16 @@ P1의 정당한 원기한을 승계한 것이므로 선적용 아님.
   (semantic-by-default 공시 / health·catalog effective 동일 — c43이 잡은 분기 그 자체를
   회귀로 고정 / explicit pin 공시). pytest 282 통과. 배선은 처치 2와 동일 게이트
   (설치본 갱신+서버 재시작)에 합류 — 선언 채널만이라 순위 실변경은 없으나 같은 재시작을 탄다.
+- 진행 3: **처치 3 코드 구현 완료 (사이클 56 커밋)** — `cosine_similarity`(memory_engine.py)가
+  `len(left) != len(right)`면 0.0 반환(절단 잡음이 `(cos+1)/2` 재사상으로 ~0.5에 놓여 게이트
+  0.45를 넘던 경로 차단). 이웃 검사에서 `vector_adapters._cosine_similarity`(인메모리 스캔
+  폴백)의 `zip()` 절단이 같은 결함류로 발견 — 동일 거부 동기(호출처 2곳은 내림차순 정렬이라
+  0.0=침강). `_batch_cosine_scores`의 차원 필터는 종전엔 스칼라 폴백이 되무르던 것을 이제
+  일관되게 만든다. **(c) 코드 레벨 재생: 600/600 → 0/600, 동일공간 대조군 200/200 유지**
+  (`embedding_space_audit.py`, seed 43·같은 3행 — c43 대조군과 직접 비교 가능). 회귀 4종
+  `tests/test_cosine_dimension_guard.py`, pytest 287 통과. **공식 (c) 판정 시계는 여전히
+  미시작** — 배선(설치본 갱신+sha256+서버 재시작, 처치 1·2와 동일 게이트) 후 +5사이클.
+  이로써 처치 3종 전부 코드 구현 완료, 남은 것은 배선 게이트 하나다.
 
 ### (d) 결과란 — 판정 완료 (사이클 44, 2026-08-04, `scripts/score_weight_regimes.py`)
 

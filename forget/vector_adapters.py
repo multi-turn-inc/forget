@@ -1155,6 +1155,10 @@ def _cassandra_payload_matches(payload: dict[str, Any], filters: dict[str, Any],
 
 
 def _cosine_similarity(left: list[float], right: list[float]) -> float:
+    if len(left) != len(right):
+        # Same rejection as memory_engine.cosine_similarity: zip() would
+        # silently truncate cross-space pairs into meaningless scores.
+        return 0.0
     dot = sum(float(a) * float(b) for a, b in zip(left, right))
     left_norm = sum(float(value) * float(value) for value in left) ** 0.5
     right_norm = sum(float(value) * float(value) for value in right) ** 0.5
