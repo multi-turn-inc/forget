@@ -9655,6 +9655,26 @@ def _stance_line(project_id: str, scope_filters: dict[str, Any] | None = None) -
     return ""
 
 
+def _self_line(project_id: str) -> str:
+    """자기 기억 슬롯 — 에이전트가 자신에 대해 검증해온 앎 (one-person RFC P0).
+
+    stance가 '지난 세션의 자세'라면 self는 '누적된 자기 교정'이다:
+    실측된 예측 편향, 규모 착시 같은 교훈. metadata.layer == "self"
+    관행으로 저장된다. stance와 달리 신선도 게이트가 없다 — 교정은
+    낡는 게 아니라 supersede로 대체된다. 새 인스턴스가 일만 아는 게
+    아니라 자신을 알고 깨어나게 하는 줄."""
+    try:
+        rows = [
+            m for m in list_memory_dicts(project_id=project_id)
+            if str((m.get("metadata") or {}).get("layer") or "") == "self"
+        ]
+    except Exception:
+        return ""
+    rows.sort(key=lambda m: str(m.get("updated_at") or m.get("created_at") or ""), reverse=True)
+    picks = [str(m.get("memory") or "").split("\n")[0][:120] for m in rows[:2]]
+    return " | ".join(p for p in picks if p)
+
+
 def _capsule_scope_filters(payload: dict[str, Any] | None) -> dict[str, Any]:
     """The requesting scope, for capsule layers that list task state.
 
@@ -9861,6 +9881,9 @@ def _render_context_capsule_text(capsule: dict[str, Any]) -> str:
     stance_line = str(capsule.get("stance_line") or "")
     if stance_line:
         lines.append("자세: " + stance_line)
+    self_line = str(capsule.get("self_line") or "")
+    if self_line:
+        lines.append("자기: " + self_line)
     parallel_tracks = [str(item) for item in capsule.get("parallel_tracks") or [] if str(item)]
     if parallel_tracks:
         # placed above the droppable tail: under budget pressure the render
@@ -10129,6 +10152,7 @@ def _attach_context_autopilot(
     capsule["parallel_tracks"] = _parallel_track_lines(capsule_project_id, current_task_id, capsule_scope)
     capsule["goal_lines"] = _goal_lines(capsule_project_id, capsule_scope)
     capsule["stance_line"] = _stance_line(capsule_project_id, capsule_scope)
+    capsule["self_line"] = _self_line(capsule_project_id)
     capsule_text = _render_context_capsule_text(capsule)
     final_model_context = str(result.get("context") or "")
     result["context_status"] = context_status
