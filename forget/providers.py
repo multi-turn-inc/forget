@@ -945,6 +945,27 @@ def effective_embedding_stack(project_id: str = "proj_local") -> dict[str, str]:
             "resolution": "configured"}
 
 
+_EMBED_FALLBACK_WARNED: set[str] = set()
+
+
+def _warn_embedding_fallback(provider: str, error: Exception) -> None:
+    """body A3: 예외를 삼키는 폴백은 실패까지 삼킨다 — 확진 2건(rumps
+    아이콘, 임베딩 provider 404)의 병소. 폴백 자체는 fail-open 설계로
+    옳다; 죄는 무흔적이다. 프로세스당 provider별 1회, 관측 가능한
+    흔적을 남긴다."""
+    import logging
+
+    key = f"{provider}:{type(error).__name__}"
+    if key in _EMBED_FALLBACK_WARNED:
+        return
+    _EMBED_FALLBACK_WARNED.add(key)
+    logging.getLogger("forget.embeddings").warning(
+        "embedding provider %r failed (%s: %s) — falling back down the chain; "
+        "if this ends at deterministic-128 your search is running on hash vectors",
+        provider, type(error).__name__, str(error)[:200],
+    )
+
+
 def embed_text(text: str, project_id: str = "proj_local", role: str = "passage") -> list[float]:
     settings = get_project_settings(project_id)
     env_choice = (os.getenv("MEM1_EMBEDDING_PROVIDER") or "").strip().lower()
@@ -958,55 +979,71 @@ def embed_text(text: str, project_id: str = "proj_local", role: str = "passage")
     if not env_choice and provider == "local" and _fastembed_available():
         try:
             return _embed_with_fastembed_provider(text, settings, role=role)
-        except Exception:
-            pass
+        except Exception as error:
+            _warn_embedding_fallback(provider, error)
     if provider in OPENAI_COMPATIBLE_EMBEDDING_PROVIDERS and _provider_credentials_available(settings, "embedding"):
         try:
-            return _embed_with_provider(text, settings)
-        except Exception:
-            pass
+            return _embed_with_provider(text, settings, role=role)
+        except Exception as error:
+            _warn_embedding_fallback(provider, error)
     if provider in GEMINI_EMBEDDING_PROVIDERS and _provider_credentials_available(settings, "embedding"):
         try:
             return _embed_with_gemini_provider(text, settings)
-        except Exception:
-            pass
+        except Exception as error:
+            _warn_embedding_fallback(provider, error)
     if provider in AZURE_OPENAI_EMBEDDING_PROVIDERS and _provider_credentials_available(settings, "embedding"):
         try:
             return _embed_with_azure_openai_provider(text, settings)
-        except Exception:
-            pass
+        except Exception as error:
+            _warn_embedding_fallback(provider, error)
     if provider in AWS_BEDROCK_EMBEDDING_PROVIDERS:
         try:
             return _embed_with_aws_bedrock_provider(text, settings)
-        except Exception:
-            pass
+        except Exception as error:
+            _warn_embedding_fallback(provider, error)
     if provider in FASTEMBED_EMBEDDING_PROVIDERS:
         try:
             return _embed_with_fastembed_provider(text, settings, role=role)
-        except Exception:
-            pass
+        except Exception as error:
+            _warn_embedding_fallback(provider, error)
     if provider in HUGGINGFACE_EMBEDDING_PROVIDERS:
         try:
             return _embed_with_huggingface_provider(text, settings, role=role)
-        except Exception:
-            pass
+        except Exception as error:
+            _warn_embedding_fallback(provider, error)
     if provider in VERTEXAI_EMBEDDING_PROVIDERS:
         try:
             return _embed_with_vertexai_provider(text, settings)
-        except Exception:
-            pass
+        except Exception as error:
+            _warn_embedding_fallback(provider, error)
     return deterministic_embedding(text)
 
 
-def _embed_with_provider(text: str, settings: dict[str, Any]) -> list[float]:
+def _embed_with_provider(text: str, settings: dict[str, Any], role: str = "passage") -> list[float]:
     api_key = _provider_api_key(settings, "embedding") or os.getenv("MEM1_EMBEDDING_API_KEY")
+    # body A4 (2026-08-06): env가 설정 '기본값'에 가려지던 비대칭 수리.
+    # provider 선택은 env가 이기는데 model/base_url은 settings-우선이라,
+    # 신선한 DB(기본값 deterministic-128)에서 MEM1_EMBEDDING_MODEL이
+    # 무시되고 404→무음 폴백으로 샜다 (2026-08-05 실측). 규칙 통일:
+    # 명시적 env > 저장된 설정 > 하드코드 기본값.
     base_url = (
-        settings.get("embedding_base_url")
-        or os.getenv("MEM1_EMBEDDING_BASE_URL")
+        os.getenv("MEM1_EMBEDDING_BASE_URL")
+        or settings.get("embedding_base_url")
         or os.getenv("MEM1_LLM_BASE_URL")
         or "https://api.openai.com/v1"
     ).rstrip("/")
-    model = settings.get("embedding_model") or os.getenv("MEM1_EMBEDDING_MODEL") or "text-embedding-3-small"
+    model = os.getenv("MEM1_EMBEDDING_MODEL") or settings.get("embedding_model") or "text-embedding-3-small"
+    # 지시-튜닝 임베더(Qwen3-Embedding 등)는 질의에만 지시 프리픽스를
+    # 요구한다 — 비대칭을 안 지키면 검색 품질이 조용히 샌다. 옵트인:
+    # 지시문이 설정/env에 있을 때만, 질의 역할에만 붙인다.
+    if role == "query":
+        instruction = str(
+            settings.get("embedding_query_instruction")
+            or os.getenv("MEM1_EMBEDDING_QUERY_INSTRUCTION")
+            or ""
+        ).strip()
+        if instruction:
+            text = f"Instruct: {instruction}\nQuery: {text}"
     with httpx.Client(timeout=15) as client:
         response = client.post(
             f"{base_url}/embeddings",

@@ -4849,7 +4849,9 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
                     (f"{field}:{memory.get(field)}" for field in ENTITY_FIELDS if memory.get(field)),
                     "project",
                 )
-            if keyword_search or filter_memories_enabled or retrieval_criteria:
+            if keyword_search or filter_memories_enabled or retrieval_criteria or bool(payload.get("score_breakdown")):
+                # body A2: 호출자가 성분을 요청하면 노출 — 훅이 어휘 일치
+                # (rule)와 의미 일치(vector)를 구분해 소음을 거를 수 있게.
                 item["score_breakdown"] = score_breakdown
             if temporal_rerank:
                 scored_embeddings[memory["id"]] = memory.get("_embedding")
@@ -4874,7 +4876,42 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
         event_id=event_id,
         metadata={"top_k": top_k, "result_count": len(scored[:top_k])},
     )
-    return {"results": scored[:top_k]}
+    response: dict[str, Any] = {"results": scored[:top_k]}
+    if payload.get("trace"):
+        # body A1 (one-person RFC): 턴 회상에도 피드백 주소를 준다.
+        # 지금까지 search 경로는 트레이스를 안 남겨서, 주입된 기억이
+        # 도움이었는지 소음이었는지 기록할 곳이 없었다 (실측 2026-08-06:
+        # 습관은 배선됐는데 "Context trace not found"). 경량 행 하나로
+        # record_context_outcome이 붙을 주소를 만든다.
+        trace_id = str(new_id())
+        selected_ids = [str(item.get("id")) for item in response["results"] if item.get("id")]
+        trace_scores = {str(item.get("id")): float(item.get("score") or 0.0) for item in response["results"] if item.get("id")}
+        with get_db() as conn:
+            conn.execute(
+                """
+                INSERT INTO context_traces (
+                    trace_id, project_id, task_id, task_phase, policy_version, query,
+                    filters, candidate_ids, selected_ids, rejected_ids, scores, roles,
+                    decision_reasons, token_cost, payload, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    trace_id, project_id, "", "", _CONTEXT_SELECTOR_POLICY_VERSION, query,
+                    json_dumps(filters), json_dumps(selected_ids), json_dumps(selected_ids),
+                    json_dumps([]), json_dumps(trace_scores), json_dumps({}),
+                    json_dumps({}), 0,
+                    json_dumps({
+                        "schema_version": CONTEXT_TRACE_SCHEMA_VERSION,
+                        "trace_id": trace_id,
+                        "trace_query": query,
+                        "search_payload": {"query": query, "filters": filters, "top_k": top_k},
+                        "source": payload.get("trace") if isinstance(payload.get("trace"), str) else "search_memories",
+                    }),
+                    utc_now(),
+                ),
+            )
+        response["trace_id"] = trace_id
+    return response
 
 
 def _scope_fallback_enabled(payload: dict[str, Any]) -> bool:

@@ -292,6 +292,14 @@ TOOLS: list[dict[str, Any]] = [
                     "enum": ["low", "medium", "high", "extra"],
                     "description": "Recall budget dial. low/medium: instant local search (default). high: an LLM gate reads ~40 candidates and keeps what the question needs (~3s). extra: deep read of ~100 candidates at near-full text (~5s). Use high/extra when the answer matters more than latency; requires a configured recall LLM, silently falls back to local search otherwise.",
                 },
+                "trace": {
+                    "type": ["boolean", "string"],
+                    "description": "Record a lightweight context trace for this search and return trace_id — the address record_context_outcome feedback attaches to. Pass a short source label (e.g. 'turn_recall') or true.",
+                },
+                "score_breakdown": {
+                    "type": "boolean",
+                    "description": "Include per-result score components (rule/vector/...) so callers can distinguish lexical from semantic matches.",
+                },
             },
         },
     },

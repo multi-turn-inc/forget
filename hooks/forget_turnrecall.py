@@ -12,9 +12,12 @@ main context window is the scarcest resource, so the gate is strict:
   main-thread agent's judgment
 - fail-open, hard 5s timeout: forget being down must never slow a turn
 
-Known gap (deliberate): these injections are not yet linked to the outcome
-flywheel (search_memories creates no context trace). Wire when per-turn
-traces land server-side.
+body A1+A2 (2026-08-06): per-turn traces landed server-side — the search
+carries trace=turn_recall, the injection footer prints the trace_id, and
+the agent's record_context_outcome habit finally has an address. The pick
+gate also reads score_breakdown.vector: a hit that matches only lexically
+("프로토타입" pulling three unrelated prototypes, measured today) is noise
+the semantic floor now drops.
 """
 
 from __future__ import annotations
@@ -31,6 +34,14 @@ from forget_project import layered_filter, project_key_for_path, scope_disabled,
 FORGET_URL = os.environ.get("FORGET_MCP_URL", "http://127.0.0.1:8000/mcp")
 STATE_DIR = os.path.expanduser("~/.forget/hooks/state")
 SCORE_THRESHOLD = float(os.environ.get("FORGET_TURNRECALL_THRESHOLD", "0.45"))
+# 의미 바닥: 임베딩 성분의 절대 하한 (2차 가드 — 이 레짐에선 코사인이
+# 0.87~0.91 띠에 포화돼 판별력이 약함을 실측으로 확인).
+SEMANTIC_FLOOR = float(os.environ.get("FORGET_TURNRECALL_SEMANTIC_FLOOR", "0.30"))
+# body A2의 실제 수술 (진단 정정 2026-08-06): 판별력은 절대값이 아니라
+# 분포의 모양에 있다. 진짜 관련 질의는 봉우리를 만들고(top1-중앙값
+# 0.054 실측), 소음 질의는 평지다(0.014 — "프로토타입" 3건 유출 사례).
+# 평지면 이 턴은 기억을 고르지 못한 것 — 침묵이 정답.
+FLATNESS_MARGIN = float(os.environ.get("FORGET_TURNRECALL_MARGIN", "0.03"))
 # Conflict-zone members get a looser gate: missing a plain recall costs
 # silence, but missing a corrected-zone alert is how incident #1 happened —
 # and being part of a supersede pair is itself strong prior evidence the
@@ -120,10 +131,25 @@ def main() -> None:
     crossed = bool(project) and wants_cross_project(prompt)
     # Per-turn ambient recall stays on the instant path — the recall dial is
     # the user's explicit choice, not a tax on every keystroke.
-    search_args: dict = {"query": prompt[:300], "top_k": MAX_RECALLS + 2, "recall": "low"}
+    search_args: dict = {
+        "query": prompt[:300],
+        "top_k": MAX_RECALLS + 2,
+        "recall": "low",
+        "trace": "turn_recall",      # body A1: 피드백이 붙을 주소를 만든다
+        "score_breakdown": True,     # body A2: 의미/어휘 성분 분리
+    }
     if project and not crossed:
         search_args["filters"] = layered_filter(project)
     result = _rpc("search_memories", search_args)
+    trace_id = str(result.get("trace_id") or "")
+    scores_all = sorted(
+        (float(item.get("score") or 0.0) for item in result.get("results") or []),
+        reverse=True,
+    )
+    flat_distribution = (
+        len(scores_all) >= 4
+        and (scores_all[0] - scores_all[len(scores_all) // 2]) < FLATNESS_MARGIN
+    )
     picks = []
     conflict_pairs: dict[tuple[str, str], None] = {}
     for item in result.get("results") or []:
@@ -145,6 +171,12 @@ def main() -> None:
                 conflict_pairs.setdefault(pair)
             continue  # presented as a pair below, not as a plain recall
         if score < SCORE_THRESHOLD:
+            continue
+        if flat_distribution:
+            continue  # 평지 분포 = 이 질의는 기억을 고르지 못함 (충돌지대는 별도 경로로 통과)
+        breakdown = item.get("score_breakdown") or {}
+        vector_score = breakdown.get("vector")
+        if vector_score is not None and float(vector_score) < SEMANTIC_FLOOR:
             continue
         trust = item.get("trust") or {}
         light = str(trust.get("light") or "yellow")
@@ -176,6 +208,10 @@ def main() -> None:
         header += " / 프로젝트 경계를 넘어 검색함]" if crossed else "]"
         lines.append(header)
         lines += [f"- ({light}) {memory}" for _, light, memory in picks]
+    if trace_id:
+        lines.append(
+            f"[피드백 주소: 이 회상이 명확히 도움/소음이면 record_context_outcome(trace_id=\"{trace_id}\") 한 번]"
+        )
     print("\n".join(lines))
     if session_id and turns_path:
         injected = [memory_id for memory_id, _, _ in picks]
