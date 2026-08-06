@@ -25,6 +25,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -48,6 +49,16 @@ FLATNESS_MARGIN = float(os.environ.get("FORGET_TURNRECALL_MARGIN", "0.03"))
 # zone matters. Recalibrate both when the embedder switches to e5.
 CONFLICT_THRESHOLD = float(os.environ.get("FORGET_CONFLICT_THRESHOLD", "0.32"))
 MAX_RECALLS = 3
+# c63: 인출 깊이와 주입 후보 집합을 분리한다. 평탄도 분포를 **자격 후보에서만**
+# 재기 때문에 최소 개수 조건도 자격 수로 세는데, 깊이가 5뿐이면 무자격 후보
+# (task_state claim·capture 포인터·충돌쌍) 2개로 자격이 3개까지 떨어져 게이트가
+# 한 마디 없이 전면 정지한다. 점수는 결과 집합 크기에 불변임을 실측 확인했으므로
+# (실제 turn_recall 질의 20건, 깊이 5 대 10에서 상위 5개 (id,score) 20/20 동일,
+# spread 변화 0건 — c63_depth_invariance.py) 깊이 인상은 자[尺]를 바꾸지 않는다.
+CANDIDATE_TOP_K = MAX_RECALLS + 7   # 분포 표본용 여유분까지 인출
+PICK_POOL = MAX_RECALLS + 2         # 주입·충돌 후보 집합은 종전과 동일 (입력 집합 불변)
+FLATNESS_WINDOW = MAX_RECALLS + 2   # 창을 고정해 중앙값 위치를 보존 (len//2는 4·5 모두 2)
+FLATNESS_MIN_SAMPLES = 4
 MEMORY_CHAR_LIMIT = 160
 MIN_PROMPT_LEN = 8
 
@@ -153,7 +164,7 @@ def main() -> None:
     # the user's explicit choice, not a tax on every keystroke.
     search_args: dict = {
         "query": prompt[:300],
-        "top_k": MAX_RECALLS + 2,
+        "top_k": CANDIDATE_TOP_K,
         "recall": "low",
         "trace": "turn_recall",      # body A1: 피드백이 붙을 주소를 만든다
         "score_breakdown": True,     # body A2: 의미/어휘 성분 분리
@@ -168,19 +179,21 @@ def main() -> None:
     # 질의의 두 런이 하위 4개 점수는 완전히 같은데 top1(양쪽 다 task_state
     # claim)만 0.9172 vs 1.0000으로 갈려 주입 0 vs 3이 됐다 — 방금 쓴 claim은
     # 1.0으로 포화하므로 푸시 회상의 on/off가 장부 신선도에 결합돼 있었다.
+    results = result.get("results") or []
+    # 창은 자격 후보 상위 FLATNESS_WINDOW개 — 인출을 깊게 해도 자[尺]는 그대로다
+    # (c63: 자격 4개였던 질의의 spread 0.0454가 창 5에서도 0.0454, 중앙값 위치 보존).
     scores_all = sorted(
-        (float(item.get("score") or 0.0)
-         for item in result.get("results") or []
-         if _injection_eligible(item)),
+        (float(item.get("score") or 0.0) for item in results if _injection_eligible(item)),
         reverse=True,
-    )
+    )[:FLATNESS_WINDOW]
+    measurable = len(scores_all) >= FLATNESS_MIN_SAMPLES
     flat_distribution = (
-        len(scores_all) >= 4
+        measurable
         and (scores_all[0] - scores_all[len(scores_all) // 2]) < FLATNESS_MARGIN
     )
     picks = []
     conflict_pairs: dict[tuple[str, str], None] = {}
-    for item in result.get("results") or []:
+    for item in results[:PICK_POOL]:
         score = float(item.get("score") or 0.0)
         memory_id = str(item.get("id") or "")
         if not memory_id or memory_id in seen:
@@ -223,6 +236,12 @@ def main() -> None:
             continue
         conflicts.append((old_id, new_id, str(old.get("memory") or "")[:MEMORY_CHAR_LIMIT], str(new.get("memory") or "")[:MEMORY_CHAR_LIMIT]))
 
+    if picks and not measurable:
+        # 표본이 창의 최소 개수에 못 미쳐 평탄도를 **재지 못한 채** 통과시킨 턴.
+        # c62가 이 상태를 "무공지 전면 정지"로 등재했다 — 깊은 인출로 빈도를 0으로
+        # 밀었지만(c63 실측 0/20), 남는 경우엔 최소한 흔적을 남긴다. 컨텍스트에는
+        # 한 글자도 쓰지 않는다: 이 원장은 감사가 읽는 자리다.
+        _note_unmeasured_flatness(prompt, len(results), len(scores_all), len(picks))
     if not picks and not conflicts:
         return  # below threshold or nothing new → silence
     lines = []
@@ -249,6 +268,23 @@ def main() -> None:
             ledger_picks.append((new_id, "green", new_text))  # 메아리 측정은 현재본 기준
         _remember_injected(turns_path, injected)
         _extend_offer_ledger(session_id, ledger_picks)
+
+
+def _note_unmeasured_flatness(prompt: str, candidates: int, eligible: int, injected: int) -> None:
+    """평탄도를 재지 못하고 통과시킨 턴을 원장에 1행 남긴다 (감사용, 컨텍스트 비용 0)."""
+    try:
+        os.makedirs(STATE_DIR, exist_ok=True)
+        with open(os.path.join(STATE_DIR, "flatness_unmeasured.jsonl"), "a", encoding="utf-8") as fh:
+            fh.write(json.dumps({
+                "at": int(time.time()),
+                "candidates": candidates,
+                "eligible": eligible,
+                "min_samples": FLATNESS_MIN_SAMPLES,
+                "injected": injected,
+                "prompt_head": prompt[:80],
+            }, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
 
 
 def _extend_offer_ledger(session_id: str, picks: list) -> None:

@@ -31,13 +31,16 @@ def _run_main(module, hook_input: dict, monkeypatch) -> None:
 
 # --- forget_turnrecall -------------------------------------------------------
 
-def _recall_module(monkeypatch, tmp_path, results, memories_by_id=None):
+def _recall_module(monkeypatch, tmp_path, results, memories_by_id=None, calls=None):
     module = _load("forget_turnrecall")
     monkeypatch.setattr(module, "STATE_DIR", str(tmp_path))
 
     def fake_rpc(name, arguments, timeout=5):
         if name == "search_memories":
-            return {"results": results}
+            if calls is not None:
+                calls.append(arguments)
+            # 서버처럼 깊이를 지킨다 — 훅이 요청한 top_k 이상은 오지 않는다 (c63)
+            return {"results": results[:int(arguments.get("top_k") or len(results))]}
         if name == "get_memory":
             return (memories_by_id or {})[arguments["memory_id"]]
         raise AssertionError(name)
@@ -169,6 +172,27 @@ def test_fresh_claim_peak_does_not_change_injection_count(monkeypatch, tmp_path,
     assert counts == [3, 3], f"claim 신선도가 주입 수를 갈랐다: {counts}"
 
 
+def test_deeper_fetch_leaves_the_measured_spread_unchanged(monkeypatch, tmp_path, capsys):
+    """P18 (a) — 깊이 인상은 자[尺]를 바꾸지 않는다 (c61 실측 배치로 고정).
+
+    창을 5로 고정하면 `len//2`가 4에서도 5에서도 2이므로, 자격 4개였던 배치에
+    하위 후보를 덧붙여도 중앙값이 같은 자리에 남고 spread가 그대로다.
+    실측에서도 그랬다: 같은 질의가 깊이 5/10에서 0.0454→0.0454
+    (`c63_depth_invariance.py`, 20건 전부 spread 변화 0).
+    """
+    injected = []
+    for tag, extra in (("s-shallow", []), ("s-deep", [0.60, 0.55, 0.50, 0.46, 0.45])):
+        results = _claim_then_memories(_C61_SCORES) + [
+            {"id": f"deep-{i}", "score": score, "memory": f"깊은 자리 기억 {i}",
+             "metadata": {}, "trust": {"light": "yellow"}}
+            for i, score in enumerate(extra)]
+        module = _recall_module(monkeypatch, tmp_path, results)
+        _run_main(module, {"session_id": tag, "prompt": "devloop 사이클을 정확히 한 바퀴 실행하라"}, monkeypatch)
+        capsys.readouterr()
+        injected.append(json.loads((tmp_path / f"{tag}.turns.json").read_text(encoding="utf-8"))["injected"])
+    assert injected[0] == injected[1] == ["m-0", "m-1", "m-2"], f"깊이가 판정을 바꿨다: {injected}"
+
+
 def test_genuinely_flat_eligible_distribution_still_silences(monkeypatch, tmp_path, capsys):
     """수리가 평탄도 게이트를 무력화하지 않았음을 고정 — 자격 후보끼리 평지면 침묵.
 
@@ -182,19 +206,13 @@ def test_genuinely_flat_eligible_distribution_still_silences(monkeypatch, tmp_pa
     assert capsys.readouterr().out == ""
 
 
-def test_few_eligible_candidates_disable_the_flatness_gate(monkeypatch, tmp_path, capsys):
-    """수리의 알려진 경계를 **의도로 고정**한다 (cycle 62 검증에서 발견).
+def test_thin_eligible_pool_still_unmeasurable_but_now_leaves_a_row(monkeypatch, tmp_path, capsys):
+    """c62가 고정한 경계의 c63 처치 후 상태 — 여전히 못 재지만 **무공지가 아니다**.
 
-    분포를 자격 후보에서만 재기 때문에 `len(scores_all) >= 4`도 자격 후보 수로
-    센다. top_k는 MAX_RECALLS+2=5뿐이라 무자격 후보가 2개면 자격 후보가 3개로
-    떨어지고, 그 순간 평탄도 게이트는 **한 마디 없이 완전히 꺼진다** — 아래처럼
-    자격 후보끼리 평지여도 전량 주입된다.
-
-    실측 빈도는 0/27 trace(도그푸드 turn_recall 전량, 메타데이터 해석 기준)이고
-    devloop 질의 4건이 자격 4개 = 최소 경계에 **정확히** 걸쳐 있다. 즉 지금은
-    안 터지지만 무자격 후보 하나만 늘면 터진다. 이 테스트는 그 동작을 '알려진
-    것'으로 만들어 두려는 것이고, 처치(top_k 인상 또는 최소 개수를 전체 후보로
-    세기)는 자[尺]를 함께 바꾸지 않기 위해 다음 사이클로 미룬다.
+    스토어가 깊이 CANDIDATE_TOP_K에도 자격 후보 3개밖에 내놓지 못하면 평탄도는
+    표본 부족으로 재지 못하고, 그 턴은 게이트 없이 통과한다(전량 주입). 처치는
+    이 통과를 막지 않는다 — 못 잰 것을 잰 척하는 것이 더 나쁘다. 대신 원장에
+    한 행을 남겨 감사가 빈도를 셀 수 있게 한다(P18 (b)의 2차 판정 채널).
     """
     results = [
         {"id": "claim:one", "score": 1.0, "memory": "장부 행 1",
@@ -209,6 +227,59 @@ def test_few_eligible_candidates_disable_the_flatness_gate(monkeypatch, tmp_path
     assert "회상" in capsys.readouterr().out, "자격 후보 3개 → 평탄도 게이트 미적용"
     turns = json.loads((tmp_path / "s-thin.turns.json").read_text(encoding="utf-8"))
     assert turns["injected"] == ["m-0", "m-1", "m-2"]
+    rows = [json.loads(line) for line in
+            (tmp_path / "flatness_unmeasured.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert len(rows) == 1
+    assert rows[0]["eligible"] == 3 and rows[0]["injected"] == 3
+    assert rows[0]["min_samples"] == module.FLATNESS_MIN_SAMPLES
+
+
+def test_deep_fetch_fills_the_window_so_a_flat_pool_still_silences(monkeypatch, tmp_path, capsys):
+    """c63 처치의 본체: 무자격 후보 2개로 게이트가 꺼지지 않는다.
+
+    상위 5개에 무자격이 2개면 얕은 인출(5)에서는 자격 3개 → 게이트 정지 →
+    평지여도 전량 주입이었다. 깊이 CANDIDATE_TOP_K로 창(5)을 채우면 자격끼리
+    평지임이 보이고 침묵이 돌아온다.
+    """
+    calls: list = []
+    results = [
+        {"id": "claim:one", "score": 1.0, "memory": "장부 행 1",
+         "metadata": {"assertion_kind": "task_state"}, "trust": {"light": "yellow"}},
+        {"id": "cap-1", "score": 0.99, "memory": "세션 캡처 포인터",
+         "metadata": {"hook": "session_capture"}, "trust": {"light": "yellow"}},
+    ] + [{"id": f"m-{i}", "score": score, "memory": f"무관한 기억 {i}",
+          "metadata": {}, "trust": {"light": "yellow"}}
+         for i, score in enumerate((0.62, 0.615, 0.61, 0.605, 0.60, 0.598))]
+    module = _recall_module(monkeypatch, tmp_path, results, calls=calls)
+    _run_main(module, {"session_id": "s-deep", "prompt": "프로토타입 어디까지 갔지?"}, monkeypatch)
+    assert capsys.readouterr().out == "", "자격 후보 5개가 평지 → 침묵이어야 한다"
+    assert calls[0]["top_k"] == module.CANDIDATE_TOP_K > module.PICK_POOL
+    assert not (tmp_path / "flatness_unmeasured.jsonl").exists()  # 재었으므로 원장 행 없음
+
+
+def test_deep_fetch_does_not_widen_the_injection_pool(monkeypatch, tmp_path, capsys):
+    """입력 집합 불변 — 깊이는 분포 표본용이고 주입 후보는 여전히 상위 PICK_POOL개.
+
+    깊은 자리(6~10위)의 기억도 문턱을 넘지만 주입되지 않는다. 이것이 c63 처치를
+    '자[尺] 변경'이 아니라 '표본 수 조건 수리'로 유지하는 경계다.
+    """
+    results = [
+        {"id": "claim:one", "score": 1.0, "memory": "장부 행", "metadata": {"assertion_kind": "task_state"}},
+        {"id": "cap-1", "score": 0.99, "memory": "캡처 포인터", "metadata": {"hook": "SessionEnd"}},
+        {"id": "m-0", "score": 0.80, "memory": "상위 5위 안의 기억", "metadata": {}, "trust": {"light": "green"}},
+        {"id": "claim:two", "score": 0.78, "memory": "장부 행 2", "metadata": {"assertion_kind": "task_state"}},
+        {"id": "cap-2", "score": 0.77, "memory": "캡처 포인터 2", "metadata": {"hook": "SessionEnd"}},
+    ] + [{"id": f"deep-{i}", "score": score, "memory": f"6위 이하 기억 {i}",
+          "metadata": {}, "trust": {"light": "yellow"}}
+         for i, score in enumerate((0.76, 0.60, 0.55, 0.50, 0.46))]
+    module = _recall_module(monkeypatch, tmp_path, results)
+    _run_main(module, {"session_id": "s-pool", "prompt": "그 기억 어디까지 갔지?"}, monkeypatch)
+    out = capsys.readouterr().out
+    assert "상위 5위 안의 기억" in out and "6위 이하" not in out
+    turns = json.loads((tmp_path / "s-pool.turns.json").read_text(encoding="utf-8"))
+    assert turns["injected"] == ["m-0"]
+    # 창은 깊은 자리로 채워져 **재였다** — 표본 부족 원장 행이 없다
+    assert not (tmp_path / "flatness_unmeasured.jsonl").exists()
 
 
 def test_slash_and_short_prompts_stay_silent(monkeypatch, tmp_path, capsys):
