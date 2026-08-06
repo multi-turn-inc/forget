@@ -12,11 +12,22 @@
       c47이 (iii)의 니들에 "tail 금지"를 추가한 뒤 3/3을 보고했다. 대조군(c46·c47 초측
       1/3)은 확장 전 니들로 쟀으므로, 같은 캡슐을 두 판본으로 재서 확장분을 분리한다.
 
-규약: 결론 문장을 상수로 인쇄하지 않는다. 숫자만 낸다.
+      **c64 확장 (P19, 가산적 — 기존 자를 치우지 않는다).** V1·V2의 니들은 규약의
+      *내용*이 아니라 c47이 목격한 *어휘*를 고정했고, 루프가 같은 지시를 다른 말로 옮겨
+      적을 때마다 계측이 조용히 0으로 내려앉았다(거짓 음성 6종째, c62 발견·c64 재확인:
+      캡슐이 "번호·모드는 … c48_step0_check.py 첫 줄"을 실제로 날라 그 손이 준수했는데
+      capsule_reach=1/3). 방향이 위험한 쪽이다 — **해결된 것을 미해결로 보고**한다.
+      그래서 셋을 더한다: V3 의미 니들(표현의 논리합) · **캡슐 원문 인쇄** · sha256.
+      V1·V2는 문면 그대로 둔다 — c46~c64 시계열의 비교 가능성이 그 자에 걸려 있다.
+      한계(정직): V3도 리터럴의 논리합이라 표류를 늦출 뿐 없애지 못한다. 드리프트에
+      대한 실제 방어는 원문 인쇄이고 V3는 시계열 숫자를 잇기 위한 보조다.
+
+규약: 결론 문장을 상수로 인쇄하지 않는다. 숫자와 원문만 낸다.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -31,6 +42,21 @@ FORGET_URL = "http://localhost:8000/mcp/forget/http/junghunkim"
 
 def run(cmd: list[str]) -> str:
     return subprocess.run(cmd, cwd=REPO, capture_output=True, text=True).stdout.strip()
+
+
+def run_raw(cmd: list[str]) -> str:
+    """strip() 없이 stdout 그대로.
+
+    c64 발견: `git status --porcelain`의 행 형식은 `XY<space><path>`이고 미스테이지
+    변경의 X는 **공백**이다(` M path`). `run()`의 `.strip()`은 그 선행 공백을
+    **첫 행에서만** 지워 `line[3:]`이 경로의 첫 글자를 먹고, 존재하지 않는 경로가 되어
+    조용히 `continue`된다 — 즉 **변경 파일 목록의 첫 항목이 언제나 보이지 않았다**.
+    변경 파일이 정확히 1개면 검사는 `0`을 답한다: 절차 2가 막으려는 바로 그 상황
+    (타 세션 WIP 1건이 있는데 "깨끗함"으로 읽고 코드 사이클 진입)에서 침묵한다.
+    part_a가 폭로하려던 `.git/HEAD` 거짓 음성 기계와 같은 종류의 결함을 part_a 자신이
+    갖고 있었다. 형식이 열(column)로 정의된 출력은 strip하지 않는다.
+    """
+    return subprocess.run(cmd, cwd=REPO, capture_output=True, text=True).stdout
 
 
 def call(name: str, arguments: dict) -> dict:
@@ -95,7 +121,9 @@ def part_a() -> None:
     # 참조 파일 mtime이 아니라 **커밋 시각**과 비교한다 — .git/HEAD의 mtime은
     # 체크아웃·페치 같은 무관한 조작으로도 갱신되므로 커밋 시각이 더 정확한 기준이다.
     newer: list[tuple[str, int]] = []
-    for line in run(["git", "status", "--porcelain"]).splitlines():
+    changed = [ln for ln in run_raw(["git", "status", "--porcelain"]).splitlines() if ln.strip()]
+    print(f"  changed_paths_total={len(changed)}")  # c64: 분모를 병기해 침묵 절단을 드러낸다
+    for line in changed:
         rel = line[3:].strip().strip('"')
         full = os.path.join(REPO, rel)
         if os.path.isdir(full):
@@ -139,12 +167,33 @@ def part_b() -> None:
 
     v1 = {"(i)": ["devloop-self"], "(ii)": ["mtime"], "(iii)": ["cycle` 필드", "cycle 필드"]}
     v2 = {"(i)": ["devloop-self"], "(ii)": ["mtime"], "(iii)": ["cycle` 필드", "cycle 필드", "tail 금지"]}
-    for label, rules in (("V1 (c46 원본 니들)", v1), ("V2 (c47 확장 니들)", v2)):
+    # V3 (c64, P19): 어휘가 아니라 **규약의 내용**을 노린다. 각 항은 그 규약을 나르는
+    # 알려진 표현들의 논리합이며, 새 표현이 관측되면 여기에 더한다(그 추가는 자[尺]
+    # 변경이므로 사이클 보고에 선언한다). 넓히되 **규약 간 경계는 넘지 않는다** —
+    # 아무 캡슐이나 3/3으로 통과시키는 자가 되면 P19 (a)가 반증된다.
+    v3 = {
+        "(i)": ["devloop-self", "devloop_self"],
+        "(ii)": ["mtime", "미커밋", "HEAD보다", "newer", "영토 규약"],
+        "(iii)": ["cycle` 필드", "cycle 필드", "tail 금지", "tail/cat/head",
+                  "c48_step0_check", "번호·모드", "열지 마"],
+    }
+    for label, rules in (("V1 (c46 원본 니들)", v1), ("V2 (c47 확장 니들)", v2),
+                         ("V3 (c64 의미 니들)", v3)):
         hits, detail = needle_reach(shown, rules)
         print(f"  {label:22s} capsule_reach={hits}/3  {detail}")
 
-    for lit in ("tail 금지", "cycle 필드", "cycle` 필드", "mtime", "devloop-self"):
-        print(f"    literal {lit!r:16s} in_capsule={int(lit in shown)}")
+    for lit in ("tail 금지", "cycle 필드", "cycle` 필드", "mtime", "devloop-self",
+                "c48_step0_check", "번호·모드"):
+        print(f"    literal {lit!r:18s} in_capsule={int(lit in shown)}")
+
+    # 원문 인쇄 (c64, P19 ②) — 관측 23이 명시한 수용 기준의 직접 이행.
+    # 니들 판본은 표류하지만 원문은 표류하지 않는다. 다음 손이 육안으로 대조한다.
+    # 주의: 이 캡슐은 SessionStart 주입본과 **같은 질의·다른 시각**의 별개 응답이다.
+    print(f"  capsule_sha256={hashlib.sha256(capsule.encode('utf-8')).hexdigest()[:16]}"
+          f"  shown_chars={len(shown)}")
+    print("  [캡슐 원문 — SessionStart 주입본의 재취득본, 동일 질의·다른 시각]")
+    for line in shown.splitlines():
+        print(f"  | {line}")
 
 
 if __name__ == "__main__":
