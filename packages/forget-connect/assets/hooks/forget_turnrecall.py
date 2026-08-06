@@ -84,6 +84,26 @@ def _conflict_pair(item: dict) -> tuple[str, str] | None:
     return None
 
 
+def _injection_eligible(item: dict) -> bool:
+    """Could this candidate ever be offered as a plain turn recall?
+
+    Mirrors the structural drops in main()'s pick loop — the ones that hold
+    regardless of score: capture pointers, task_state ledger rows, and
+    supersede pairs (which travel the conflict path instead). Only these
+    candidates may shape the flatness distribution; letting an ineligible
+    item be the peak means the peak-detector measures something it can
+    never surface.
+    """
+    metadata = item.get("metadata") or {}
+    if metadata.get("hook"):
+        return False
+    if metadata.get("assertion_kind") == "task_state":
+        return False
+    if _conflict_pair(item):
+        return False
+    return True
+
+
 def _seen_ids(session_id: str) -> tuple[set[str], str]:
     seen: set[str] = set()
     offer_path = os.path.join(STATE_DIR, f"{session_id}.json")
@@ -142,8 +162,16 @@ def main() -> None:
         search_args["filters"] = layered_filter(project)
     result = _rpc("search_memories", search_args)
     trace_id = str(result.get("trace_id") or "")
+    # 평탄도는 **주입 자격이 있는 후보**에서만 재야 한다 (c62 실측 수리).
+    # 이전 판본은 배제 이전의 전체 결과로 분포를 재서, 봉우리가 결코 주입될 수
+    # 없는 항목(task_state claim·capture 포인터)일 수 있었다. 실측: 축자 동일한
+    # 질의의 두 런이 하위 4개 점수는 완전히 같은데 top1(양쪽 다 task_state
+    # claim)만 0.9172 vs 1.0000으로 갈려 주입 0 vs 3이 됐다 — 방금 쓴 claim은
+    # 1.0으로 포화하므로 푸시 회상의 on/off가 장부 신선도에 결합돼 있었다.
     scores_all = sorted(
-        (float(item.get("score") or 0.0) for item in result.get("results") or []),
+        (float(item.get("score") or 0.0)
+         for item in result.get("results") or []
+         if _injection_eligible(item)),
         reverse=True,
     )
     flat_distribution = (

@@ -114,6 +114,103 @@ def test_task_state_claims_never_recalled(monkeypatch, tmp_path, capsys):
     assert turns["injected"] == ["m-2"]
 
 
+# 아래 두 테스트의 점수는 합성값이 아니라 도그푸드 서버 context_traces에서 꺼낸
+# 실측이다 (cycle 62). 동일 질의·동일 훅의 두 런이 top1 하나 때문에 주입 0 대 3으로
+# 갈렸고, 그 top1은 양쪽 다 훅이 반드시 버리는 task_state claim이었다.
+_C61_SCORES = (0.9172, 0.9149, 0.8967, 0.8696, 0.8519)   # 실측 주입 0 (평지 오판정)
+_C62_SCORES = (1.0000, 0.9149, 0.8967, 0.8696, 0.8519)   # 실측 주입 3
+
+
+def _claim_then_memories(scores):
+    """[0]=task_state claim, 나머지=평범한 기억. 실측 배치를 그대로 재현."""
+    head, *tail = scores
+    results = [
+        {"id": "claim:a6bb2d19", "score": head,
+         "memory": "[devloop 사이클 61] ... 상위 목표: lmev2-credible-number ...",
+         "metadata": {"source": "claim_ledger", "assertion_kind": "task_state",
+                      "task_state": {"task_id": "devloop"}},
+         "trust": {"light": "yellow", "kind": "task_state"}},
+    ]
+    for index, score in enumerate(tail):
+        results.append({"id": f"m-{index}", "score": score,
+                        "memory": f"[devloop] 사이클 4{index} 발견 — 관측 본문",
+                        "metadata": {}, "trust": {"light": "yellow"}})
+    return results
+
+
+def test_flatness_ignores_candidates_that_can_never_be_injected(monkeypatch, tmp_path, capsys):
+    """평탄도 봉우리가 주입 불가능한 후보면 안 된다 (cycle 62 실측 수리).
+
+    c61 런 실측: top1(task_state claim) 0.9172 − 중앙값 0.8967 = 0.0205 < 0.03 →
+    전체 결과로 재면 '평지'라 자격 있는 기억 4개가 전량 침묵했다. 자격 후보
+    4개만으로 재면 0.9149 − 0.8696 = 0.0453 ≥ 0.03 → 봉우리가 있다.
+    """
+    module = _recall_module(monkeypatch, tmp_path, _claim_then_memories(_C61_SCORES))
+    _run_main(module, {"session_id": "s-c61", "prompt": "devloop 사이클을 정확히 한 바퀴 실행하라"}, monkeypatch)
+    out = capsys.readouterr().out
+    assert "회상" in out, "자격 후보 분포엔 봉우리가 있으므로 침묵해선 안 된다"
+    assert "claim:a6bb2d19" not in out and "상위 목표" not in out  # claim 자체는 여전히 미주입
+    turns = json.loads((tmp_path / "s-c61.turns.json").read_text(encoding="utf-8"))
+    assert turns["injected"] == ["m-0", "m-1", "m-2"]  # MAX_RECALLS=3
+
+
+def test_fresh_claim_peak_does_not_change_injection_count(monkeypatch, tmp_path, capsys):
+    """장부 신선도 결합 해제: claim 점수가 0.9172든 1.0이든 주입 수가 같아야 한다.
+
+    수리 전에는 claim이 방금 쓰여 1.0으로 포화하면 주입 3, 하루 묵어 0.9172면
+    주입 0이었다 — 푸시 회상의 on/off가 루프 자신의 task_state 신선도에 결합.
+    """
+    counts = []
+    for tag, scores in (("s-a", _C61_SCORES), ("s-b", _C62_SCORES)):
+        module = _recall_module(monkeypatch, tmp_path, _claim_then_memories(scores))
+        _run_main(module, {"session_id": tag, "prompt": "devloop 사이클을 정확히 한 바퀴 실행하라"}, monkeypatch)
+        capsys.readouterr()
+        counts.append(len(json.loads((tmp_path / f"{tag}.turns.json").read_text(encoding="utf-8"))["injected"]))
+    assert counts == [3, 3], f"claim 신선도가 주입 수를 갈랐다: {counts}"
+
+
+def test_genuinely_flat_eligible_distribution_still_silences(monkeypatch, tmp_path, capsys):
+    """수리가 평탄도 게이트를 무력화하지 않았음을 고정 — 자격 후보끼리 평지면 침묵.
+
+    (자[尺]는 그대로다: FLATNESS_MARGIN·SCORE_THRESHOLD 미변경.)
+    """
+    flat = [{"id": f"m-{i}", "score": score, "memory": f"무관한 기억 {i}",
+             "metadata": {}, "trust": {"light": "yellow"}}
+            for i, score in enumerate((0.62, 0.615, 0.61, 0.605, 0.60))]
+    module = _recall_module(monkeypatch, tmp_path, flat)
+    _run_main(module, {"session_id": "s-flat", "prompt": "프로토타입 어디까지 갔지?"}, monkeypatch)
+    assert capsys.readouterr().out == ""
+
+
+def test_few_eligible_candidates_disable_the_flatness_gate(monkeypatch, tmp_path, capsys):
+    """수리의 알려진 경계를 **의도로 고정**한다 (cycle 62 검증에서 발견).
+
+    분포를 자격 후보에서만 재기 때문에 `len(scores_all) >= 4`도 자격 후보 수로
+    센다. top_k는 MAX_RECALLS+2=5뿐이라 무자격 후보가 2개면 자격 후보가 3개로
+    떨어지고, 그 순간 평탄도 게이트는 **한 마디 없이 완전히 꺼진다** — 아래처럼
+    자격 후보끼리 평지여도 전량 주입된다.
+
+    실측 빈도는 0/27 trace(도그푸드 turn_recall 전량, 메타데이터 해석 기준)이고
+    devloop 질의 4건이 자격 4개 = 최소 경계에 **정확히** 걸쳐 있다. 즉 지금은
+    안 터지지만 무자격 후보 하나만 늘면 터진다. 이 테스트는 그 동작을 '알려진
+    것'으로 만들어 두려는 것이고, 처치(top_k 인상 또는 최소 개수를 전체 후보로
+    세기)는 자[尺]를 함께 바꾸지 않기 위해 다음 사이클로 미룬다.
+    """
+    results = [
+        {"id": "claim:one", "score": 1.0, "memory": "장부 행 1",
+         "metadata": {"assertion_kind": "task_state"}, "trust": {"light": "yellow"}},
+        {"id": "cap-1", "score": 0.99, "memory": "세션 캡처 포인터",
+         "metadata": {"hook": "session_capture"}, "trust": {"light": "yellow"}},
+    ] + [{"id": f"m-{i}", "score": score, "memory": f"무관한 기억 {i}",
+          "metadata": {}, "trust": {"light": "yellow"}}
+         for i, score in enumerate((0.62, 0.615, 0.61))]
+    module = _recall_module(monkeypatch, tmp_path, results)
+    _run_main(module, {"session_id": "s-thin", "prompt": "프로토타입 어디까지 갔지?"}, monkeypatch)
+    assert "회상" in capsys.readouterr().out, "자격 후보 3개 → 평탄도 게이트 미적용"
+    turns = json.loads((tmp_path / "s-thin.turns.json").read_text(encoding="utf-8"))
+    assert turns["injected"] == ["m-0", "m-1", "m-2"]
+
+
 def test_slash_and_short_prompts_stay_silent(monkeypatch, tmp_path, capsys):
     module = _recall_module(monkeypatch, tmp_path, [{"id": "m", "score": 0.9, "memory": "x", "metadata": {}}])
     for prompt in ("/compact", "ㅇㅋ", "# Update Config Skill 문서..."):
