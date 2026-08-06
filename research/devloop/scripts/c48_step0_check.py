@@ -27,10 +27,12 @@
 
 from __future__ import annotations
 
+import glob
 import hashlib
 import json
 import os
 import re
+import sqlite3
 import subprocess
 import sys
 import urllib.request
@@ -38,6 +40,9 @@ import urllib.request
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
 INSTALLED_HOOKS = os.path.expanduser("~/.forget/hooks")
 FORGET_URL = "http://localhost:8000/mcp/forget/http/junghunkim"
+FINGERPRINT_BASELINE = os.path.join(REPO, "research", "devloop", "body-fingerprint.json")
+FORGET_DB = os.path.expanduser("~/.forget/forget.sqlite3")
+UNKNOWN = "미확인"
 
 
 def run(cmd: list[str]) -> str:
@@ -101,6 +106,147 @@ def part_n() -> None:
     print("     감사 사이클의 metrics 정독 임무는 번호 결정 단계와 별개로 허용된다.)")
     print(f"[N. 사이클 번호 — cycle 필드 max+1]")
     print(f"  last_cycle={max(cycles)}  N={n}  mode={mode} (N%10={n % 10}, N%5={n % 5})")
+
+
+def compare_fingerprint(live: dict[str, str], baseline: dict[str, str]) -> tuple[str, list[str], list[str]]:
+    """live와 baseline을 대조한다. **순수 함수** — I/O 없음, 그래서 테스트된다.
+
+    설계의 핵심 성질 하나: **채취하지 못한 항목을 '일치'로 보고하지 않는다.**
+    관측 30의 병리가 조용한 흡수였으므로, 미채취(`UNKNOWN`)는 '일치'가 아니라
+    **판정 불가**로 격리한다. baseline에 없는 신규 키도 미채취와 같게 다룬다 —
+    지문 정의를 넓히는 것은 자[尺] 변경이고, 그 변경은 baseline 커밋으로만 승인된다.
+
+    반환: (verdict, changed, unknown)
+      changed 있으면 "재교정 필요" (몸이 바뀌었다)
+      changed 없고 unknown 있으면 "판정 불가" (모른다 — 위양성으로 계상하지 않는다)
+      둘 다 없으면 "일치"
+    """
+    changed: list[str] = []
+    unknown: list[str] = []
+    for key in sorted(set(live) | set(baseline)):
+        got, want = live.get(key, UNKNOWN), baseline.get(key, UNKNOWN)
+        if got == UNKNOWN or want == UNKNOWN:
+            unknown.append(key)
+        elif got != want:
+            changed.append(key)
+    verdict = "재교정 필요" if changed else ("판정 불가" if unknown else "일치")
+    return verdict, changed, unknown
+
+
+def _installed_dist_info() -> str:
+    di = glob.glob(os.path.expanduser(
+        "~/.forget/venv/lib/python3*/site-packages/forget_ai-*.dist-info"))
+    return os.path.basename(di[0]).replace(".dist-info", "") if di else UNKNOWN
+
+
+def _installed_vs_repo() -> str:
+    """설치본과 저장소본의 최상위 .py 해시 대조 (c66_body_identity.py에서 이식)."""
+    inst = glob.glob(os.path.expanduser("~/.forget/venv/lib/python3*/site-packages/forget"))
+    repo_pkg = os.path.join(REPO, "forget")
+    if not inst or not os.path.isdir(repo_pkg):
+        return UNKNOWN
+
+    def digest(path: str) -> str:
+        with open(path, "rb") as fh:
+            return hashlib.sha256(fh.read()).hexdigest()
+
+    rfiles = {f for f in os.listdir(repo_pkg) if f.endswith(".py")}
+    ifiles = {f for f in os.listdir(inst[0]) if f.endswith(".py")}
+    both = rfiles & ifiles
+    same = sum(1 for f in both
+               if digest(os.path.join(repo_pkg, f)) == digest(os.path.join(inst[0], f)))
+    # 분모는 합집합이다 — 교집합을 분모로 쓰면 한쪽에만 있는 파일이 사라진다 (c64 규율).
+    return f"{same}/{len(rfiles | ifiles)}"
+
+
+def _store_vec() -> str:
+    """스토어 임베딩의 형식·우세 차원. 디코드 없이 byte length만 집계한다.
+
+    행 수는 싣지 않는다 — 매 사이클 증가하므로 위양성 기계가 된다 (P21 (b)).
+    dim = (len - 4) // 4  (MEB1 = 4바이트 매직 + little-endian float32).
+    """
+    if not os.path.exists(FORGET_DB):
+        return UNKNOWN
+    try:
+        con = sqlite3.connect(f"file:{FORGET_DB}?mode=ro", uri=True)
+        try:
+            # 매직 비교는 **hex 리터럴**이어야 한다: embedding은 BLOB이고 SQLite에서
+            # BLOB은 TEXT 리터럴('MEB1')과 절대 같지 않다(저장 클래스가 다르면 불일치).
+            # 첫 배선에서 이 비교가 항상 거짓이라 1540바이트 MEB1 행을 JSON으로 보고했고,
+            # baseline 대조가 같은 사이클 안에서 그것을 잡았다 — 계측기가 자기 결함을
+            # 자기 첫 런에서 검출한 표본이다. x'4D454231' = b"MEB1".
+            rows = con.execute(
+                "select substr(embedding,1,4)=x'4D454231', length(embedding), count(*) "
+                "from memories where deleted=0 and embedding is not null and embedding != '' "
+                "group by 1, 2 order by count(*) desc limit 1").fetchall()
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return UNKNOWN
+    if not rows:
+        return UNKNOWN
+    is_meb1, blen, _ = rows[0]
+    return f"MEB1:{(int(blen) - 4) // 4}" if is_meb1 else f"JSON:len{int(blen)}"
+
+
+def _effective_stack() -> tuple[str, str, str]:
+    """살아 있는 몸에게 직접 묻는다 — 디스크가 아니라 **적재된 런타임**의 자기 보고.
+
+    두 필드를 함께 낸다. `checks.embeddings`는 **저장된 설정**의 거울이라
+    폴백 이름(deterministic-128)을 들고 있고, `effective`가 실제 실행 스택이다
+    (provider_runtime.py:779-784). 불일치 자체가 지문의 일부다.
+    """
+    try:
+        health = call("get_provider_health", {})
+    except Exception:  # noqa: BLE001 — 서버 정지도 데이터다. 조용히 '일치'가 되지만 않으면 된다.
+        return UNKNOWN, UNKNOWN, UNKNOWN
+    eff = health.get("effective") or {}
+    chk = (health.get("checks") or {}).get("embeddings") or {}
+    effective = (f"{eff.get('embedding_provider')}:{eff.get('embedding_model')}"
+                 if eff.get("embedding_model") else UNKNOWN)
+    checks = (f"{chk.get('provider')}:{chk.get('model')}" if chk.get("model") else UNKNOWN)
+    return effective, str(eff.get("resolution") or UNKNOWN), checks
+
+
+def part_body() -> None:
+    """P21 처치 (c67 배선) — 몸 지문을 step 0의 첫 화면에 세운다.
+
+    계기: 관측 30 / notes/cycle-66. c59 oracle replay가 무수정 재실행에서 재현되지
+    않았고 원인은 어휘가 아니라 **12시간 전에 교체된 몸**이었다. 루프는 c61~c65
+    다섯 사이클을 새 몸에서 돌면서 그 사실을 원장에 적지 못했다(검출 지연 5사이클).
+    step 0 스크립트를 고른 이유: F-절차0 처치가 만든 **절단 불가능 채널**이고,
+    관측 29가 실측한 대로 그 채널에 없는 규약은 산다는 보장이 없다.
+
+    등록본 이탈 1건(선언): ②'프로세스 기동 시각'을 빼고 **effective 스택 + resolution**을
+    넣었다 — lsof/ps가 샌드박스 승인에 의존해 승인 없는 런에서 지문이 조용히 미지로
+    내려앉기 때문이다. 근거와 대안은 body-fingerprint.json의 `_omitted_process_start`.
+
+    출력은 **3줄 고정** (P21 정직 병기 ②: 늘어나면 F-절차0 재발로 계상한다).
+    """
+    effective, resolution, checks = _effective_stack()
+    live = {"dist_info": _installed_dist_info(),
+            "installed_vs_repo": _installed_vs_repo(),
+            "effective_embedding": effective,
+            "embedding_resolution": resolution,
+            "checks_embedding": checks,
+            "store_vec": _store_vec()}
+    try:
+        with open(FINGERPRINT_BASELINE, encoding="utf-8") as fh:
+            baseline = json.load(fh).get("fingerprint", {})
+    except (OSError, json.JSONDecodeError):
+        baseline = {}
+    verdict, changed, unknown = compare_fingerprint(live, baseline)
+
+    mark = "**재교정 필요**" if changed else verdict
+    print(f"[Body. 몸 지문 — 게이트 상수 의존 계기의 유효 전제 (P21, baseline=body-fingerprint.json)]")
+    print(f"  {live['dist_info']} inst_vs_repo={live['installed_vs_repo']} "
+          f"eff={live['effective_embedding']} res={resolution.split(' (')[0]} "
+          f"checks={live['checks_embedding']} store={live['store_vec']}")
+    print(f"  대조: {mark}"
+          + (f" — 변경 {changed}" if changed else "")
+          + (f" / 미채취 {unknown}" if unknown else "")
+          + ("  → oracle replay 계열·gate_audit·score_weight_* 를 재교정 전 판정 금지"
+             if changed else ""))
 
 
 def part_a() -> None:
@@ -198,5 +344,8 @@ def part_b() -> None:
 
 if __name__ == "__main__":
     part_n()
+    # part_n을 1행에 남긴다 — 그 배너가 F-절차0 처치이고 P16 (a)가 5/5로 성립한
+    # 작동 중인 처치다. 몸 지문은 그 **직후**(여전히 첫 화면)에 세운다.
+    part_body()
     part_a()
     part_b()

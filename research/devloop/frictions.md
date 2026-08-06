@@ -1651,3 +1651,60 @@ c67 이후, 이 사이클은 관찰 우선 원칙에 따라 기록만).
 해제 권고에 이 관측을 네 번째 근거로 추가**한다.
 
 **`frictions_fixed` 미계상** — 이 사이클은 고치지 않았다(관찰 우선). 처치는 P21.
+
+---
+
+## 미분류 관측 31 — 몸의 자기 보고가 **두 개의 스택을 동시에** 말한다: 순진한 필드가 폴백 이름을 들고 있다 (사이클 67, 유형 판정 회부 — 관측 30의 하위 기전)
+
+**증상.** P21 처치를 배선하려고 몸의 지문을 어디서 채취할지 조사하던 중(`c67_identity_channels.py`),
+`get_provider_health`가 임베딩 스택에 대해 **서로 모순하는 두 답**을 내는 것을 발견했다:
+
+```
+checks.embeddings : {"provider": "local",    "model": "deterministic-128", "status": "ok"}
+effective         : {"embedding_provider": "fastembed",
+                     "embedding_model": "BAAI/bge-small-en-v1.5",
+                     "resolution": "auto-default (unconfigured + fastembed importable)"}
+```
+
+**어느 쪽이 진실인가 (1차 증거).** 스토어는 **384차원**이다 — `embedding_space_audit.py` 실측
+dim=384 n=**3619**, dim=128은 3행뿐(전부 2026-08-01, 고립 사건). bge-small-en-v1.5가 384,
+deterministic-128이 128이므로 **`effective`가 진실이고 `checks.embeddings.model`은 실행 중인
+것이 아니다.** 독립 채널 2개가 일치한다(step 0의 `length(embedding)` 집계 = `MEB1:384`).
+
+**기전 — 버그가 아니라 설계이고, 그래서 더 위험하다.** `checks`는 **저장된 설정**의 거울이고
+(`providers.py:43` 기본값 `embedding_model="deterministic-128"`), `effective`는
+`effective_embedding_stack()`의 해석 결과다. 그리고 `provider_runtime.py:779-784`에
+그 이유가 주석으로 남아 있다 — *"silently upgrades an unconfigured 'local' to fastembed when
+importable. Doctor and any observer must see what actually runs, not what was stored
+— the LME-V2 run-1 lesson, in the opposite direction."* 즉 **진실 채널은 이미 만들어져 있다.**
+문제는 그것이 **추가 필드**로 붙어 있고, `checks`는 여전히 폴백 이름을 `status:"ok"`와 함께
+들고 있다는 것이다. "health"라는 이름의 응답에서 `checks`를 읽는 것이 자연스러운 독법이므로,
+**순진한 독자는 LME-V2 1차 풀런을 무효화한 바로 그 문장(`deterministic-128`으로 돌았다)을
+그대로 다시 적는다.** 원칙 3은 "구성 스택을 명시적으로 선언하고 결과 보고에 병기"를 요구하고,
+루프가 그 선언을 이 응답에서 뽑는다면 **틀린 스택을 성실하게 병기**한다.
+
+**관측 30과의 관계 — 상위/하위다.** 관측 30은 "몸이 바뀌었는데 원장이 몰랐다"였다. 관측 31은
+**왜 몸의 정체가 묻기 어려운지**를 말한다: `resolution="auto-default (unconfigured +
+fastembed importable)"`는 임베딩 공간이 **설정이 아니라 `fastembed`의 import 가능성**으로
+결정된다는 뜻이다. 따라서 **설정 변경 0 · 재임베딩 0 · 커밋 0으로도 공간이 뒤집힐 수 있다**
+— 의존성 설치/제거만으로. c66이 "재임베딩 이벤트 없음(차원 384 유지)"을 확인하고도 점수가
+일제히 이동한 것을 목격한 이유가 이 축에 있다(단 c66의 귀속은 `fd30a68` 질의측 경로 수리이고,
+이 관측이 그것을 대체하지는 않는다 — **두 경로가 모두 열려 있다**는 것이 여기서의 발견이다).
+
+**기대 동작.** 스택을 묻는 단일 질문에 단일 답이 오고, 저장된 설정과 실행 중 스택이 다르면
+그 불일치가 `issues`/`status`에 **경고로** 나타난다(현재 `status:"ok"`). 최소한 `checks`를
+읽는 경로가 폴백 이름을 무경고로 반환하지 않는다.
+
+**수용 기준.** `get_provider_health`에서 `checks.embeddings`의 모델이 `effective`와 다르면
+(i) `issues`에 항목이 실리고 (ii) `status`가 `ok`가 아니다. 대조군: 둘이 같은 프로젝트에서는
+`issues` 빈 배열 유지(위양성 0).
+
+**이 사이클의 처치 — 부분적이고, 제품이 아니라 계기에만 했다.** 제품 수정은 하지 않았다
+(관찰 우선 + 작업 단위 하나). 대신 P21 지문에 **두 필드를 함께** 싣고 `resolution`을 지문의
+1급 항목으로 넣었다 — 불일치 자체가 몸의 지문이라는 판단이다. 따라서 `frictions_fixed`는
+**0으로 계상한다**: 계기는 이제 이 사실을 매 사이클 말하지만, 제품의 순진한 독법은 그대로다.
+
+**정직 병기.** ① 이 관측은 **제품 결함 주장이 아니다** — 진실 채널이 존재하고 그 의도가 코드에
+주석으로 남아 있다. 주장은 "순진한 필드가 무경고로 오답을 준다"는 **표면 설계**에 대한 것이다.
+② `checks`를 실제로 오독한 사이클이 있었는지는 **세지 않았다**(원장 전수 조사 미실시).
+따라서 "루프가 틀린 스택을 병기한 적 있다"고는 말하지 않는다 — 위험의 존재만 기록한다.
