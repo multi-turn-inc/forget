@@ -1847,6 +1847,21 @@ outrank real memories for the very queries those utterances asked about"(store.p
 `c69_centering_prototype.py`의 F1 대조 · `c69_universal_attractor.py`(강등 누출 귀속) ·
 `tests/test_devloop_centering_prototype.py`(피드백 보정 없이는 사슬이 재현되지 않음을 고정).
 
+**처치 (사이클 76, 2026-08-08 — 저장소 몸, ⑮ 미배포).** 수용 기준 ①·② 구현 + ③ 테스트 고정.
+① `feedback_adjusted_score`의 **적용 델타(클램프 후 실값)**를 `score_breakdown["feedback"]`로
+기록 — 본체 사슬과 task_state 경로 양쪽, 보정 0이면 키를 늘리지 않는다(위양성 0 대조군 테스트
+동봉). 명목 라벨 가중치(±0.05/−0.15/−0.35)가 아니라 적용값을 싣는 이유: [0,1] 클램프가 델타를
+줄일 수 있고 재조립은 적용값으로만 성립한다. ② task_state 클레임은 `{rule, task_state: true}`
+— 합성 사슬 우회 표지가 실리고 vector 키를 위조하지 않는다(부재 자체가 "vector 미계산"의
+표지). 노출은 기존 계약(호출자 요청 시) 그대로 opt-in — 요청 없는 검색의 응답 형태 불변을
+테스트로 고정. ③ `tests/test_score_breakdown_reassembly.py` 5건 — 무피드백·POSITIVE·NEGATIVE·
+VERY_NEGATIVE·클레임 혼합 행의 표면화 전수에서 breakdown 단독 재조립 = score를 고정. 전체
+pytest **339 passed**(기존 334 회귀 0, +5).
+**한계(정직).** 99.81%의 원 표본은 도그푸드 :8000의 3200행 F1이었다 — 살아 있는 몸은
+forget_ai 0.4.0 설치본이라 이 수리가 닿지 않았고, 라이브 100% 재측정은 ⑮ 배포 영수증 뒤에만
+가능하다. 부수 관측(`a9402b0c` 강등 누출 — 대리 표지 문제)은 이 처치의 범위 밖, 미해소 존치.
+상태: **저장소 몸 해소 / 라이브 몸 ⑮ 종속 잔여.**
+
 ## 관측 34 — 대조군의 라벨은 **만료된다**, 그리고 만료를 일으키는 것은 루프 자신의 기록이다 (사이클 69, 유형 판정 회부 — 신규류 'F13 자기 기록에 의한 대조군 소비' 후보)
 
 **증상.** c69가 c68의 baseline을 재현하지 못했다: 같은 질의·같은 몸에서 OFF 최고가

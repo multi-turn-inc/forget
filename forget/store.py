@@ -1261,6 +1261,7 @@ def _task_state_search_results(
     top_k: int,
     threshold: float,
     as_of: str = "",
+    include_breakdown: bool = False,
 ) -> list[dict[str, Any]]:
     params: list[Any] = [project_id]
     if as_of:
@@ -1300,10 +1301,19 @@ def _task_state_search_results(
         # off-topic active states ride free score over recall gates
         # (friction F2 — the Quant task shadowing devloop turns).
         # Activeness is the capsule's job; search ranks by topic.
-        score = score_memory(query, item, reference_date=as_of or None)
-        score = feedback_adjusted_score(score, feedbacks.get(str(item["id"])))
+        rule_score = score_memory(query, item, reference_date=as_of or None)
+        score = feedback_adjusted_score(rule_score, feedbacks.get(str(item["id"])))
         if score >= threshold:
             item["score"] = score
+            if include_breakdown:
+                # Claims never enter the rule×w + vector×w composition, so an
+                # empty breakdown reads as rule=vector=0 — indistinguishable
+                # from "no lexical/semantic match" on rows that scored well.
+                # Mark the bypass and carry the actual input (observation 33).
+                breakdown: dict[str, Any] = {"rule": rule_score, "task_state": True}
+                if score != rule_score:
+                    breakdown["feedback"] = round(score - rule_score, 4)
+                item["score_breakdown"] = breakdown
             results.append(item)
     results.sort(key=lambda item: (item.get("score", 0), item["updated_at"]), reverse=True)
     return results[:top_k]
@@ -4750,6 +4760,7 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
     keyword_search = bool(payload.get("keyword_search", False))
     filter_memories_enabled = bool(payload.get("filter_memories", False))
     retrieval_criteria = _project_retrieval_criteria(project_id)
+    expose_breakdown = bool(keyword_search or filter_memories_enabled or retrieval_criteria or payload.get("score_breakdown"))
     memory_as_of = str(
         payload.get("memory_as_of")
         or payload.get("memoryAsOf")
@@ -4811,7 +4822,13 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
             score_breakdown["criteria"] = criteria_breakdown
         if rerank:
             score = rerank_score(query, memory, score, reference_date=reference_date)
-        score = feedback_adjusted_score(score, feedbacks.get(memory["id"]))
+        adjusted = feedback_adjusted_score(score, feedbacks.get(memory["id"]))
+        if adjusted != score:
+            # Record the applied delta, not the nominal label weight: the
+            # [0, 1] clamp can shrink it, and only the applied value lets the
+            # breakdown reassemble the score (observation 33).
+            score_breakdown["feedback"] = round(adjusted - score, 4)
+        score = adjusted
         if (memory.get("metadata") or {}).get("superseded_at"):
             # Supersession is a deterministic, agent-issued staleness signal
             # (unlike the inferred harmful penalty), so demote hard — but
@@ -4849,14 +4866,18 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
                     (f"{field}:{memory.get(field)}" for field in ENTITY_FIELDS if memory.get(field)),
                     "project",
                 )
-            if keyword_search or filter_memories_enabled or retrieval_criteria or bool(payload.get("score_breakdown")):
+            if expose_breakdown:
                 # body A2: 호출자가 성분을 요청하면 노출 — 훅이 어휘 일치
                 # (rule)와 의미 일치(vector)를 구분해 소음을 거를 수 있게.
                 item["score_breakdown"] = score_breakdown
             if temporal_rerank:
                 scored_embeddings[memory["id"]] = memory.get("_embedding")
             scored.append(item)
-    scored.extend(_task_state_search_results(query, filters, project_id, top_k, threshold, as_of=memory_as_of))
+    scored.extend(
+        _task_state_search_results(
+            query, filters, project_id, top_k, threshold, as_of=memory_as_of, include_breakdown=expose_breakdown
+        )
+    )
     if rerank:
         scored = rerank_memory_results(query, scored, project_id=project_id, top_n=top_k)
     scored.sort(key=lambda item: (item["score"], item["updated_at"]), reverse=True)
