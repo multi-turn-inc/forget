@@ -613,7 +613,7 @@ def list_memory_dicts(
 def _batch_cosine_scores(query_embedding: list[float], candidates: list[dict[str, Any]]) -> dict[str, float]:
     """Vectorized cosine over stored embeddings of the same dimension as the
     query. Produces bit-for-bit the same rounded score as cosine_similarity
-    ((cos + 1) / 2, rounded to 4, clamped); rows without a matching-dimension
+    (max(0, cos), rounded to 4, clamped); rows without a matching-dimension
     embedding are left out so the caller falls back to the scalar path."""
     try:
         import numpy as np
@@ -637,7 +637,7 @@ def _batch_cosine_scores(query_embedding: list[float], candidates: list[dict[str
     norms = np.linalg.norm(matrix, axis=1)
     norms[norms == 0.0] = 1.0
     cosines = (matrix @ query) / (norms * query_norm)
-    scores = np.clip(np.round((cosines + 1.0) / 2.0, 4), 0.0, 1.0)
+    scores = np.clip(np.round(cosines, 4), 0.0, 1.0)
     return dict(zip(ids, scores.tolist()))
 
 

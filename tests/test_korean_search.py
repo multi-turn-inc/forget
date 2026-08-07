@@ -94,7 +94,21 @@ def test_korean_search_ranks_relevant_memory_first(monkeypatch) -> None:
     assert items, "korean search returned no results"
     top = items[0]
     assert "결제" in str(top.get("memory") or ""), f"expected payment memory first, got: {top.get('memory')}"
-    scores = [round(float(item.get("score") or 0.0), 4) for item in items]
+
+    # The ranking-not-flat assertion needs the off-topic rows visible. On the
+    # max(0,cos) scale they fall below the default 0.1 search threshold (the
+    # affine (cos+1)/2 rescale used to float every row above it), so rank the
+    # full set with the threshold off.
+    unfiltered = c.post(
+        "/v3/memories/search/",
+        json={"query": "결제 수단이 뭐야", "filters": {"user_id": "ko-tester"},
+              "top_k": 3, "threshold": 0.0},
+    )
+    assert unfiltered.status_code == 200
+    ubody = unfiltered.json()
+    uitems = ubody if isinstance(ubody, list) else (ubody.get("results") or ubody.get("memories") or [])
+    assert "결제" in str(uitems[0].get("memory") or ""), f"expected payment memory first, got: {uitems[0].get('memory')}"
+    scores = [round(float(item.get("score") or 0.0), 4) for item in uitems]
     assert len(set(scores)) > 1, f"scores are flat: {scores}"
 
 

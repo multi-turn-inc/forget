@@ -781,16 +781,21 @@ def cosine_similarity(left: list[float], right: list[float]) -> float:
     if not left or not right:
         return 0.0
     if len(left) != len(right):
-        # Vectors from different embedding spaces carry no comparable signal.
-        # Truncating to min(len) yields near-neutral noise that lands ~0.5 on
-        # the (cos+1)/2 scale — above the 0.45 recall gate — so mismatches are
-        # rejected outright instead of silently scored.
+        # Vectors from different embedding spaces carry no comparable signal,
+        # so mismatches are rejected outright instead of silently scored
+        # (on the old (cos+1)/2 scale truncation noise even cleared the 0.45
+        # recall gate; on max(0,cos) it would merely hover near 0).
         return 0.0
     size = len(left)
     dot = sum(left[i] * right[i] for i in range(size))
     left_norm = math.sqrt(sum(value * value for value in left)) or 1.0
     right_norm = math.sqrt(sum(value * value for value in right)) or 1.0
-    return max(0.0, min(1.0, round((dot / (left_norm * right_norm) + 1.0) / 2.0, 4)))
+    # max(0, cos), not (cos+1)/2: the affine rescale paid every pair a
+    # topic-free constant (0.275 of the final score after the 0.55 weight),
+    # so zero-signal rows cleared the recall gate on the constant alone
+    # (c68 FPR=1.00; P23). Negative cosine carries no retrieval signal here
+    # and clamps to 0.
+    return max(0.0, min(1.0, round(dot / (left_norm * right_norm), 4)))
 
 
 def normalize_entity(value: str) -> str:
