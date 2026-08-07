@@ -11,6 +11,11 @@ Two judgment-free jobs, each fail-open on its own:
    label (all-or-none echo, substring match); its job is to start the data
    flywheel, not to be right — retire it when a learned labeler exists
    (observer W2) or when per-memory matching lands.
+
+At PreCompact a third job is delegated, not owned: forget_digest.flush()
+digests the whole undigested segment before the handoff note is written
+(rolling consolidation ②), so a compaction can only evaporate turns that
+already reached forget.
 """
 
 from __future__ import annotations
@@ -24,6 +29,11 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from forget_project import project_key_for_path, scope_disabled  # noqa: E402
+
+try:
+    import forget_digest  # noqa: E402 — sibling; packaged installs may not ship it yet
+except Exception:
+    forget_digest = None
 
 FORGET_URL = os.environ.get("FORGET_MCP_URL", "http://127.0.0.1:8000/mcp")
 STATE_DIR = os.path.expanduser("~/.forget/hooks/state")
@@ -200,6 +210,13 @@ def main() -> None:
     except Exception:
         pass
     if str(hook_input.get("hook_event_name") or "") == "PreCompact":
+        # ② final flush BEFORE the handoff note: everything the compaction is
+        # about to evaporate reaches forget first (rolling-consolidation ②).
+        if forget_digest is not None:
+            try:
+                forget_digest.flush(transcript_path, session_id)
+            except Exception:
+                pass
         try:
             _handoff(digest, transcript_path, session_id)
         except Exception:

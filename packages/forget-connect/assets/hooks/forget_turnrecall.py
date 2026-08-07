@@ -11,6 +11,9 @@ main context window is the scarcest resource, so the gate is strict:
 - the injection is an OFFER with trust lights; adoption stays the
   main-thread agent's judgment
 - fail-open, hard 5s timeout: forget being down must never slow a turn
+- one more offer rides along (c79, rolling consolidation ③): when the digest
+  hook estimates context usage near the compaction threshold, a single line
+  suggests rebooting over compacting — once per episode, never forced
 
 body A1+A2 (2026-08-06): per-turn traces landed server-side — the search
 carries trace=turn_recall, the injection footer prints the trace_id, and
@@ -113,6 +116,47 @@ def _injection_eligible(item: dict) -> bool:
     if _conflict_pair(item):
         return False
     return True
+
+
+def _threshold_notice(session_id: str) -> tuple[str, dict, str] | None:
+    """③의 소비자 — forget_digest가 세운 near_threshold를 재부팅 권고 1줄로.
+
+    에피소드당 한 번: advised 마커는 플래그가 내려갈 때만 forget_digest가
+    지우므로, 임계 위에 머무는 동안 매 턴 잔소리하지 않는다. 문구는
+    backlog_turns를 읽어 '소화 완료'를 과잉 주장하지 않고, 강제하지 않는다 —
+    캡슐과 같은 제안 규약이다 (rolling-consolidation-stage1.md ③).
+    """
+    if not session_id:
+        return None
+    path = os.path.join(STATE_DIR, f"digest-{session_id}.json")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            state = json.load(fh)
+    except Exception:
+        return None
+    if not state.get("near_threshold") or state.get("near_threshold_advised"):
+        return None
+    backlog = int(state.get("backlog_turns") or 0)
+    digested = (
+        "활성 창 밖 구간은 forget에 소화 완료"
+        if backlog == 0
+        else f"활성 창 밖 {backlog}턴은 다음 Stop에서 소화 예정"
+    )
+    ratio = float(state.get("est_ratio") or 0.0)
+    line = (
+        f"[forget 임계 — 컨텍스트 사용 추정 ~{round(ratio * 100)}%. {digested}. "
+        "컴팩션보다 재부팅(새 세션 + 캡슐 복원)이 낫다 — 제안이며 명령이 아님]"
+    )
+    return line, state, path
+
+
+def _mark_threshold_advised(state: dict, path: str) -> None:
+    try:
+        state["near_threshold_advised"] = True
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(state, fh, ensure_ascii=False)
+    except Exception:
+        pass
 
 
 def _seen_ids(session_id: str) -> tuple[set[str], str]:
@@ -242,7 +286,8 @@ def main() -> None:
         # 밀었지만(c63 실측 0/20), 남는 경우엔 최소한 흔적을 남긴다. 컨텍스트에는
         # 한 글자도 쓰지 않는다: 이 원장은 감사가 읽는 자리다.
         _note_unmeasured_flatness(prompt, len(results), len(scores_all), len(picks))
-    if not picks and not conflicts:
+    notice = _threshold_notice(session_id)
+    if not picks and not conflicts and notice is None:
         return  # below threshold or nothing new → silence
     lines = []
     if conflicts:
@@ -255,12 +300,16 @@ def main() -> None:
         header += " / 프로젝트 경계를 넘어 검색함]" if crossed else "]"
         lines.append(header)
         lines += [f"- ({light}) {memory}" for _, light, memory in picks]
-    if trace_id:
+    if notice is not None:
+        lines.append(notice[0])
+    if trace_id and (picks or conflicts):
         lines.append(
             f"[피드백 주소: 이 회상이 명확히 도움/소음이면 record_context_outcome(trace_id=\"{trace_id}\") 한 번]"
         )
     print("\n".join(lines))
-    if session_id and turns_path:
+    if notice is not None:
+        _mark_threshold_advised(notice[1], notice[2])
+    if session_id and turns_path and (picks or conflicts):
         injected = [memory_id for memory_id, _, _ in picks]
         ledger_picks = list(picks)
         for old_id, new_id, old_text, new_text in conflicts:

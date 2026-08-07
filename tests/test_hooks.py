@@ -12,6 +12,7 @@ import importlib.util
 import io
 import json
 import sys
+import types
 from pathlib import Path
 
 HOOKS_DIR = Path(__file__).resolve().parents[1] / "hooks"
@@ -318,6 +319,7 @@ def test_digest_filters_machine_payloads(tmp_path):
 def test_outcome_only_at_session_end(monkeypatch, tmp_path):
     module = _load("forget_capture")
     monkeypatch.setattr(module, "STATE_DIR", str(tmp_path))
+    monkeypatch.setattr(module, "forget_digest", None)  # 플러시는 별도 테스트 — 여기선 차단
     calls = []
     monkeypatch.setattr(module, "_capture", lambda *a, **k: None)
     monkeypatch.setattr(module, "_outcome", lambda digest, sid: calls.append(sid))
@@ -380,6 +382,7 @@ def test_sessionstart_prints_capsule_and_writes_offer_ledger(monkeypatch, tmp_pa
 def test_precompact_writes_handoff_note(monkeypatch, tmp_path):
     module = _load("forget_capture")
     monkeypatch.setattr(module, "STATE_DIR", str(tmp_path))
+    monkeypatch.setattr(module, "forget_digest", None)  # 플러시는 별도 테스트 — 여기선 차단
     monkeypatch.setattr(module, "_rpc", lambda *a, **k: None)
     transcript = _write_transcript(tmp_path)
     _run_main(module, {"session_id": "s8", "transcript_path": str(transcript),
@@ -542,3 +545,117 @@ def test_digest_skips_machine_payloads_but_passes_their_offset(monkeypatch, tmp_
     assert [m["content"] for m in calls[0][1]["messages"]] == [f"turn {i:02d} content" for i in (1, 2, 4, 5)]
     state = json.loads((tmp_path / "digest-d6.json").read_text(encoding="utf-8"))
     assert state["digested_upto"] == 5 and state["digested_turns"] == 5  # 기계 페이로드도 오프셋은 지나간다
+
+
+# --- P4 순서 2 — ② PreCompact 플러시 + ③ 임계 감시 (c79) -----------------------
+
+def test_digest_sets_near_threshold_flag_without_a_call(monkeypatch, tmp_path):
+    """③ — 소화할 것이 없어도(배치 미달) 임계 추정은 매 Stop 갱신된다."""
+    calls: list = []
+    module = _digest_module(monkeypatch, tmp_path, calls=calls)
+    monkeypatch.setattr(module, "CONTEXT_WINDOW_TOKENS", 100)  # 컷 = 70 tokens ≈ 224 bytes
+    monkeypatch.setattr(module, "OVERHEAD_TOKENS", 0)
+    transcript = _append_turns(tmp_path, 1, 7)  # 숙성분 2 < batch 3 → 소화 없음, 크기 ~700B
+    _run_main(module, {"session_id": "d7", "transcript_path": str(transcript)}, monkeypatch)
+    assert calls == []  # RPC 0회 — 플래그는 계기이지 소화가 아니다
+    state = json.loads((tmp_path / "digest-d7.json").read_text(encoding="utf-8"))
+    assert state["near_threshold"] is True and state["est_tokens"] > 0
+    assert state["backlog_turns"] == 2 and "digested_upto" not in state
+
+
+def test_flush_ignores_the_window_and_caps_its_batches(monkeypatch, tmp_path):
+    """② — 플러시는 활성 창 보호를 해제하되 FLUSH_MAX_BATCHES로 비용을 묶는다."""
+    calls: list = []
+    module = _digest_module(monkeypatch, tmp_path, calls=calls)
+    monkeypatch.setattr(module, "BATCH_CHAR_LIMIT", 30)  # 15자 메시지 정확히 2개 몫
+    transcript = _append_turns(tmp_path, 1, 10)
+    (tmp_path / "digest-f1.json").write_text(json.dumps(
+        {"near_threshold": True, "near_threshold_advised": True}), encoding="utf-8")
+    module.flush(str(transcript), "f1")
+    assert len(calls) == 4  # 2턴×4배치 = 8턴 — window=5여도 보호 없음
+    assert [m["content"] for m in calls[0][1]["messages"]] == ["turn 01 content", "turn 02 content"]
+    assert calls[0][1]["metadata"]["digest_trigger"] == "precompact_flush"
+    assert "hook" not in calls[0][1]["metadata"]
+    state = json.loads((tmp_path / "digest-f1.json").read_text(encoding="utf-8"))
+    assert state["digested_upto"] == 8 and state["backlog_turns"] == 2  # 잔여는 다음 Stop 몫
+    assert state["compacted_at_bytes"] == transcript.stat().st_size
+    assert state["near_threshold"] is False and "near_threshold_advised" not in state
+
+
+def test_flush_failure_advances_only_past_sent_batches_but_baselines_anyway(monkeypatch, tmp_path):
+    """② — 오프셋은 전송분까지만(손실 불가), 기준선은 사건 기록이라 실패해도 남는다."""
+    module = _digest_module(monkeypatch, tmp_path)
+    monkeypatch.setattr(module, "BATCH_CHAR_LIMIT", 30)
+    sent: list = []
+
+    def flaky_rpc(name, arguments, timeout=30):
+        sent.append(arguments)
+        if len(sent) >= 3:
+            raise OSError("server down")
+
+    monkeypatch.setattr(module, "_rpc", flaky_rpc)
+    transcript = _append_turns(tmp_path, 1, 10)
+    module.flush(str(transcript), "f2")
+    state = json.loads((tmp_path / "digest-f2.json").read_text(encoding="utf-8"))
+    assert state["digested_upto"] == 4 and state["backlog_turns"] == 6  # 배치 2개만 전진
+    assert state["compacted_at_bytes"] == transcript.stat().st_size
+
+
+def test_estimator_resets_at_the_compaction_baseline(monkeypatch, tmp_path):
+    """③ — 컴팩션 후 추정은 성장분만 잰다: 같은 크기의 트랜스크립트가 플래그를 못 세운다."""
+    module = _digest_module(monkeypatch, tmp_path, calls=[])
+    monkeypatch.setattr(module, "CONTEXT_WINDOW_TOKENS", 100)
+    monkeypatch.setattr(module, "OVERHEAD_TOKENS", 0)
+    transcript = _append_turns(tmp_path, 1, 7)
+    _run_main(module, {"session_id": "d8", "transcript_path": str(transcript)}, monkeypatch)
+    assert json.loads((tmp_path / "digest-d8.json").read_text(encoding="utf-8"))["near_threshold"] is True
+    module.flush(str(transcript), "d8")  # 컴팩션 — 기준선 기록 + 플래그 강하
+    _run_main(module, {"session_id": "d8", "transcript_path": str(transcript)}, monkeypatch)
+    state = json.loads((tmp_path / "digest-d8.json").read_text(encoding="utf-8"))
+    assert state["near_threshold"] is False  # 성장분 0 → 추정 = 오버헤드뿐
+
+
+def test_precompact_flushes_digest_before_handoff(monkeypatch, tmp_path):
+    """② — 캡처 훅은 PreCompact에서만 플러시를 위임한다 (SessionEnd는 아님)."""
+    module = _load("forget_capture")
+    monkeypatch.setattr(module, "STATE_DIR", str(tmp_path))
+    monkeypatch.setattr(module, "_rpc", lambda *a, **k: None)
+    flushed: list = []
+    monkeypatch.setattr(module, "forget_digest", types.SimpleNamespace(
+        flush=lambda transcript_path, session_id: flushed.append((transcript_path, session_id))))
+    transcript = _write_transcript(tmp_path)
+    _run_main(module, {"session_id": "s15", "transcript_path": str(transcript),
+                       "hook_event_name": "PreCompact", "trigger": "auto"}, monkeypatch)
+    assert flushed == [(str(transcript), "s15")]
+    assert (tmp_path / "handoff.json").exists()  # 플러시가 인수장을 막지 않는다
+    _run_main(module, {"session_id": "s15", "transcript_path": str(transcript),
+                       "hook_event_name": "SessionEnd", "reason": "exit"}, monkeypatch)
+    assert flushed == [(str(transcript), "s15")]  # SessionEnd는 플러시하지 않는다
+
+
+def test_near_threshold_advisory_prints_once_even_with_zero_picks(monkeypatch, tmp_path, capsys):
+    """③ — 회상 0건이어도 권고 1줄은 나가고, 에피소드당 한 번으로 끝난다."""
+    module = _recall_module(monkeypatch, tmp_path, [])
+    (tmp_path / "digest-s16.json").write_text(json.dumps(
+        {"near_threshold": True, "est_tokens": 145_000, "est_ratio": 0.725, "backlog_turns": 0}),
+        encoding="utf-8")
+    _run_main(module, {"session_id": "s16", "prompt": "다음 단계 계속 진행해줘"}, monkeypatch)
+    out = capsys.readouterr().out
+    assert "임계" in out and "재부팅" in out and "72%" in out and "소화 완료" in out
+    assert "피드백 주소" not in out  # 회상 0건이면 feedback footer도 없다
+    state = json.loads((tmp_path / "digest-s16.json").read_text(encoding="utf-8"))
+    assert state["near_threshold_advised"] is True
+    _run_main(module, {"session_id": "s16", "prompt": "다음 단계 계속 진행해줘"}, monkeypatch)
+    assert capsys.readouterr().out == ""  # 두 번째 턴은 침묵
+
+
+def test_near_threshold_advisory_rides_along_and_admits_backlog(monkeypatch, tmp_path, capsys):
+    """③ — 회상과 동승하고, 미소화 잔여가 있으면 '소화 완료'를 주장하지 않는다."""
+    results = [{"id": "m-9", "score": 0.6, "memory": "관련 기억", "metadata": {}, "trust": {"light": "green"}}]
+    module = _recall_module(monkeypatch, tmp_path, results)
+    (tmp_path / "digest-s17.json").write_text(json.dumps(
+        {"near_threshold": True, "est_ratio": 0.71, "backlog_turns": 12}), encoding="utf-8")
+    _run_main(module, {"session_id": "s17", "prompt": "그 기억 관련해서 뭐가 있었지?"}, monkeypatch)
+    out = capsys.readouterr().out
+    assert "(green) 관련 기억" in out and "임계" in out
+    assert "12턴" in out and "소화 완료" not in out
