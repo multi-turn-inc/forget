@@ -435,3 +435,110 @@ def test_stale_handoff_is_burned_silently(monkeypatch, tmp_path, capsys):
     out = capsys.readouterr().out
     assert "교대 인수인계" not in out and "현재 목표: 새 일" in out
     assert (tmp_path / "handoff.json.done").exists()
+
+
+# --- forget_digest (P4 — 롤링 응고 1단계 ①) ------------------------------------
+
+def _digest_module(monkeypatch, tmp_path, calls=None, fail=False, window=5, batch=3):
+    module = _load("forget_digest")
+    monkeypatch.setattr(module, "STATE_DIR", str(tmp_path))
+    monkeypatch.setattr(module, "RECENT_WINDOW_TURNS", window)
+    monkeypatch.setattr(module, "DIGEST_BATCH_TURNS", batch)
+
+    def fake_rpc(name, arguments, timeout=30):
+        if fail:
+            raise OSError("server down")
+        if calls is not None:
+            calls.append((name, arguments))
+
+    monkeypatch.setattr(module, "_rpc", fake_rpc)
+    return module
+
+
+def _append_turns(tmp_path, start, count) -> Path:
+    """턴 텍스트는 전 역할 15자 고정("turn NN content") — 문자 상한 테스트가 산술에 기댄다."""
+    path = tmp_path / "digest-transcript.jsonl"
+    with path.open("a", encoding="utf-8") as fh:
+        for i in range(start, start + count):
+            role = "user" if i % 2 else "assistant"
+            text = f"turn {i:02d} content"
+            content = text if role == "user" else [{"type": "text", "text": text}]
+            fh.write(json.dumps({"type": role, "message": {"role": role, "content": content}}) + "\n")
+    return path
+
+
+def test_digest_protects_active_window_and_records_range(monkeypatch, tmp_path):
+    calls: list = []
+    module = _digest_module(monkeypatch, tmp_path, calls=calls)
+    transcript = _append_turns(tmp_path, 1, 10)  # window=5 → 숙성분은 1..5뿐
+    _run_main(module, {"session_id": "d1", "transcript_path": str(transcript)}, monkeypatch)
+    assert len(calls) == 1
+    name, args = calls[0]
+    assert name == "add_memory" and args["infer"] is True
+    assert [m["content"] for m in args["messages"]] == [f"turn {i:02d} content" for i in range(1, 6)]
+    assert args["metadata"]["turn_range"] == [1, 5] and args["metadata"]["session_id"] == "d1"
+    # metadata.hook이 붙으면 회상 스킵 + ×0.5 강등 — 소화 기억은 일반 기억이어야 한다
+    assert "hook" not in args["metadata"]
+    state = json.loads((tmp_path / "digest-d1.json").read_text(encoding="utf-8"))
+    assert state["digested_upto"] == 5 and state["digested_turns"] == 5
+
+
+def test_digest_below_batch_threshold_makes_no_call(monkeypatch, tmp_path):
+    calls: list = []
+    module = _digest_module(monkeypatch, tmp_path, calls=calls)
+    transcript = _append_turns(tmp_path, 1, 7)  # 숙성분 2 < batch 3
+    _run_main(module, {"session_id": "d2", "transcript_path": str(transcript)}, monkeypatch)
+    assert calls == [] and not (tmp_path / "digest-d2.json").exists()
+
+
+def test_digest_failure_keeps_offset_then_retries(monkeypatch, tmp_path):
+    transcript = _append_turns(tmp_path, 1, 10)
+    module = _digest_module(monkeypatch, tmp_path, fail=True)
+    _run_main(module, {"session_id": "d3", "transcript_path": str(transcript)}, monkeypatch)
+    assert not (tmp_path / "digest-d3.json").exists()  # 실패 비전진
+    calls: list = []
+    module = _digest_module(monkeypatch, tmp_path, calls=calls)
+    _run_main(module, {"session_id": "d3", "transcript_path": str(transcript)}, monkeypatch)
+    assert [m["content"] for m in calls[0][1]["messages"]] == [f"turn {i:02d} content" for i in range(1, 6)]
+
+
+def test_digest_offset_advances_and_never_redigests(monkeypatch, tmp_path):
+    calls: list = []
+    module = _digest_module(monkeypatch, tmp_path, calls=calls)
+    transcript = _append_turns(tmp_path, 1, 10)
+    _run_main(module, {"session_id": "d4", "transcript_path": str(transcript)}, monkeypatch)  # 1..5 소화
+    _append_turns(tmp_path, 11, 8)  # 총 18턴 → 신규 6..18 중 숙성분 6..13
+    _run_main(module, {"session_id": "d4", "transcript_path": str(transcript)}, monkeypatch)
+    assert len(calls) == 2
+    assert [m["content"] for m in calls[1][1]["messages"]] == [f"turn {i:02d} content" for i in range(6, 14)]
+    assert calls[1][1]["metadata"]["turn_range"] == [6, 13]
+    state = json.loads((tmp_path / "digest-d4.json").read_text(encoding="utf-8"))
+    assert state["digested_turns"] == 13 and state["digested_upto"] == 13
+
+
+def test_digest_char_cap_advances_only_past_sent_turns(monkeypatch, tmp_path):
+    calls: list = []
+    module = _digest_module(monkeypatch, tmp_path, calls=calls)
+    monkeypatch.setattr(module, "BATCH_CHAR_LIMIT", 30)  # 15자 메시지 정확히 2개 몫
+    transcript = _append_turns(tmp_path, 1, 10)
+    _run_main(module, {"session_id": "d5", "transcript_path": str(transcript)}, monkeypatch)
+    assert [m["content"] for m in calls[0][1]["messages"]] == ["turn 01 content", "turn 02 content"]
+    state = json.loads((tmp_path / "digest-d5.json").read_text(encoding="utf-8"))
+    assert state["digested_upto"] == 2  # 나머지 몫은 다음 Stop이 이어받는다
+
+
+def test_digest_skips_machine_payloads_but_passes_their_offset(monkeypatch, tmp_path):
+    calls: list = []
+    module = _digest_module(monkeypatch, tmp_path, calls=calls)
+    transcript = tmp_path / "digest-transcript.jsonl"
+    lines = []
+    for i in range(1, 11):
+        role = "user" if i % 2 else "assistant"
+        text = "<command-name>/loop</command-name>" if i == 3 else f"turn {i:02d} content"
+        content = text if role == "user" else [{"type": "text", "text": text}]
+        lines.append(json.dumps({"type": role, "message": {"role": role, "content": content}}))
+    transcript.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    _run_main(module, {"session_id": "d6", "transcript_path": str(transcript)}, monkeypatch)
+    assert [m["content"] for m in calls[0][1]["messages"]] == [f"turn {i:02d} content" for i in (1, 2, 4, 5)]
+    state = json.loads((tmp_path / "digest-d6.json").read_text(encoding="utf-8"))
+    assert state["digested_upto"] == 5 and state["digested_turns"] == 5  # 기계 페이로드도 오프셋은 지나간다
