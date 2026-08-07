@@ -73,6 +73,17 @@ def call(name: str, arguments: dict) -> dict:
     return json.loads(body["result"]["content"][0]["text"])
 
 
+def cycle_number_and_mode(cycles: list[int]) -> tuple[int, str]:
+    """cycle 필드 max+1과 모드. **순수 함수** — part_n의 산술을 테스트 가능하게 분리 (c71).
+
+    part_n/part_a/part_b 파싱 테스트 미커버가 c64→c70 7회 재이월된 부채의 부분 상환:
+    번호·모드 산술이 처음으로 회귀 감시 아래 들어간다. 출력 문면은 불변이다.
+    """
+    n = max(cycles) + 1
+    mode = "적대 감사" if n % 10 == 0 else ("회고" if n % 5 == 0 else "일반")
+    return n, mode
+
+
 def part_n() -> None:
     """c52 재배선(F-절차0 처치): 사이클 번호 N을 이 스크립트가 인쇄한다.
 
@@ -98,8 +109,7 @@ def part_n() -> None:
             line = line.strip()
             if line:
                 cycles.append(int(json.loads(line)["cycle"]))
-    n = max(cycles) + 1
-    mode = "적대 감사" if n % 10 == 0 else ("회고" if n % 5 == 0 else "일반")
+    n, mode = cycle_number_and_mode(cycles)
     print("[!] metrics.jsonl을 직접 열지 말 것 — 번호·모드는 아래 한 줄이 정본이다.")
     print("    (tail/cat/head 계열 0회. 이 스크립트가 이미 전체를 파싱했다.")
     print("     지시서 절차 0의 '마지막 줄에서 N' 문면은 A-55.1 게이트 대기 중인 구본이며,")
@@ -249,6 +259,84 @@ def part_body() -> None:
              if changed else ""))
 
 
+def recall_components(note: str) -> dict[str, int] | None:
+    """recall_note에서 성분 4값(능동 hit/miss · 주입 hit/miss)을 추출한다. **순수 함수**.
+
+    정본 형식(P15 (b)): `능동 X회(hit a·miss b) / 주입 Y건(hit c·miss d)`.
+    관측된 의역(c70: "능동 검색 0회", "주입 4건 = … hit 1 + … 3건 miss")도 받되,
+    값이 **유일하게** 정해지지 않으면 None을 반환한다 — '추출 불가'는 P24 (b)의
+    계상 대상이지 조용히 0으로 접을 값이 아니다(compare_fingerprint와 같은 규율:
+    모르는 것을 '일치'로 보고하지 않는다).
+    """
+    text = note.replace("*", "")
+    inj = re.search(r"주입\s*(\d+)\s*건", text)
+    act = re.search(r"능동[^0-9]{0,12}?(\d+)\s*회", text)
+    if not inj or not act:
+        return None
+
+    def hitmiss(seg: str) -> tuple[int | None, int | None]:
+        h = re.search(r"hit\s*(\d+)", seg)
+        m = re.search(r"miss\s*(\d+)", seg) or re.search(r"(\d+)\s*건[^0-9]{0,8}?miss", seg)
+        return (int(h.group(1)) if h else None), (int(m.group(1)) if m else None)
+
+    act_seg, inj_seg = text[:inj.start()], text[inj.start():]
+    a_cnt, i_cnt = int(act.group(1)), int(inj.group(1))
+    a_hit, a_miss = hitmiss(act_seg)
+    if a_hit is None and a_miss is None and a_cnt == 0:
+        a_hit = a_miss = 0  # "능동 0회"는 분해 생략이 유일 해석이다
+    if a_hit is None or a_miss is None:
+        return None
+    i_hit, i_miss = hitmiss(inj_seg)
+    # 한쪽만 명시돼도 총계로 닫히면 유일 결정이다 (예: "주입 4건 = hit 1 + 3건 miss")
+    if i_hit is None and i_miss is not None and i_miss <= i_cnt:
+        i_hit = i_cnt - i_miss
+    elif i_miss is None and i_hit is not None and i_hit <= i_cnt:
+        i_miss = i_cnt - i_hit
+    if i_hit is None or i_miss is None:
+        return None
+    return {"active_hits": a_hit, "active_misses": a_miss, "active_total": a_cnt,
+            "injected_hits": i_hit, "injected_misses": i_miss, "injected_total": i_cnt}
+
+
+def recall_identity(row: dict) -> tuple[str, str]:
+    """원장 행의 recall 필드가 성분 합과 일치하는지 검산한다. **순수 함수** (P24 처치 ②).
+
+    반환 (verdict, detail). verdict ∈ {일치, 불일치, 추출 불가}.
+    audit-70 §1-a가 적발한 c64형 결함(필드=구정의·산문=신정의, 무선언 분열)을
+    다음 사이클의 step 0이 기계로 잡는다. 결론 문장은 만들지 않는다 — 값과 판정만.
+    """
+    comp = recall_components(str(row.get("recall_note", "")))
+    if comp is None:
+        return "추출 불가", "성분 4값 유일 추출 실패 — P24 (b) 계상 대상"
+    want = (comp["active_hits"] + comp["injected_hits"],
+            comp["active_misses"] + comp["injected_misses"])
+    got = (int(row.get("recall_hits", -1)), int(row.get("recall_misses", -1)))
+    detail = (f"fields(hits={got[0]}·misses={got[1]}) vs "
+              f"성분(능동 {comp['active_hits']}·{comp['active_misses']} / "
+              f"주입 {comp['injected_hits']}·{comp['injected_misses']})")
+    return ("일치" if got == want else "불일치"), detail
+
+
+def part_recall() -> None:
+    """P15 (a) 반증 처방의 배선 (c71, P24) — 정의 A를 절단 불가능 채널로 인쇄하고
+    직전 원장 행의 `성분 합 = 필드 값` 항등식을 검산한다.
+    """
+    rows = []
+    with open(os.path.join(REPO, "research", "devloop", "metrics.jsonl"), encoding="utf-8") as fh:
+        for line in fh:
+            if line.strip():
+                rows.append(json.loads(line))
+    last = max(rows, key=lambda r: r["cycle"])
+    verdict, detail = recall_identity(last)
+    print("\n[R. recall 계상 — 정의 A 정본 출력 (P15 (a) 반증 → P24 배선, c71)]")
+    print("  계상 대상 = 이 사이클에 표면화된 회상 전체: 능동 검색 + 주입(캡슐·task_state·훅).")
+    print("  계기의 검색 호출은 계상 제외(c68 선언). hit = 행동을 바꾼 신규 정보이며, 도착")
+    print("  시각이 행동을 바꾸면 hit(c64 확장의 성문화 — 노출이지 승인 아님, audit-70 N7).")
+    print("  필드 항등식: recall_hits = 능동hit+주입hit · recall_misses = 능동miss+주입miss.")
+    print("  recall_note 병기 형식: '능동 X회(hit a·miss b) / 주입 Y건(hit c·miss d)'.")
+    print(f"  [직전 행 검산] cycle={last['cycle']}: {detail} → {verdict}")
+
+
 def part_a() -> None:
     print("[A. 규약 (ii) — 구현 의존성]")
     dotgit = os.path.join(REPO, ".git")
@@ -347,5 +435,6 @@ if __name__ == "__main__":
     # part_n을 1행에 남긴다 — 그 배너가 F-절차0 처치이고 P16 (a)가 5/5로 성립한
     # 작동 중인 처치다. 몸 지문은 그 **직후**(여전히 첫 화면)에 세운다.
     part_body()
+    part_recall()
     part_a()
     part_b()
