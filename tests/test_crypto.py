@@ -80,13 +80,19 @@ def test_recovery_code_format_and_checksum():
     assert crypto.validate_recovery_code(code)
     assert crypto.validate_recovery_code(code.lower().replace("-", " "))
 
-    raw = crypto.normalize_recovery_code(code)
-    # flip one data character -> checksum must catch it
+    # The 10-bit checksum cannot catch every single-char flip (~0.11%
+    # collide), so flipping a freshly drawn random code makes this test
+    # fail one run in ~900. Pin a vector whose position-5 flips are all
+    # collision-free, and which also freezes the checksum algorithm —
+    # deployed recovery codes must keep validating across versions.
+    raw = "F1QMEBFORGETRECOVERYTESTVECT5X"
+    assert crypto.validate_recovery_code(raw)
     position = 5
-    original = raw[position]
-    replacement = next(c for c in "ABCDEFGH234567" if c != original)
-    corrupted = raw[:position] + replacement + raw[position + 1:]
-    assert not crypto.validate_recovery_code(corrupted)
+    for replacement in crypto._RECOVERY_ALPHABET:
+        if replacement == raw[position]:
+            continue
+        corrupted = raw[:position] + replacement + raw[position + 1:]
+        assert not crypto.validate_recovery_code(corrupted)
     assert not crypto.validate_recovery_code("XX" + raw[2:])
     assert not crypto.validate_recovery_code("F1-SHORT")
 
