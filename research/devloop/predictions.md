@@ -1234,3 +1234,40 @@ tail 0회)만 작동했고 c66~c69 원장에 P19 언급 0회(audit-70 §3-a [신
   캐비앗(원칙 1): 관측 창에서 분열 압력 자체가 없었으므로(전부 일치) 이 판정은 "처치가 분열을
   막았다"가 아니라 "처치 가동 창에서 분열이 재발하지 않았다"까지만 지지한다.
 
+## P25 — phrase_bonus 매칭 자격 필터 단독: 대수 동치와 c22 T2b 랭크 재현 (등록 2026-08-09 사이클 81, **코드 변경 동반 — 이 등록이 코드에 선행**)
+
+- 배경: F2 지배 원인 C1(사이클 18, notes/cycle-18-f2-root-cause.md) — score_memory phrase_bonus의
+  무자격 합산(+0.02/토큰, 부분 문자열)이 단문자 조사·숫자 토큰과 결합해 장문 한국어 기억에
+  주제 무관 +0.3 바닥 점수를 만든다. 처치 설계는 c21 투영 → c22 선택성 스윕이 좁혔다:
+  **자격 필터 단독(T2b)**, 상한 0.10은 배제(c22 실측 — 감소량 junk+max(0,qual−CAP)이라
+  고어휘겹침(관련) 기억일수록 벌점, e2ee 쿼리 top-1 훼손·상한 제거 시 복구 = 회귀적).
+  audit-80 §3이 이 팔의 62사이클 무착수를 회피로 확정하고 R1(c81 1순위)로 권고했다.
+- 처치(c81): score_memory의 per-token +0.02를 자격 토큰(`len(token) >= 2 and not
+  token.isdigit()` — c21/c22 계기 `qualified()`와 동형)으로 제한. **상한 없음.**
+  full-query bonus(0.25) 불변, coverage/jaccard/category/recency/temporal 축 전부 불변
+  (자[尺] 단독 규율, c48). 훅·라이브 :8000 무접촉(스코어러는 repo 단일 지점,
+  ⑮ 미배포이므로 도그푸드 몸의 산술은 이 사이클로 변하지 않는다).
+- 예측 (반증가능, 계기 실행 전 등록):
+  - **(a) 대수 동치** — fixtures_cycle22 8쿼리 × 히트 전수에서
+    `new_score == clamp(round(old_raw − junk, 4))` (old_raw = 구규칙 동결 재현, junk =
+    무자격 토큰 기여, 허용 오차 5e-5). 1건이라도 불일치면 구현이 투영과 다른 것(구현 결함)
+    이거나 다른 점수 축을 건드린 것 — **반증, 커밋 전 수정 또는 롤백**.
+  - **(b) c22 T2b 랭크 재현** — 앵커 2026-08-02T12:00+09:00(c22 실측일 정오) 고정 시
+    쿼리별 tau(구규칙 순서 vs 신규칙 순서)가 c22 기록과 일치: devloop-meta 0.857 ·
+    us-relocation 1.000 · e2ee-pivot 0.643 · dogfood-setup 1.000 · researcher-identity 1.000 ·
+    b2b-pitch 1.000 · compression-metrics 0.929 · codex-dual-write 0.857, top-1 훼손은
+    compression-metrics 1건뿐. 캐비앗 선언: c22의 정확한 실행 시각은 미기록이라 recency
+    항(0.08·exp(−age/60))의 시간차가 박빙 쌍을 뒤집을 수 있다 — 불일치가 나오면 per-쌍
+    점수차로 recency 귀속 여부를 판별해 병기하고, recency로 설명 안 되는 불일치만 반증으로 계상.
+  - **(c) 제품 테스트 무손상** — 기존 pytest 전수 통과, 기존 단언 완화 0건. 기존 테스트가
+    깨져 단언을 물러야 통과한다면 그것이 회귀 신호 — supersede로 롤백(LOOP.md ② 규약).
+  - **(d) 비-예측(정직·범위 한정)** — 이 사이클이 주장하는 것은 (a)(b)(c)의 대수·국소
+    회귀까지다. LongMemEval (i-b) 판정(P8 승계)은 벤치 사이클(비용 게이트) 몫, 라이브 F2
+    효과는 ⑮ 배포 후 몫이다. **이 처치로 F2를 fixed로 계상하지 않는다**(c3 오진의 교훈:
+    frictions_fixed는 검증 후에만).
+- 판정: (a)(b)(c)는 이 사이클 안에서 즉시(계기: research/devloop/scripts/c81_phrase_qual_regression.py,
+  fixtures_cycle22 재사용·$0·읽기 전용). (d)의 벤치 팔은 P8 (i-b)가 이미 등록돼 있으므로
+  중복 등록하지 않고 승계만 명시.
+- 부기: c22 스윕 계기(f2_treatment2_selectivity_sweep.py)의 proj/proj_b 대수는 처치가 본체에
+  들어간 뒤에는 이중 차감이 된다 — 역사 계기로 강등하고 fixtures만 재사용(스크립트 헤더에 1줄 표기).
+

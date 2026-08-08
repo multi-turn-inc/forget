@@ -683,7 +683,10 @@ def score_memory(query: str, memory: dict[str, Any], reference_date: Any = None)
     lowered_memory = str(memory.get("memory", "")).lower()
     lowered_query = query.lower()
     for token in q_tokens:
-        if token in lowered_memory:
+        # Single-char particles (조사) and bare numbers substring-match almost
+        # any long text, farming a topic-free score floor (F2/C1, cycle 18) —
+        # only tokens that can carry topical signal earn the phrase bonus.
+        if len(token) >= 2 and not token.isdigit() and token in lowered_memory:
             phrase_bonus += 0.02
     if lowered_query and lowered_query in lowered_memory:
         phrase_bonus += 0.25

@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """F2 처치 2 선택성 스윕 (사이클 22, 읽기 전용).
 
+[c81 이후 — 역사 계기] 자격 필터가 score_memory 본체에 들어갔으므로(P25) 이
+스크립트의 proj/proj_b 투영은 이중 차감이 된다. fixtures만 재사용할 것 —
+재현 판정은 c81_phrase_qual_regression.py가 담당한다.
+
 사이클 21(notes/cycle-21-f2-treatment2-projection.md)은 처치 2(phrase 매칭 자격
 len>=2 & non-numeric + 상한 0.10)를 두 쿼리에만 투영했다: 퇴화한 devloop 고정
 프롬프트(n=1)와 정상 주제 쿼리(n=1, 미국 이주). 결론("devloop 프롬프트에서 비선택적,
