@@ -337,6 +337,26 @@ def part_recall() -> None:
     print(f"  [직전 행 검산] cycle={last['cycle']}: {detail} → {verdict}")
 
 
+def porcelain_changed_paths(raw: str) -> list[str]:
+    """`git status --porcelain` 원문(무-strip)에서 경로 열을 뽑는다. **순수 함수** (c82).
+
+    part_a 인라인이던 파싱의 분리 — "part_n/part_a/part_b 파싱 미커버" 부채(c64 등재,
+    c71 부분 상환, audit-80 §3-(b) 재지적)의 잔여 상환. 동작은 문면 그대로 보존한다:
+    행 형식 `XY<space><path>`에서 `line[3:]`, 공백 행 무시, 둘러싼 따옴표 제거.
+    입력은 run_raw의 무-strip 원문이어야 한다 — strip된 원문을 주면 첫 행의 X열(공백)이
+    사라져 경로 첫 글자를 먹는다(run_raw 독스트링의 c64 결함, 이제 테스트가 방향을 고정).
+
+    알려진 거짓 음성 2종 (c82 관측 — 원칙 2: 고치기 전에 기록, 처치는 후속 사이클 몫):
+      ① 스테이지된 리네임 행 `R  old -> new`는 `old -> new` 통짜 문자열이 되어
+         하류 os.path.exists에서 조용히 탈락한다.
+      ② core.quotepath 기본값에서 비ASCII 경로는 8진 이스케이프(`"\\355…"`)로 와서
+         디스크에 없는 경로가 된다 — 한국어 파일명 저장소에서 실질 위험.
+    두 경우 모두 "변경 있음"이 "깨끗함" 쪽으로 접히는 방향이다(절차 2가 막으려는 상황).
+    현행 동작을 테스트가 그대로 단언한다 — 처치가 오면 그 단언이 울리는 것이 의도다.
+    """
+    return [line[3:].strip().strip('"') for line in raw.splitlines() if line.strip()]
+
+
 def part_a() -> None:
     print("[A. 규약 (ii) — 구현 의존성]")
     dotgit = os.path.join(REPO, ".git")
@@ -355,10 +375,9 @@ def part_a() -> None:
     # 참조 파일 mtime이 아니라 **커밋 시각**과 비교한다 — .git/HEAD의 mtime은
     # 체크아웃·페치 같은 무관한 조작으로도 갱신되므로 커밋 시각이 더 정확한 기준이다.
     newer: list[tuple[str, int]] = []
-    changed = [ln for ln in run_raw(["git", "status", "--porcelain"]).splitlines() if ln.strip()]
+    changed = porcelain_changed_paths(run_raw(["git", "status", "--porcelain"]))
     print(f"  changed_paths_total={len(changed)}")  # c64: 분모를 병기해 침묵 절단을 드러낸다
-    for line in changed:
-        rel = line[3:].strip().strip('"')
+    for rel in changed:
         full = os.path.join(REPO, rel)
         if os.path.isdir(full):
             mt = max((os.path.getmtime(os.path.join(r, f))
@@ -380,13 +399,26 @@ def needle_reach(capsule: str, rules: dict[str, list[str]]) -> tuple[int, dict[s
     return sum(detail.values()), detail
 
 
+def capsule_char_budget(src: str) -> int:
+    """훅 소스에서 CAPSULE_CHAR_BUDGET 정수를 뽑는다. **순수 함수** (c82).
+
+    part_b 인라인 정규식의 분리 — 같은 부채의 잔여 상환. 예산은 truncated 판정과
+    니들 도달의 분모를 정한다: 이 값을 잘못 읽으면 part_b 전체가 통째로 어긋난다.
+    `1_600` 같은 밑줄 리터럴을 허용한다(현행 동작 보존). 마커 부재 시 AttributeError로
+    **시끄럽게** 죽는다 — 조용히 기본값으로 접혀 거짓 음성이 되는 것보다 낫고,
+    그 성질도 테스트가 고정한다(compare_fingerprint의 규율: 모르는 것을 '일치'로
+    보고하지 않는다).
+    """
+    return int(re.search(r"CAPSULE_CHAR_BUDGET\s*=\s*([0-9_]+)", src).group(1).replace("_", ""))
+
+
 def part_b() -> None:
     print("\n[B. 규약 도달 — 니들 판본 대조]")
     sys.path.insert(0, INSTALLED_HOOKS)
     from forget_project import layered_filter, project_key_for_path, scope_disabled  # noqa: E402
 
     src = open(os.path.join(INSTALLED_HOOKS, "forget_sessionstart.py"), encoding="utf-8").read()
-    budget = int(re.search(r"CAPSULE_CHAR_BUDGET\s*=\s*([0-9_]+)", src).group(1).replace("_", ""))
+    budget = capsule_char_budget(src)
 
     project = None if scope_disabled() else project_key_for_path(REPO)
     args = {"query": f"session startup in {REPO} — active tasks, open loops, recent decisions",
