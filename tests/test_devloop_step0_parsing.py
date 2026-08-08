@@ -9,12 +9,13 @@ compare_fingerprint)을 감시 아래 넣었고, 이 파일이 나머지 둘을 
   2. capsule_char_budget — part_b 도달 계측의 자[尺]. 예산을 잘못 읽으면 truncated
      판정과 니들 도달 분모가 통째로 어긋난다.
 
-정직 규약: 알려진 거짓 음성 2종(스테이지된 리네임 행 · core.quotepath 8진 이스케이프,
-c82 관측 — frictions.md 미분류 관측 38)은 **현행 동작을 그대로 단언**한다. 고치기 전에
-기록(원칙 2)이고, 처치가 오면 이 단언이 울리는 것이 의도다(선례: test_crypto의
-하위호환 불변식, c73).
+정직 규약 이력: 거짓 음성 2종(스테이지된 리네임 행 · core.quotepath 8진 이스케이프,
+c82 관측 38)은 c82가 **현행 동작 그대로** 단언해 두었고(고치기 전에 기록, 원칙 2),
+c83이 처치하면서 그 단언들을 정상 동작 단언으로 교체했다 — 울리라고 둔 종이 울린
+기록은 git 이력(5fb80c5)에 있다. 선례: test_crypto의 하위호환 불변식(c73).
 """
 import importlib.util
+import os
 from pathlib import Path
 
 import pytest
@@ -60,21 +61,57 @@ def test_blank_lines_skipped_and_empty_input_is_empty():
     assert c48.porcelain_changed_paths("?? x.md\n\n?? y.md\n") == ["x.md", "y.md"]
 
 
-# ---- porcelain_changed_paths: 알려진 거짓 음성 2종 (c82 관측, 현행 동작 단언) ----
+# ---- porcelain_changed_paths: 관측 38 처치 (c83) — 거짓 음성 2종의 정상 동작 단언 ----
 
-def test_known_false_negative_staged_rename_yields_nonpath():
-    # 관측 38-①: `R  old -> new`는 통짜 문자열이 되어 os.path.exists에서 조용히
-    # 탈락한다. 처치(양쪽 경로 분리) 시 이 단언을 갱신하라 — 울리라고 둔 종이다.
+def test_staged_rename_splits_into_both_paths():
+    # 관측 38-① 처치: `R  old -> new`는 양쪽 경로로 갈라진다. old는 디스크에 없어
+    # 하류 exists에서 걸러지고(D 행과 같은 취급), new가 mtime 검사에 들어간다 —
+    # 리네임된 미커밋 WIP가 영토 검사에 보인다. (c82의 현행 단언을 교체한 종.)
     raw = "R  old-name.md -> new-name.md\n"
-    assert c48.porcelain_changed_paths(raw) == ["old-name.md -> new-name.md"]
+    assert c48.porcelain_changed_paths(raw) == ["old-name.md", "new-name.md"]
 
 
-def test_known_false_negative_quotepath_octal_escape_survives():
-    # 관측 38-②: core.quotepath 기본값에서 비ASCII 경로는 8진 이스케이프로 온다.
-    # 반환값은 디스크에 없는 문자열이라 하류에서 조용히 탈락 — 한국어 파일명
-    # 저장소에서 실질 위험. 처치(-c core.quotepath=off 또는 디코딩) 시 갱신하라.
+def test_copy_line_also_splits():
+    raw = "C  src.md -> dup.md\n"
+    assert c48.porcelain_changed_paths(raw) == ["src.md", "dup.md"]
+
+
+def test_arrow_in_filename_without_rename_code_is_not_split():
+    # 상태 코드에 R/C가 없으면 ` -> `가 있어도 가르지 않는다 — 화살표를 품은
+    # 평범한 파일명이 리네임으로 오인되는 반대 방향 오류를 막는다.
+    raw = " M notes -> plan.md\n"
+    assert c48.porcelain_changed_paths(raw) == ["notes -> plan.md"]
+
+
+def test_quoted_old_path_containing_arrow_splits_at_real_arrow():
+    # old가 인용돼 있으면 닫는 인용부호까지가 old다 — 인용 속 ` -> `는 경로의 일부.
+    raw = 'R  "a -> b.md" -> c.md\n'
+    assert c48.porcelain_changed_paths(raw) == ["a -> b.md", "c.md"]
+
+
+def test_quotepath_octal_escape_decodes_to_korean():
+    # 관측 38-② 처치: 8진 이스케이프가 UTF-8 바이트로 복원된다 — 한국어 파일명이
+    # 디스크에 실재하는 문자열로 돌아온다. (c82의 현행 단언을 교체한 종.)
     raw = '?? "\\355\\225\\234\\352\\270\\200.md"\n'
-    assert c48.porcelain_changed_paths(raw) == ["\\355\\225\\234\\352\\270\\200.md"]
+    assert c48.porcelain_changed_paths(raw) == ["한글.md"]
+
+
+def test_rename_with_quoted_korean_new_path():
+    raw = 'R  old.md -> "\\355\\225\\234\\352\\270\\200 \\352\\270\\260\\353\\241\\235.md"\n'
+    assert c48.porcelain_changed_paths(raw) == ["old.md", "한글 기록.md"]
+
+
+def test_escaped_quote_backslash_and_tab_decode():
+    assert c48.porcelain_changed_paths('?? "a\\"b.md"\n') == ['a"b.md']
+    assert c48.porcelain_changed_paths('?? "a\\\\b.md"\n') == ["a\\b.md"]
+    assert c48.porcelain_changed_paths('?? "a\\tb.md"\n') == ["a\tb.md"]
+
+
+def test_invalid_utf8_octal_does_not_crash_and_roundtrips_bytes():
+    # 비UTF-8 바이트는 surrogateescape로 보존된다 — strict는 죽고 replace는 디스크에
+    # 없는 다른 경로를 만든다. os.fsencode 왕복으로 원본 바이트가 남았음을 단언한다.
+    [p] = c48.porcelain_changed_paths('?? "\\377.md"\n')
+    assert os.fsencode(p) == b"\xff.md"
 
 
 # ---- capsule_char_budget --------------------------------------------------------

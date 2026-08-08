@@ -337,24 +337,98 @@ def part_recall() -> None:
     print(f"  [직전 행 검산] cycle={last['cycle']}: {detail} → {verdict}")
 
 
+def _dequote_c_style(path: str) -> str:
+    """git이 인용한 경로(`"..."`)를 C 스타일 이스케이프까지 디코드한다. **순수 함수** (c83).
+
+    관측 38-② 처치. core.quotepath 기본값(true)에서 비ASCII 바이트는 8진 이스케이프로
+    온다 — `"\\355\\225\\234\\352\\270\\200.md"` → `한글.md`. 디코드는 바이트로 모은 뒤
+    surrogateescape로 되돌린다: 비UTF-8 파일명도 os.path.exists가 그대로 통과하는
+    유일한 복원이다(strict는 죽고 replace는 디스크에 없는 다른 경로를 만든다 —
+    거짓 음성을 고치려다 같은 방향의 거짓 음성을 재생산하지 않는다).
+    인용부호가 없으면 원문 그대로 — 정상 경로의 무해 통과를 보존한다.
+    """
+    if not (len(path) >= 2 and path.startswith('"') and path.endswith('"')):
+        return path
+    inner = path[1:-1]
+    simple = {"\\": ord("\\"), '"': ord('"'), "n": ord("\n"), "t": ord("\t"),
+              "r": ord("\r"), "a": 7, "b": 8, "f": 12, "v": 11}
+    out = bytearray()
+    i = 0
+    while i < len(inner):
+        ch = inner[i]
+        if ch == "\\" and i + 1 < len(inner):
+            nxt = inner[i + 1]
+            if nxt in "01234567":
+                j = i + 2
+                while j < min(i + 4, len(inner)) and inner[j] in "01234567":
+                    j += 1
+                out.append(int(inner[i + 1:j], 8) & 0xFF)
+                i = j
+                continue
+            if nxt in simple:
+                out.append(simple[nxt])
+                i += 2
+                continue
+        out.extend(ch.encode("utf-8"))
+        i += 1
+    return out.decode("utf-8", "surrogateescape")
+
+
+def _split_rename_columns(rest: str) -> list[str]:
+    """리네임/카피 행의 `old -> new` 열을 양쪽 경로로 가른다. **순수 함수** (c83).
+
+    관측 38-① 처치. old가 인용된 경우(`"a -> b.md" -> c.md`)는 닫는 인용부호를
+    스캔해 인용 속 화살표를 경로의 일부로 지킨다. 한계(정직): porcelain v1은
+    무인용 경로 속 ` -> `를 진짜 구분자와 가릴 수 없다(근본 처치는 -z NUL 형식) —
+    여기서는 첫 ` -> `에서 가른다. 그 모호성은 경로가 인용되지 않는 평문 ASCII
+    파일명에 화살표가 실제로 들어간 경우에만 남는다.
+    """
+    if rest.startswith('"'):
+        i = 1
+        while i < len(rest):
+            if rest[i] == "\\":
+                i += 2
+                continue
+            if rest[i] == '"':
+                break
+            i += 1
+        head, tail = rest[:i + 1], rest[i + 1:]
+        if tail.startswith(" -> "):
+            return [head, tail[4:]]
+        return [rest]
+    if " -> " in rest:
+        old, new = rest.split(" -> ", 1)
+        return [old, new]
+    return [rest]
+
+
 def porcelain_changed_paths(raw: str) -> list[str]:
     """`git status --porcelain` 원문(무-strip)에서 경로 열을 뽑는다. **순수 함수** (c82).
 
     part_a 인라인이던 파싱의 분리 — "part_n/part_a/part_b 파싱 미커버" 부채(c64 등재,
-    c71 부분 상환, audit-80 §3-(b) 재지적)의 잔여 상환. 동작은 문면 그대로 보존한다:
-    행 형식 `XY<space><path>`에서 `line[3:]`, 공백 행 무시, 둘러싼 따옴표 제거.
-    입력은 run_raw의 무-strip 원문이어야 한다 — strip된 원문을 주면 첫 행의 X열(공백)이
-    사라져 경로 첫 글자를 먹는다(run_raw 독스트링의 c64 결함, 이제 테스트가 방향을 고정).
+    c71 부분 상환, audit-80 §3-(b) 재지적)의 잔여 상환. 행 형식 `XY<space><path>`에서
+    `line[3:]`, 공백 행 무시. 입력은 run_raw의 무-strip 원문이어야 한다 — strip된
+    원문을 주면 첫 행의 X열(공백)이 사라져 경로 첫 글자를 먹는다(run_raw 독스트링의
+    c64 결함, 테스트가 방향을 고정).
 
-    알려진 거짓 음성 2종 (c82 관측 — 원칙 2: 고치기 전에 기록, 처치는 후속 사이클 몫):
-      ① 스테이지된 리네임 행 `R  old -> new`는 `old -> new` 통짜 문자열이 되어
-         하류 os.path.exists에서 조용히 탈락한다.
-      ② core.quotepath 기본값에서 비ASCII 경로는 8진 이스케이프(`"\\355…"`)로 와서
-         디스크에 없는 경로가 된다 — 한국어 파일명 저장소에서 실질 위험.
-    두 경우 모두 "변경 있음"이 "깨끗함" 쪽으로 접히는 방향이다(절차 2가 막으려는 상황).
-    현행 동작을 테스트가 그대로 단언한다 — 처치가 오면 그 단언이 울리는 것이 의도다.
+    거짓 음성 2종 처치 (c82 관측 38 → c83 수리, frictions.md 수용 기준 ②):
+      ① 상태 코드에 R/C가 있는 행은 `old -> new`를 양쪽 경로로 가른다 — old는
+         디스크에 없어 하류 exists에서 걸러지고(D 행과 같은 취급), new가 mtime
+         검사에 들어간다. 리네임된 미커밋 WIP가 영토 검사에 보인다.
+      ② 인용 경로는 8진 이스케이프까지 디코드한다 — 한국어 파일명이 디스크에
+         실재하는 문자열로 돌아온다.
+    두 처치 모두 "변경 있음→'깨끗함'" 방향의 침묵을 막는다(절차 2가 막으려는 상황).
+    c82가 현행 동작으로 고정해 둔 단언 2건은 이 처치와 함께 정상 동작 단언으로
+    교체됐다 — 울리라고 둔 종이 울렸고, 종을 새 자리에 다시 걸었다.
     """
-    return [line[3:].strip().strip('"') for line in raw.splitlines() if line.strip()]
+    paths: list[str] = []
+    for line in raw.splitlines():
+        if not line.strip():
+            continue
+        xy, rest = line[:2], line[3:]
+        segs = _split_rename_columns(rest) if ("R" in xy or "C" in xy) else [rest]
+        paths.extend(_dequote_c_style(seg.strip()) for seg in segs)
+    return paths
 
 
 def part_a() -> None:
