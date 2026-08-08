@@ -59,51 +59,98 @@ PROBE_QUERY = "№0003 실험 3시드 78.4% — rate-distortion 차트 forget �
       k에 단조 비감소여야 하고, n_retrieved == min(k, stored)여야 한다.
 LLM 0 · 외부 API $0 (reader/judge 미호출 — 검색은 로컬 fastembed).
 산출물: research/devloop/notes/c88_payload_sweep.json (메타+질문×k 원시+집계),
-  노트 notes/cycle-88-*.md 요약. 실행: 서버 기동 후
+  노트 notes/cycle-88-*.md 요약. 실행:
   .venv/bin/python research/devloop/scripts/c88_topk_payload_sweep.py
+
+── 선등록 이탈 선언 (실행 전 개정 e43e80a 이후, 결과 관측 전) ───────────────────
+  등록본의 몸은 "격리 인스턴스 :8602 (uvicorn)"이었다. 이 비대화형 런에서 서버
+  기동은 승인 게이트에 걸려 실행 불가 — 승인 의존 채널은 승인 없는 런에서 조용히
+  죽는다(body-fingerprint _omitted_process_start 선례). 대체: **인프로세스 엔진**,
+  같은 저장소 워킹트리 코드 + 전용 MEM1_DB_PATH(/tmp). HTTP 핸들러(server.py
+  memories_create / memories_search_v3 / memories_delete_all)는 add_memories /
+  search_memories / delete_memories의 얇은 래퍼이므로 채점·저장 경로는 등록본과
+  동일하고, 이탈은 수송층(HTTP↔인프로세스)뿐이다. harness의 ingest_instance /
+  retrieve 코드는 클라이언트 셤(shim)으로 무수정 재사용한다. 몸 검증은 MCP 대신
+  동일 내부 함수(provider_runtime.provider_health_payload)로 수행하고, 스토어
+  벡터 차원(MEB1:384) 검사를 추가한다(폴백 이중 감시). 직렬 실행(스레드 풀 제거)
+  — 인프로세스 sqlite 동시성 리스크 회피, 표본 규모(42문항 ~21k턴)는 직렬로 충분.
+  DB 경로도 /tmp → 저장소 tmp/(.gitignore 26행)로: /tmp 파일은 샌드박스에서 삭제
+  불가라 폐기 의무를 지킬 수 없다. 전용 신규 DB라는 격리 본질은 불변.
 """
 from __future__ import annotations
 
 import json
+import os
 import random
 import statistics
 import subprocess
 import sys
 import time
-import urllib.request
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-import httpx
-import tiktoken
+# /tmp는 이 샌드박스에서 삭제 불가(작업 디렉토리 밖) — 저장소 tmp/(.gitignore 26행)로.
+# 등록본 경로와의 차이는 격리성에 무영향(전용 신규 DB라는 본질 유지). 이탈 선언에 병기.
+DB_PATH = str(Path(__file__).resolve().parents[3] / "tmp" / "c88_bench_payload.sqlite3")
+os.environ["MEM1_DB_PATH"] = DB_PATH  # forget import 전에 — 격리 DB 바인딩
+
+import tiktoken  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "research" / "longmemeval"))
+sys.path.insert(0, str(ROOT))
 import harness  # noqa: E402  (ingest_instance / retrieve / _context_lines / READER_SYS_V3)
+from forget.db import init_db  # noqa: E402
+from forget.provider_runtime import provider_health_payload  # noqa: E402
+from forget.store import add_memories, delete_memories, search_memories  # noqa: E402
 
-URL = "http://localhost:8602"
-DB_NOTE = "/tmp/c88_bench_payload.sqlite3"
 OUT = ROOT / "research" / "devloop" / "notes" / "c88_payload_sweep.json"
 K_LIST = [1, 2, 5, 10, 20, 42, 84]
 N, SEED = 42, 42
-WORKERS = 4
 EXPECTED_EFFECTIVE = "fastembed:BAAI/bge-small-en-v1.5"
 
 enc = tiktoken.get_encoding("o200k_base")
 
 
-def mcp_call(name: str, arguments: dict) -> dict:
-    payload = {"jsonrpc": "2.0", "id": 1, "method": "tools/call",
-               "params": {"name": name, "arguments": arguments}}
-    req = urllib.request.Request(f"{URL}/mcp/forget/http/c88bench",
-                                 data=json.dumps(payload).encode("utf-8"),
-                                 headers={"Content-Type": "application/json"})
-    body = json.loads(urllib.request.urlopen(req, timeout=30).read())
-    return json.loads(body["result"]["content"][0]["text"])
+class _Resp:
+    """httpx.Response의 최소 표면 — harness가 쓰는 두 메서드만."""
+
+    def __init__(self, data: dict):
+        self._data = data
+
+    def raise_for_status(self) -> None:
+        pass
+
+    def json(self) -> dict:
+        return self._data
+
+
+class InProcClient:
+    """harness의 httpx.Client 자리에 꽂는 인프로세스 셤.
+
+    server.py 핸들러가 하는 일을 그대로 한다 — 래퍼 로직(text→messages 봉투,
+    filters 통과)만 복제하고 엔진 함수는 동일한 것을 호출한다.
+    """
+
+    def post(self, path: str, json: dict) -> _Resp:  # noqa: A002 — httpx 시그니처 유지
+        payload = json
+        if path == "/v1/memories/":
+            text = payload.get("text")
+            wrapped = {**payload,
+                       "messages": [{"role": "user", "content": str(text)}],
+                       "infer": False}
+            wrapped.pop("text", None)
+            return _Resp(add_memories(wrapped))
+        if path == "/v3/memories/search/":
+            return _Resp({"results": search_memories(payload).get("results", [])})
+        raise ValueError(f"unmapped path: {path}")
+
+    def request(self, method: str, path: str, json: dict) -> _Resp:  # noqa: A002
+        assert method == "DELETE" and path == "/v1/memories/"
+        return _Resp(delete_memories({k: v for k, v in json.items() if v}))
 
 
 def verify_body() -> dict:
-    health = mcp_call("get_provider_health", {})
+    health = provider_health_payload()
     eff = health.get("effective") or {}
     chk = (health.get("checks") or {}).get("embeddings") or {}
     effective = f"{eff.get('embedding_provider')}:{eff.get('embedding_model')}"
@@ -114,12 +161,34 @@ def verify_body() -> dict:
         "repo_head": subprocess.run(["git", "rev-parse", "--short", "HEAD"],
                                     cwd=ROOT, capture_output=True, text=True).stdout.strip(),
         "arithmetic": "신척도 (c72 affine 제거 + c81 phrase 자격 — 워킹트리 editable)",
-        "url": URL, "db": DB_NOTE,
+        "transport": "in-process (선등록 이탈 선언 참조 — 서버 기동 승인 불가)",
+        "db": DB_PATH,
     }
     if effective != EXPECTED_EFFECTIVE:
         raise SystemExit(f"몸 검증 실패 — effective={effective!r} != {EXPECTED_EFFECTIVE!r}: "
                          "deterministic-128 폴백 위 측정 금지 (선등록 스펙). 중단.")
     return fp
+
+
+def store_vec_check() -> str:
+    """폴백 이중 감시 — 첫 인제스트 후 스토어 벡터 형식 실측 (기대 MEB1:384).
+
+    SQL은 c48_step0_check._store_vec의 정본을 그대로 — 매직 비교는 hex 리터럴
+    (x'4D454231' = b"MEB1"): BLOB은 TEXT 리터럴과 저장 클래스가 달라 절대 같지 않다.
+    """
+    import sqlite3
+    conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+    try:
+        rows = conn.execute(
+            "select substr(embedding,1,4)=x'4D454231', length(embedding), count(*) "
+            "from memories where deleted=0 and embedding is not null and embedding != '' "
+            "group by 1, 2 order by count(*) desc limit 1").fetchall()
+    finally:
+        conn.close()
+    if not rows:
+        return "no-vector"
+    is_meb1, blen, _ = rows[0]
+    return f"MEB1:{(int(blen) - 4) // 4}" if is_meb1 else f"JSON:len{int(blen)}"
 
 
 def tok(s: str) -> int:
@@ -131,32 +200,33 @@ def run_instance(inst: dict) -> dict:
     q, qdate = inst["question"], inst.get("question_date", "")
     row = {"question_id": inst["question_id"], "question_type": inst["question_type"],
            "by_k": {}, "flags": []}
-    with httpx.Client(base_url=URL, timeout=180) as client:
-        stored = harness.ingest_instance(client, scope, inst, granularity="turn")
-        row["stored"] = stored
-        prev_payload = -1
-        for k in K_LIST:
-            mems = harness.retrieve(client, scope, q, k, temporal_rerank=True)
-            context = harness._context_lines(mems)
-            user_prompt = (f"Today's date: {qdate}\n\nRetrieved memories "
-                           f"(each tagged with its date):\n{context}\n\nQuestion: {q}")
-            payload = tok(context)
-            row["by_k"][str(k)] = {
-                "n_retrieved": len(mems),
-                "payload_tokens": payload,
-                "reader_prompt_tokens": tok(harness.READER_SYS_V3) + tok(user_prompt),
-            }
-            if len(mems) != min(k, stored):
-                row["flags"].append(f"k={k}: n_retrieved {len(mems)} != min(k, stored {stored})")
-            if payload < prev_payload:
-                row["flags"].append(f"k={k}: payload {payload} < 직전 k {prev_payload} (단조성 위반)")
-            prev_payload = payload
-        client.request("DELETE", "/v1/memories/", json={"user_id": scope, "app_id": "lme"})
+    client = InProcClient()
+    stored = harness.ingest_instance(client, scope, inst, granularity="turn")
+    row["stored"] = stored
+    prev_payload = -1
+    for k in K_LIST:
+        mems = harness.retrieve(client, scope, q, k, temporal_rerank=True)
+        context = harness._context_lines(mems)
+        user_prompt = (f"Today's date: {qdate}\n\nRetrieved memories "
+                       f"(each tagged with its date):\n{context}\n\nQuestion: {q}")
+        payload = tok(context)
+        row["by_k"][str(k)] = {
+            "n_retrieved": len(mems),
+            "payload_tokens": payload,
+            "reader_prompt_tokens": tok(harness.READER_SYS_V3) + tok(user_prompt),
+        }
+        if len(mems) != min(k, stored):
+            row["flags"].append(f"k={k}: n_retrieved {len(mems)} != min(k, stored {stored})")
+        if payload < prev_payload:
+            row["flags"].append(f"k={k}: payload {payload} < 직전 k {prev_payload} (단조성 위반)")
+        prev_payload = payload
+    client.request("DELETE", "/v1/memories/", json={"user_id": scope, "app_id": "lme"})
     return row
 
 
 def main() -> None:
     t0 = time.time()
+    init_db()
     fp = verify_body()
     print("몸 검증 통과:", json.dumps(fp, ensure_ascii=False))
 
@@ -166,12 +236,15 @@ def main() -> None:
     print(f"표본: dev-{N} (seed {SEED}) — {len(sample)}문항, K={K_LIST}")
 
     rows: list[dict] = []
-    with ThreadPoolExecutor(max_workers=WORKERS) as ex:
-        for i, row in enumerate(ex.map(run_instance, sample), 1):
-            rows.append(row)
-            print(f"  [{i}/{len(sample)}] {row['question_id']} stored={row['stored']} "
-                  f"k84={row['by_k']['84']['payload_tokens']}tok "
-                  f"{'FLAGS:' + str(row['flags']) if row['flags'] else ''}")
+    for i, inst in enumerate(sample, 1):
+        row = run_instance(inst)
+        if i == 1:
+            fp["store_vec_first_instance"] = store_vec_check()
+            print("스토어 벡터 검사(1문항 후):", fp["store_vec_first_instance"])
+        rows.append(row)
+        print(f"  [{i}/{len(sample)}] {row['question_id']} stored={row['stored']} "
+              f"k84={row['by_k']['84']['payload_tokens']}tok "
+              f"{'FLAGS:' + str(row['flags']) if row['flags'] else ''}", flush=True)
 
     agg = {}
     for k in K_LIST:
@@ -185,7 +258,7 @@ def main() -> None:
             "payload_min": min(vals), "payload_max": max(vals),
             "reader_prompt_median": statistics.median(rp),
             "n_retrieved_mean": round(statistics.mean(
-                r["by_k"][str(k)]["n_retrieved"] for r in rows), 1),
+                [r["by_k"][str(k)]["n_retrieved"] for r in rows]), 1),
         }
 
     flagged = [r["question_id"] for r in rows if r["flags"]]
@@ -197,7 +270,7 @@ def main() -> None:
             "tokenizer": "o200k_base", "llm_calls": 0, "external_cost_usd": 0,
             "elapsed_s": round(time.time() - t0, 1),
             "pairing_caveat": ("x(k)만 실측. 아카이브 정확도(y)와의 결합 금지 — "
-                                "몸 패리티 미검증 (선등록 헤더 참조)."),
+                               "몸 패리티 미검증 (선등록 헤더 참조)."),
         },
         "aggregate_by_k": agg,
         "flagged_questions": flagged,
