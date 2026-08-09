@@ -130,3 +130,29 @@ def test_budget_missing_marker_is_loud_not_silent():
     # 시끄럽게 죽는 현행 성질을 고정한다(모르는 것을 '일치'로 보고하지 않는다).
     with pytest.raises(AttributeError):
         c48.capsule_char_budget("# 예산 상수가 없는 소스")
+
+
+# ---- task_state_lag: 유동층 대조 (c93, 관측 49) ---------------------------------
+
+def test_lag_detects_the_c93_case():
+    # 실제 표본: 원장 마지막은 92인데 세대는 c91 완주본이었다. c92의 절차 5 쓰기가
+    # 착지하지 않았고, 그 문면이 정확했기 때문에 실패가 조용했다.
+    summary = "[devloop 사이클 91 — 2026-08-10, 일반 사이클(91%10=1) — 완주·커밋 e1ab180+59065f4]"
+    assert c48.task_state_lag(92, summary) == (91, "지연")
+
+
+def test_lag_in_sync_is_the_normal_start_of_a_cycle():
+    # 정상 구간: N-1 == ledger_last == 세대 사이클. 이번 사이클은 아직 절차 5 전이다.
+    assert c48.task_state_lag(92, "[devloop 사이클 92 — 완주]") == (92, "일치")
+
+
+def test_lag_ahead_means_step5_ran_but_the_ledger_row_is_missing():
+    # 반대 방향의 비대칭 실패 — 유동층은 갱신됐는데 원장 append가 빠진 경우.
+    assert c48.task_state_lag(92, "[devloop 사이클 93 — 완주]") == (93, "앞섬(원장 미기재 — 절차 5 미완주 의심)")
+
+
+def test_lag_without_a_cycle_number_is_undecidable_not_ok():
+    # 번호를 못 읽으면 '일치'로 접지 않는다 — compare_fingerprint의 UNKNOWN 규율과 같다.
+    state_cycle, verdict = c48.task_state_lag(92, "다른 태스크의 요약문입니다")
+    assert state_cycle is None
+    assert verdict.startswith("판정 불가")

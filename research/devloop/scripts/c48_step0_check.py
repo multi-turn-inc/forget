@@ -84,6 +84,69 @@ def cycle_number_and_mode(cycles: list[int]) -> tuple[int, str]:
     return n, mode
 
 
+def task_state_lag(ledger_last: int, summary: str) -> tuple[int | None, str]:
+    """원장 마지막 사이클과 task_state 세대의 사이클을 대조한다. **순수 함수** (c93).
+
+    두 원장은 서로 독립이다: metrics.jsonl은 git이 지키는 불변 기록이고, task_state는
+    스토어의 유동층이다. 둘이 어긋나는 유일한 정상 구간은 "이번 사이클이 아직 절차 5를
+    돌지 않았다"인데, 그 구간은 N-1 == ledger_last로 나타난다. ledger_last보다 **뒤진**
+    세대는 정상 구간이 없다 — 그 사이 어느 사이클의 쓰기가 착지하지 못한 것이다.
+    """
+    match = re.search(r"사이클\s*(\d+)", summary)
+    if not match:
+        return None, "판정 불가(세대 문면에 사이클 번호 없음)"
+    state_cycle = int(match.group(1))
+    if state_cycle == ledger_last:
+        return state_cycle, "일치"
+    if state_cycle < ledger_last:
+        return state_cycle, "지연"
+    return state_cycle, "앞섬(원장 미기재 — 절차 5 미완주 의심)"
+
+
+def part_s() -> None:
+    """[S] 유동층 대조 — 원장과 task_state가 같은 사이클을 가리키는가 (c93 처치, 관측 49).
+
+    왜. c92는 완주·커밋했고 원장 c92 행은 "record_task_state를 호출했고 응답의 배열이
+    비어 있지 않음을 눈으로 확인했다"고 적었다. 그러나 스토어에 c92 세대는 없었다
+    (그 세션 창의 TASK_STATE 이벤트 0건 — c93 1차 증거). 다음 세션은 c91 완주본을
+    **현재로** 받았고, 그 문면이 정확하고 최신처럼 보였기에 실패는 소리를 내지 않았다.
+
+    조용한 실패의 방어는 자기 보고가 아니라 계기다: 두 원장이 어긋나면 턴2에 소리가 난다.
+    한계(정직): 이 검사는 **직전 사이클의 실패**만 잡는다. 이번 사이클 자신의 절차 5
+    쓰기가 착지했는지는 호출 뒤 재조회로만 확인되며, 그 규약을 아래에 함께 인쇄한다.
+    """
+    cycles = []
+    with open(os.path.join(REPO, "research", "devloop", "metrics.jsonl"), encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if line:
+                cycles.append(int(json.loads(line)["cycle"]))
+    ledger_last = max(cycles)
+    print("[S. 유동층 대조 — 원장 마지막 사이클 vs task_state 세대 (c93 처치, 관측 49)]")
+    try:
+        rows = (call("get_task_state", {"task_id": "devloop", "limit": 1}) or {}).get("results") or []
+    except Exception as exc:  # noqa: BLE001 — 도달 실패도 관측이며 침묵보다 낫다
+        print(f"  판정 불가 — get_task_state 도달 실패: {type(exc).__name__}: {exc}")
+        return
+    if not rows:
+        print(f"  ledger_last={ledger_last}  task_state=**세대 없음**")
+        print("  ★ devloop 유동층이 통째로 비었다 — 복원은 저장소만으로 해야 한다.")
+        return
+    row = rows[0]
+    summary = " ".join(str(row.get("summary") or "").split())
+    state_cycle, verdict = task_state_lag(ledger_last, summary)
+    print(f"  ledger_last={ledger_last}  task_state_cycle={state_cycle}  "
+          f"valid_from={row.get('valid_from')}  판정={verdict}")
+    if verdict == "지연":
+        span = f"{state_cycle + 1}~{ledger_last}" if state_cycle is not None else "?"
+        print(f"  ★ 불일치: 사이클 {span}의 record_task_state가 스토어에 세대를 남기지 않았다.")
+        print("    → 이 세션의 restore_grade(task_state 채널)는 **stale**이다. 해당 원장 행이")
+        print("      완주를 주장한다면 그 주장은 이 대조로 반증된다(관측 49의 기전).")
+    print("  [쓰기 규약] 절차 5의 record_task_state는 호출로 끝나지 않는다 — 호출 뒤")
+    print("    get_task_state로 **재조회**해 이번 사이클 번호가 돌아오는지 확인할 것.")
+    print("    c92는 '눈으로 확인했다'고 적었고 세대는 없었다. 확인은 재조회로만 성립한다.")
+
+
 def part_n() -> None:
     """c52 재배선(F-절차0 처치): 사이클 번호 N을 이 스크립트가 인쇄한다.
 
@@ -545,6 +608,8 @@ if __name__ == "__main__":
     part_n()
     # part_n을 1행에 남긴다 — 그 배너가 F-절차0 처치이고 P16 (a)가 5/5로 성립한
     # 작동 중인 처치다. 몸 지문은 그 **직후**(여전히 첫 화면)에 세운다.
+    # part_s는 그 바로 다음 — 복원의 신뢰성 판정이 몸 지문보다 앞선다(c93).
+    part_s()
     part_body()
     part_recall()
     part_a()

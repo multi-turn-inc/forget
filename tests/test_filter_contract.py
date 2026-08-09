@@ -11,6 +11,7 @@ key, lists the valid vocabulary, and suggests the nearest valid spelling.
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -249,3 +250,41 @@ def test_mcp_filters_schema_documents_vocabulary() -> None:
         description = tool["inputSchema"]["properties"]["filters"].get("description") or ""
         assert "user_id" in description, f"{tool['name']} filters schema lacks vocabulary"
         assert "Unknown keys are rejected" in description, f"{tool['name']} filters schema lacks rejection note"
+
+
+def _task_state(payload: dict, ctx: dict) -> dict:
+    return json.loads(call_tool("get_task_state", payload, ctx)["content"][0]["text"])
+
+
+def test_task_state_filter_task_id_is_applied_not_dropped() -> None:
+    # filters.task_id is valid vocabulary, so it passed validation and was then
+    # dropped: _task_state_scope keeps only ENTITY_FIELDS + project, and the id
+    # was read from the top level alone. The caller got every task back, shaped
+    # exactly like a filtered answer. Found by devloop cycle 93 step 0, where a
+    # stale task state could not be told apart from a missing one.
+    _client()
+    ctx = {"user_id": "codex", "client_name": "codex"}
+    for task_id in ("devloop", "heartbeat"):
+        call_tool("record_task_state", {"task_id": task_id, "summary": f"state for {task_id}"}, ctx)
+
+    assert len(_task_state({}, ctx)["results"]) == 2, "fixture should hold two tasks"
+
+    filtered = _task_state({"filters": {"task_id": "devloop"}}, ctx)
+    assert [row["task_id"] for row in filtered["results"]] == ["devloop"]
+
+    top_level = _task_state({"task_id": "devloop"}, ctx)
+    assert [row["task_id"] for row in top_level["results"]] == ["devloop"]
+
+    missing = _task_state({"filters": {"task_id": "no-such-task"}}, ctx)
+    assert missing["results"] == [], "an unmatched filter must narrow, not widen"
+
+
+def test_task_state_filter_task_id_comparator_fails_loud() -> None:
+    # Comparators are not applied to task state; saying so beats ignoring it.
+    _client()
+    ctx = {"user_id": "codex", "client_name": "codex"}
+    call_tool("record_task_state", {"task_id": "devloop", "summary": "state"}, ctx)
+    with pytest.raises(HTTPException) as excinfo:
+        _task_state({"filters": {"task_id": {"icontains": "devl"}}}, ctx)
+    assert excinfo.value.status_code == 400
+    assert "exact string" in str(excinfo.value.detail)

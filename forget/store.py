@@ -1495,10 +1495,55 @@ def record_task_state(payload: dict[str, Any], project_id: str | None = None) ->
     return result
 
 
+def _requested_task_state_id(payload: dict[str, Any]) -> str | None:
+    """Resolve the task/goal id from the top level or from `filters`.
+
+    `task_id` and `goal_id` are valid filter vocabulary — validate_filters
+    accepts them and tests/test_filter_contract.py pins that — but
+    _task_state_scope keeps only ENTITY_FIELDS + project, so until 2026-08-10 a
+    filters-only task_id passed validation and was then dropped: the caller got
+    the whole cross-task list back, shaped exactly like a filtered answer.
+
+    That is the worse half of the contract validate_filters established. An
+    unknown key fails loud; a known-but-unapplied key taught callers to read
+    "accepted" as "applied". Observed by the devloop cycle 93 step 0, where a
+    stale task state could not be told apart from a missing one because the
+    filter used to investigate it did nothing.
+    """
+    for key in ("task_id", "goal_id"):
+        value = payload.get(key)
+        if value not in (None, ""):
+            return str(value)
+    filters = payload.get("filters")
+    if not isinstance(filters, dict):
+        return None
+    for key in ("task_id", "goal_id"):
+        value = filters.get(key)
+        if value in (None, ""):
+            continue
+        if isinstance(value, dict):
+            operators = ", ".join(sorted(str(name) for name in value))
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"filters.{key} on task state accepts an exact string only; "
+                    f"comparators ({operators}) are not applied here. "
+                    f"Pass the top-level {key} parameter instead."
+                ),
+            )
+        if isinstance(value, (list, tuple, set)):
+            raise HTTPException(
+                status_code=400,
+                detail=f"filters.{key} on task state accepts an exact string, not a list.",
+            )
+        return str(value)
+    return None
+
+
 def get_task_state(payload: dict[str, Any] | None = None, project_id: str | None = None) -> dict[str, Any]:
     payload = dict(payload or {})
     project_id = payload.get("project_id") or project_id or current_project_id()
-    task_id = payload.get("task_id") or payload.get("goal_id")
+    task_id = _requested_task_state_id(payload)
     as_of = str(
         payload.get("as_of")
         or payload.get("asOf")
