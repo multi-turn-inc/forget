@@ -76,6 +76,19 @@ LLM 0 · 외부 API $0 (reader/judge 미호출 — 검색은 로컬 fastembed).
   — 인프로세스 sqlite 동시성 리스크 회피, 표본 규모(42문항 ~21k턴)는 직렬로 충분.
   DB 경로도 /tmp → 저장소 tmp/(.gitignore 26행)로: /tmp 파일은 샌드박스에서 삭제
   불가라 폐기 의무를 지킬 수 없다. 전용 신규 DB라는 격리 본질은 불변.
+
+── 선등록 이탈 선언 ② (재실행 세션, 결과 관측 전) ───────────────────────────────
+  1차 실행은 25/42 인스턴스에서 세션 사망으로 중단(산출물 0). 재실행분 2건 개정,
+  둘 다 채점 규칙 아님 — 격리와 몸 검증에만 관계한다:
+  (a) DB_PATH 파일명 → c88_bench_payload_r2.sqlite3. 중단 런의 DB에는 사망 시점
+      인스턴스(c88-b29f3365)의 live 행 80개가 남아 있어, 같은 스코프 재인제스트가
+      중복을 만든다(해당 문항의 payload 오염). 신규 파일로 격리 본질 복원.
+      중단본은 tmp/에 보존(mv 차단 — 파일명 분리로 대체).
+  (b) store_vec_check 호출 시점 → 인스턴스 1의 **DELETE 이전**으로 이동. 1차 실행이
+      "no-vector"를 낸 원인은 폴백이 아니라 계기 결함이었다: 검사가 deleted=0을
+      요구하는데 호출 지점이 스코프 DELETE 뒤였다. 중단 DB 사후 실측이 이를 확증
+      (embedding 12,621행 전부 MEB1·length 1540 → 384차원). 검사는 이제 live 행을
+      본다 — 폴백 이중 감시가 실제로 감시하게 된다.
 """
 from __future__ import annotations
 
@@ -90,7 +103,7 @@ from pathlib import Path
 
 # /tmp는 이 샌드박스에서 삭제 불가(작업 디렉토리 밖) — 저장소 tmp/(.gitignore 26행)로.
 # 등록본 경로와의 차이는 격리성에 무영향(전용 신규 DB라는 본질 유지). 이탈 선언에 병기.
-DB_PATH = str(Path(__file__).resolve().parents[3] / "tmp" / "c88_bench_payload.sqlite3")
+DB_PATH = str(Path(__file__).resolve().parents[3] / "tmp" / "c88_bench_payload_r2.sqlite3")
 os.environ["MEM1_DB_PATH"] = DB_PATH  # forget import 전에 — 격리 DB 바인딩
 
 import tiktoken  # noqa: E402
@@ -175,6 +188,9 @@ def store_vec_check() -> str:
 
     SQL은 c48_step0_check._store_vec의 정본을 그대로 — 매직 비교는 hex 리터럴
     (x'4D454231' = b"MEB1"): BLOB은 TEXT 리터럴과 저장 클래스가 달라 절대 같지 않다.
+
+    호출 지점은 인스턴스 1의 스코프 DELETE **이전**이어야 한다 — deleted=0을 요구
+    하므로 DELETE 뒤에 부르면 폴백 여부와 무관하게 no-vector가 나온다(이탈 선언 ② (b)).
     """
     import sqlite3
     conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
@@ -195,7 +211,7 @@ def tok(s: str) -> int:
     return len(enc.encode(s))
 
 
-def run_instance(inst: dict) -> dict:
+def run_instance(inst: dict, vec_check: bool = False) -> dict:
     scope = f"c88-{inst['question_id']}"
     q, qdate = inst["question"], inst.get("question_date", "")
     row = {"question_id": inst["question_id"], "question_type": inst["question_type"],
@@ -220,6 +236,8 @@ def run_instance(inst: dict) -> dict:
         if payload < prev_payload:
             row["flags"].append(f"k={k}: payload {payload} < 직전 k {prev_payload} (단조성 위반)")
         prev_payload = payload
+    if vec_check:  # DELETE 전에 — live 행이 있어야 검사가 성립한다 (이탈 선언 ② (b))
+        row["store_vec"] = store_vec_check()
     client.request("DELETE", "/v1/memories/", json={"user_id": scope, "app_id": "lme"})
     return row
 
@@ -237,10 +255,10 @@ def main() -> None:
 
     rows: list[dict] = []
     for i, inst in enumerate(sample, 1):
-        row = run_instance(inst)
+        row = run_instance(inst, vec_check=(i == 1))
         if i == 1:
-            fp["store_vec_first_instance"] = store_vec_check()
-            print("스토어 벡터 검사(1문항 후):", fp["store_vec_first_instance"])
+            fp["store_vec_first_instance"] = row.pop("store_vec", "n/a")
+            print("스토어 벡터 검사(1문항, DELETE 전):", fp["store_vec_first_instance"])
         rows.append(row)
         print(f"  [{i}/{len(sample)}] {row['question_id']} stored={row['stored']} "
               f"k84={row['by_k']['84']['payload_tokens']}tok "
