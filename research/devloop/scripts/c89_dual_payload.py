@@ -276,13 +276,15 @@ def main() -> None:
         print(f"재개: partial에서 {len(done)}문항 복원", flush=True)
 
     rows: list[dict] = []
+    ran_this_run = 0  # 관측 44 처치: 검사는 **문항 순번**이 아니라 **런 순번**에 건다.
     for i, inst in enumerate(sample, 1):
         qid = inst["question_id"]
         if qid in done:
             rows.append(done[qid])
             print(f"  [{i}/{len(sample)}] {qid} (재개 — 건너뜀)", flush=True)
             continue
-        row = run_instance(inst, vec_check=(i == 1 and not done))
+        row = run_instance(inst, vec_check=(ran_this_run == 0))
+        ran_this_run += 1
         if "store_vec" in row:
             fp["store_vec_first_instance"] = row.pop("store_vec")
             print("스토어 벡터 검사(1문항, DELETE 전):", fp["store_vec_first_instance"], flush=True)
@@ -303,6 +305,10 @@ def main() -> None:
     aggregate = {k: agg(k) for k in
                  ("payload_dual_tokens", "payload_obs_tokens", "payload_raw_tokens",
                   "tok_per_item_obs", "tok_per_item_raw", "tok_per_item_dual")}
+
+    # 관측 44 처치 ③: 공백을 공백으로 기록한다 — 키 부재와 "검사 결과 없음"이
+    # 구별되지 않으면 사후 복원이 불가능하다(관측 40 계열).
+    fp.setdefault("store_vec_first_instance", "not-run(resumed)")
 
     dual_med = aggregate["payload_dual_tokens"]["median"]
     obs_per_item_med = aggregate["tok_per_item_obs"]["median"]
