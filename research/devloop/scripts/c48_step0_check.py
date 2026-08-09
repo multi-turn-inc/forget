@@ -116,6 +116,11 @@ def part_n() -> None:
     print("     감사 사이클의 metrics 정독 임무는 번호 결정 단계와 별개로 허용된다.)")
     print(f"[N. 사이클 번호 — cycle 필드 max+1]")
     print(f"  last_cycle={max(cycles)}  N={n}  mode={mode} (N%10={n % 10}, N%5={n % 5})")
+    print("[T. 턴 배치 규약 — audit-90 R1 (ii) 이중화 (c91 집행)]")
+    print("    턴1 = LOOP.md+cycle-prompt.md Read + ToolSearch(5스키마) 같은 응답에 묶음")
+    print("    턴2 = get_task_state + 이 스크립트 + git status 병렬 / 턴3 = 첫 유효 행동")
+    print("    ※ 이 인쇄는 턴2에 열리므로 **턴1 규약을 집행할 수 없다**(관측 47).")
+    print("       턴1 이전 채널은 저장소 루트 CLAUDE.md와 캡슐이다 — 판정은 P29.")
 
 
 def compare_fingerprint(live: dict[str, str], baseline: dict[str, str]) -> tuple[str, list[str], list[str]]:
