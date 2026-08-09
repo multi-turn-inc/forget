@@ -499,7 +499,7 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "get_task_state",
-        "description": "Read active task_state claims for the MCP session scope.",
+        "description": "Read active task_state claims for the MCP session scope. The response carries a `freshness` marker for this fast-layer state: state is fresh|stale|absent|unknown|replay, and `stale: true` means the state is NOT certified current (too old, unreadable timestamp, or none recorded at all). When stale is true, re-verify before acting on summary/next_actions — and read `absent` as 'the last write may have failed', not as 'nothing is in progress'.",
         "inputSchema": {
             "type": "object",
             "properties": {

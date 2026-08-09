@@ -1540,6 +1540,110 @@ def _requested_task_state_id(payload: dict[str, Any]) -> str | None:
     return None
 
 
+def _flux_layer_stale_hours() -> float:
+    """TTL for the fast layer, in hours.
+
+    The capsule dial (MEM1_CAPSULE_STALE_HOURS) is the same concept applied to
+    the same data, so it is the fallback; MEM1_TASK_STATE_STALE_HOURS exists for
+    callers who want the tool stricter than the rendered capsule.
+    """
+    for name in ("MEM1_TASK_STATE_STALE_HOURS", "MEM1_CAPSULE_STALE_HOURS"):
+        raw = os.environ.get(name)
+        if raw is None or not str(raw).strip():
+            continue
+        try:
+            hours = float(raw)
+        except ValueError:
+            continue
+        if hours > 0:
+            return hours
+    return 24.0
+
+
+def _task_state_recorded_at(current: dict[str, Any] | None) -> str:
+    """When the returned generation was written, by the most specific stamp."""
+    if not isinstance(current, dict):
+        return ""
+    for key in ("valid_from", "updated_at", "recorded_at", "created_at"):
+        value = str(current.get(key) or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def task_state_freshness(current: dict[str, Any] | None, as_of: str = "") -> dict[str, Any]:
+    """Machine-readable freshness marker for a task-state response.
+
+    LOOP.md's persona model splits context by rate of change and puts task state
+    in the fast layer, whose contract is "hourly TTL, a stale marker is required
+    once exceeded". The rule existed; the wiring did not. Cycle 93 (field note,
+    observation 49) paid for the gap: two record_task_state calls left no
+    generation, and the next sessions were handed a two-cycle-old state as
+    "current" with nothing in the payload saying so. The failure was silent in
+    both directions -- a write that does not land raises nothing, and a read of
+    the older generation looks exactly like a read of the newest one.
+
+    `stale` means "not certified fresh", not merely "old": absence and an
+    unreadable timestamp set it too. An agent branches on one boolean or on
+    none, so the reasons live in `state` and the single flag stays decidable.
+
+    Absence is the case worth naming. `count: 0` already says no rows came back,
+    but silence reads as "nothing in progress" when it can equally mean the last
+    write failed -- exactly the sentence cycle 93 could not tell apart.
+
+    A point-in-time replay (`as_of`) is deliberately historical, so age against
+    now says nothing about it; flagging it would be a false alarm, and a marker
+    that cries wolf stops being read.
+
+    Not covered (see P33 (c)): whether the generation's *content* matches the
+    caller's own ledger. The server has no access to a domain ledger such as
+    devloop's metrics.jsonl, so a fresh generation carrying the wrong cycle
+    still reports `fresh`. That half stays with the caller's instrument.
+    """
+    ttl_hours = _flux_layer_stale_hours()
+    marker: dict[str, Any] = {
+        "schema_version": "mem1-task-state-freshness-v1",
+        "state": "fresh",
+        "stale": False,
+        "age_hours": None,
+        "ttl_hours": ttl_hours,
+        "recorded_at": "",
+        "checked_at": utc_now(),
+        "replay_as_of": as_of or "",
+        "advice": "",
+    }
+    if as_of:
+        marker["state"] = "replay"
+        marker["advice"] = "point-in-time replay: freshness is not evaluated against now."
+        return marker
+    if not isinstance(current, dict) or not current:
+        marker["state"] = "absent"
+        marker["stale"] = True
+        marker["advice"] = (
+            "no active task state for this scope. Absence is not evidence that nothing "
+            "is in progress -- the last record_task_state may have failed. Re-record "
+            "before treating this as a clean slate."
+        )
+        return marker
+    recorded_at = _task_state_recorded_at(current)
+    marker["recorded_at"] = recorded_at
+    age_hours = _state_age_hours(recorded_at)
+    if age_hours is None:
+        marker["state"] = "unknown"
+        marker["stale"] = True
+        marker["advice"] = "no readable write timestamp: freshness cannot be certified, treat as stale."
+        return marker
+    marker["age_hours"] = round(age_hours, 3)
+    if age_hours >= ttl_hours:
+        marker["state"] = "stale"
+        marker["stale"] = True
+        marker["advice"] = (
+            f"state was written {age_hours:.1f}h ago (TTL {ttl_hours:g}h). Re-verify before "
+            "acting on summary or next_actions; confirm the last cycle actually recorded."
+        )
+    return marker
+
+
 def get_task_state(payload: dict[str, Any] | None = None, project_id: str | None = None) -> dict[str, Any]:
     payload = dict(payload or {})
     project_id = payload.get("project_id") or project_id or current_project_id()
@@ -1615,6 +1719,7 @@ def get_task_state(payload: dict[str, Any] | None = None, project_id: str | None
             "count": len(epoch_results),
             "results": epoch_results,
             "current": epoch_results[0],
+            "freshness": task_state_freshness(epoch_results[0], as_of),
             "state_source": "workspace_epoch_as_of" if as_of else "workspace_epoch",
         }
     params: list[Any] = [project_id]
@@ -1684,6 +1789,7 @@ def get_task_state(payload: dict[str, Any] | None = None, project_id: str | None
         "count": len(results),
         "results": results,
         "current": results[0] if results else None,
+        "freshness": task_state_freshness(results[0] if results else None, as_of),
         "state_source": "claim_ledger_as_of" if as_of else "claim_ledger",
     }
 
