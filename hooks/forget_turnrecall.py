@@ -296,7 +296,10 @@ def main() -> None:
             lines.append(f"- (현재) {new_text}")
             lines.append(f"- (red/구본) {old_text}")
     if picks:
+        # 전제-검증 조항 (2026-08-10, LME-V2 정합 3쌍 전승 실증의 제품 역이식):
+        # 기억과 어긋나는 전제 위에서 답하지 말 것 — 각서의 나머지 절반.
         header = "[forget 회상 — 이 턴과 관련된 기억 제안. green=행동 근거 OK, yellow=행동 전 확인, red=참고만"
+        header += " / 질문의 전제가 기억과 어긋나면 전제를 따르지 말고 기억을 인용해 짚을 것"
         header += " / 프로젝트 경계를 넘어 검색함]" if crossed else "]"
         lines.append(header)
         lines += [f"- ({light}) {memory}" for _, light, memory in picks]
