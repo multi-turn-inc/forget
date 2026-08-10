@@ -455,12 +455,17 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "record_context_outcome",
-        "description": "Record whether an assembled context actually supported the first useful agent action.",
+        "description": "Record whether an assembled context actually supported the first useful agent action. Simplest call: pass trace_id + outcome ('helped' or 'noise') — the one-touch verdict the recall hook asks for.",
         "inputSchema": {
             "type": "object",
             "required": ["trace_id"],
             "properties": {
                 "trace_id": {"type": "string"},
+                "outcome": {
+                    "type": "string",
+                    "enum": ["helped", "noise"],
+                    "description": "Shorthand verdict on the injected recall: helped → failure_stage none + productive first action; noise → selection_failure. Structured fields below override it.",
+                },
                 "task_id": {"type": "string"},
                 "used_memory_ids": {"type": "array", "items": {"type": "string"}},
                 "missing_memory_ids": {"type": "array", "items": {"type": "string"}},

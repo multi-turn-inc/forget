@@ -11655,6 +11655,30 @@ def _close_outcome_feedback_loop(
 
 
 def record_context_outcome(payload: dict[str, Any], project_id: str | None = None) -> dict[str, Any]:
+    # outcome 축약 라벨 (2026-08-10, 귀먹음 버그 수리): 훅과 CLAUDE.md가 광고해 온
+    # "helped|noise 한 번"의 실제 배선. 이전에는 스키마에 outcome이 없어 조용히
+    # 버려졌고, 신호 0인 채 추론기가 helped/noise 모두 reasoning_failure로 찍었다.
+    # helped → 명시적 failure_stage="none" (+ 첫 행동 생산적) — 양성 학습은
+    #   trace 단위 failure_stage='none' 조인이 이미 소비한다.
+    # noise → 명시적 selection_failure — 선별이 틀렸다는 뜻이며, 해악(harmful)이나
+    #   턴 실패(reasoning_failure)를 주장하지 않는다. id 자동 채움도 하지 않는다.
+    outcome_label = str(payload.get("outcome") or "").strip().lower()
+    if outcome_label in {"helped", "noise"}:
+        payload = dict(payload)
+        inferred_in = dict(payload.get("inferred")) if isinstance(payload.get("inferred"), dict) else {}
+        if outcome_label == "helped":
+            payload.setdefault("first_action_productive", True)
+            payload.setdefault("user_correction_required", False)
+            payload.setdefault("failure_stage", "none")
+            inferred_in.setdefault("reason", "caller labeled the injected recall as helpful (outcome=helped)")
+        else:
+            payload.setdefault("failure_stage", "selection_failure")
+            inferred_in.setdefault("reason", "caller labeled the injected recall as noise (outcome=noise)")
+        inferred_in.setdefault("source", "explicit_label")
+        payload["inferred"] = inferred_in
+        metadata_in = dict(payload.get("metadata")) if isinstance(payload.get("metadata"), dict) else {}
+        metadata_in.setdefault("outcome_label", outcome_label)
+        payload["metadata"] = metadata_in
     trace_id = str(payload.get("trace_id") or "").strip()
     if not trace_id:
         raise HTTPException(status_code=400, detail="trace_id is required")
