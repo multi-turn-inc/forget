@@ -604,6 +604,130 @@ def part_b() -> None:
         print(f"  | {line}")
 
 
+FRICTIONS = os.path.join(REPO, "research", "devloop", "frictions.md")
+
+# 상태 헤더 규약 — 이 어휘가 파트 F의 눈이다 (A-95.1 루프 몫, P34 ②③):
+#   원본  `## [미분류 ]관측 N — 제목 (사이클 C, …)` — 괄호절에 '회부'/'후보'면 계상 대상
+#   갱신  `## 관측 N 보강|재발… (사이클 C, …)` — 최근 사이클만 갱신
+#   처분  `## 관측 N 처분 …` 헤더 또는 절 안 행 첫머리 `**처분 (사이클` 문단.
+#         처분 문단에 "종결" 또는 "회부 상태를 벗"이 있어야 회부 이탈 —
+#         없으면 부분 처분으로 존속한다(관측 55·58이 실측 반례: 하위 항목/계열 표기만).
+OBS_HEADER = re.compile(r"^##\s+(?:미분류\s+)?관측\s+(\d+)(?:\s+(보강|재발|처분))?")
+_OBS_CYCLE = re.compile(r"사이클\s*(\d+)")
+_INLINE_DISPOSAL = re.compile(r"^\*\*처분\s*\(사이클")
+_EXIT_MARKS = ("종결", "회부 상태를 벗")
+
+
+def _obs_paragraph(lines: list[str], start: int) -> str:
+    """start 행부터 첫 공백 행 전까지 — 처분 문단의 이탈 마커 탐색 범위. **순수 함수**."""
+    out = []
+    for line in lines[start:]:
+        if not line.strip():
+            break
+        out.append(line)
+    return " ".join(out)
+
+
+def parse_observations(text: str) -> dict[int, dict]:
+    """frictions.md의 실재 표기 관행에서 관측별 상태를 파생한다. **순수 함수** (c108, P34).
+
+    별도 인덱스 파일을 두지 않는 이유: 두 번째 원장은 대장과 어긋나며 썩는다
+    (관측 57 상속 계수의 파일판). 대장이 단일 정본으로 남고, 위 상태 헤더 규약이
+    A-95.1이 요구한 "기계가독 상태 마커"의 실행형이다.
+    한계(정직): 처분이 amendment 문서에만 있고 대장에 주석되지 않으면 이 눈에는
+    보이지 않는다 — amendment-105 §5의 "판정 집행은 frictions.md 주석" 관행이 전제다.
+    이탈 마커 어휘가 표류하면 P34 (b) 채널 팔로 계상하고 어휘를 넓힌다(자[尺] 변경
+    선언 동반 — V3 니들과 같은 규율).
+    """
+    obs: dict[int, dict] = {}
+    current: int | None = None
+    lines = text.splitlines()
+    for idx, line in enumerate(lines):
+        m = OBS_HEADER.match(line)
+        if m:
+            num, kind = int(m.group(1)), (m.group(2) or "원본")
+            entry = obs.setdefault(num, {
+                "opened": None, "last": None, "tagged": False,
+                "exited": False, "partial_disposal": False, "title": ""})
+            cycles = _OBS_CYCLE.findall(line)
+            if cycles:
+                entry["last"] = max(entry["last"] or 0, int(cycles[-1]))
+            if kind == "원본":
+                entry["opened"] = int(cycles[-1]) if cycles else None
+                tail = line[line.rfind("(사이클"):] if "(사이클" in line else line
+                entry["tagged"] = ("회부" in tail) or ("후보" in tail)
+                body = line[m.end():].replace("**", "")
+                cut = body.rfind("(사이클")
+                entry["title"] = (body[:cut] if cut >= 0 else body).strip(" —·:")
+            elif kind == "처분":
+                para = _obs_paragraph(lines, idx)
+                if any(mark in para for mark in _EXIT_MARKS):
+                    entry["exited"] = True
+                else:
+                    entry["partial_disposal"] = True
+            current = num
+            continue
+        if line.startswith("## "):
+            current = None
+            continue
+        if current is not None and _INLINE_DISPOSAL.match(line):
+            para = _obs_paragraph(lines, idx)
+            if any(mark in para for mark in _EXIT_MARKS):
+                obs[current]["exited"] = True
+            else:
+                obs[current]["partial_disposal"] = True
+            cycles = _OBS_CYCLE.findall(line)
+            if cycles:
+                obs[current]["last"] = max(obs[current]["last"] or 0, int(cycles[-1]))
+    return obs
+
+
+def open_observation_numbers(obs: dict[int, dict]) -> list[int]:
+    """계상 대상(회부/후보 태그) 중 회부 이탈하지 않은 번호. **순수 함수**."""
+    return sorted(n for n, o in obs.items() if o["tagged"] and not o["exited"])
+
+
+def part_f() -> None:
+    """[F] 미해소 관측 인덱스 — 대장 파생 (A-95.1 루프 몫, c108 배선 · P34, 관측 52 처치).
+
+    왜. open_observations는 c105 정의 후 세 사이클 연속 수기 재계수로만 산출됐고
+    (c107 자기 기재: "상설화 필요성 3번째 실례"), 절차 2의 1순위 입력(미해소 마찰)은
+    317KB 대장 통독 불가로 grep 절편으로만 접근됐다(관측 52). 이 인쇄가 A-95.1이
+    말한 "상수 크기 조망"이다 — 원문은 여전히 표적 조회로 연다.
+    """
+    with open(FRICTIONS, encoding="utf-8") as fh:
+        obs = parse_observations(fh.read())
+    rows = []
+    with open(os.path.join(REPO, "research", "devloop", "metrics.jsonl"), encoding="utf-8") as fh:
+        for line in fh:
+            if line.strip():
+                rows.append(json.loads(line))
+    last = max(rows, key=lambda r: r["cycle"])
+    prev = last.get("open_observations")
+
+    opened = open_observation_numbers(obs)
+    untagged = sorted(n for n, o in obs.items() if not o["tagged"])
+    exited = sorted(n for n, o in obs.items() if o["exited"])
+    print("\n[F. 미해소 관측 인덱스 — 대장 파생 (A-95.1 루프 몫, c108 배선 · P34)]")
+    print("  정의 = 원본 헤더 회부/후보 태그 − 회부 이탈(처분 문단에 '종결'/'회부 상태를 벗').")
+    print("  부분 처분(이탈 마커 없음)은 존속이다. 대장에 주석 없는 처분은 이 눈에 보이지 않는다.")
+    if prev is None:
+        delta_txt = "직전 원장 행에 open_observations 필드 없음 — Δ 판정 불가"
+        delta = None
+    else:
+        delta = len(opened) - int(prev)
+        delta_txt = f"직전 원장 행 c{last['cycle']}={prev}, Δ{delta:+d}"
+    print(f"  open_observations={len(opened)}  ({delta_txt})")
+    if delta:
+        print("  ★ Δ≠0 — 신규 관측 또는 처분이 있었다: 이번 원장 행 frictions_note에 귀속을 선언할 것.")
+    print(f"  무태그(유형 기귀속, 계상 밖): {' '.join(str(n) for n in untagged)}"
+          f"   회부 이탈: {' '.join(str(n) for n in exited)}")
+    for n in opened:
+        o = obs[n]
+        mark = " ·처분文有(존속)" if o["partial_disposal"] else ""
+        print(f"    관측 {n:>2}  c{o['opened']}→c{o['last']}{mark}  {o['title'][:64]}")
+
+
 if __name__ == "__main__":
     part_n()
     # part_n을 1행에 남긴다 — 그 배너가 F-절차0 처치이고 P16 (a)가 5/5로 성립한
@@ -614,3 +738,6 @@ if __name__ == "__main__":
     part_recall()
     part_a()
     part_b()
+    # part_f는 말미다 — part_n 배너 1행·Body 첫 화면(P21)의 기존 계약을 건드리지 않고,
+    # 인덱스는 절차 2(선택) 직전에 읽히는 마지막 화면이 된다.
+    part_f()
