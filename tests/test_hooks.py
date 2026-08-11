@@ -94,6 +94,34 @@ def test_repeat_suppression_and_ledger_extension(monkeypatch, tmp_path, capsys):
     assert capsys.readouterr().out == ""
 
 
+def test_search_error_row_carries_error_kind(monkeypatch, tmp_path, capsys):
+    # 관측 59: 24h 창의 search_error 13건에 원인이 없어 귀속 불가였다.
+    # 실패 행에는 예외 종류가 실리고, fail-open(컨텍스트 무출력)은 유지된다.
+    module = _load("forget_turnrecall")
+    monkeypatch.setattr(module, "STATE_DIR", str(tmp_path))
+
+    def broken_rpc(name, arguments, timeout=5):
+        raise TimeoutError("timed out")
+
+    monkeypatch.setattr(module, "_rpc", broken_rpc)
+    _run_main(module, {"session_id": "s21", "prompt": "아키텍처 어떻게 가기로 했지?"}, monkeypatch)
+    assert capsys.readouterr().out == ""
+    rows = [json.loads(line) for line in
+            (tmp_path / "turnrecall_gate.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert rows[-1]["action"] == "search_error"
+    assert rows[-1]["error"].startswith("TimeoutError")
+
+
+def test_gate_rows_without_error_keep_schema(monkeypatch, tmp_path, capsys):
+    # error 필드는 실패 행에만 붙는다 — 성공 행은 기존 원장 파서와 스키마 동일.
+    module = _recall_module(monkeypatch, tmp_path, [])
+    _run_main(module, {"session_id": "s22", "prompt": "아키텍처 어떻게 가기로 했지?"}, monkeypatch)
+    rows = [json.loads(line) for line in
+            (tmp_path / "turnrecall_gate.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert rows[-1]["action"] == "silent_scores"
+    assert "error" not in rows[-1]
+
+
 def test_task_state_claims_never_recalled(monkeypatch, tmp_path, capsys):
     # F2/C2 (cycle 18): fluid-layer task ledger rows farm phrase_bonus with
     # long claim texts and outrank topical memories. They travel via

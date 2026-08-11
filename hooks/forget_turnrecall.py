@@ -303,23 +303,34 @@ def _classify_turn(prompt: str, transcript_path: str, crossed: bool) -> tuple[st
     return "neutral", "low"
 
 
+def _error_brief(exc: BaseException) -> str:
+    """예외를 원장 1행 크기로 — 종류(클래스명)가 앞, 메시지는 꼬리 (관측 59:
+    종류 없는 search_error 13건은 원인 귀속이 불가능했다)."""
+    return f"{type(exc).__name__}: {exc}"[:160]
+
+
 def _note_gate(session_id: str, gate: str, gear: str | None, action: str,
-               n_picks: int, n_conflicts: int, prompt: str) -> None:
+               n_picks: int, n_conflicts: int, prompt: str,
+               error: str | None = None) -> None:
     """게이트 결정을 원장에 1행 남긴다 — 주입률(주입/턴)의 분모이자 전후 비교 자료.
-    컨텍스트에는 한 글자도 쓰지 않는다."""
+    컨텍스트에는 한 글자도 쓰지 않는다. error는 실패 행에만 붙는다 —
+    성공 행의 스키마는 기존 원장 파서와 그대로 호환."""
     try:
         os.makedirs(STATE_DIR, exist_ok=True)
+        row = {
+            "at": int(time.time()),
+            "session": (session_id or "")[:8],
+            "gate": gate,
+            "gear": gear or "-",
+            "action": action,
+            "picks": n_picks,
+            "conflicts": n_conflicts,
+            "prompt_head": prompt[:80],
+        }
+        if error:
+            row["error"] = error
         with open(os.path.join(STATE_DIR, "turnrecall_gate.jsonl"), "a", encoding="utf-8") as fh:
-            fh.write(json.dumps({
-                "at": int(time.time()),
-                "session": (session_id or "")[:8],
-                "gate": gate,
-                "gear": gear or "-",
-                "action": action,
-                "picks": n_picks,
-                "conflicts": n_conflicts,
-                "prompt_head": prompt[:80],
-            }, ensure_ascii=False) + "\n")
+            fh.write(json.dumps(row, ensure_ascii=False) + "\n")
     except Exception:
         pass
 
@@ -436,11 +447,13 @@ def main() -> None:
         # 기억-의존을 선언한 high에서는 딥 리콜 실측 ~4.4s를 품도록 12s —
         # 그 턴에서 몇 초의 대기는 침묵보다 싸다 (2026-08-11, search_error 2/2 수리).
         result = _rpc("search_memories", search_args, timeout=12 if gear == "high" else 5)
-    except Exception:
+    except Exception as exc:
         # fail-open은 유지하되 원장에는 남긴다 — high 기어의 타임아웃이 그냥
         # 침묵으로 위장하면 적응형 기어의 실패율을 잴 수 없다 (실측: 콜드 캐시
         # 첫 high 검색이 5s RPC 한도를 넘겨 소리 없이 죽는 것을 확인).
-        _note_gate(session_id, gate, gear, "search_error", 0, 0, prompt)
+        # 원인 종류를 동봉한다 — 종류 없는 13건이 귀속 불가로 남았다 (관측 59 ②).
+        _note_gate(session_id, gate, gear, "search_error", 0, 0, prompt,
+                   error=_error_brief(exc))
         return
     trace_id = str(result.get("trace_id") or "")
     # 평탄도는 **주입 자격이 있는 후보**에서만 재야 한다 (c62 실측 수리).
@@ -611,6 +624,8 @@ def _extend_offer_ledger(session_id: str, picks: list) -> None:
 if __name__ == "__main__":
     try:
         main()
-    except Exception:
-        pass
+    except Exception as exc:
+        # 검색 이후의 크래시는 원장에도 없는 완전 침묵이었다 (관측 59 삼킴 지점 ③).
+        # fail-open은 유지하되 흔적은 남긴다 — 세션·프롬프트는 이 지점에선 모른다.
+        _note_gate("", "-", None, "hook_error", 0, 0, "", error=_error_brief(exc))
     sys.exit(0)
