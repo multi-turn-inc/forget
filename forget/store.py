@@ -4875,6 +4875,72 @@ def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_
     return {"results": [candidates[i] for i in ordered], "recall_layer": layer}
 
 
+def _expand_temporal_neighbors(result: dict[str, Any], project_id: str | None = None) -> dict[str, Any]:
+    """EM-LLM 이식 (2026-08-11): 회상은 사실만이 아니라 장면을 데려온다.
+
+    유사도 검색은 '같은 작업 장면에서 태어난 옆 사실'을 놓친다 — 어휘가 다르면
+    이웃이어도 안 보인다. 최상위 히트의 생성 시각 ±20분 안에서 태어난 기억
+    1건을 이웃으로 동반한다(temporal contiguity buffer, arXiv:2407.09450).
+
+    표식: temporal_neighbor_of = 앵커 id. trust는 부착하지 않는다 — 소비자
+    기본값 yellow(행동 전 확인)가 이웃의 올바른 의미론이다. 점수는 앵커의
+    절반으로 강등해 정규 후보와 섞이지 않게 한다.
+    끄기: MEM1_RECALL_TEMPORAL=0. 판정: 2주 outcome 플라이휠(선등록 참조).
+    """
+    if str(os.getenv("MEM1_RECALL_TEMPORAL", "1")).strip().lower() in {"0", "false", "off"}:
+        return result
+    items = result.get("results") or []
+    if not items:
+        return result
+    anchor = items[0]
+    anchor_id = str(anchor.get("id") or "")
+    raw_created = str(anchor.get("created_at") or "")
+    if not anchor_id or not raw_created:
+        return result
+    try:
+        anchor_at = datetime.fromisoformat(raw_created.replace("Z", "+00:00"))
+    except ValueError:
+        return result
+    seen_ids = {str(item.get("id") or "") for item in items}
+    window = timedelta(minutes=20)
+    best: dict[str, Any] | None = None
+    best_gap: timedelta | None = None
+    for row in list_memory_dicts(project_id=project_id):
+        rid = str(row.get("id") or "")
+        if not rid or rid in seen_ids:
+            continue
+        metadata = row.get("metadata") or {}
+        # 턴-회상과 같은 구조적 제외: 캡처 포인터·task_state·self 격언·정정된 구본.
+        if metadata.get("hook") or metadata.get("assertion_kind") == "task_state":
+            continue
+        if str(metadata.get("layer") or "").lower() == "self" or metadata.get("superseded_by"):
+            continue
+        try:
+            row_at = datetime.fromisoformat(str(row.get("created_at") or "").replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        gap = abs(row_at - anchor_at)
+        if gap > window:
+            continue
+        if best_gap is None or gap < best_gap:
+            best, best_gap = row, gap
+    if best is None or best_gap is None:
+        return result
+    neighbor = {
+        "id": best["id"],
+        "memory": best.get("memory"),
+        "metadata": best.get("metadata") or {},
+        "created_at": best.get("created_at"),
+        "updated_at": best.get("updated_at"),
+        "score": round(float(anchor.get("score") or 0.0) * 0.5, 4),
+        "temporal_neighbor_of": anchor_id,
+        "score_breakdown": {"temporal_gap_minutes": round(best_gap.total_seconds() / 60, 1)},
+    }
+    result["results"] = [*items, neighbor]
+    result["temporal_neighbors_added"] = 1
+    return result
+
+
 def search_memories(payload: dict[str, Any], project_id: str | None = None) -> dict[str, Any]:
     project_id = payload.get("project_id") or project_id or current_project_id()
     recall_mode = str(payload.get("recall") or os.getenv("MEM1_RECALL_V2") or "").strip().lower()

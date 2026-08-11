@@ -459,8 +459,12 @@ def main() -> None:
         and (scores_all[0] - scores_all[len(scores_all) // 2]) < FLATNESS_MARGIN
     )
     picks = []
+    # 시간 이웃은 서버가 목록 '끝'에 붙인다 — PICK_POOL 절단 전에 전체에서 수집.
+    neighbor_pool: list[dict] = [item for item in results if item.get("temporal_neighbor_of")]
     conflict_pairs: dict[tuple[str, str], None] = {}
     for item in results[:PICK_POOL]:
+        if item.get("temporal_neighbor_of"):
+            continue  # 이웃은 별도 경로 — 정규 임계를 안 거친다
         score = float(item.get("score") or 0.0)
         memory_id = str(item.get("id") or "")
         if not memory_id or memory_id in seen:
@@ -532,6 +536,17 @@ def main() -> None:
         header += " / 프로젝트 경계를 넘어 검색함]" if crossed else "]"
         lines.append(header)
         lines += [f"- ({light}) {memory}" for _, light, memory in picks]
+        # EM-LLM 이식(2026-08-11): 채택된 앵커의 시간 이웃 1건 — "회상은 장면을 데려온다".
+        if neighbor_pool and os.environ.get("FORGET_RECALL_TEMPORAL", "1").strip().lower() not in {"0", "off", "false"}:
+            picked_ids = {memory_id for memory_id, _, _ in picks}
+            nb = next((n for n in neighbor_pool
+                       if str(n.get("temporal_neighbor_of")) in picked_ids
+                       and str(n.get("id") or "") and str(n.get("id")) not in seen), None)
+            if nb is not None:
+                gap = (nb.get("score_breakdown") or {}).get("temporal_gap_minutes")
+                nb_text = str(nb.get("memory") or "")[:MEMORY_CHAR_LIMIT]
+                lines.append(f"- (yellow·같은 장면 ±{gap}분) {nb_text}")
+                picks.append((str(nb.get("id")), "yellow", nb_text))  # 원장·반복억제 합류
     if notice is not None:
         lines.append(notice[0])
     if trace_id and (picks or conflicts):

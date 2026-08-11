@@ -9,6 +9,7 @@ from . import __version__
 from .provider_matrix import provider_parity_payload
 from .provider_runtime import configure_provider_payload, provider_catalog_payload, provider_health_payload
 from .store import (
+    _expand_temporal_neighbors,
     list_gate_log,
     add_memories,
     assemble_context,
@@ -1316,7 +1317,9 @@ def _dispatch_tool(name: str, arguments: dict[str, Any] | None, context: dict[st
     if name == "search_memories":
         _reject_unknown_args(name, args)
         _validate_search_params(args)
-        return _text_result(search_memories({**args, "filters": _mcp_scoped_filters(args, context)}))
+        result = search_memories({**args, "filters": _mcp_scoped_filters(args, context)})
+        # EM-LLM 이식: 최상위 히트의 시간 이웃 1건 동반 (MEM1_RECALL_TEMPORAL=0으로 끔)
+        return _text_result(_expand_temporal_neighbors(result, args.get("project_id")))
     if name == "search_memory":
         _reject_unknown_args(name, args)
         scope = _require_openmemory_scope(args, context)
