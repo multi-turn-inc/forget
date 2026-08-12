@@ -23,6 +23,7 @@ fast = ["numpy>=1.24"]  # optional speedup for rerank/consolidation; pure-Python
 
 [project.scripts]
 forget-server = "forget.cli:main"
+forget-proxy = "forget.proxy:main"
 
 [project.urls]
 Homepage = "https://multi-turn.ai"
