@@ -54,6 +54,16 @@ def mine_session(path: Path, now: float):
             continue
         d["_line"] = lineno
         rows.append(d)
+    return mine_rows(rows, path.name, now)
+
+
+def mine_rows(rows: list, source_label: str, now: float):
+    """행 리스트에서 채굴 — CC 트랜스크립트와 프록시 스트림(to_cc_rows) 공용 진입점."""
+    for i, d in enumerate(rows, 1):
+        d.setdefault("_line", i)
+
+    class path:  # src 표기 호환용 최소 셔밍
+        name = source_label
 
     out = []
     # 함정 아크: is_error 도구 결과 → 이후 6턴 내 같은 도구의 성공 호출.
