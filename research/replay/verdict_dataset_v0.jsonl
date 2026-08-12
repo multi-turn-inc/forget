@@ -1,0 +1,42 @@
+{"src": "devloop:P1", "kind": "outcome", "proposition": "P1 b — 시계형 stale 처치의 효능 (등록 2026-07-31 사이클 11, P1 부분 반증의 후속)", "verdict": "반증", "verdict_text": "결과 (사이클 12 판정): (a) 성립 — 배포후 5/5 사이클(8~12) 시계형 F1 0건, 시계형 처치 효능 인정."}
+{"src": "devloop:P3", "kind": "outcome", "proposition": "P3 b — F2 재발의 원인 판별: 처치 무효 vs 검증 불가 (등록 2026-07-31 사이클 11, P3 부분 반증의 후속)", "verdict": "반증", "verdict_text": ""}
+{"src": "devloop:P6", "kind": "outcome", "proposition": "P6 쓰기측 스코프 가드로 F4 재발 차단 (등록 2026-07-31 사이클 9, 커밋 직전 — 구현은 전 세션, 예측 등록 누락을 소급)", "verdict": "반증", "verdict_text": ""}
+{"src": "devloop:P7", "kind": "outcome", "proposition": "P7 ADD 파이프라인 회계로 F5 침묵 잊음의 관측 가능화 (등록 2026-08-01 사이클 16, 구현 전)", "verdict": "반증", "verdict_text": "판정 도구 선제작 (사이클 17)**: gate_audit.py가 metadata.accounting 전수 합산 위에서"}
+{"src": "devloop:P8", "kind": "outcome", "proposition": "P8 F2 처치: 턴 회상에서 유동층 필터 + 점수 게이트 실질화 (등록 2026-08-01 사이클 18, 구현 전)", "verdict": "지지", "verdict_text": "결과 해석의 정정 — 처치 1은 무관 노출을 관련성이 아니라 침묵으로 바꿨다 (사이클 42)**:"}
+{"src": "devloop:P10", "kind": "outcome", "proposition": "P10 배제 필터 이후에 후보 예산을 채우면 회상이 되살아난다 (등록 2026-08-04 사이클 42, 구현 전)", "verdict": "보류", "verdict_text": ""}
+{"src": "devloop:P11", "kind": "outcome", "proposition": "P11 실행 스택과 선언 스택의 분기: 세 처치 (등록 2026-08-04 사이클 43, 구현 전)", "verdict": "반증", "verdict_text": "성립/반증 판정은 처치 배선 후 유지."}
+{"src": "devloop:P7", "kind": "outcome", "proposition": "P7 도그푸드 시맨틱 승격으로 회상 관련성 개선 (등록 2026-08-01, 배포 직후)", "verdict": "반증", "verdict_text": "판정: (b)는 성립하지 않음(감소 미발생). 처치의 인과 효과에 대해서는 무정보."}
+{"src": "devloop:P9", "kind": "outcome", "proposition": "P9 트랙 혼선 치유 메커니즘: latest-write-wins vs 태그 우선 (등록 2026-08-02 사이클 24)", "verdict": "반증", "verdict_text": "| P1 · P1b · P3 · P7(a) · P7(reembed) · P8 · P9 · P11(d) | **판정 완료** | — | — | — |"}
+{"src": "devloop:P12", "kind": "outcome", "proposition": "P12 그림자 규약은 무-게이트로 전달되고 무-게이트로 소멸한다 (등록 2026-08-04 사이클 45, **게이트 불요**)", "verdict": "반증", "verdict_text": ""}
+{"src": "devloop:P13", "kind": "outcome", "proposition": "P13 캡슐의 전량 슬롯은 쓰기 순서가 정한다 (등록 2026-08-04 사이클 47, **게이트 불요·무-코드**)", "verdict": "반증", "verdict_text": ""}
+{"src": "devloop:P14", "kind": "outcome", "proposition": "P14 도구는 git으로 가고 \"실행하라\"는 여전히 산문으로 간다 (등록 2026-08-04 사이클 48, **게이트 불요**)", "verdict": "보류", "verdict_text": "| (c) 비-예측 | 이용률 71.8% 근처 | **판정 불능 — 전제 붕괴** | 파기(외생) |"}
+{"src": "devloop:P15", "kind": "outcome", "proposition": "P15 recall 계상 정의의 산문 선언은 무공지 이탈을 막는가 (등록 2026-08-06 사이클 61, **게이트 불요·무-코드**)", "verdict": "반증", "verdict_text": ""}
+{"src": "devloop:P16", "kind": "outcome", "proposition": "P16 절단되지 않는 채널로 옮긴 금지문은 반사를 이기는가 (등록 2026-08-06 사이클 61, **게이트 불요**)", "verdict": "반증", "verdict_text": ""}
+{"src": "devloop:P17", "kind": "outcome", "proposition": "P17 자격 없는 봉우리를 분포에서 빼면 푸시 회상이 장부 신선도에서 풀린다 (등록 2026-08-07 사이클 62, **코드 변경 동반·배포는 게이트**)", "verdict": "지지", "verdict_text": ""}
+{"src": "devloop:P18", "kind": "outcome", "proposition": "P18 인출 깊이를 분리하면 자[尺]를 건드리지 않고 절벽에서 물러날 수 있는가 (등록 2026-08-07 사이클 63, **코드 변경 동반·배포는 게이트**)", "verdict": "지지", "verdict_text": ""}
+{"src": "devloop:P19", "kind": "outcome", "proposition": "P19 의미 니들과 원문 인쇄는 도달 계측기의 거짓 음성을 끝내는가 (등록 2026-08-07 사이클 64, **게이트 불요·계기 변경**)", "verdict": "지지", "verdict_text": ""}
+{"src": "devloop:P20", "kind": "outcome", "proposition": "P20 잃은 턴 배치 규약을 되찾으면 restore 초과분이 0으로 간다 (등록 2026-08-07 사이클 65, **게이트 불요·문서 채널만**)", "verdict": "반증", "verdict_text": ""}
+{"src": "devloop:P21", "kind": "outcome", "proposition": "P21 몸의 지문을 step 0에 세우면 계기 무효화가 사이클 안에서 잡힌다 (등록 2026-08-07 사이클 66, **처치는 c67 이후 · 게이트 불요**)", "verdict": "반증", "verdict_text": ""}
+{"src": "devloop:P22", "kind": "outcome", "proposition": "P22 회상 점수의 절반은 주제와 무관한 상수항이다: 상수 경로는 닫혔고 중심화만 열려 있다 (등록 2026-08-07 사이클 68, **처치 미착수 · 게이트 불요**)", "verdict": "반증", "verdict_text": "(b) 반증 확정.** 표본 c69(위 절): 등록 처치(질의별/전역 중심화)는 8개 변형 전부에서"}
+{"src": "devloop:P23", "kind": "outcome", "proposition": "P23 아핀 재척도 제거가 유일하게 열린 처치인가 (등록 2026-08-07 사이클 69, **처치 미착수 · 자[尺] 단독 사이클 필요**)", "verdict": "반증", "verdict_text": ""}
+{"src": "devloop:P24", "kind": "outcome", "proposition": "P24 계상 정의의 스크립트 고정 출력은 산문/필드 분열을 끝내는가 (등록 2026-08-08 사이클 71, **게이트 불요·계기 변경**)", "verdict": "지지", "verdict_text": "판정 (c76, 2026-08-08 — 시계 c72~c76 종료, 기한 내 기재)**: **적중 (비반증)**."}
+{"src": "devloop:P25", "kind": "outcome", "proposition": "P25 phrase_bonus 매칭 자격 필터 단독: 대수 동치와 c22 T2b 랭크 재현 (등록 2026-08-09 사이클 81, **코드 변경 동반 — 이 등록이 코드에 선행**)", "verdict": "반증", "verdict_text": ""}
+{"src": "devloop:P26", "kind": "outcome", "proposition": "P26 중간 체크포인트 빈도의 **순 효과**: restore 등급을 올리는가, 틀리는 크기를 키우는가 (등록 2026-08-10 사이클 89, **게이트 불요·규약 변경**)", "verdict": "지지", "verdict_text": ""}
+{"src": "devloop:P27", "kind": "outcome", "proposition": "P27 관측 42(원장 직독 위반)의 **단일 원인은 문면인가**: A-55.1 처치의 사전 등록 판정 (등록 2026-08-10 사이클 89 3세션, **처치는 게이트 대기 — 예측만 선등록**)", "verdict": "반증", "verdict_text": ""}
+{"src": "devloop:P28", "kind": "outcome", "proposition": "P28 audit-90 R1의 **내용 복원 단독**은 규약 ③·④를 되살리는가 (등록 2026-08-10 사이클 91, 판정 기준 출처는 커밋 b5eb39a · **표본 1 즉시 판정**)", "verdict": "반증", "verdict_text": "판정 이유 — 처치가 발화할 수 없는 자리에 놓였다**(관측 47로 승격):"}
+{"src": "devloop:P29", "kind": "outcome", "proposition": "P29 규약 ④는 **턴1 이전에 도착하는 채널**로만 집행되는가 (등록 2026-08-10 사이클 91, **게이트 불요 · 처치는 이 등록 다음 커밋**)", "verdict": "지지", "verdict_text": ""}
+{"src": "devloop:P30", "kind": "outcome", "proposition": "P30 얼어붙은 트리오의 **길이축 귀속**은 전향적으로 성립하는가 (등록 2026-08-10 사이클 92, 게이트 불요 · 처치 없음 = 순수 관측 예측)", "verdict": "반증", "verdict_text": ""}
+{"src": "devloop:P31", "kind": "outcome", "proposition": "P31 문면 집행 가능성의 축은 **도달 시각이 아니라 규약의 종류**인가: 억제 규약 vs 구성 규약 (등록 2026-08-10 사이클 93, **게이트 불요·무-코드** — P29 (a) 반증의 승계)", "verdict": "반증", "verdict_text": "(b) 구성 규약 — 반증 확정.** 규약 ④ 준수: 턴1 = Read 2건 + ToolSearch(5스키마)"}
+{"src": "devloop:P32", "kind": "outcome", "proposition": "P32 두 원장의 대조(파트 S)는 F1 사건형 재발을 사이클 안에서 잡는가, 재조회 규약은 세대 부재를 끝내는가 (등록 2026-08-10 사이클 93, **게이트 불요·계기 변경** — 관측 49의 처치)", "verdict": "지지", "verdict_text": ""}
+{"src": "devloop:P33", "kind": "outcome", "proposition": "P33 유동층 응답이 **자기 신선도를 스스로 말하면** 사건형 F1은 계기 없이 잡히는가 (등록 2026-08-10 사이클 94, **게이트 불요·코드 처치** — 관측 49 수용 기준의 제품 몫)", "verdict": "반증", "verdict_text": ""}
+{"src": "devloop:P34", "kind": "outcome", "proposition": "P34 미해소 관측 인덱스의 대장 파생은 수기 재계수를 끝내는가 (등록 2026-08-12 사이클 108, **게이트 불요·계기 변경** — A-95.1 루프 몫, 관측 52 처치)", "verdict": "반증", "verdict_text": ""}
+{"src": "lme:c43-확정", "kind": "outcome", "proposition": "확인 시드(c35_web_200k_s2) 도착: 발동층 +4.8pp (기존 s1 +6.5pp, 2시드 평균 +5.65pp) — 선등록 게이트(+5pp) 평균 충족·s2 단독은 4.8로 경계선 명시. 성립 판정. 보너스 발견: 비발동층(163문항)에서 200k가 해로움 (s1 −4.0pp, s2 −3.4pp, 2시드 일관) — 즉 상시-200k는 85k보다 전체가 나쁘고(~135 vs 137.5), 적응(발동만 200k)은 양 끝점 모두를 이김 (140~142/225, 2시드×2베이스 = 140.5~141.5). 에스컬레이션의 주장 격상: 싸서 좋은 게 아니라 그냥 더 좋다 — 불필요한 컨텍스트는 소음이다. 다음: 재제출 준비물(#2)은 적응 패키지 기준.", "verdict": "지지", "verdict_text": "confirmed"}
+{"src": "design-session:2026-08-12", "kind": "verdict", "proposition": "35B-A3B MoE를 증류 엔진으로 유지", "verdict": "기각", "verdict_text": "27B dense가 전 벤치 우위 — 품질 배치엔 dense (정훈이 잡음)"}
+{"src": "design-session:2026-08-12", "kind": "verdict", "proposition": "연구실 4090 프라이버시 제약으로 Spark 훈련", "verdict": "기각", "verdict_text": "개인 장비 확인 — 제약 과잉 일반화, 속도 우선"}
+{"src": "design-session:2026-08-12", "kind": "verdict", "proposition": "설계 v1 (발화 모방 중심)", "verdict": "기각", "verdict_text": "배관 완결·아이디어 부재, 출력 모방은 생성기가 아님"}
+{"src": "design-session:2026-08-12", "kind": "verdict", "proposition": "v2 방향: 월드모델·신념·평결", "verdict": "승인", "verdict_text": "조사 지시 후 ㄱㄱ — 계보 합류 확인"}
+{"src": "design-session:2026-08-12", "kind": "verdict", "proposition": "수리 부록 1차 (표기 수준)", "verdict": "기각", "verdict_text": "수식이 저거밖에 안 되냐 — 유도·보증 요구"}
+{"src": "design-session:2026-08-12", "kind": "verdict", "proposition": "정훈-예측모델 발제", "verdict": "승인", "verdict_text": "이거야 — W-트랙 측정 표면"}
+{"src": "design-session:2026-08-12", "kind": "verdict", "proposition": "68문항 소형 평가셋 프레이밍", "verdict": "기각", "verdict_text": "뭐라는거야 / 채점기 말고 나를 만들어"}
+{"src": "design-session:2026-08-12", "kind": "verdict", "proposition": "blog 철학 글 숨김 제안", "verdict": "기각", "verdict_text": "내 철학 글도 숨겨야 해? (2026-08-11)"}
+{"src": "design-session:2026-08-12", "kind": "verdict", "proposition": "Show HN 우선 진행", "verdict": "기각", "verdict_text": "제품 개발이 먼저, 벤치마크 제시하면서 (2026-08-02)"}
