@@ -21,6 +21,7 @@ PROJECT_DIRS = [
 ]
 # 교정 신호: 사용자 턴 서두의 부정·정정 표지. 보수적으로 서두 40자만 본다 —
 # 본문 중간의 "아니"는 담화 표지일 때가 많다 (오탐이 정탐보다 비싸다).
+SYS_NOISE = re.compile(r"task-notification|<task-id>|tool-use-id|SYSTEM NOTIFICATION|<summary>|Monitor event|<local-command|<command-name>|<bash-input>|0{8,}|This is how Claude Code|stepped away|Recap in under")
 CORRECTION_HEAD = re.compile(
     r"^(아니|아냐|그게 아니라|틀렸|잘못|하지 ?마|왜 |그러지 말고|다시 해|말고)", re.U
 )

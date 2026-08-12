@@ -16,9 +16,9 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from trl import SFTConfig, SFTTrainer
 
 BASE = "Qwen/Qwen3.5-9B"
-OUT = "twin_v0_sft"
+OUT = "twin_v1_sft"
 
-rows = [json.loads(l) for l in open("voice_pairs_v0.jsonl")]
+rows = [json.loads(l) for l in open("voice_pairs_clean.jsonl")]
 holdout = rows[-60:]
 train_rows = rows[:-60]
 json.dump(holdout, open("twin_holdout.json", "w"), ensure_ascii=False)
