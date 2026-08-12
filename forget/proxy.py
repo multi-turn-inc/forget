@@ -249,6 +249,15 @@ def create_app(
     # Docs routes disabled: every path belongs to the upstream, including /docs.
     app = FastAPI(title="forget-proxy", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
 
+    @app.get("/healthz")
+    async def healthz() -> JSONResponse:
+        # The one deliberate carve-out from "every path belongs to the
+        # upstream": the health watchdog needs an answer that proves *this*
+        # process is alive, not the upstream. The Anthropic API namespace
+        # lives under /v1/*, so nothing real is shadowed. Never captured,
+        # never relayed, independent of the capture sink's health.
+        return JSONResponse({"ok": True, "service": "forget-proxy"})
+
     @app.api_route(
         "/{path:path}",
         methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],

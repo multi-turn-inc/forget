@@ -282,6 +282,25 @@ async def test_credential_headers_never_reach_capture_file(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_healthz_answers_locally_without_upstream_or_capture(tmp_path):
+    # The watchdog's probe must prove *this* process is alive even when the
+    # upstream is down — so /healthz never relays and never captures.
+    def responder(request: httpx.Request) -> httpx.Response:
+        raise AssertionError("healthz must not reach the upstream")
+
+    upstream = _UpstreamTransport(responder)
+    app = create_app("https://upstream.test", capture_dir=tmp_path, transport=upstream)
+
+    async with _proxy_client(app) as client:
+        response = await client.get("/healthz")
+
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+    assert upstream.requests == []
+    assert _capture_lines(tmp_path) == []
+
+
+@pytest.mark.asyncio
 async def test_upstream_errors_and_other_paths_pass_through_uncaptured(tmp_path):
     def responder(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/v1/models":
