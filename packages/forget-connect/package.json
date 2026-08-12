@@ -15,7 +15,7 @@
   ],
   "scripts": {
     "test": "node --test",
-    "lint": "node --check bin/forget-connect.js && node --check src/cli.js && node --check src/core.js && node --check src/doctor.js && node --check src/hooks.js"
+    "lint": "node --check bin/forget-connect.js && node --check src/cli.js && node --check src/core.js && node --check src/doctor.js && node --check src/hooks.js && node --check src/proxy.js"
   },
   "engines": {
     "node": ">=18"

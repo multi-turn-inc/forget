@@ -33,6 +33,18 @@ import {
   removeHookScripts,
   settingsPathFor,
 } from "./hooks.js";
+import {
+  PROXY_BASE_URL,
+  PROXY_LABEL,
+  WATCHDOG_LABEL,
+  findExecutable,
+  installProxyServices,
+  readWiringState,
+  removeProxyServices,
+  unwireProxyEnv,
+  wireProxyEnv,
+  writeWiringState,
+} from "./proxy.js";
 
 const CLIENT_IDS = new Set(["claude-code", "codex", "claude-desktop"]);
 
@@ -62,6 +74,8 @@ Scope:
   --no-rules           Do not manage CLAUDE.md or AGENTS.md instruction blocks
   --no-hooks           Do not install Claude Code memory hooks (session capsule,
                        per-turn recall, conflict alerts, session capture)
+  --no-proxy           Do not wire the local capture proxy (launchd service +
+                       ANTHROPIC_BASE_URL override + health watchdog; macOS only)
   --no-migrate-enacta  Keep matching legacy config and rules blocks
   --dry-run            Show the files that would change without writing them
   --timeout <seconds>  Doctor network timeout (default: 10)
@@ -127,6 +141,7 @@ export function parseArgs(argv, env = process.env) {
     auth: true,
     rules: true,
     hooks: true,
+    proxy: true,
     migrateLegacy: true,
     dryRun: false,
     yes: false,
@@ -174,6 +189,8 @@ export function parseArgs(argv, env = process.env) {
       options.rules = false;
     } else if (arg === "--no-hooks") {
       options.hooks = false;
+    } else if (arg === "--no-proxy") {
+      options.proxy = false;
     } else if (arg === "--no-migrate-enacta") {
       options.migrateLegacy = false;
     } else if (arg === "--dry-run") {
@@ -611,8 +628,27 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
     stderr.write("Note: memory hooks are not yet supported on Windows; skipping hook install.\n");
     manageHooks = false;
   }
+  // The capture proxy (zero-config memory capture) rides the same
+  // settings.json: env.ANTHROPIC_BASE_URL points Claude Code at the local
+  // forget-proxy. launchd-only for now, so connect wires it on macOS;
+  // disconnect always unwires — a no-op wherever connect never ran.
+  let manageProxy = Boolean(claudeCode)
+    && (options.action === "disconnect" || options.proxy);
+  if (manageProxy && options.action === "connect" && process.platform !== "darwin") {
+    stderr.write("Note: the capture proxy service requires launchd (macOS); skipping proxy wiring.\n");
+    manageProxy = false;
+  }
+  if (manageProxy && options.action === "connect" && !options.dryRun
+    && !(await findExecutable("forget-proxy", { env }))) {
+    // Checked before any file changes: an env override pointing at a proxy
+    // that cannot start would break the user's Claude, not just capture.
+    stderr.write("Note: forget-proxy not found on PATH; skipping proxy wiring (pip install 'forget-ai[server]').\n");
+    manageProxy = false;
+  }
+
   const hooksDir = manageHooks ? hooksDirFor({ env }) : "";
-  if (manageHooks) {
+  let proxyPlan = null;
+  if (manageHooks || manageProxy) {
     const settingsPath = settingsPathFor({ env });
     let settingsRaw = "";
     try {
@@ -620,16 +656,37 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
     } catch (error) {
       if (!error || error.code !== "ENOENT") throw error;
     }
-    const settingsNext = options.action === "connect"
-      ? connectHooksSettings(settingsRaw, { hooksDir, url: urlFor(claudeCode) })
-      : disconnectHooksSettings(settingsRaw);
+    let settingsNext = settingsRaw;
+    if (manageHooks) {
+      settingsNext = options.action === "connect"
+        ? connectHooksSettings(settingsNext, { hooksDir, url: urlFor(claudeCode) })
+        : disconnectHooksSettings(settingsNext);
+    }
+    if (manageProxy && options.action === "connect") {
+      proxyPlan = wireProxyEnv(settingsNext);
+      if (proxyPlan.status === "skip") {
+        // (c) an odd configuration skips the whole wiring, loudly — being
+        // invisible must never mean silently breaking the user's setup.
+        stderr.write(`Warning: ${proxyPlan.reason}; skipping proxy wiring. Nothing was changed.\n`);
+        manageProxy = false;
+        proxyPlan = null;
+      } else {
+        settingsNext = proxyPlan.next;
+      }
+    }
+    if (manageProxy && options.action === "disconnect") {
+      const wiring = await readWiringState({ env });
+      settingsNext = unwireProxyEnv(settingsNext, {
+        original: wiring?.original_base_url ?? null,
+      }).next;
+    }
     if (settingsRaw !== settingsNext) {
       changes.push({
         client: claudeCode,
         filePath: settingsPath,
         before: settingsRaw,
         after: settingsNext,
-        kind: "hooks",
+        kind: "settings",
         sensitive: false,
         backup: options.action === "connect",
       });
@@ -637,7 +694,7 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
   }
 
   if (options.dryRun) {
-    if (!changes.length && !manageHooks) {
+    if (!changes.length && !manageHooks && !manageProxy) {
       stdout.write("No changes needed.\n");
       return;
     }
@@ -651,6 +708,15 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
     if (manageHooks && options.action === "disconnect") {
       stdout.write(`Would remove hook scripts from ${hooksDir}\n`);
       stdout.write(`Would remove our slash commands from ${commandsDirFor({ env })} (user-edited files are kept)\n`);
+    }
+    if (manageProxy && options.action === "connect") {
+      stdout.write(`Would register launchd services ${PROXY_LABEL} + ${WATCHDOG_LABEL} (capture proxy at ${PROXY_BASE_URL})\n`);
+      if (proxyPlan?.upstream) {
+        stdout.write(`Would chain the existing ANTHROPIC_BASE_URL as the proxy upstream: ${proxyPlan.upstream}\n`);
+      }
+    }
+    if (manageProxy && options.action === "disconnect") {
+      stdout.write(`Would remove launchd services ${PROXY_LABEL} + ${WATCHDOG_LABEL} and restore ANTHROPIC_BASE_URL\n`);
     }
     return;
   }
@@ -667,8 +733,35 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
       : await removeCommandAssets(commandsDir);
     hookScriptPaths = hookScriptPaths.concat(commandPaths);
   }
+  let proxyPaths = [];
+  let proxyUpstream = null;
+  if (manageProxy) {
+    if (options.action === "connect") {
+      // State first: the watchdog and a future disconnect must know the
+      // user's original base URL before either could ever act on it. A
+      // no-op re-connect keeps the existing record (it holds the original).
+      let wiring = await readWiringState({ env });
+      if (proxyPlan.status === "wire" || !wiring) {
+        wiring = await writeWiringState({ env }, {
+          upstream: proxyPlan.upstream,
+          original: proxyPlan.original,
+        });
+      }
+      proxyUpstream = wiring.upstream ?? null;
+      const service = await installProxyServices({ env }, { upstream: proxyUpstream });
+      proxyPaths = service.written;
+      if (!service.installed) {
+        stderr.write(
+          `Warning: capture proxy service not fully registered — ${service.reason}\n`
+          + "  If Claude Code cannot reach the API, run: forget-connect disconnect --client claude-code\n",
+        );
+      }
+    } else {
+      proxyPaths = await removeProxyServices({ env });
+    }
+  }
   const verb = options.action === "connect" ? "Connected" : "Disconnected";
-  if (!result.changed.length && !hookScriptPaths.length) {
+  if (!result.changed.length && !hookScriptPaths.length && !proxyPaths.length) {
     stdout.write("No changes needed.\n");
   } else {
     stdout.write(`${verb} ${clients.map((client) => client.name).join(", ")}.\n`);
@@ -676,6 +769,7 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
     for (const filePath of result.backups) stdout.write(`  backup  ${filePath}\n`);
     const hookVerb = options.action === "connect" ? "installed" : "removed";
     for (const filePath of hookScriptPaths) stdout.write(`  ${hookVerb} ${filePath}\n`);
+    for (const filePath of proxyPaths) stdout.write(`  ${hookVerb} ${filePath}\n`);
   }
   if (options.action === "connect") {
     if (options.scope) {
@@ -688,6 +782,12 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
     if (manageHooks) {
       stdout.write("  hooks: session capsule, per-turn recall, conflict alerts, session capture (needs python3 on PATH)\n");
       stdout.write("  commands: /forget (the recall dial) · /forget-settings (status, doctor, cloud usage)\n");
+    }
+    if (manageProxy) {
+      stdout.write(`  proxy: capture proxy at ${PROXY_BASE_URL} (launchd ${PROXY_LABEL}, watchdog ${WATCHDOG_LABEL})\n`);
+      if (proxyUpstream) {
+        stdout.write(`  proxy upstream: ${proxyUpstream} (your previous ANTHROPIC_BASE_URL, chained)\n`);
+      }
     }
     if (options.hosted && !options.scope) {
       stdout.write(

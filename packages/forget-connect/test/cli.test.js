@@ -18,6 +18,10 @@ function invoke(home, args, extraEnv = {}) {
     HOME: home,
     CODEX_HOME: path.join(home, ".codex"),
     FORGET_API_KEY: SECRET,
+    // Proxy wiring writes plists and settings into the fixture HOME, but the
+    // real launchd is a machine-global registry: tests must never bootstrap
+    // into it. This seam skips only the launchctl calls.
+    FORGET_PROXY_LAUNCHCTL: "skip",
     ...extraEnv,
   };
   return spawnSync(process.execPath, [BIN, ...args], {

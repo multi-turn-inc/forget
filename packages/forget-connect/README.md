@@ -84,6 +84,8 @@ block. It does not restore backups or remove unrelated config.
 --no-scope           Install the shared unscoped /mcp endpoint (legacy behavior)
 --no-auth            Do not install a Bearer token
 --no-rules           Do not manage CLAUDE.md or AGENTS.md
+--no-hooks           Do not install Claude Code memory hooks
+--no-proxy           Do not wire the local capture proxy (macOS only)
 --no-migrate-enacta  Keep matching legacy config and rule blocks
 --dry-run            Show which files would change
 --timeout <seconds>  Doctor network timeout, from 1 to 60
@@ -128,3 +130,21 @@ Hooks are judgment-free and fail-open: if the Forget server is down they exit
 silently and never block your session. They need `python3` on PATH.
 Skip them with `--no-hooks`; `disconnect` always removes them. Foreign hooks
 registered by other tools are preserved byte-for-byte.
+
+## Capture proxy (macOS)
+
+On macOS, connect also wires the zero-config capture proxy when `forget-proxy`
+(from `pip install 'forget-ai[server]'`) is on PATH:
+
+- registers launchd services `ai.forget.proxy` (KeepAlive, port 8377) and
+  `ai.forget.proxy.watchdog` (60s health checks)
+- sets `env.ANTHROPIC_BASE_URL = http://127.0.0.1:8377` in
+  `~/.claude/settings.json`. An existing custom base URL is chained as the
+  proxy's `--upstream`, never discarded; a settings file we cannot parse
+  skips the wiring entirely with a warning.
+
+If the proxy stops answering for three consecutive checks, the watchdog
+removes the override (only the value we wrote) and restores your original
+base URL — losing capture is cheaper than losing Claude. When the proxy
+recovers, the override returns unless you changed the value yourself.
+Skip with `--no-proxy`; `disconnect` always unwires and removes the services.
