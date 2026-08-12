@@ -150,6 +150,7 @@ def main() -> None:
                "sim": round(sim, 4), "dir_pred": d_pred, "dir_actual": d_act,
                "dir_match": d_pred == d_act,
                "pred_head": pred[:160], "actual_head": turn["actual"][:160],
+               "ctx": turn["ctx"][-1600:], "actual": turn["actual"],
                "engine": TWIN_MODEL}
         with SCORES.open("a") as fh:
             fh.write(json.dumps(row, ensure_ascii=False) + "\n")
