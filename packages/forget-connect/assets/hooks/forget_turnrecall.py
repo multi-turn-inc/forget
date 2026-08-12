@@ -446,15 +446,27 @@ def main() -> None:
         # 상한은 기어를 따른다: instant 경로(low)는 5s 원칙 유지, 턴이 스스로
         # 기억-의존을 선언한 high에서는 딥 리콜 실측 ~4.4s를 품도록 12s —
         # 그 턴에서 몇 초의 대기는 침묵보다 싸다 (2026-08-11, search_error 2/2 수리).
-        result = _rpc("search_memories", search_args, timeout=12 if gear == "high" else 5)
+        result = _rpc("search_memories", search_args, timeout=7 if gear == "high" else 5)
     except Exception as exc:
-        # fail-open은 유지하되 원장에는 남긴다 — high 기어의 타임아웃이 그냥
-        # 침묵으로 위장하면 적응형 기어의 실패율을 잴 수 없다 (실측: 콜드 캐시
-        # 첫 high 검색이 5s RPC 한도를 넘겨 소리 없이 죽는 것을 확인).
-        # 원인 종류를 동봉한다 — 종류 없는 13건이 귀속 불가로 남았다 (관측 59 ②).
-        _note_gate(session_id, gate, gear, "search_error", 0, 0, prompt,
-                   error=_error_brief(exc))
-        return
+        # 2026-08-12 실측: 콜드 딥리콜 11s > CC 훅 한도 → 회상 전량 폐기 사고.
+        # 서버가 keep_alive 상주+기동 예열로 콜드를 없애지만, 남는 콜드 턴은
+        # 침묵 대신 low로 강등한다 — 얕은 회상이 무회상보다 낫다는 게 c43의
+        # 교훈(예산은 조건부 자산)의 역방향 적용이기도 하다.
+        if gear == "high":
+            try:
+                search_args["recall"] = "low"
+                result = _rpc("search_memories", search_args, timeout=2)
+                _note_gate(session_id, gate, gear, "degraded_to_low", 0, 0, prompt,
+                           error=_error_brief(exc))
+            except Exception as exc2:
+                _note_gate(session_id, gate, gear, "search_error", 0, 0, prompt,
+                           error=_error_brief(exc2))
+                return
+        else:
+            # fail-open은 유지하되 원장에는 남긴다 — 원인 종류 동봉 (관측 59 ②).
+            _note_gate(session_id, gate, gear, "search_error", 0, 0, prompt,
+                       error=_error_brief(exc))
+            return
     trace_id = str(result.get("trace_id") or "")
     # 평탄도는 **주입 자격이 있는 후보**에서만 재야 한다 (c62 실측 수리).
     # 이전 판본은 배제 이전의 전체 결과로 분포를 재서, 봉우리가 결코 주입될 수
@@ -475,6 +487,11 @@ def main() -> None:
         and (scores_all[0] - scores_all[len(scores_all) // 2]) < FLATNESS_MARGIN
     )
     picks = []
+    # P4 v1 (2026-08-12, ARB-C evidence_status 이식): 신뢰등(출처 축)과 별개로
+    # 이 턴 질문에 대한 증거 강도 축을 분리 보고한다. 절대 임계는 못 쓴다 —
+    # 실측(p4_probe): 무관 질의도 합성 점수 0.51 바닥, 관련 질의 0.55~0.66으로
+    # 압축돼 있어 턴-상대(상단 밴드)로만 가른다. c40 벤치의 spread 신호와 동형.
+    pick_scores: dict[str, float] = {}
     # 시간 이웃은 서버가 목록 '끝'에 붙인다 — PICK_POOL 절단 전에 전체에서 수집.
     neighbor_pool: list[dict] = [item for item in results if item.get("temporal_neighbor_of")]
     conflict_pairs: dict[tuple[str, str], None] = {}
@@ -514,6 +531,7 @@ def main() -> None:
         trust = item.get("trust") or {}
         light = str(trust.get("light") or "yellow")
         picks.append((memory_id, light, str(item.get("memory") or "")[:MEMORY_CHAR_LIMIT]))
+        pick_scores[memory_id] = score
         if len(picks) >= MAX_RECALLS:
             break
 
@@ -548,10 +566,19 @@ def main() -> None:
         # 전제-검증 조항 (2026-08-10, LME-V2 정합 3쌍 전승 실증의 제품 역이식):
         # 기억과 어긋나는 전제 위에서 답하지 말 것 — 각서의 나머지 절반.
         header = "[forget 회상 — 이 턴과 관련된 기억 제안. green=행동 근거 OK, yellow=행동 전 확인, red=참고만"
+        header += " / 직접=이 턴의 근거 후보, 참고=관련 단서일 뿐 답의 근거 아님"
         header += " / 질문의 전제가 기억과 어긋나면 전제를 따르지 말고 기억을 인용해 짚을 것"
         header += " / 프로젝트 경계를 넘어 검색함]" if crossed else "]"
         lines.append(header)
-        lines += [f"- ({light}) {memory}" for _, light, memory in picks]
+        # 증거 태그: 평탄도를 잰 턴에서만 '직접'을 허용 — 못 잰 턴은 전원 '참고'
+        # (근거 표기는 과장보다 누락이 싸다). 밴드는 턴 최고점 기준 상대치.
+        evidence_band = float(os.environ.get("FORGET_EVIDENCE_BAND", "0.02"))
+        top_score = max(pick_scores.values()) if pick_scores else 0.0
+        def _etag(mid: str) -> str:
+            if not measurable or mid not in pick_scores:
+                return "참고"
+            return "직접" if pick_scores[mid] >= top_score - evidence_band else "참고"
+        lines += [f"- ({light}·{_etag(mid)}) {memory}" for mid, light, memory in picks]
         # EM-LLM 이식(2026-08-11): 채택된 앵커의 시간 이웃 1건 — "회상은 장면을 데려온다".
         if neighbor_pool and os.environ.get("FORGET_RECALL_TEMPORAL", "1").strip().lower() not in {"0", "off", "false"}:
             picked_ids = {memory_id for memory_id, _, _ in picks}

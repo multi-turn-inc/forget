@@ -86,7 +86,7 @@ def test_repeat_suppression_and_ledger_extension(monkeypatch, tmp_path, capsys):
     (tmp_path / "s3.json").write_text(json.dumps(
         {"trace_id": "t-1", "memory_ids": ["cap-mem"], "capsule_lines": ["현재 목표: X"]}), encoding="utf-8")
     _run_main(module, {"session_id": "s3", "prompt": "아키텍처 어떻게 가기로 했지?"}, monkeypatch)
-    assert "(green) 로컬-퍼스트" in capsys.readouterr().out
+    assert "(green·" in (_out3 := capsys.readouterr().out) and "로컬-퍼스트" in _out3
     ledger = json.loads((tmp_path / "s3.json").read_text(encoding="utf-8"))
     assert "m-1" in ledger["memory_ids"] and any("로컬-퍼스트" in line for line in ledger["capsule_lines"])
     # 같은 세션 두 번째 턴 → 억제
@@ -140,7 +140,7 @@ def test_task_state_claims_never_recalled(monkeypatch, tmp_path, capsys):
     _run_main(module, {"session_id": "s13", "prompt": "임베더 교체 계획이 뭐였지?"}, monkeypatch)
     out = capsys.readouterr().out
     assert "heartbeat" not in out
-    assert "(green) 임베더는 e5로" in out
+    assert "(green·" in out and "임베더는 e5로" in out
     # 장부에도 task 클레임은 오르지 않는다 — 억제 상태 오염 방지
     turns = json.loads((tmp_path / "s13.turns.json").read_text(encoding="utf-8"))
     assert turns["injected"] == ["m-2"]
@@ -685,5 +685,5 @@ def test_near_threshold_advisory_rides_along_and_admits_backlog(monkeypatch, tmp
         {"near_threshold": True, "est_ratio": 0.71, "backlog_turns": 12}), encoding="utf-8")
     _run_main(module, {"session_id": "s17", "prompt": "그 기억 관련해서 뭐가 있었지?"}, monkeypatch)
     out = capsys.readouterr().out
-    assert "(green) 관련 기억" in out and "임계" in out
+    assert "(green·" in out and "관련 기억" in out and "임계" in out
     assert "12턴" in out and "소화 완료" not in out

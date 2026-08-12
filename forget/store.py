@@ -4782,7 +4782,14 @@ def _resolve_recall_llm() -> dict[str, Any] | None:
     return _local_recall_llm() or _byo_recall_llm(settings) or _cloud_recall_llm(settings)
 
 
-def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_k: int = 40, snippet_chars: int = 280, layer: str = "gate-v2") -> dict[str, Any]:
+_GATE_WIDE_K = int(os.getenv("MEM1_GATE_WIDE_K", "16"))
+_GATE_SNIPPET_CHARS = int(os.getenv("MEM1_GATE_SNIPPET_CHARS", "160"))
+
+
+def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_k: int = _GATE_WIDE_K, snippet_chars: int = _GATE_SNIPPET_CHARS, layer: str = "gate-v2") -> dict[str, Any]:
+    # 게이트 다이어트 (2026-08-12 실측): 40×280 프로필은 로컬 9B 프리필만
+    # ~9.5s — 훅 예산(≤7s) 밖이라 high 기어가 구조적으로 죽는다. 16×160이면
+    # ~2s. 연구용 광폭 프로필은 env로 복원 가능.
     """Recall v2 'high' gear: wide hybrid retrieval, then a small LLM reads
     the candidates and keeps only what the question actually needs —
     a selector's job, not a retriever's. Config via env (experimental):
@@ -4833,6 +4840,9 @@ def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_
                     "messages": [{"role": "user", "content": prompt}],
                     "stream": False,
                     "think": False,
+                    # 상주 유지 — 콜드 로드 11s가 훅 한도(6~10s)를 넘겨 회상이
+                    # 통째로 버려지는 사고의 근본 원인 (2026-08-12 실측).
+                    "keep_alive": os.getenv("MEM1_GATE_KEEP_ALIVE", "24h"),
                     "options": {"num_predict": 256, "temperature": 0},
                 }).encode("utf-8"),
                 headers={"Content-Type": "application/json"},

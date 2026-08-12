@@ -11,7 +11,10 @@ billing through :mod:`forget.ports` without the core importing either.
 """
 from __future__ import annotations
 
+import json
+import os
 import subprocess
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -73,6 +76,35 @@ app = FastAPI(
 # Schema is created eagerly at import so plain TestClient(app) usage and
 # one-off scripts work without lifespan events (mirrors the engine's history).
 init_db()
+
+
+def _warm_recall_gate() -> None:
+    """게이트 모델 예열 — 재시작 직후의 콜드 로드(실측 11s)가 첫 high-기어
+    회상을 훅 한도 밖으로 밀어내 통째로 버려지게 한다. 1토큰 핑이 keep_alive
+    상주를 미리 걸어둔다. 실패는 무해하므로 삼킨다 (TestClient 환경 포함)."""
+    try:
+        from . import store as _store
+        llm = _store._resolve_recall_llm()
+        if not llm or ":11434" not in llm["base_url"]:
+            return
+        import urllib.request as _rq
+        req = _rq.Request(
+            llm["base_url"].replace("/v1", "/api/chat"),
+            data=json.dumps({
+                "model": llm["model"], "messages": [{"role": "user", "content": "0"}],
+                "stream": False, "think": False,
+                "keep_alive": os.getenv("MEM1_GATE_KEEP_ALIVE", "24h"),
+                "options": {"num_predict": 1},
+            }).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+        )
+        _rq.urlopen(req, timeout=120).read()
+    except Exception:
+        pass
+
+
+if os.getenv("MEM1_GATE_WARMUP", "1").strip().lower() not in {"0", "off", "false"}:
+    threading.Thread(target=_warm_recall_gate, daemon=True).start()
 
 
 async def auth(request: Request) -> None:
