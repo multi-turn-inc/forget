@@ -64,18 +64,43 @@ def _post(url: str, payload: dict, timeout: int = 300) -> dict:
     return json.loads(urllib.request.urlopen(req, timeout=timeout).read())
 
 
-def twin_say(ctx: str) -> str:
+def twin_say(ctx: str, max_tokens: int = 150) -> str:
     # 기본 = 훈련과 동일한 시스템 프롬프트(분포 일치가 쌍둥이에게 공정).
     # TWIN_SYSTEM 환경변수는 널 대조용 — 각인 없는 베이스에 길이 지시만 주고
     # 게이트가 목소리를 재는지(베이스 낙제) 길이만 재는지(베이스도 통과) 가른다.
     system = os.environ.get("TWIN_SYSTEM", TRAIN_SYSTEM_PROMPT)
     body = _post(TWIN_URL, {
-        "model": TWIN_MODEL, "temperature": 0.7, "max_tokens": 150,
+        "model": TWIN_MODEL, "temperature": 0.7, "max_tokens": max_tokens,
         "chat_template_kwargs": {"enable_thinking": False},
         "messages": [{"role": "system", "content": system},
                      {"role": "user", "content": ctx[-1600:]}],
     })
     return str((body.get("choices") or [{}])[0].get("message", {}).get("content") or "").strip()
+
+
+# 길이-정합 널 (2026-08-14 2차 감사 처방): 1차 널은 길이 "지시"를 무시했다
+# (평균 110.9자 = 실발화 2.3배). "목소리 대 간결함"을 가르려면 강제가 필요:
+# 실발화 길이에 맞춘 max_tokens 상한 + |Δ길이| ≤ 허용치까지 재표집(최근접 유지).
+MATCH_LEN = str(os.environ.get("TWIN_MATCH_LEN", "")).strip().lower() in {"1", "true", "on"}
+MATCH_TOL = int(os.environ.get("TWIN_MATCH_TOL", "10"))
+MATCH_TRIES = int(os.environ.get("TWIN_MATCH_TRIES", "6"))
+
+
+def twin_say_matched(ctx: str, target_chars: int) -> str:
+    # 한국어 대략 2자/토큰 — 상한을 실발화 길이에 묶고, 허용치 안에 들 때까지
+    # 재표집하되 최근접 후보를 유지한다(전 시도 실패 시에도 최근접 반환).
+    cap = max(8, target_chars // 2 + 8)
+    best, best_gap = "", 10**9
+    for _ in range(MATCH_TRIES):
+        fake = twin_say(ctx, max_tokens=cap)
+        if not fake:
+            continue
+        gap = abs(len(fake) - target_chars)
+        if gap < best_gap:
+            best, best_gap = fake, gap
+        if gap <= MATCH_TOL:
+            break
+    return best
 
 
 def judge(ctx: str, a: str, b: str) -> str:
@@ -143,7 +168,10 @@ def main() -> None:
     with OUT.open("a") as fh:
         for i, item in enumerate(pool):
             try:
-                fake = twin_say(item["ctx"])
+                if MATCH_LEN:
+                    fake = twin_say_matched(item["ctx"], len(item["actual"][:CAP]))
+                else:
+                    fake = twin_say(item["ctx"])
             except Exception as exc:
                 print(f"[skip] twin 생성 실패: {exc}", file=sys.stderr)
                 continue
