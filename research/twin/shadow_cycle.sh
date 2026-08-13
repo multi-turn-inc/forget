@@ -9,6 +9,6 @@ DAEMON="$HOME/.forget/twin/shadow_daemon.py"
 /usr/bin/python3 "$DAEMON" || echo "[cycle] baseline 실패 $(date '+%F %T')"
 
 TWIN_URL="http://127.0.0.1:8024/v1/chat/completions" \
-TWIN_MODEL="twin_v1" \
-TWIN_VARIANT="twin_v1_sft/qwen3.5-9b" \
+TWIN_MODEL="twin_v6k" \
+TWIN_VARIANT="twin_v6k_sft/kanana-1.5-8b" \
 /usr/bin/python3 "$DAEMON" || echo "[cycle] twin_v1 실패 $(date '+%F %T')"
