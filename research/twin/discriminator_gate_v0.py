@@ -45,7 +45,11 @@ CONTAM = re.compile(
     r"|\[forget 회상|\[forget 캡슐|<command-|<local-command|<bash-input"
     r"|<system-reminder|Caveat:|\[SYSTEM NOTIFICATION|<task-notification"
     r"|The user (stepped away|sent a new message)|Recap in under"
-    r"|This is how Claude Code surfaces",
+    r"|This is how Claude Code surfaces"
+    # 2026-08-14 감사 후속: 홀드아웃의 실제 오염 패턴 — 배선만 하고 패턴을
+    # 안 덮은 반쪽 수리의 완결(중단 마커·영어 브리프·설정 붙여넣기).
+    r"|\[Request interrupted|Approach this as|CRITICAL: Respond"
+    r"|^Host |IdentityFile|ssh -",
     re.I,
 )
 
