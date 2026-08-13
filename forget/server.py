@@ -149,24 +149,35 @@ def mcp_rpc(payload: Any = Body(...), profile: str | None = None) -> JSONRespons
 
 
 @app.get("/mcp/{app_id}/http/{user_id}", dependencies=[Depends(auth)])
-def mcp_scope_info(app_id: str, user_id: str) -> dict[str, Any]:
+def mcp_scope_info(app_id: str, user_id: str, project: str | None = None) -> dict[str, Any]:
     # Identity echo for connection doctors: confirms which scope this
     # endpoint pins before any tool call is made (forget-connect probes it).
-    return {"name": "forget-mcp", "user_id": user_id, "client_name": app_id}
+    info = {"name": "forget-mcp", "user_id": user_id, "client_name": app_id}
+    if project:
+        info["project"] = project
+    return info
 
 
 @app.post("/mcp/{app_id}/http/{user_id}", dependencies=[Depends(auth)])
 def mcp_rpc_scoped(
-    app_id: str, user_id: str, payload: Any = Body(...), profile: str | None = None
+    app_id: str,
+    user_id: str,
+    payload: Any = Body(...),
+    profile: str | None = None,
+    project: str | None = None,
 ) -> JSONResponse:
     # Scoped MCP endpoint (same path shape as the hosted gateway): every
     # tool call inherits this user/app scope unless the caller names an
     # entity explicitly — an unscoped local /mcp connection otherwise
     # searches the default scope and misses the user's memories entirely
     # (2026-07-13 dogfooding: a fresh client recalled nothing).
+    # ?project=<key>는 무필터 호출에 프로젝트 층(훅의 layered_filter와 동일)을
+    # 추가로 고정한다 — 공용 서버는 cwd가 없으므로 연결 URL이 프로젝트를 나른다.
     context: dict[str, str] = {"user_id": user_id, "client_name": app_id}
     if profile:
         context["tool_profile"] = profile
+    if project:
+        context["project_key"] = project
     return _mcp_dispatch(payload, context)
 
 

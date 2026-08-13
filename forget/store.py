@@ -4885,7 +4885,11 @@ def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_
     return {"results": [candidates[i] for i in ordered], "recall_layer": layer}
 
 
-def _expand_temporal_neighbors(result: dict[str, Any], project_id: str | None = None) -> dict[str, Any]:
+def _expand_temporal_neighbors(
+    result: dict[str, Any],
+    project_id: str | None = None,
+    filters: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """EM-LLM 이식 (2026-08-11): 회상은 사실만이 아니라 장면을 데려온다.
 
     유사도 검색은 '같은 작업 장면에서 태어난 옆 사실'을 놓친다 — 어휘가 다르면
@@ -4918,6 +4922,11 @@ def _expand_temporal_neighbors(result: dict[str, Any], project_id: str | None = 
     for row in list_memory_dicts(project_id=project_id):
         rid = str(row.get("id") or "")
         if not rid or rid in seen_ids:
+            continue
+        # 이웃도 본검색과 같은 스코프를 통과해야 한다 — 시간 인접성은 점수
+        # 특례이지 경계 특례가 아니다. 필터 없이 돌면 타 사용자·타 프로젝트
+        # 기억이 이웃 자격으로 동승한다 (2026-08-13 검진에서 실측).
+        if filters and not matches_filters(row, filters):
             continue
         metadata = row.get("metadata") or {}
         # 턴-회상과 같은 구조적 제외: 캡처 포인터·task_state·self 격언·정정된 구본.
@@ -6339,6 +6348,10 @@ def _claim_eval_matched(item: dict[str, Any], verification: dict[str, Any]) -> b
     expected_unsupported = item.get("expected_unsupported_count")
     if expected_unsupported is not None and int(expected_unsupported) != int(verification.get("unsupported_count") or 0):
         return False
+    if expected_supported is not None or expected_unsupported is not None:
+        # 개수 기대값을 명시한 항목은 그 일치가 곧 판정이다 — valid까지 요구하면
+        # expected_unsupported_count>0인 음성 케이스가 구조적으로 통과 불가능해진다.
+        return True
     return bool(verification.get("valid"))
 
 

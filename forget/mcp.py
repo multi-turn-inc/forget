@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from typing import Any
 
@@ -990,6 +991,33 @@ def _mcp_default_scope(args: dict[str, Any], context: dict[str, str] | None) -> 
     return scope
 
 
+def _project_layer_filter(project_key: str | None) -> dict[str, Any] | None:
+    """훅(hooks/forget_project.py layered_filter)과 동일한 회상 층.
+
+    이 프로젝트 + 전역층 + 층화 이전에 쓰인 미태깅 레거시. 공용 HTTP 서버는
+    cwd로 프로젝트를 알 수 없으므로, 스코프 엔드포인트의 ?project= 쿼리로
+    연결 등록 시점에 고정된 키가 context["project_key"]로 들어온다.
+    """
+    if not project_key:
+        return None
+    return {
+        "OR": [
+            {"metadata.project": project_key},
+            {"metadata.project": None},
+            {"metadata.scope_layer": "global"},
+        ]
+    }
+
+
+def _filters_reference_project_layer(filters: dict[str, Any]) -> bool:
+    """호출자가 이미 프로젝트 층을 다뤘으면 기본 층을 겹치지 않는다."""
+    try:
+        blob = json.dumps(filters, ensure_ascii=False)
+    except (TypeError, ValueError):
+        return True  # 직렬화 불가면 보수적으로 주입을 포기한다
+    return "metadata.project" in blob or "metadata.scope_layer" in blob
+
+
 def _mcp_scoped_filters(args: dict[str, Any], context: dict[str, str] | None) -> dict[str, Any]:
     filters = args.get("filters")
     filters = dict(filters) if isinstance(filters, dict) else {}
@@ -1006,8 +1034,18 @@ def _mcp_scoped_filters(args: dict[str, Any], context: dict[str, str] | None) ->
         # exactly that. Injecting the default app_id alongside an explicit
         # user_id silently excludes every memory stored without an app_id —
         # this is what made assemble_context return empty capsules over MCP.
-        return {**filters, **explicit_scope}
-    return {**filters, **_mcp_default_scope(args, context)}
+        scoped = {**filters, **explicit_scope}
+    else:
+        scoped = {**filters, **_mcp_default_scope(args, context)}
+    # 프로젝트-고정 연결(?project=)의 무필터 호출에는 훅과 동일한 프로젝트
+    # 층을 태운다 — 이것이 없으면 에이전트의 직접 호출이 타 프로젝트 기억을
+    # 회수한다 (2026-08-13 검진: dilabv2 기억이 forget 세션에 누수). 호출자가
+    # filters로 엔티티나 프로젝트 층을 직접 다루면 이 지점에 오지 않거나 겹치지
+    # 않으므로, 층은 언제나 명시 의도에 진다.
+    layer = _project_layer_filter((context or {}).get("project_key"))
+    if layer and not _filters_reference_project_layer(scoped):
+        scoped["AND"] = [*(scoped.get("AND") or []), layer]
+    return scoped
 
 
 def _require_openmemory_scope(args: dict[str, Any], context: dict[str, str] | None) -> dict[str, str]:
@@ -1317,9 +1355,11 @@ def _dispatch_tool(name: str, arguments: dict[str, Any] | None, context: dict[st
     if name == "search_memories":
         _reject_unknown_args(name, args)
         _validate_search_params(args)
-        result = search_memories({**args, "filters": _mcp_scoped_filters(args, context)})
-        # EM-LLM 이식: 최상위 히트의 시간 이웃 1건 동반 (MEM1_RECALL_TEMPORAL=0으로 끔)
-        return _text_result(_expand_temporal_neighbors(result, args.get("project_id")))
+        scoped_filters = _mcp_scoped_filters(args, context)
+        result = search_memories({**args, "filters": scoped_filters})
+        # EM-LLM 이식: 최상위 히트의 시간 이웃 1건 동반 (MEM1_RECALL_TEMPORAL=0으로 끔).
+        # 이웃도 본검색과 동일한 스코프 필터를 통과해야 한다.
+        return _text_result(_expand_temporal_neighbors(result, args.get("project_id"), filters=scoped_filters))
     if name == "search_memory":
         _reject_unknown_args(name, args)
         scope = _require_openmemory_scope(args, context)
