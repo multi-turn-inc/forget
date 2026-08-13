@@ -28,9 +28,14 @@ from pathlib import Path
 STREAM_DIR = Path.home() / ".forget/proxy/stream"
 TWIN_DIR = Path.home() / ".forget/twin"
 SCORES = TWIN_DIR / "shadow_scores.jsonl"
-STATE = TWIN_DIR / "shadow_state.json"
 TWIN_URL = os.environ.get("TWIN_URL", "http://127.0.0.1:11435/api/chat")  # Spark 터널 기본
 TWIN_MODEL = os.environ.get("TWIN_MODEL", "qwen3.6:27b")
+TWIN_VARIANT = os.environ.get("TWIN_VARIANT", f"prompt-only/{TWIN_MODEL}")
+# 변형별 상태 분리 — 같은 턴을 서로 다른 변형이 각각 채점해야 통일 곡선에서
+# 변형 간 대조가 성립한다. 기본 변형은 기존 파일명을 유지(하위호환).
+_VARIANT_SLUG = "".join(c if c.isalnum() else "-" for c in TWIN_VARIANT)
+STATE = TWIN_DIR / ("shadow_state.json" if "TWIN_VARIANT" not in os.environ
+                    else f"shadow_state.{_VARIANT_SLUG}.json")
 EMB_URL = os.environ.get("EMB_URL", "http://127.0.0.1:11434/api/embed")   # 로컬 ollama
 EMB_MODEL = os.environ.get("EMB_MODEL", "nomic-embed-text")
 MAX_PER_RUN = int(os.environ.get("SHADOW_MAX", "12"))
@@ -69,13 +74,27 @@ def _post(url: str, payload: dict, timeout: int = 300) -> dict:
     return json.loads(urllib.request.urlopen(req, timeout=timeout).read())
 
 
+SYSTEM_PROMPT = "너는 정훈이다. 1인 창업자, forget(로컬 AI 기억 제품)을 만든다. 아래는 네 에이전트의 최신 보고다. 정훈으로서 다음 메시지를 써라 — 짧고 직설적으로, 실제 채팅처럼."
+
+
 def twin_predict(context: str) -> str:
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": context[-1600:]},
+    ]
+    if "/v1/chat/completions" in TWIN_URL:
+        # OpenAI-호환 서빙 (vllm LoRA 모듈 등) — 어댑터 변형은 이 경로로 곡선에 오른다.
+        body = _post(TWIN_URL, {
+            "model": TWIN_MODEL, "messages": messages,
+            "temperature": 0.7, "max_tokens": 150,
+            # Qwen3.5 하이브리드 thinking 차단 — ollama 경로의 think:false와 동치
+            "chat_template_kwargs": {"enable_thinking": False},
+        })
+        choices = body.get("choices") or [{}]
+        return str((choices[0].get("message") or {}).get("content") or "").strip()
     body = _post(TWIN_URL, {
         "model": TWIN_MODEL, "stream": False, "think": False, "keep_alive": "3h",
-        "messages": [
-            {"role": "system", "content": "너는 정훈이다. 1인 창업자, forget(로컬 AI 기억 제품)을 만든다. 아래는 네 에이전트의 최신 보고다. 정훈으로서 다음 메시지를 써라 — 짧고 직설적으로, 실제 채팅처럼."},
-            {"role": "user", "content": context[-1600:]},
-        ],
+        "messages": messages,
         "options": {"temperature": 0.7, "num_predict": 150},
     })
     return str((body.get("message") or {}).get("content") or "").strip()
@@ -155,7 +174,7 @@ def main() -> None:
                # 통일 계기(정훈-예측기 v0): 모든 쌍둥이 버전이 같은 곡선 위에서
                # 비교되도록 변형 식별자를 행마다 남긴다. 어댑터/기억 결합이
                # 붙으면 TWIN_VARIANT로 구별한다 (예: adapter_v2+mem).
-               "variant": os.environ.get("TWIN_VARIANT", f"prompt-only/{TWIN_MODEL}")}
+               "variant": TWIN_VARIANT}
         with SCORES.open("a") as fh:
             fh.write(json.dumps(row, ensure_ascii=False) + "\n")
         done.add(turn["key"])
