@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import json
+import os
 import random
 import re
 import sys
@@ -31,8 +32,6 @@ STREAM_DIR = Path.home() / ".forget/proxy/stream"
 # 쓴다 — 훈련이 본 발화로 판별하면 축자 재현이 가능해 게이트가 관대해진다.
 STREAM_DAY = "2026-08-13"
 OUT = Path.home() / f".forget/twin/discriminator_{os.environ.get('TWIN_MODEL', 'twin_v1')}.jsonl"
-
-import os
 
 TWIN_URL = os.environ.get("TWIN_URL", "http://127.0.0.1:8024/v1/chat/completions")
 TWIN_MODEL = os.environ.get("TWIN_MODEL", "twin_v1")
@@ -62,11 +61,14 @@ def _post(url: str, payload: dict, timeout: int = 300) -> dict:
 
 
 def twin_say(ctx: str) -> str:
-    # 훈련과 동일한 시스템 프롬프트 — 분포 일치가 쌍둥이에게 공정하다.
+    # 기본 = 훈련과 동일한 시스템 프롬프트(분포 일치가 쌍둥이에게 공정).
+    # TWIN_SYSTEM 환경변수는 널 대조용 — 각인 없는 베이스에 길이 지시만 주고
+    # 게이트가 목소리를 재는지(베이스 낙제) 길이만 재는지(베이스도 통과) 가른다.
+    system = os.environ.get("TWIN_SYSTEM", TRAIN_SYSTEM_PROMPT)
     body = _post(TWIN_URL, {
         "model": TWIN_MODEL, "temperature": 0.7, "max_tokens": 150,
         "chat_template_kwargs": {"enable_thinking": False},
-        "messages": [{"role": "system", "content": TRAIN_SYSTEM_PROMPT},
+        "messages": [{"role": "system", "content": system},
                      {"role": "user", "content": ctx[-1600:]}],
     })
     return str((body.get("choices") or [{}])[0].get("message", {}).get("content") or "").strip()
@@ -114,9 +116,14 @@ TRAIN_SYSTEM_PROMPT = "너는 정훈이다. 아래는 어시스턴트의 보고�
 
 
 def load_holdout_pairs() -> list[dict]:
+    # CONTAM을 실배선 (2026-08-14 감사 결함 ①): 스트림 경로용으로 짜였다가
+    # 홀드아웃 경로 전환 때 호출이 누락돼 죽은 코드였다 — 홀드아웃 60쌍 중
+    # 4건(중단 마커·영어 브리프·SSH 설정)이 그대로 통과한 원인.
     items = json.loads(HOLDOUT.read_text())
     return [{"ctx": it["context"], "actual": it["response"], "cls": it.get("cls", "")}
-            for it in items if it.get("context") and it.get("response")]
+            for it in items
+            if it.get("context") and it.get("response")
+            and not CONTAM.search(str(it["response"])[:300])]
 
 
 def main() -> None:
