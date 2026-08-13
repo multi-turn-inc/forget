@@ -6,6 +6,10 @@
 
 DAEMON="$HOME/.forget/twin/shadow_daemon.py"
 
+# 주기 겹침 방지 (k회 표집으로 주기가 길어질 수 있음)
+exec 9>/tmp/shadow-cycle.lock
+flock -n 9 || exit 0
+
 /usr/bin/python3 "$DAEMON" || echo "[cycle] baseline 실패 $(date '+%F %T')"
 
 TWIN_URL="http://127.0.0.1:8024/v1/chat/completions" \

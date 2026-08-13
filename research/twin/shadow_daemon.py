@@ -39,7 +39,11 @@ STATE = TWIN_DIR / ("shadow_state.json" if "TWIN_VARIANT" not in os.environ
                     else f"shadow_state.{_VARIANT_SLUG}.json")
 EMB_URL = os.environ.get("EMB_URL", "http://127.0.0.1:11434/api/embed")   # 로컬 ollama
 EMB_MODEL = os.environ.get("EMB_MODEL", "nomic-embed-text")
-MAX_PER_RUN = int(os.environ.get("SHADOW_MAX", "12"))
+MAX_PER_RUN = int(os.environ.get("SHADOW_MAX", "6"))
+# 턴당 k회 표집 (2026-08-14 5차 결함 처방): 온도 0.7 단발 뽑기는 같은 턴의
+# dir_match가 71% 확률로 뒤집혔다 — k회 평균(sim)·다수결(방향)로 안정화.
+# 측정 대상은 "모델의 전형적 출력" 유지(온도 불변). k=5, 소음 √5배 감소.
+SAMPLES_PER_TURN = max(1, int(os.environ.get("SHADOW_K", "5")))
 
 NOISE = re.compile(r"\[forget 회상|\[forget 캡슐|<command-|<local-command|<bash-input|<system-reminder|Caveat:|\[SYSTEM NOTIFICATION|<task-notification|The user (stepped away|sent a new message)|Recap in under|This is how Claude Code surfaces|\[SUGGESTION MODE|Suggest what the user might naturally type", re.I)
 CORRECT = re.compile(r"^(아니|아냐|안 ?돼|틀렸|잘못|하지 ?마|왜 |그게 아니|말고|어휴|아씨)", re.U)
@@ -160,19 +164,33 @@ def main() -> None:
             continue
         if scored >= MAX_PER_RUN:
             break
-        try:
-            pred = twin_predict(turn["ctx"])
-        except Exception as exc:
-            print(f"[skip] twin 생성 실패: {exc}", file=sys.stderr)
+        preds, engine_down = [], False
+        for _ in range(SAMPLES_PER_TURN):
+            try:
+                p = twin_predict(turn["ctx"])
+            except Exception as exc:
+                print(f"[skip] twin 생성 실패: {exc}", file=sys.stderr)
+                engine_down = True
+                break
+            if p:
+                preds.append(p)
+        if engine_down:
             break  # 엔진 다운 — 다음 주기에
-        if not pred:
+        if not preds:
             done.add(turn["key"])
             continue
-        sim = embed_sim(pred, turn["actual"])
-        d_pred, d_act = direction(pred), direction(turn["actual"])
+        sims = [s for s in (embed_sim(p, turn["actual"]) for p in preds) if s >= 0]
+        sim = sum(sims) / len(sims) if sims else -1.0
+        dirs_pred = [direction(p) for p in preds]
+        d_pred = max(set(dirs_pred), key=dirs_pred.count)  # 다수결
+        d_act = direction(turn["actual"])
+        pred = preds[0]
         row = {"ts": turn["ts"], "scored_at": time.strftime("%F %T"),
                "sim": round(sim, 4), "dir_pred": d_pred, "dir_actual": d_act,
                "dir_match": d_pred == d_act,
+               "k": len(preds),
+               "dir_votes": {d: dirs_pred.count(d) for d in set(dirs_pred)},
+               "sim_std": round((sum((s - sim) ** 2 for s in sims) / len(sims)) ** 0.5, 4) if len(sims) > 1 else 0.0,
                "pred_head": pred[:160], "actual_head": turn["actual"][:160],
                "ctx": turn["ctx"][-1600:], "actual": turn["actual"],
                "engine": TWIN_MODEL,

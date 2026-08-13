@@ -148,7 +148,52 @@ HOLDOUT = Path.home() / ".forget/twin/twin_holdout.json"
 TRAIN_SYSTEM_PROMPT = "너는 정훈이다. 아래는 어시스턴트의 보고다. 정훈으로서 반응하라."
 
 
+# 신선 홀드아웃 채굴 (확증 런용): HOLDOUT_STREAM_DAYS="2026-08-13,2026-08-14"
+# 형식 — 훈련 컷오프 이후 날짜의 프록시 스트림에서 (직전 어시스턴트, 실발화)
+# 유니크 쌍을 캔다. 마커는 위치 불문 분리(꼬리 캐비앗이 진짜 발화를 통째
+# 기각하던 8/13 결함의 수리판) 후 머리만 취하고, 머리에 CONTAM을 적용.
+_MARKERS = re.compile(
+    r"<local-command-caveat>|<system-reminder>|\[SYSTEM NOTIFICATION"
+    r"|<task-notification|\[forget 회상|\[forget 캡슐|<command-name>|SessionStart:"
+)
+
+
+def mine_fresh_pairs(days: list[str]) -> list[dict]:
+    seen, pool = set(), []
+    for day in days:
+        for f in sorted(STREAM_DIR.glob(f"{day}*.jsonl")):
+            for line in f.open():
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                msgs = row.get("request_messages") or []
+                li = max((i for i, m in enumerate(msgs) if m.get("role") == "user"), default=-1)
+                if li < 0:
+                    continue
+                head = _MARKERS.split(_text(msgs[li].get("content")))[0].strip()
+                if not head or len(head) < 6 or CONTAM.search(head[:300]):
+                    continue
+                key = head[:80]
+                if key in seen:
+                    continue
+                ctx = ""
+                for m in reversed(msgs[:li]):
+                    if m.get("role") == "assistant":
+                        ctx = _text(m.get("content"))
+                        if ctx.strip():
+                            break
+                if not ctx.strip():
+                    continue
+                seen.add(key)
+                pool.append({"ctx": ctx, "actual": head[:800]})
+    return pool
+
+
 def load_holdout_pairs() -> list[dict]:
+    fresh_days = str(os.environ.get("HOLDOUT_STREAM_DAYS", "")).strip()
+    if fresh_days:
+        return mine_fresh_pairs([d.strip() for d in fresh_days.split(",") if d.strip()])
     # CONTAM을 실배선 (2026-08-14 감사 결함 ①): 스트림 경로용으로 짜였다가
     # 홀드아웃 경로 전환 때 호출이 누락돼 죽은 코드였다 — 홀드아웃 60쌍 중
     # 4건(중단 마커·영어 브리프·SSH 설정)이 그대로 통과한 원인.
