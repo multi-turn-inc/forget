@@ -32,6 +32,8 @@ STREAM_DIR = Path.home() / ".forget/proxy/stream"
 # 쓴다 — 훈련이 본 발화로 판별하면 축자 재현이 가능해 게이트가 관대해진다.
 STREAM_DAY = "2026-08-13"
 _OUT_MODE = ".lenmatch" if str(os.environ.get("TWIN_MATCH_LEN", "")).strip().lower() in {"1", "true", "on"} else ""
+if str(os.environ.get("HOLDOUT_STREAM_DAYS", "")).strip():
+    _OUT_MODE += ".fresh"  # 신선-채굴 모드도 별도 파일 — 2026-08-14 두 번째 덮어쓰기 사고 후 완결
 # 모드 접미사 필수 (2026-08-14): 접미사 없이 TWIN_MODEL만으로 키웠다가
 # 길이-정합 재실행이 1차 널 원시 데이터를 시작 시점에 덮었다 — 같은 모델의
 # 다른 실험 조건은 다른 파일이어야 원장이 산다.
@@ -209,7 +211,9 @@ def main() -> None:
     pool = load_holdout_pairs()
     rng.shuffle(pool)
     pool = pool[:N_PAIRS]
-    print(f"쌍 재료 {len(pool)}개 (twin_holdout.json — 훈련 미접촉 시간 꼬리)", file=sys.stderr)
+    fresh = str(os.environ.get("HOLDOUT_STREAM_DAYS", "")).strip()
+    src = f"신선 스트림 {fresh}" if fresh else "twin_holdout.json — 훈련 미접촉 시간 꼬리"
+    print(f"쌍 재료 {len(pool)}개 ({src})", file=sys.stderr)
 
     correct = 0
     judged = 0
