@@ -1,0 +1,29 @@
+{
+  "built_at": "2026-08-14T08:07:57+0900",
+  "source_files": [
+    "2026-08-12.jsonl",
+    "2026-08-13.jsonl"
+  ],
+  "train_n": 11314,
+  "holdout_n": 60,
+  "response_chars": {
+    "median": 148,
+    "p10": 41,
+    "p90": 1213
+  },
+  "filters": {
+    "min_chars": 20,
+    "max_chars": 6000,
+    "target_contam": "\\[Request interrupted|\\[SUGGESTION MODE|SIMULATION|<system-reminder|API Error|no content yet"
+  },
+  "stats": {
+    "rows": 1165,
+    "assistant_turns": 21087,
+    "dropped_short": 508,
+    "dropped_long": 8,
+    "dropped_contam": 61,
+    "dropped_dup": 9129,
+    "transcript_files": 2635
+  },
+  "gate_constraint": "원점 판별기는 보강판(길이-통제/묶음, n>=40, 널 선등재)으로만"
+}
