@@ -37,6 +37,29 @@ CONTAM = re.compile(
 )
 
 
+def _majority_share(dirs: list) -> float:
+    """항상-다수클래스 예측기의 정확도 — 이 곡선의 널 기준선."""
+    if not dirs:
+        return 0.0
+    from collections import Counter
+    return Counter(dirs).most_common(1)[0][1] / len(dirs)
+
+
+def _class_recall(items: list[dict], cls: str) -> float:
+    sub = [i for i in items if i.get("dir_actual") == cls]
+    if not sub:
+        return -1.0  # 해당 클래스 표본 없음
+    return sum(1 for i in sub if i.get("dir_match")) / len(sub)
+
+
+def _balanced_acc(items: list[dict]) -> float:
+    """클래스별 재현율의 평균 — 다수클래스 붕괴에 속지 않는 방향 지표."""
+    classes = sorted({i.get("dir_actual") for i in items if i.get("dir_actual")})
+    recalls = [_class_recall(items, c) for c in classes]
+    recalls = [r for r in recalls if r >= 0]
+    return sum(recalls) / len(recalls) if recalls else 0.0
+
+
 def load_rows() -> list[dict]:
     rows = []
     for line in SCORES.open():
@@ -54,6 +77,16 @@ def main() -> None:
     clean, dirty = [], []
     for r in rows:
         (dirty if CONTAM.search(str(r.get("actual") or "")[:300]) else clean).append(r)
+
+    # 소급 중복 제거 (2026-08-14 4차 결함): 데몬의 done 키가 비결정 hash()라
+    # 매 주기 같은 턴을 재채점했다 — 원장은 append-only로 두고 집계에서
+    # (변형, ts, 발화머리) 기준 최신 1건만 취한다.
+    uniq: dict[tuple, dict] = {}
+    for r in clean:
+        v = r.get("variant") or f"prompt-only/{r.get('engine', '?')}"
+        uniq[(v, str(r.get("ts")), str(r.get("actual") or "")[:80])] = r
+    dup_dropped = len(clean) - len(uniq)
+    clean = list(uniq.values())
 
     # 변형×일 곡선 (변형 필드가 없는 구행은 engine으로 소급 식별)
     buckets: dict[tuple[str, str], list[dict]] = defaultdict(list)
@@ -73,11 +106,42 @@ def main() -> None:
                 "variant": variant, "day": day, "n": n,
                 "sim_mean": round(sum(sims) / max(1, len(sims)), 4),
                 "dir_acc": round(sum(dirm) / max(1, len(dirm)), 4),
+                # 널 기준선 의무 (2026-08-14 3차 감사): 방향 일치의 다수클래스
+                # 널이 0.75라 raw dir_acc는 오도한다 — 널·초과분·균형정확도·
+                # 승인 재현율을 병기해야 곡선이 읽힌다.
+                "dir_null": round(_majority_share(dirs), 4),
+                "dir_excess": round(sum(dirm) / max(1, len(dirm)) - _majority_share(dirs), 4),
+                "balanced_acc": round(_balanced_acc(items), 4),
+                "approve_recall": round(_class_recall(items, "approve"), 4),
                 # W-트랙 A/B 표면 v0: 정훈 실발화의 방향 분포 —
                 # 교정률(어시스턴트 산출이 교정을 유발한 비율)·승인률.
                 "correct_rate": round(dirs.count("correct") / max(1, n), 4),
                 "approve_rate": round(dirs.count("approve") / max(1, n), 4),
             }, ensure_ascii=False) + "\n")
+
+    # 변형별 널-보정 요약 + 공통-턴 짝지은 표 (3차 감사 처방)
+    by_variant: dict[str, dict[str, dict]] = {}
+    for r in clean:
+        v = r.get("variant") or f"prompt-only/{r.get('engine', '?')}"
+        by_variant.setdefault(v, {})[str(r.get("ts"))] = r
+    print("\n=== 변형별 (널-보정) ===", file=sys.stderr)
+    for v, d in sorted(by_variant.items()):
+        items = list(d.values())
+        dirs_v = [i.get("dir_actual") for i in items]
+        acc = sum(1 for i in items if i.get("dir_match")) / max(1, len(items))
+        null = _majority_share(dirs_v)
+        print(f"  {v}: n={len(items)} dir_acc={acc:.3f} (널 {null:.3f}, 초과 {acc-null:+.3f}) "
+              f"균형={_balanced_acc(items):.3f} 승인재현={_class_recall(items, 'approve'):.3f}",
+              file=sys.stderr)
+    if len(by_variant) >= 2:
+        common_ts = set.intersection(*(set(d) for d in by_variant.values()))
+        print(f"  공통 턴 {len(common_ts)}건"
+              + (" — 순위 판정 불가 (n<40)" if len(common_ts) < 40 else ""), file=sys.stderr)
+        for v, d in sorted(by_variant.items()):
+            sub = [d[t] for t in common_ts]
+            if sub:
+                acc = sum(1 for i in sub if i.get("dir_match")) / len(sub)
+                print(f"    {v}: 방향={acc:.3f} 균형={_balanced_acc(sub):.3f}", file=sys.stderr)
 
     sims = [r["sim"] for r in clean if r.get("sim", -1) >= 0]
     dirm = [r["dir_match"] for r in clean if "dir_match" in r]
@@ -86,6 +150,7 @@ def main() -> None:
         "total_rows": len(rows),
         "contaminated": len(dirty),
         "contamination_rate": round(len(dirty) / max(1, len(rows)), 4),
+        "duplicates_dropped": dup_dropped,
         "clean_n": len(clean),
         "clean_sim_mean": round(sum(sims) / max(1, len(sims)), 4),
         "clean_dir_acc": round(sum(dirm) / max(1, len(dirm)), 4),

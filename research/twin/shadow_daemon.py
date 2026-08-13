@@ -17,6 +17,7 @@ v0 설계 결정:
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -138,7 +139,11 @@ def iter_turns():
                         break
             if not ctx.strip():
                 continue
-            yield {"key": f"{f.name}:{row.get('ts','')}:{hash(user_t[:80]) & 0xffffffff:08x}",
+            # 결정론적 해시 필수 (2026-08-14): 내장 hash()는 프로세스별 솔트로
+            # 매 주기 done 키가 전부 달라져 같은 턴을 무한 재채점했다 —
+            # 밤새 '누적 636점'의 실체는 유니크 12~18턴의 반복이었다.
+            digest = hashlib.md5(user_t[:80].encode("utf-8", "ignore")).hexdigest()[:8]
+            yield {"key": f"{f.name}:{row.get('ts','')}:{digest}",
                    "ctx": ctx, "actual": user_t[:800], "ts": row.get("ts", "")}
 
 
