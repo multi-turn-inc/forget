@@ -31,7 +31,11 @@ STREAM_DIR = Path.home() / ".forget/proxy/stream"
 # 홀드아웃 규율: twin_v1 훈련 컷오프(2026-08-12 밤) 이후의 발화만 쌍 재료로
 # 쓴다 — 훈련이 본 발화로 판별하면 축자 재현이 가능해 게이트가 관대해진다.
 STREAM_DAY = "2026-08-13"
-OUT = Path.home() / f".forget/twin/discriminator_{os.environ.get('TWIN_MODEL', 'twin_v1')}.jsonl"
+_OUT_MODE = ".lenmatch" if str(os.environ.get("TWIN_MATCH_LEN", "")).strip().lower() in {"1", "true", "on"} else ""
+# 모드 접미사 필수 (2026-08-14): 접미사 없이 TWIN_MODEL만으로 키웠다가
+# 길이-정합 재실행이 1차 널 원시 데이터를 시작 시점에 덮었다 — 같은 모델의
+# 다른 실험 조건은 다른 파일이어야 원장이 산다.
+OUT = Path.home() / f".forget/twin/discriminator_{os.environ.get('TWIN_MODEL', 'twin_v1')}{_OUT_MODE}.jsonl"
 
 TWIN_URL = os.environ.get("TWIN_URL", "http://127.0.0.1:8024/v1/chat/completions")
 TWIN_MODEL = os.environ.get("TWIN_MODEL", "twin_v1")
