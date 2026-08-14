@@ -30,11 +30,17 @@ from pathlib import Path
 
 HOLDOUT = Path(__file__).resolve().parent / "persona_holdout_v0.json"
 OUT_DIR = Path.home() / ".forget/twin"
-NULLS = OUT_DIR / "persona_gate_v0.nulls.json"
-RESULTS = OUT_DIR / "persona_gate_v0.results.jsonl"
+_CELL_SUFFIX = ""  # 아래에서 CELL 정의 후 재설정
 
 PERSONA_URL = "http://127.0.0.1:8024/v1/chat/completions"
-PERSONA_MODEL = "persona_v0"
+PERSONA_MODEL = os.environ.get("PERSONA_MODEL", "persona_v0")
+# P37 2x2: 기억 주입 셀 (MEM_INJECT=1) — 생성 전 forget 회상을 시스템에 동승.
+# 시간여행 컷오프 필수: 쌍의 ts 이전 기억만 (created_at < ts).
+MEM_INJECT = os.environ.get("MEM_INJECT") == "1"
+CELL = os.environ.get("PERSONA_GATE_CELL", PERSONA_MODEL + ("+mem" if MEM_INJECT else ""))
+_slug = "".join(c if c.isalnum() else "-" for c in CELL)
+NULLS = OUT_DIR / f"persona_gate_v0.{_slug}.nulls.json"
+RESULTS = OUT_DIR / f"persona_gate_v0.{_slug}.results.jsonl"
 JUDGE_URL = "http://127.0.0.1:11435/api/chat"
 JUDGE_MODEL = "qwen3.6:27b"
 SYS = "너는 정훈과 함께 forget을 만드는 에이전트다. 아래는 정훈의 메시지다. 너로서 응답하라."
@@ -63,21 +69,41 @@ def lang(s: str) -> str:
     return "ko" if r >= 0.30 else ("en" if r < 0.15 else "mixed")
 
 
-def persona_say(ctx: str, max_tokens: int) -> str:
+def recall_block(ctx: str, ts: str) -> str:
+    """P37 기억 셀: 쌍의 시각 이전 기억 top-6을 시스템에 동승 (시간누출 봉쇄)."""
+    if not MEM_INJECT:
+        return ""
+    os.environ.setdefault("MEM1_DB_PATH", str(Path.home() / ".forget/forget.sqlite3"))
+    try:
+        from forget import store
+        filters = {"AND": [{"user_id": "junghunkim"}, {"created_at": {"lt": ts}}]} if ts else {"user_id": "junghunkim"}
+        res = store.search_memories({"query": ctx[-400:], "filters": filters,
+                                     "top_k": 6, "threshold": 0}, project_id="proj_local")
+        mems = [str(r.get("memory") or "")[:200] for r in (res.get("results") or [])[:6]]
+        mems = [m for m in mems if m]
+    except Exception as exc:
+        print(f"[warn] 회상 실패: {exc}", file=sys.stderr)
+        return ""
+    if not mems:
+        return ""
+    return "\n\n[기억 — 이전에 있었던 일들]\n" + "\n".join(f"- {m}" for m in mems)
+
+
+def persona_say(ctx: str, max_tokens: int, mem: str = "") -> str:
     body = _post(PERSONA_URL, {
         "model": PERSONA_MODEL, "temperature": 0.7, "max_tokens": max_tokens,
         "chat_template_kwargs": {"enable_thinking": False},
-        "messages": [{"role": "system", "content": SYS},
+        "messages": [{"role": "system", "content": SYS + mem},
                      {"role": "user", "content": ctx[-1600:]}],
     })
     return str((body.get("choices") or [{}])[0].get("message", {}).get("content") or "").strip()
 
 
-def persona_say_matched(ctx: str, target_chars: int) -> str:
+def persona_say_matched(ctx: str, target_chars: int, mem: str = "") -> str:
     cap = max(12, target_chars // 2 + 12)
     best, best_gap = "", 10 ** 9
     for _ in range(MATCH_TRIES):
-        fake = persona_say(ctx, cap)
+        fake = persona_say(ctx, cap, mem)
         if not fake:
             continue
         gap = abs(len(fake) - target_chars)
@@ -128,8 +154,9 @@ def main() -> None:
     gen_pairs = []
     for item in pool:
         real = str(item["response"])[:CAP]
+        mem = recall_block(item["context"], str(item.get("ts") or ""))
         try:
-            fake = persona_say_matched(item["context"], len(real))
+            fake = persona_say_matched(item["context"], len(real), mem)
         except Exception as exc:
             print(f"[skip] 생성 실패: {exc}", file=sys.stderr)
             continue
@@ -198,7 +225,7 @@ def main() -> None:
         "same_lang_subset": {"n": same_lang_n,
                              "rate": round(same_lang_correct / max(1, same_lang_n), 4)},
         "verdict": verdict, "nulls": str(NULLS), "out": str(RESULTS),
-        "persona": PERSONA_MODEL, "judge": JUDGE_MODEL, "cap_chars": CAP,
+        "persona": PERSONA_MODEL, "cell": CELL, "mem_inject": MEM_INJECT, "judge": JUDGE_MODEL, "cap_chars": CAP,
     }, ensure_ascii=False, indent=2))
 
 
