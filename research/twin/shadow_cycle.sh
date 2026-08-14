@@ -6,9 +6,15 @@
 
 DAEMON="$HOME/.forget/twin/shadow_daemon.py"
 
-# 주기 겹침 방지 (k회 표집으로 주기가 길어질 수 있음)
-exec 9>/tmp/shadow-cycle.lock
-flock -n 9 || exit 0
+# 주기 겹침 방지 (k회 표집으로 주기가 길어질 수 있음).
+# flock은 macOS에 없다 (2026-08-14 결함 ⑧: 08:06~11:0x 전 주기 즉사) —
+# mkdir 원자성 락 + 60분 초과 시 고아 락 회수.
+LOCKDIR=/tmp/shadow-cycle.lock.d
+if [ -d "$LOCKDIR" ] && [ -n "$(find "$LOCKDIR" -maxdepth 0 -mmin +60 2>/dev/null)" ]; then
+  rmdir "$LOCKDIR" 2>/dev/null
+fi
+if ! mkdir "$LOCKDIR" 2>/dev/null; then exit 0; fi
+trap 'rmdir "$LOCKDIR" 2>/dev/null' EXIT
 
 /usr/bin/python3 "$DAEMON" || echo "[cycle] baseline 실패 $(date '+%F %T')"
 
