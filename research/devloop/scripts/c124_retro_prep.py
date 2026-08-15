@@ -15,16 +15,23 @@
 c122의 무번호 24 vs c123의 25는 어느 쪽이 틀린 게 아니라 **규칙이 없어 대조가
 원리적으로 불가능**했다. 그래서 아래 세 절의 계수는 모두 규칙을 함께 인쇄한다.
 
-거짓 양성 회피 (c123 관측 63 상속 금지)
---------------------------------------
+필드 직독으로의 전환 (c127, 관측 71 수용 기준 ③)
+------------------------------------------------
+**v1·v2 두 추측 규칙은 대차대조의 산출 경로에서 폐기됐다.** c127이 41건 전수에
+`- 상태:` 필드를 소급 부여했으므로(`c127_assign_status.py`가 부여 표 = 감사 원본),
+대차대조는 이제 **필드를 직독**한다 — 추측이 없으므로 미감사도 없다.
+
+v1·v2는 **역사 계기로만** 남는다: §1-B의 폐기 정산(전수 오류율)을 한 번 내기
+위해서다. c124는 불일치 17건만 손 판정하고 일치 24건을 미감사로 남겨 오류율을
+**하한**(v1 ≥ 34.1% · v2 ≥ 19.5%)으로만 공표할 수 있었다. 이제 41/41이 감사됐으므로
+그 하한이 실제로 얼마나 하한이었는지가 계산 가능하다. 이 정산 이후 v1·v2를 산출
+경로로 되살리지 말 것 — 되살리면 관측 71이 다시 열린다.
+
+거짓 양성 회피 (c123 관측 63 상속 금지 — 역사 계기 v1/v2에만 해당)
+-----------------------------------------------------------------
 관측 63은 처분 판정을 격발어 존재만으로 내려 부정문("…로 닫지 않는다")을
-처분으로 오독한 사고다. 이 계기는 그 기전을 상속하지 않기 위해:
-  (1) 판정 격발어를 **절 전체가 아니라 표지 있는 줄에서만** 찾는다
-      (`- 결과:` / `- **판정 …**:` / `- 처분 …` 계열).
-  (2) 지지·반증 격발어가 **한 예측 안에서 공존**하면 자동 판정하지 않고
-      SPLIT으로 인쇄해 사람 눈에 넘긴다.
-  (3) 표지 줄이 없으면 시계 줄로 강등 분류하고, 그것도 없으면 UNRESOLVED.
-즉 이 계기는 **열거와 증거 인쇄**를 하고, 애매한 것은 판정하지 않는다.
+처분으로 오독한 사고다. v1/v2는 그 기전을 상속하지 않으려 표지 줄 한정·SPLIT
+보류·시계 강등을 뒀으나, **그 방어로도 부족했다는 것이 관측 71의 실측**이다.
 
 사용: .venv/bin/python research/devloop/scripts/c124_retro_prep.py
 """
@@ -45,17 +52,20 @@ AUDITS = DEVLOOP / "audits"
 AMENDS = DEVLOOP / "amendments"
 
 # ── 계수 규칙 (성문) ────────────────────────────────────────────────────────
-RULE_PRED = """[계수 규칙 — 예측]
-  단위    = P-식별자 1개. 서식지 둘: (H1) 문서 상단 표의 `| Pn |` 행,
-            (H2) `## Pn — …` 절. 둘 다 있으면 절이 정본, 표행은 부기로만 센다.
-  중복    = 같은 P-식별자가 절 2개 이상이면 DUPLICATE로 별도 인쇄(분모에서 빼지 않음).
-  판정근거 = 절 안에서 정규식 `^-\\s*\\*{0,2}(결과|판정|처분)` 에 걸리는 **표지 줄만**.
-            산문 문단은 근거로 쓰지 않는다(관측 63 기전 회피).
-  상태    = 표지 줄의 격발어로 분류. 지지계열={성립,적중,지지,확정,인정}
-            반증계열={반증,기각,불성립} 폐기계열={폐기,표본 부재,마감}
-            공존 시 SPLIT(자동 판정 안 함). 표지 줄 없으면 시계 줄
-            (`^-\\s*\\*{0,2}시계`)로 강등: 미시작/미가동 → CLOCK_UNSTARTED,
-            가동 → CLOCK_RUNNING. 시계 줄도 없으면 UNRESOLVED."""
+RULE_PRED = """[계수 규칙 — 예측 (c127 개정: 추측 → 필드 직독)]
+  단위    = P-식별자 1개. 서식지 둘: (H1) 상단 표의 `| Pn |` 행(상태 열),
+            (H2) `## Pn — …` 절(헤딩 직후 `- 상태:` 줄). 총 41 = 절 38 + 표행 3.
+  중복    = `P7`은 번호 충돌로 절이 2개다(회계 / reembed). 둘 다 독립 단위로 센다 —
+            분모에서 빼지 않으며 개명(P7-2)은 c35 사람 게이트.
+  상태    = **절의 `- 상태:` 필드를 그대로 읽는다.** 산문 추론·격발어 매칭 없음.
+            필드가 없으면 그것이 곧 결함이며 MISSING으로 인쇄하고 분모에 남긴다
+            (숨기지 않는다). 현재 MISSING 0건 = 전수 감사 가능.
+  팔      = `(a) X · (b) Y` 는 팔별 값, 값 하나면 전 팔 동일. 팔은 개별 계상하되
+            **절 단위 계수와 팔 단위 계수를 갈라 인쇄**한다(합산 금지 — 절 41건과
+            팔 96건은 다른 분모다).
+  어휘    = amendment-125 §4-R10 11값 + 하자 `무기재` + c127 전수 배정이 발견한 2값
+            (`비예측`·`마감-미가동`, 사유는 c127_assign_status.py 헤더).
+            어휘 밖 값은 하드 에러 — 조용히 삼키면 관측 71이 값 칸으로 재발한다."""
 
 RULE_FRIC = """[계수 규칙 — 마찰/관측]
   단위    = frictions.md의 `^## ` 헤딩 1개(= 1절).
@@ -130,9 +140,63 @@ ADJUDICATED: dict[str, tuple[str, bool, bool]] = {
     "P30": ("혼합(예측 존속 + (a) 표본 부재 마감)", False, False),
 }
 
-# 어휘 밖 상태 — 두 규칙 다 원리적으로 표현할 수 없는 처분들
+# 어휘 밖 상태 — 두 규칙 다 원리적으로 표현할 수 없는 처분들 (c124 발견, R10이 흡수)
 VOCAB_GAP = ["무판정 마감(P33)", "표본 부재 마감(P30)", "전제 소멸(P10)",
              "문면 성립·귀속 불가(P8)"]
+
+# ── 처분 어휘 (c127) ───────────────────────────────────────────────────────
+# amendment-125 §4-R10의 11값 + 하자 라벨 1 + c127 전수 배정 발견분 2.
+VOCAB_R10 = ("지지", "반증", "부분", "시계-미시작", "시계-가동", "마감-표본부재",
+             "마감-무판정", "마감-기한도과", "마감-조기", "전제소멸", "폐기")
+VOCAB_DEFECT = ("무기재",)
+VOCAB_C127 = ("비예측", "마감-미가동")
+VOCAB = VOCAB_R10 + VOCAB_DEFECT + VOCAB_C127
+
+STATUS_RE = re.compile(r"^-\s*상태:\s*(.+?)\s*$")
+ARM_RE = re.compile(r"^\((?P<arm>[a-z]|비)\)\s*(?P<val>.+)$")
+
+# c124 손 판정 17건의 값을 R10 어휘로 사상 — 대조는 같은 자로 재야 성립한다.
+# (c124는 자기 파서의 라벨을 썼고 R10 어휘는 c125에 생겼다.)
+HAND_TO_R10 = {
+    "CLOCK_UNSTARTED": "시계-미시작",
+    "CLOCK_RUNNING": "시계-가동",
+    "UNRESOLVED(판정줄 부재)": "무기재",
+    "PENDING(달력 시계 09-10)": "시계-가동",
+    "PENDING→외부 판정(커밋 4ed88f1, 대장 미반영)": "무기재",
+    "DISCARDED(기한 도과 강제 마감)": "마감-기한도과",
+    "DISCARDED(표본 2로 마감)": "마감-조기",
+    "DISCARDED(표본 1로 마감, 무도장)": "마감-조기",
+    "DISCARDED(처분=폐기, 무도장)": "폐기",
+    "PARTIAL(문면 성립·처치 귀속 불가)": "부분",
+    "전제 소멸(예측 자체가 무효화)": "전제소멸",
+    "무판정 마감(지지도 반증도 아님)": "마감-무판정",
+    "혼합(예측 존속 + (a) 표본 부재 마감)": "마감-표본부재",
+}
+
+# v1/v2(역사 계기)의 라벨 → R10 어휘. SPLIT·MARK_NO_TOKEN은 값을 내지 못하므로 사상 없음
+# (= 어떤 필드와도 일치하지 않는다. 이 규칙을 인쇄해 채점 기준을 노출한다).
+GUESS_TO_R10 = {
+    "SUPPORTED": "지지", "REFUTED": "반증", "DISCARDED": "폐기",
+    "CLOCK_UNSTARTED": "시계-미시작", "CLOCK_RUNNING": "시계-가동",
+    "UNRESOLVED": "무기재",
+}
+
+
+def parse_status(raw: str) -> tuple[list[tuple[str, str]], list[str]]:
+    """`- 상태:` 원문 → ([(팔, 값)], 오류). 팔 없으면 팔 이름은 '-'."""
+    body = raw.replace("`", "").strip()
+    parts = [p.strip() for p in body.split("·") if p.strip()]
+    arms: list[tuple[str, str]] = []
+    errs: list[str] = []
+    for p in parts:
+        m = ARM_RE.match(p)
+        arm, val = (m.group("arm"), m.group("val").strip()) if m else ("-", p)
+        if val not in VOCAB:
+            errs.append(f"어휘 밖 값 {val!r}")
+        arms.append((arm, val))
+    if len(arms) > 1 and any(a == "-" for a, _ in arms):
+        errs.append("팔이 둘 이상인데 라벨 없는 값이 섞였다")
+    return arms, errs
 
 
 def _read(p: Path) -> list[str]:
@@ -154,9 +218,16 @@ def predictions() -> dict:
                 break
         sections.append((pid, i, end))
 
+    # 표 서식지는 **등록 표 하나뿐**이다 — 첫 `## ` 헤딩 이전 구간.
+    # (c127 수리: 종전 규칙은 문서 전체의 `| Pn |` 행을 훑어 「게이트 종속 상태표」
+    #  (c45 스냅샷 부기)의 `| P2 |` 행까지 등록으로 셌다. 그 결과 계기는 42건을
+    #  열거하는데 c124 산문과 공표 백분율은 전부 41을 분모로 썼고, 셋 다 어긋난 채
+    #  c124→c126 3사이클을 갔다. 스냅샷은 등록이 아니므로 41이 옳다 —
+    #  즉 틀린 것은 산문이 아니라 계기였고, R9가 막으려던 바로 그 형태다.)
+    first_head = next((i for i, l in enumerate(lines) if l.startswith("## ")), len(lines))
     table_only = []
     seen_sec = {pid for pid, _, _ in sections}
-    for i, l in enumerate(lines):
+    for i, l in enumerate(lines[:first_head]):
         m = PROW_RE.match(l)
         if m and m.group(1) not in seen_sec:
             table_only.append((m.group(1), i))
@@ -185,41 +256,83 @@ def predictions() -> dict:
     recs = []
     for pid, s, e in sections:
         body = lines[s:e]
+        # ── 정본 경로: `- 상태:` 필드 직독 (c127) ──────────────────────
+        field = next((m.group(1) for l in body if (m := STATUS_RE.match(l.strip()))), None)
+        arms, errs = parse_status(field) if field is not None else ([], ["필드 부재"])
+        # ── 역사 경로: v1/v2 (폐기 정산 전용, 산출에 쓰지 않는다) ──────
         marks = [l.strip() for l in body if MARK_RE.match(l.strip())]
         clocks = [l.strip() for l in body if CLOCK_RE.match(l.strip())]
         v_marks = [l for l in marks if _is_verdict_line(l)]
-        status = _classify(marks, clocks)          # v1 (나이브)
-        status2 = _classify(v_marks, clocks)       # v2 (도장 판별)
-        ev = (v_marks[-1] if v_marks else (marks[-1] if marks else
-              (clocks[-1] if clocks else "")))[:150]
-        recs.append({"id": pid, "line": s + 1, "status": status, "status2": status2,
-                     "marks": len(marks), "vmarks": len(v_marks), "evidence": ev,
+        recs.append({"id": pid, "line": s + 1, "habitat": "절",
+                     "field": field, "arms": arms, "errs": errs,
+                     "status": _classify(marks, clocks),
+                     "status2": _classify(v_marks, clocks),
                      "title": lines[s].lstrip("# ").strip()[:90]})
 
     for pid, i in table_only:
         cell = lines[i].split("|")
-        last = cell[-2].strip() if len(cell) >= 3 else ""
-        has_sup = any(t in last for t in SUP)
-        has_ref = any(t in last for t in REF)
-        if has_sup and has_ref:
-            status = "SPLIT"
-        elif has_ref:
-            status = "REFUTED"
-        elif has_sup:
-            status = "SUPPORTED"
-        elif "대기" in last:
-            status = "CLOCK_RUNNING"
-        else:
-            status = "UNRESOLVED"
-        recs.append({"id": pid, "line": i + 1, "status": status, "status2": status,
-                     "marks": 0, "vmarks": 0,
-                     "evidence": last[:150], "title": "(표행 단독)"})
+        field = cell[-2].strip() if len(cell) >= 3 else ""
+        last = cell[-3].strip() if len(cell) >= 4 else ""
+        arms, errs = parse_status(field) if field else ([], ["필드 부재"])
+        has_sup, has_ref = (any(t in last for t in SUP), any(t in last for t in REF))
+        guess = ("SPLIT" if has_sup and has_ref else "REFUTED" if has_ref
+                 else "SUPPORTED" if has_sup else
+                 "CLOCK_RUNNING" if "대기" in last else "UNRESOLVED")
+        recs.append({"id": pid, "line": i + 1, "habitat": "표행",
+                     "field": field, "arms": arms, "errs": errs,
+                     "status": guess, "status2": guess, "title": "(표행 단독)"})
 
-    recs.sort(key=lambda r: (int(re.sub(r"\D", "", r["id"]) or 0), r["id"]))
+    recs.sort(key=lambda r: (int(re.sub(r"\D", "", r["id"]) or 0), r["id"], r["line"]))
+    arm_counts = Counter(v for r in recs for _, v in r["arms"])
     return {"records": recs, "duplicates": dup,
+            "arm_counts": arm_counts,
+            "missing": [r for r in recs if r["field"] is None or not r["field"]],
+            "errors": [(r["id"], r["errs"]) for r in recs if r["errs"]],
             "counts": Counter(r["status"] for r in recs),
             "counts2": Counter(r["status2"] for r in recs),
             "disagree": [r for r in recs if r["status"] != r["status2"]]}
+
+
+def _armset(rec: dict) -> set[str]:
+    return {v for _, v in rec["arms"]}
+
+
+def reconcile(p: dict) -> dict:
+    """대조 2종. **채점 규칙을 값과 함께 인쇄한다** — 규칙 없는 일치율은 비교 불가.
+
+    포함 기준 = 상대의 단일 값이 소급 부여된 **팔별 값 집합에 포함**되면 일치.
+      (상대는 절 하나에 값 하나를 매겼고 c127은 팔별로 매겼으므로, 다중 팔 절에서
+       완전일치를 요구하면 서식 차이가 전부 불일치로 계상돼 대조가 무의미해진다.)
+    완전일치 기준 = 절의 상태가 **단일 값**이고 그 값이 상대와 같을 때만 일치.
+      (엄격 하한. 다중 팔 절은 정의상 전부 불일치이므로 이 수는 서식 차를 포함한다.)
+    """
+    by_id: dict[str, dict] = {}
+    for r in p["records"]:
+        by_id.setdefault(r["id"], r)          # P7 중복은 첫 절(회계)을 대표로
+
+    hand = []
+    for pid, (truth, _, _) in ADJUDICATED.items():
+        rec = by_id.get(pid)
+        mapped = HAND_TO_R10.get(truth)
+        aset = _armset(rec) if rec else set()
+        hand.append({"id": pid, "hand": truth, "mapped": mapped,
+                     "field": rec["field"] if rec else None,
+                     "incl": mapped in aset,
+                     "exact": len(aset) == 1 and mapped in aset})
+
+    # v1/v2가 **원리상 낼 수 없는** 값만 참인 절 = 어휘 불가능.
+    # 이 분해가 없으면 "파서가 83% 틀렸다"가 과잉 주장이 된다 —
+    # 그중 일부는 파싱이 아니라 어휘에 그 칸이 없어서 틀린 것이다(관측 71 기전 ③).
+    reachable = set(GUESS_TO_R10.values())
+    guess = []
+    for r in p["records"]:
+        aset = _armset(r)
+        guess.append({"id": r["id"], "line": r["line"],
+                      "v1": r["status"], "v2": r["status2"],
+                      "v1_ok": GUESS_TO_R10.get(r["status"]) in aset,
+                      "v2_ok": GUESS_TO_R10.get(r["status2"]) in aset,
+                      "impossible": not (aset & reachable)})
+    return {"hand": hand, "guess": guess}
 
 
 # ── 2. 마찰/관측 헤딩 계수 ──────────────────────────────────────────────────
@@ -293,43 +406,84 @@ def main() -> int:
     # 1
     p = predictions()
     print("\n" + RULE_PRED)
-    print(f"\n[1] 예측 대차대조 — 총 {len(p['records'])}건")
+    n = len(p["records"])
+    n_arm = sum(len(r["arms"]) for r in p["records"])
+    print(f"\n[1] 예측 대차대조 — 절·표행 {n}건 / 팔 {n_arm}개 (필드 직독)")
     if p["duplicates"]:
         print(f"    !! DUPLICATE 식별자: {p['duplicates']}  (개명 패킷 게이트 대기 항목과 대조할 것)")
-    print("    상태     v1(나이브)  v2(도장 판별)")
-    for k in sorted(set(p["counts"]) | set(p["counts2"])):
-        print(f"    {k:16s} {p['counts'].get(k, 0):3d}  →  {p['counts2'].get(k, 0):3d}")
-    print(f"\n    v1↔v2 불일치 {len(p['disagree'])}건 / {len(p['records'])} "
-          f"= {100*len(p['disagree'])/len(p['records']):.1f}%  (아래 * 표시)")
-    print("\n    id      line  v1               v2               증거(v2가 채택한 줄)")
-    for r in p["records"]:
-        flag = "*" if r["status"] != r["status2"] else " "
-        print(f"  {flag} {r['id']:6s} {r['line']:5d}  {r['status']:16s} {r['status2']:16s} {r['evidence'][:96]}")
 
-    # ── 손 판정 채점 (불일치 집합 전수) ──────────────────────────────────
-    dis_ids = [r["id"] for r in p["disagree"]]
-    scored = [(i, ADJUDICATED[i]) for i in dis_ids if i in ADJUDICATED]
-    missing = [i for i in dis_ids if i not in ADJUDICATED]
-    v1_ok = sum(1 for _, (_, a, _) in scored if a)
-    v2_ok = sum(1 for _, (_, _, b) in scored if b)
-    both_wrong = [i for i, (_, a, b) in scored if not a and not b]
-    print(f"\n    [손 판정 채점] 불일치 {len(dis_ids)}건 중 판정 {len(scored)}건"
-          f"{f' · 미판정 {missing}' if missing else ''}")
-    print(f"      v1 적중 {v1_ok}/{len(scored)}  ·  v2 적중 {v2_ok}/{len(scored)}"
-          f"  ·  둘 다 오답 {len(both_wrong)}건 {both_wrong}")
-    print(f"      → 오류율 **하한**: v1 ≥ {len(scored)-v1_ok}/{len(p['records'])}"
-          f" = {100*(len(scored)-v1_ok)/len(p['records']):.1f}%"
-          f" · v2 ≥ {len(scored)-v2_ok}/{len(p['records'])}"
-          f" = {100*(len(scored)-v2_ok)/len(p['records']):.1f}%")
-    print(f"      (일치 {len(p['records'])-len(dis_ids)}건은 **미감사** — 둘 다 틀렸을 수 있으므로 하한)")
-    print("      실제 처분(손):")
-    for i, (truth, a, b) in scored:
-        print(f"        {i:5s} {truth:42s} v1={'○' if a else '✗'} v2={'○' if b else '✗'}")
-    print(f"\n    [어휘 공백] 두 규칙 어느 쪽도 표현할 수 없는 처분 상태 {len(VOCAB_GAP)}종:")
-    for v in VOCAB_GAP:
-        print(f"        - {v}")
-    print("      → 결론: 대차대조는 **현 대장 서식에서 기계 도출 불가**하다. 처분이 도장 없는")
-    print("        자유 산문에 살고, 지지/반증 이분법 밖의 상태가 최소 4종 존재하기 때문.")
+    # ── 1-A. 전수 감사 가능성 (수용 기준 ③의 판정 지점) ─────────────────
+    print(f"\n    [전수 감사] 필드 부재 {len(p['missing'])}건 · 어휘/서식 오류 {len(p['errors'])}건")
+    for pid, errs in p["errors"]:
+        print(f"      !! {pid}: {errs}")
+    for r in p["missing"]:
+        print(f"      !! {r['id']} (L{r['line']}) 필드 부재")
+    if not p["missing"] and not p["errors"]:
+        print(f"      → **미감사 0건** — {n}/{n} 전수가 값을 갖고 전부 어휘 안이다.")
+
+    print(f"\n    [절 단위 {n}건]                      [팔 단위 {n_arm}개]")
+    sec_counts = Counter(v for r in p["records"] for v in _armset(r))
+    for k in VOCAB:
+        s, a = sec_counts.get(k, 0), p["arm_counts"].get(k, 0)
+        if s or a:
+            tag = "  ← c127 신설" if k in VOCAB_C127 else ("  ← 하자" if k in VOCAB_DEFECT else "")
+            print(f"    {k:14s} 절 {s:3d}                       팔 {a:3d}{tag}")
+    print("    (절 계수는 그 절에 그 값을 가진 팔이 하나라도 있으면 1 — 다중 팔 절은 여러 칸에 든다.")
+    print("     따라서 절 계수의 합은 41을 넘는다. 두 분모를 합산하지 말 것.)")
+
+    print("\n    id      line  상태(필드 직독)")
+    for r in p["records"]:
+        print(f"    {r['id']:6s} {r['line']:5d}  {r['field']}")
+
+    # ── 1-B. 대조 1 — c124 손 판정 17건 (수용 기준 ②의 공표 지점) ───────
+    rc = reconcile(p)
+    hand = rc["hand"]
+    incl = sum(1 for h in hand if h["incl"])
+    exact = sum(1 for h in hand if h["exact"])
+    print(f"\n    [대조 1 — c124 손 판정 {len(hand)}건 vs c127 소급 부여]")
+    print(reconcile.__doc__.split("\n", 1)[1].rstrip())
+    print(f"      포함 기준: 일치 {incl}/{len(hand)} · **불일치 {len(hand)-incl}건**")
+    print(f"      완전일치 기준: 일치 {exact}/{len(hand)} · 불일치 {len(hand)-exact}건")
+    print("      (수용 기준 ②는 불일치 0을 요구하지 않는다 — 손 판정도 표본 1이다.)")
+    print("      불일치 내역 (포함 기준):")
+    for h in hand:
+        if not h["incl"]:
+            print(f"        {h['id']:5s} 손={h['hand']}")
+            print(f"              → 사상 {h['mapped']!r} / c127 필드 {h['field']!r}")
+
+    # ── 1-C. 대조 2 — v1·v2 폐기 정산 (역사 계기, 이후 산출 금지) ────────
+    g = rc["guess"]
+    v1_ok = sum(1 for x in g if x["v1_ok"])
+    v2_ok = sum(1 for x in g if x["v2_ok"])
+    print(f"\n    [대조 2 — v1·v2 폐기 정산] 전수 {n}건 기준 (c124는 17건만 감사해 하한만 냈다)")
+    print(f"      v1 적중 {v1_ok}/{n} → **오류율 {100*(n-v1_ok)/n:.1f}%** (c124 공표 하한 34.1%)")
+    print(f"      v2 적중 {v2_ok}/{n} → **오류율 {100*(n-v2_ok)/n:.1f}%** (c124 공표 하한 19.5%)")
+    print("      채점 규칙: 사상값(GUESS_TO_R10)이 팔별 값 집합에 포함되면 적중.")
+    print("      SPLIT·MARK_NO_TOKEN은 값을 내지 못하므로 정의상 오답이다(규칙 노출).")
+    imp = [x["id"] for x in g if x["impossible"]]
+    n_par = n - len(imp)
+    v1p = sum(1 for x in g if not x["impossible"] and x["v1_ok"])
+    v2p = sum(1 for x in g if not x["impossible"] and x["v2_ok"])
+    print(f"\n      [오류 분해 — 과잉 주장 방지] 어휘 불가능 {len(imp)}건 {imp}")
+    print("        = 참값이 전부 v1/v2 어휘 밖(무기재·비예측·마감-*·부분·전제소멸 등)이라")
+    print("          정규식을 어떻게 고쳐도 맞힐 수 없는 절. 관측 71 기전 ③의 크기다.")
+    print(f"        어휘 도달 가능 {n_par}건 한정 오류율: v1 {100*(n_par-v1p)/n_par:.1f}%"
+          f" · v2 {100*(n_par-v2p)/n_par:.1f}%")
+    print("      → 두 수를 함께 읽어야 한다: 전수 오류율은 **어휘 결함을 포함한 총량**이고,")
+    print("        도달 가능 한정 오류율이 **파싱 자체의 몫**이다. c124가 '본체는 정규식이")
+    print("        아니라 어휘 공백'이라 진단한 것이 이 분해로 수치화됐다.")
+    print("      캐비앗(자기 불리 방향 병기): '어휘 불가능'의 정의가 **관대**하다 —")
+    print("        다중 팔 절은 팔 하나만 도달 가능해도 가능으로 세지만 v1/v2는 값을 하나만")
+    print("        내므로 실제 난도는 더 높다. 즉 도달 가능 한정 오류율은 **상한 쪽으로**")
+    print("        치우쳐 있고, 파싱의 책임을 실제보다 크게 잡은 수다.")
+    print(f"      → 그리고 하한은 실제보다 낮았다(34.1%→{100*(n-v1_ok)/n:.1f}% ·"
+          f" 19.5%→{100*(n-v2_ok)/n:.1f}%). 미감사 24건이 오류를 숨기고 있었음이")
+    print("        전수 감사로 확인됐다 — '하한 병기'가 정직 장치였던 이유다.")
+    print(f"\n    [어휘 공백] c124가 발견한 4종은 R10이 흡수했고, 전수 배정이 {len(VOCAB_C127)}종을 더 냈다:")
+    for v in VOCAB_C127:
+        print(f"        - {v} (팔 {p['arm_counts'].get(v, 0)}개)")
+    print("      → 관측 71의 '기계 도출 불가'는 **해소**됐다. 도출을 가능하게 한 것은")
+    print("        정규식 개량이 아니라 **대장이 자기 상태를 필드로 말하게 한 것**이다.")
 
     # 2
     f = frictions()
