@@ -95,6 +95,18 @@ def _consume_handoff() -> str:
     return "\n".join(lines)
 
 
+def _bstate_block(project: str | None) -> str:
+    """B층 파일 직독 — 회상 경합·캡슐 슬롯 경쟁 없음 (P39 처분)."""
+    try:
+        import forget_bstate
+        state = forget_bstate.load_state(project or "global")
+        if not state:
+            return ""
+        return forget_bstate.render_block(state)
+    except Exception:
+        return ""
+
+
 def main() -> None:
     hook_input = json.load(sys.stdin)
     cwd = str(hook_input.get("cwd") or os.getcwd())
@@ -135,12 +147,17 @@ def main() -> None:
             capsule = "\n".join(f"- {item}" for item in items[:6] if isinstance(item, str))
     handoff = _consume_handoff()
     notice = _version_notice(str(result.get("server_version") or ""))
-    if not capsule and not handoff:
+    bstate = _bstate_block(project)
+    if not capsule and not handoff and not bstate:
         return  # low confidence → silence (version nags don't earn a lone injection)
     shown = capsule[:CAPSULE_CHAR_BUDGET]
     parts = []
     if notice:
         parts.append(f"[forget 버전] {notice}")
+    # B층이 캡슐보다 먼저 — 인간이 깨어날 때 "무엇의 한가운데였나"가
+    # 백과사전보다 먼저 오듯이 (P39: 구조화 상태가 예측 정보 +62%).
+    if bstate:
+        parts.append(bstate)
     if handoff:
         parts.append(handoff)
     if shown:
