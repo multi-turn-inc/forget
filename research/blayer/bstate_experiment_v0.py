@@ -17,11 +17,12 @@ import urllib.request
 from pathlib import Path
 
 TRANSCRIPT_DIR = Path.home() / ".claude/projects"
-OUT = Path.home() / ".forget/twin/bstate_v0.results.json"
-RAW = Path.home() / ".forget/twin/bstate_v0.rows.jsonl"
+_MSLUG = "".join(c if c.isalnum() else "-" for c in os.environ.get("BSTATE_PREDICTOR", "persona_v0"))
+OUT = Path.home() / f".forget/twin/bstate_v0.{_MSLUG}.results.json"
+RAW = Path.home() / f".forget/twin/bstate_v0.{_MSLUG}.rows.jsonl"
 
 PERSONA_URL = "http://127.0.0.1:8024/v1/chat/completions"
-PERSONA_MODEL = "persona_v0"
+PERSONA_MODEL = os.environ.get("BSTATE_PREDICTOR", "persona_v0")
 SUMM_URL = "http://127.0.0.1:11435/api/chat"   # Spark 27B — 요약기
 SUMM_MODEL = "qwen3.6:27b"
 EMB_URL = "http://127.0.0.1:11434/api/embed"
@@ -225,6 +226,7 @@ def main() -> None:
                 continue
             acts.append(turn["actual"][:800])
             fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+            fh.flush()  # 진행 가시성 — 버퍼링이 '정체' 오진을 낳았다 (2026-08-15)
             if len(acts) % 10 == 0:
                 print(f"  {len(acts)}턴 완료", file=sys.stderr)
 
