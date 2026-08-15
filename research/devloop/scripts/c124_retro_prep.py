@@ -77,7 +77,10 @@ def rule_pred(n_sec: int, n_row: int, n_total: int, n_arm: int, n_missing: int) 
             **절 단위 계수와 팔 단위 계수를 갈라 인쇄**한다(합산 금지 — 절 {n_total}건과
             팔 {n_arm}개는 다른 분모다).
   어휘    = amendment-125 §4-R10 11값 + 하자 `무기재` + c127 전수 배정이 발견한 2값
-            (`비예측`·`마감-미가동`, 사유는 c127_assign_status.py 헤더).
+            (`비예측`·`마감-미가동`, 사유는 c127_assign_status.py 헤더)
+            + c136 집행분(amendment-135 §4-R10): `마감-조기(지지/반증)` 방향 병기
+            의무(방향 없는 `마감-조기`는 하드 에러) · `수반((형제팔))`은 독립 증거를
+            담지 않으므로 지지/반증 계수 밖 별도 칸.
             어휘 밖 값은 하드 에러 — 조용히 삼키면 관측 71이 값 칸으로 재발한다.
   [분모 구성 — 관측 73 수용 기준 ② 이행] 아래 `id/line/상태` 표가 분모의 전수 열거다.
             산문이 인용하는 수는 그 표의 행 수({n_total})와 대조 가능해야 한다."""
@@ -163,13 +166,38 @@ ADJUDICATED: dict[str, tuple[str, bool, bool]] = {
 VOCAB_GAP = ["무판정 마감(P33)", "표본 부재 마감(P30)", "전제 소멸(P10)",
              "문면 성립·귀속 불가(P8)"]
 
-# ── 처분 어휘 (c127) ───────────────────────────────────────────────────────
-# amendment-125 §4-R10의 11값 + 하자 라벨 1 + c127 전수 배정 발견분 2.
+# ── 처분 어휘 (c127 / c136 개정) ────────────────────────────────────────────
+# amendment-125 §4-R10의 11값 + 하자 라벨 1 + c127 전수 배정 발견분 2
+# + c136 집행분(amendment-135 §4-R10): 조기 마감은 판정을 낸 사건이므로 방향을
+# 의무 병기하고(`마감-조기(지지/반증)`), 형제 팔 판정에 논리적으로 수반되어 독립
+# 증거를 담지 않는 팔은 `수반((형제팔))`로 지지/반증 계수 밖 별도 칸에 센다.
+# 방향 없는 `마감-조기`와 수반 대상 없는 `수반`은 어휘 밖 값(하드 에러)이다.
 VOCAB_R10 = ("지지", "반증", "부분", "시계-미시작", "시계-가동", "마감-표본부재",
-             "마감-무판정", "마감-기한도과", "마감-조기", "전제소멸", "폐기")
+             "마감-무판정", "마감-기한도과", "전제소멸", "폐기")
 VOCAB_DEFECT = ("무기재",)
 VOCAB_C127 = ("비예측", "마감-미가동")
-VOCAB = VOCAB_R10 + VOCAB_DEFECT + VOCAB_C127
+VOCAB_C136 = ("마감-조기(지지)", "마감-조기(반증)", "수반")
+VOCAB = VOCAB_R10 + VOCAB_DEFECT + VOCAB_C127 + VOCAB_C136
+
+# 수반 팔 서식: `(b) 수반((a))` — 어느 팔에 수반되는지 병기 의무.
+SUBSUME_RE = re.compile(r"^수반\(\([a-z]\)\)$")
+
+
+def _vocab_key(val: str) -> str:
+    """계수용 어휘 키 — `수반((a))`류는 `수반` 한 칸으로 모은다. 그 외 원문 그대로."""
+    return "수반" if SUBSUME_RE.match(val) else val
+
+
+def _r10_base(val: str) -> str:
+    """방향/수반-대상 괄호를 벗긴 밑값 — c124 손 자[尺]와의 대조 전용.
+
+    손 판정(c124)은 방향 무기록 어휘로 쟀으므로(`DISCARDED(표본 N로 마감)` →
+    `마감-조기`), c136 방향 병기 이후의 필드와 대조하려면 밑값으로 내려야 한다.
+    산출 경로에는 쓰지 않는다 — 대차대조 계수는 방향을 산 채로 센다.
+    """
+    if val.startswith("마감-조기("):
+        return "마감-조기"
+    return _vocab_key(val)
 
 STATUS_RE = re.compile(r"^-\s*상태:\s*(.+?)\s*$")
 ARM_RE = re.compile(r"^\((?P<arm>[a-z]|비)\)\s*(?P<val>.+)$")
@@ -210,7 +238,12 @@ def parse_status(raw: str) -> tuple[list[tuple[str, str]], list[str]]:
     for p in parts:
         m = ARM_RE.match(p)
         arm, val = (m.group("arm"), m.group("val").strip()) if m else ("-", p)
-        if val not in VOCAB:
+        if val == "마감-조기":
+            errs.append("어휘 밖 값 '마감-조기' — 방향 병기 의무 위반"
+                        "(c136 강등, amendment-135 §4-R10: 마감-조기(지지/반증))")
+        elif val == "수반":
+            errs.append("어휘 밖 값 '수반' — 수반 대상 병기 의무 위반(서식: 수반((a)))")
+        elif _vocab_key(val) not in VOCAB:
             errs.append(f"어휘 밖 값 {val!r}")
         arms.append((arm, val))
     if len(arms) > 1 and any(a == "-" for a, _ in arms):
@@ -302,7 +335,7 @@ def predictions() -> dict:
                      "status": guess, "status2": guess, "title": "(표행 단독)"})
 
     recs.sort(key=lambda r: (int(re.sub(r"\D", "", r["id"]) or 0), r["id"], r["line"]))
-    arm_counts = Counter(v for r in recs for _, v in r["arms"])
+    arm_counts = Counter(_vocab_key(v) for r in recs for _, v in r["arms"])
     return {"records": recs, "duplicates": dup,
             "arm_counts": arm_counts,
             "missing": [r for r in recs if r["field"] is None or not r["field"]],
@@ -333,7 +366,8 @@ def reconcile(p: dict) -> dict:
     for pid, (truth, _, _) in ADJUDICATED.items():
         rec = by_id.get(pid)
         mapped = HAND_TO_R10.get(truth)
-        aset = _armset(rec) if rec else set()
+        # 손 자[尺](c124)는 방향 무기록이므로 밑값으로 대조한다(c136 방향 병기 이후).
+        aset = {_r10_base(v) for v in _armset(rec)} if rec else set()
         hand.append({"id": pid, "hand": truth, "mapped": mapped,
                      "field": rec["field"] if rec else None,
                      "incl": mapped in aset,
@@ -352,6 +386,23 @@ def reconcile(p: dict) -> dict:
                       "v2_ok": GUESS_TO_R10.get(r["status2"]) in aset,
                       "impossible": not (aset & reachable)})
     return {"hand": hand, "guess": guess}
+
+
+# ── 달력 산식 (c136 수리, 관측 78) ──────────────────────────────────────────
+# 정본은 지시서 절차 1의 분기 순서다: N%10==0 → 감사가 N%5==0(회고)에 **우선**한다.
+# 구 산식(((nxt//5)+1)*5 if nxt%5 else nxt)은 이 선행 규칙을 몰라 10의 배수를
+# 회고로 인쇄했고(nxt=126~129 → "다음 회고 = c130"(감사), 재발 주기 10사이클),
+# `다음 감사` 팔은 nxt 자신이 10의 배수일 때 자기를 건너뛰었다. 이 함수들이
+# 달력의 유일한 산출 경로다 — 인쇄 지점에 산식을 다시 쓰지 말 것(관측 78).
+def next_audit(n: int) -> int:
+    """n 포함, 10의 배수 최소값."""
+    return n if n % 10 == 0 else ((n // 10) + 1) * 10
+
+
+def next_retro(n: int) -> int:
+    """n 포함, 5의 배수이되 10의 배수가 아닌 최소값 — 감사 선행 규칙 반영."""
+    m = n if n % 5 == 0 else ((n // 5) + 1) * 5
+    return m + 5 if m % 10 == 0 else m
 
 
 # ── 2. 마찰/관측 헤딩 계수 ──────────────────────────────────────────────────
@@ -444,14 +495,18 @@ def main() -> int:
         print(f"      → **미감사 0건** — {n}/{n} 전수가 값을 갖고 전부 어휘 안이다.")
 
     print(f"\n    [절 단위 {n}건]                      [팔 단위 {n_arm}개]")
-    sec_counts = Counter(v for r in p["records"] for v in _armset(r))
+    sec_counts = Counter(v for r in p["records"] for v in {_vocab_key(x) for x in _armset(r)})
     for k in VOCAB:
         s, a = sec_counts.get(k, 0), p["arm_counts"].get(k, 0)
         if s or a:
-            tag = "  ← c127 신설" if k in VOCAB_C127 else ("  ← 하자" if k in VOCAB_DEFECT else "")
+            tag = ("  ← c136 개정(R10)" if k in VOCAB_C136 else
+                   "  ← c127 신설" if k in VOCAB_C127 else
+                   "  ← 하자" if k in VOCAB_DEFECT else "")
             print(f"    {k:14s} 절 {s:3d}                       팔 {a:3d}{tag}")
     print("    (절 계수는 그 절에 그 값을 가진 팔이 하나라도 있으면 1 — 다중 팔 절은 여러 칸에 든다.")
-    print("     따라서 절 계수의 합은 41을 넘는다. 두 분모를 합산하지 말 것.)")
+    print(f"     따라서 절 계수의 합은 {n}을 넘을 수 있다. 두 분모를 합산하지 말 것.")
+    print("     `수반` 팔은 독립 증거를 담지 않으므로 지지/반증 계수에 넣지 않는다 — 별도 칸이")
+    print("     그 자체로 계상이다. 지지/반증 수를 인용하는 산문은 수반 칸을 합산하지 말 것.)")
 
     print("\n    id      line  상태(필드 직독)")
     for r in p["records"]:
@@ -540,7 +595,7 @@ def main() -> int:
     print(f"    audits {len(au)}: {[x.stem for x in au]}")
     print(f"    amendments {len(am)}: {[x.stem for x in am]}")
     nxt = (g["rows"][-1]["cycle"] + 1)
-    print(f"    다음 감사 = c{((nxt // 10) + 1) * 10} · 다음 회고 = c{((nxt // 5) + 1) * 5 if nxt % 5 else nxt}")
+    print(f"    다음 감사 = c{next_audit(nxt)} · 다음 회고 = c{next_retro(nxt)}")
     return 0
 
 
