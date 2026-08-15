@@ -617,6 +617,43 @@ _OBS_CYCLE = re.compile(r"사이클\s*(\d+)")
 _INLINE_DISPOSAL = re.compile(r"^\*\*처분\s*\(사이클")
 _EXIT_MARKS = ("종결", "회부 상태를 벗")
 
+# 관측 63 처치 (c126). 순수 부분문자열 탐색은 부정 문맥을 격발어와 구별하지 못했다 —
+# "이 처분은 ①의 이행 기록이지 종결이 아니다"(관측 61 c113)가 이탈로 읽혀 존속 선언
+# 자체가 관측을 인덱스에서 지웠다. 처치는 **발생 단위** 판정이다: 마커 직후 창에
+# 부정어가 오면 그 발생만 무효이고, 같은 문단의 다른 발생이 긍정이면 이탈은 성립한다
+# (관측 53 처분 문단이 반례 — "→ **종결.**" 뒤 문장에 "…아니다"가 온다).
+#
+# 창은 **문장 종결 전 3어절**이다. 글자 수가 아니라 어절로 세는 이유: 부정 종결어미는
+# 마커 뒤 1~3어절에 붙고("종결이 아니다" 2 · "회부 상태를 벗어나지 않는다" 2 ·
+# "종결로 보지 않는다" 3), 그 너머의 부정어는 **다른 절의 것**이다. 창을 넓히면
+# "종결이며 더 이상 보정하지 않는다"류의 긍정 선언이 뒤 절 부정어에 오염돼 거짓
+# 음성(존속 과계상)이 난다 — 이 예에서 부정어는 6어절 뒤라 3어절 창 밖이다.
+# 대장 실측 8개 발생 전수에서 이 창은 부정 1건(관측 61 c113)만 배제한다.
+# 한계(정직): 휴리스틱이다. 4어절 이상 떨어진 부정 종결("종결이라고 이 절이 말하지는
+# 않는다")은 여전히 위양성으로 남는다. 어휘·거리가 표류하면 P34 (b) 채널 팔로 계상하고
+# 자[尺] 변경을 선언한 뒤 넓힌다 — V3 니들과 같은 규율.
+_NEG_TOKENS = 3
+_SENT_END = re.compile(r"[.。\n]")
+_NEGATION = re.compile(r"(아니|않|못하|없)")
+
+
+def _exit_declared(para: str) -> bool:
+    """이탈 마커가 **부정 문맥이 아닌 자리에** 한 번이라도 나오면 이탈. **순수 함수**."""
+    for mark in _EXIT_MARKS:
+        pos = 0
+        while True:
+            i = para.find(mark, pos)
+            if i < 0:
+                break
+            pos = i + len(mark)
+            window = para[pos:]
+            cut = _SENT_END.search(window)
+            if cut:
+                window = window[:cut.start()]
+            if not _NEGATION.search(" ".join(window.split()[:_NEG_TOKENS])):
+                return True
+    return False
+
 
 def _obs_paragraph(lines: list[str], start: int) -> str:
     """start 행부터 첫 공백 행 전까지 — 처분 문단의 이탈 마커 탐색 범위. **순수 함수**."""
@@ -661,7 +698,7 @@ def parse_observations(text: str) -> dict[int, dict]:
                 entry["title"] = (body[:cut] if cut >= 0 else body).strip(" —·:")
             elif kind == "처분":
                 para = _obs_paragraph(lines, idx)
-                if any(mark in para for mark in _EXIT_MARKS):
+                if _exit_declared(para):
                     entry["exited"] = True
                 else:
                     entry["partial_disposal"] = True
@@ -672,7 +709,7 @@ def parse_observations(text: str) -> dict[int, dict]:
             continue
         if current is not None and _INLINE_DISPOSAL.match(line):
             para = _obs_paragraph(lines, idx)
-            if any(mark in para for mark in _EXIT_MARKS):
+            if _exit_declared(para):
                 obs[current]["exited"] = True
             else:
                 obs[current]["partial_disposal"] = True
@@ -685,6 +722,29 @@ def parse_observations(text: str) -> dict[int, dict]:
 def open_observation_numbers(obs: dict[int, dict]) -> list[int]:
     """계상 대상(회부/후보 태그) 중 회부 이탈하지 않은 번호. **순수 함수**."""
     return sorted(n for n, o in obs.items() if o["tagged"] and not o["exited"])
+
+
+# c123 정독(관측 69 수용 기준 ①)이 확정한 정직 재고 범위. **빈티지 상수**다 —
+# 자동 인쇄가 36이던 시점의 값이고, 이 범위의 무번호 성분(20/16 + 무태그 c41 1건
+# − 중복 후보 4)만이 상수의 몫이다. 자동 성분이 움직이면 범위도 그만큼 움직이므로,
+# 재정독 없이 갱신하지 않고 **빈티지를 병기해** 현재값으로 위장하지 않는다.
+C123_HONEST_RANGE = (48, 57)
+C123_AUTO_AT_VINTAGE = 36
+
+
+def unnumbered_blind_spot() -> tuple[int, int]:
+    """무번호 관측 절 수 · 그중 회부/후보 태그 수 (관측 69 ② 처치, c126).
+
+    c123 계수 규칙을 **재구현하지 않고 재사용**한다 — 규칙을 두 벌 두면 그것이 바로
+    관측 30·34(자[尺]가 선언 없이 갈라지면 시점 간 비교가 소멸)의 다음 표본이 된다.
+    """
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from c123_unnumbered_obs import NUMBERED, sections, tagged
+    with open(FRICTIONS, encoding="utf-8") as fh:
+        secs = sections(fh.read())
+    obs_secs = [s for s in secs if "관측" in s[0]]
+    unnum = [s for s in obs_secs if not NUMBERED.match(s[0])]
+    return len(unnum), sum(1 for s in unnum if tagged(s[0]))
 
 
 def part_f() -> None:
@@ -717,9 +777,36 @@ def part_f() -> None:
     else:
         delta = len(opened) - int(prev)
         delta_txt = f"직전 원장 행 c{last['cycle']}={prev}, Δ{delta:+d}"
-    print(f"  open_observations={len(opened)}  ({delta_txt})")
+    print(f"  open_observations={len(opened)}  (번호 있는 회부만 — {delta_txt})")
     if delta:
         print("  ★ Δ≠0 — 신규 관측 또는 처분이 있었다: 이번 원장 행 frictions_note에 귀속을 선언할 것.")
+
+    # 관측 69 ② 처치 (c126) — 인쇄가 자기 사각의 크기를 함께 말한다. 소급 배정은
+    # c125가 기각했으므로(참조 무결성), 없는 것은 숫자가 아니라 인쇄의 정직성이었다.
+    unnum_total, unnum_tagged = unnumbered_blind_spot()
+    lo, hi = C123_HONEST_RANGE
+    print(f"  ↳ 사각: 무번호 관측 절 {unnum_total}건 중 회부/후보 {unnum_tagged}건은 이 눈 밖"
+          f" (c123 계수 규칙 재사용, 소급 배정은 c125 기각).")
+    print(f"     c123 정독 기준 정직 재고 범위 {lo}~{hi} — **빈티지**: 그 시점 자동 인쇄는"
+          f" {C123_AUTO_AT_VINTAGE}, 지금 {len(opened)}이므로 자동 성분 이동분"
+          f"({len(opened) - C123_AUTO_AT_VINTAGE:+d})은 이 범위에 미반영이다.")
+
+    # audit-120 R2 (c126 이행) — 재고 회전의 크기. 권고 문면은 "처치 식별 완료·집행
+    # 대기" 부분집합을 요구하나, 대장에는 그 상태를 가리키는 기계가독 마커가 없다
+    # (그 부재 자체가 미등재 규약 공백이다). 여기서 부분문자열로 그 부분집합을 짐작하는
+    # 것은 지금 이 사이클이 고치고 있는 결함(관측 63)을 새 자리에 다시 심는 일이므로
+    # 하지 않는다 — 분모를 회부 존속 전체로 열고 **상한 근사임을 병기**한다.
+    n_now = int(last["cycle"]) + 1
+    if opened:
+        oldest = max(opened, key=lambda n: n_now - (obs[n]["opened"] or n_now))
+        stalest = max(opened, key=lambda n: n_now - (obs[n]["last"] or n_now))
+        print(f"  ↳ 처치 대기 (audit-120 R2) — 분모 = 회부 존속 {len(opened)}건 전체."
+              f" '처치 식별 완료·집행 대기' 부분집합은 기계가독 마커가 없어 **상한 근사**다.")
+        print(f"     최고 등재 경과: 관측 {oldest} c{obs[oldest]['opened']}"
+              f" → {n_now - obs[oldest]['opened']}사이클째 미해소")
+        print(f"     최고 무갱신  : 관측 {stalest} c{obs[stalest]['last']} 마지막 갱신"
+              f" → {n_now - obs[stalest]['last']}사이클째 무갱신")
+
     print(f"  무태그(유형 기귀속, 계상 밖): {' '.join(str(n) for n in untagged)}"
           f"   회부 이탈: {' '.join(str(n) for n in exited)}")
     for n in opened:
