@@ -613,6 +613,17 @@ FRICTIONS = os.path.join(REPO, "research", "devloop", "frictions.md")
 #         처분 문단에 "종결" 또는 "회부 상태를 벗"이 있어야 회부 이탈 —
 #         없으면 부분 처분으로 존속한다(관측 55·58이 실측 반례: 하위 항목/계열 표기만).
 OBS_HEADER = re.compile(r"^##\s+(?:미분류\s+)?관측\s+(\d+)(?:\s+(보강|재발|처분))?")
+# 관측 76 처치 (c131 적용, audit-130 R1 승인). OBS_HEADER는 번호 **바로 다음** 어절만
+# 종류로 읽어 `## 관측 74 수용 기준 ③ 최초 집행 …` 같은 어순을 원본으로 오분류했고,
+# 원본 분기가 tagged를 괄호절로 덮어써 살아 있는 관측이 인덱스에서 무공지 소멸했다
+# (c129 실측: 38→37, Δ 게이트가 잡음). 처치 ① 어순 둔감: 번호 뒤 대시(—) 전 구간에서
+# 처분/보강/재발을 탐색. 처치 ② 태그 단조성: 원본 분기가 기존 tagged=True를 내리지
+# 못한다 — 태그는 원본 등재로만 켜지고, 처분은 exited로만 끈다.
+# 자[尺] 교체 선언 (관측 28 규율 — 무공지 교체 금지): 반사실 영수증은 실물 파서 대조
+# 2회 — audit-130 §4 (c130, open 39/39·차집합 ∅) + c131 재발행 (open 40/40·차집합 ∅,
+# 재해석 헤딩 전수 1건 = c128 `관측 71 잔여 하자 처분` → 처분, 71은 기이탈이라 무영향.
+# 무태그 목록만 71 제외로 이동). 소급 이동 Δ0 확인 후 적용했다.
+_OBS_KIND_SEG = re.compile(r"^##\s+(?:미분류\s+)?관측\s+\d+([^—\n]*)")
 _OBS_CYCLE = re.compile(r"사이클\s*(\d+)")
 _INLINE_DISPOSAL = re.compile(r"^\*\*처분\s*\(사이클")
 _EXIT_MARKS = ("종결", "회부 상태를 벗")
@@ -683,6 +694,14 @@ def parse_observations(text: str) -> dict[int, dict]:
         m = OBS_HEADER.match(line)
         if m:
             num, kind = int(m.group(1)), (m.group(2) or "원본")
+            if kind == "원본":
+                # 관측 76 처치 ①: 어순 둔감 — 대시 전 구간에서 종류 어휘 탐색
+                seg_m = _OBS_KIND_SEG.match(line)
+                seg = seg_m.group(1) if seg_m else ""
+                for k in ("처분", "보강", "재발"):
+                    if k in seg:
+                        kind = k
+                        break
             entry = obs.setdefault(num, {
                 "opened": None, "last": None, "tagged": False,
                 "exited": False, "partial_disposal": False, "title": ""})
@@ -692,7 +711,8 @@ def parse_observations(text: str) -> dict[int, dict]:
             if kind == "원본":
                 entry["opened"] = int(cycles[-1]) if cycles else None
                 tail = line[line.rfind("(사이클"):] if "(사이클" in line else line
-                entry["tagged"] = ("회부" in tail) or ("후보" in tail)
+                # 관측 76 처치 ②: 태그 단조성 — 원본 분기는 기존 태그를 내리지 못한다
+                entry["tagged"] = entry["tagged"] or ("회부" in tail) or ("후보" in tail)
                 body = line[m.end():].replace("**", "")
                 cut = body.rfind("(사이클")
                 entry["title"] = (body[:cut] if cut >= 0 else body).strip(" —·:")
