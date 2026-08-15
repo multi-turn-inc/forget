@@ -33,8 +33,13 @@ from shadow_daemon import (  # noqa: E402  데몬의 자를 그대로 빌린다
 TRANSCRIPT_DIR = Path.home() / ".claude/projects"
 TWIN_DIR = Path.home() / ".forget/twin"
 SCORES = TWIN_DIR / "shadow_scores.jsonl"
-STATE = TWIN_DIR / "shadow_retro_state.json"
 VARIANT = "retro:" + os.environ.get("TWIN_VARIANT", f"prompt-only/{TWIN_MODEL}")
+# 변형별 상태 분리 (2026-08-15 결함 ⑨): 공유 상태로 돌렸더니 첫 변형이 채점한
+# 턴을 두 번째가 건너뛰어 공통 턴 0 — 짝지은 비교가 구조적으로 불가능했다.
+# 데몬에는 이미 있던 규율의 반쪽 이식이 원인. 같은 턴을 두 변형이 각각 채점해야
+# 짝지음이 성립한다.
+_SLUG = "".join(c if c.isalnum() else "-" for c in VARIANT)
+STATE = TWIN_DIR / f"shadow_retro_state.{_SLUG}.json"
 MAX_TURNS = int(os.environ.get("RETRO_MAX", "60"))
 
 
