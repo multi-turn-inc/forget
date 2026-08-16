@@ -402,6 +402,7 @@ def part_recall() -> None:
     print("  시각이 행동을 바꾸면 hit(c64 확장의 성문화 — 노출이지 승인 아님, audit-70 N7).")
     print("  필드 항등식: recall_hits = 능동hit+주입hit · recall_misses = 능동miss+주입miss.")
     print("  recall_note 병기 형식: '능동 X회(hit a·miss b) / 주입 Y건(hit c·miss d)'.")
+    print("  [공표 가드 — audit-140 R3, c141 성문] hit_rate 구간 집계는 계상 체제 변화(c64·c71)에 걸치고 hit 주 원천이 task_state 재귀다 — 단일 체제 구간·재귀 성분 제외 없이는 제품 개선으로 공표 불가.")
     print(f"  [직전 행 검산] cycle={last['cycle']}: {detail} → {verdict}")
 
 
