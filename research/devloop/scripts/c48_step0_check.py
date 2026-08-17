@@ -903,6 +903,56 @@ def part_p() -> None:
         print(f"  [기지·게이트 대기] {pid}: {len(errs)}건 — 손 유지 상수 KNOWN_VOCAB_OFFENDERS 등재분")
 
 
+def part_x() -> None:
+    """[X] 일회용 프로브 인구조사 — 매 사이클 (c158 신설, P45, c157 HAND 별건 3).
+
+    왜. c157의 프로브가 `hits = NC.scan(i) if hasattr(NC, "scan") else []`로 쓰였고
+    `scan`은 없었다. `[]`가 조용히 반환돼 "검출기 hit = 0건"으로 인쇄됐다(실제 35).
+    계기 본체는 전부 하드 가드를 갖췄고 **일회용 프로브만 갖추지 않았다**.
+
+    자[尺]는 옮기지 않는다 — 탐지 규칙의 정본은 `probe_guard.PATTERNS` 하나이며
+    여기서는 **import해서 쓴다**(파트 P의 VOCAB과 같은 규율).
+
+    위상 병기: 이 인쇄는 턴2에 열리므로 **직전 사이클까지의 프로브**만 본다.
+    당 사이클 프로브의 실시간 차단은 `probe_guard.need()`뿐이고 그것은 프로브가
+    import해야 작동한다 — 이 파트는 (a)의 집행자가 아니라 준수 계수기다(P45 한계 ①).
+    """
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from probe_guard import (  # noqa: PLC0415
+            PATTERNS, cycle_of, probe_paths, scan_probes,
+        )
+        rep = scan_probes(probe_paths(REPO))
+    except Exception as exc:  # 계기 고장이 step 0을 죽이지 않는다 — 강등 후 계속
+        print("\n[X. 일회용 프로브 인구조사]")
+        print(f"  !! 계기 자체가 돌지 않았다: {type(exc).__name__}: {exc}")
+        print("     → 이 사이클의 프로브 판정은 **미측정**이다. '위반 0'으로 읽지 말 것.")
+        print("     (P45 (c): 미측정이 2사이클 이상이면 (b)는 판정 불가가 아니라 반증이다.)")
+        return
+
+    viol, unparsed = rep["violations"], rep["unparsed"]
+    print("\n[X. 일회용 프로브 인구조사 — 매 사이클 (c158 신설, P45)]")
+    print(f"  tmp/*.py {len(rep['scanned'])}본 검사 · 위반 {len(viol)}건 ·"
+          f" **미검사 {len(unparsed)}본** · probe_guard 채택 {len(rep['guarded'])}본")
+    print(f"  탐지 규칙 정본 = probe_guard.PATTERNS ({len(PATTERNS)}종: {' · '.join(PATTERNS)})"
+          f" — 이 파일은 사본을 갖지 않는다.")
+    print("  ※ 침묵은 '이 4종이 없다'이지 '조용한 거짓이 없다'가 아니다 (P45 한계 ③).")
+    if unparsed:
+        print("  !! 미검사분 — 이 수는 '위반 0'에 섞이지 않는다:")
+        for u in unparsed:
+            print(f"       {os.path.relpath(u['path'], REPO)}  {u['why']}")
+    if viol:
+        print("  !! 위반 — 폴백이 실패를 값으로 위장할 수 있는 자리:")
+        for v in viol:
+            c = cycle_of(v["path"])
+            print(f"       c{c if c is not None else '??'}  "
+                  f"{os.path.relpath(v['path'], REPO)}:{v['line']}  [{v['kind']}]  {v['src']}")
+        print("     → 당 사이클 산출이면 처치하고, 과거분이면 **사유를 원장에 적을 것**")
+        print("       (P45 (b) 반증 조건 = 인쇄됐는데 처치도 사유 기재도 없이 이월).")
+    else:
+        print("  위반 0 — 4패턴 클린.")
+
+
 def part_f() -> None:
     """[F] 미해소 관측 인덱스 — 대장 파생 (A-95.1 루프 몫, c108 배선 · P34, 관측 52 처치).
 
@@ -987,3 +1037,6 @@ if __name__ == "__main__":
     # part_p는 part_f 뒤 — 대장 위생은 절차 2의 선택 입력이 아니라 절차 3의 등록
     # 직전에 읽혀야 한다. 파트 F의 조망 계약(마지막 화면)을 깨지 않으려 그 아래 붙인다.
     part_p()
+    # part_x는 말미 — 프로브 위생은 절차 3(수행) 직전에 읽히면 된다. 파트 P와 같은
+    # 이유로 파트 F의 조망 계약 아래에 둔다.
+    part_x()
