@@ -185,7 +185,12 @@ def main() -> int:
 
     nxt = args.next_cycle
     if nxt is None and args.cycle is not None:
-        nxt = args.cycle + 1
+        # c156 수정 (c155 발견 · 관측 83 둘째 표본 · P42 판정 직후 집행).
+        # 구본은 `args.cycle + 1`이었다. 다음 손의 HAND는 **이 사이클의** 코퍼스를
+        # 감사하므로(관행 = corpus(N−1) 감사, 즉 N번 수확의 다음 손은 corpus(N)) 정답은
+        # args.cycle이다. N+1은 그 시점 원장 행이 없어 corpus()가 FATAL로 죽으며,
+        # c153·c154가 그 FATAL을 각각 '부수 재확인 — 정상'으로 3연속 오독했다.
+        nxt = args.cycle
     print()
     print("  [붙여넣기 블록 — task_state 주의문에 그대로]")
     print("  " + "─" * 70)
