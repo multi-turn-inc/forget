@@ -854,6 +854,55 @@ def unnumbered_blind_spot() -> tuple[int, int]:
     return len(unnum), sum(1 for s in unnum if tagged(s[0]))
 
 
+# 어휘 위반의 **기지(旣知)** 기지국 — 손 유지 상수 (파트 A의 CODE_QUEUE_PATHS와 같은 규율:
+# 바뀌면 이 줄을 고치고 보고에 선언한다). P39는 두 트랙 이중 주조(관측 77)이고 처치는
+# 개명 패킷(§6 서열 9) 게이트 대기다 — 신규 위반과 섞이면 이 인쇄가 늑대소년이 된다.
+KNOWN_VOCAB_OFFENDERS = ("P39",)
+
+
+def part_p() -> None:
+    """[P] 예측 대장 어휘 게이트 — **매 사이클** (c155 신설, 관측 83 처치).
+
+    왜. c125가 "어휘 밖 값은 하드 에러"라고 선언했고 그 검사는 c124_retro_prep에만
+    있었다. 그런데 **등록은 매 사이클 열리고 그 계기는 10사이클에 한 번 열린다** —
+    관측 82(상신 매 사이클 / 편입 10사이클)와 같은 주기 불일치이며, 실제로 c151이
+    어휘 밖 값 '미판정'을 발급하자 P42·P43이 그대로 베껴 **4사이클(c151~c154)간
+    7개 팔**이 무검출로 통과했다. 검사를 쓰기와 같은 주기의 채널로 옮긴다.
+
+    자[尺]는 옮기지 않는다 — 어휘의 정본은 여전히 c124_retro_prep.VOCAB 하나이며
+    여기서는 **import해서 쓴다**. 어휘를 복사하면 정본이 둘이 되고, 그것이 바로 이
+    처치가 진단한 병이다.
+    """
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from c124_retro_prep import VOCAB, predictions  # noqa: PLC0415
+        p = predictions()
+    except Exception as exc:  # 계기 고장이 step 0을 죽이지 않는다 — 강등 후 계속
+        print("\n[P. 예측 대장 어휘 게이트]")
+        print(f"  !! 게이트 자체가 돌지 않았다: {type(exc).__name__}: {exc}")
+        print("     → 이 사이클의 어휘 판정은 **미측정**이다. '위반 0'으로 읽지 말 것.")
+        return
+
+    errors = p["errors"]
+    total = len(p["records"])
+    fresh = [(pid, errs) for pid, errs in errors if pid not in KNOWN_VOCAB_OFFENDERS]
+    known = [(pid, errs) for pid, errs in errors if pid in KNOWN_VOCAB_OFFENDERS]
+
+    print("\n[P. 예측 대장 어휘 게이트 — 매 사이클 (c155 신설, 관측 83 처치)]")
+    print(f"  대장 {total}건 · 위반 절 {len(errors)}건 (신규 {len(fresh)} · 기지 {len(known)})")
+    print(f"  어휘 정본 = c124_retro_prep.VOCAB ({len(VOCAB)}값) — 이 파일은 사본을 갖지 않는다.")
+    if fresh:
+        print("  !! 신규 위반 — 등록한 사이클이 처치한다 (어휘 밖 값은 하드 에러):")
+        for pid, errs in fresh:
+            for e in errs:
+                print(f"       {pid}: {e}")
+        print("     ※ 판정 미도래를 뜻하려면 `시계-미시작`(창 미개시) 또는 `시계-가동`(창 개시)이다.")
+    else:
+        print("  신규 위반 0 — 어휘 클린.")
+    for pid, errs in known:
+        print(f"  [기지·게이트 대기] {pid}: {len(errs)}건 — 손 유지 상수 KNOWN_VOCAB_OFFENDERS 등재분")
+
+
 def part_f() -> None:
     """[F] 미해소 관측 인덱스 — 대장 파생 (A-95.1 루프 몫, c108 배선 · P34, 관측 52 처치).
 
@@ -935,3 +984,6 @@ if __name__ == "__main__":
     # part_f는 말미다 — part_n 배너 1행·Body 첫 화면(P21)의 기존 계약을 건드리지 않고,
     # 인덱스는 절차 2(선택) 직전에 읽히는 마지막 화면이 된다.
     part_f()
+    # part_p는 part_f 뒤 — 대장 위생은 절차 2의 선택 입력이 아니라 절차 3의 등록
+    # 직전에 읽혀야 한다. 파트 F의 조망 계약(마지막 화면)을 깨지 않으려 그 아래 붙인다.
+    part_p()
