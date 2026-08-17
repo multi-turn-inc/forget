@@ -35,6 +35,7 @@ import re
 import sqlite3
 import subprocess
 import sys
+import time
 import urllib.request
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
@@ -184,6 +185,11 @@ def part_n() -> None:
     print("    턴2 = get_task_state + 이 스크립트 + git status 병렬 / 턴3 = 첫 유효 행동")
     print("    ※ 이 인쇄는 턴2에 열리므로 **턴1 규약을 집행할 수 없다**(관측 47).")
     print("       턴1 이전 채널은 저장소 루트 CLAUDE.md와 캡슐이다 — 판정은 P29.")
+    print("[H. 절차 5 — 다음 HAND 분모는 손으로 옮겨적지 않는다 (audit-150 R6, P42)]")
+    print("    수확 커밋 직후: .venv/bin/python research/devloop/scripts/harvest_stat.py"
+          f" --cycle {n}")
+    print("    출력 말미의 붙여넣기 블록을 task_state에 **그대로** 넣는다. 손 계산 금지 —")
+    print("    계열 실측 c147 Δ−1 · c149 Δ±1 · c150 Δ−19, 문면 처치 3회 실효 0.")
 
 
 def compare_fingerprint(live: dict[str, str], baseline: dict[str, str]) -> tuple[str, list[str], list[str]]:
@@ -500,6 +506,52 @@ def porcelain_changed_paths(raw: str) -> list[str]:
     return paths
 
 
+# 코드 사이클 큐 — 절차 2에서 "봉쇄를 풀 증명"에 쓰이는 쪽 피연산자 (audit-150 §3, c151).
+#
+# 루프가 매 사이클 인쇄해 온 무교집합은 `이번 사이클의 변경분 ∩ 봉쇄 경로 = ∅`였다.
+# 그것은 **"내가 남의 파일을 밟지 않았다"**만 증명한다. 봉쇄를 풀려면 반대 방향이
+# 필요하다: **"내가 하려는 일이 남의 파일과 무관하다"** = `코드 큐 ∩ 봉쇄 경로 = ∅`.
+# 43사이클 동안 전자만 인쇄됐고 후자는 c150 감사가 손으로 한 번 쟀다. 여기 싣는다.
+#
+# 이 상수는 손으로 유지된다(큐의 정본은 task_state next_actions와 frictions 대장이며,
+# 기계가독 형식이 아직 없다). 매 사이클 인쇄되므로 표류는 **눈에 보이는 채로** 썩는다 —
+# 조용히 틀리는 것보다 낫다. 큐가 바뀌면 이 줄을 바꾸고 사이클 보고에 선언한다.
+CODE_QUEUE_PATHS = ("forget/store.py",)
+
+
+def blockade_rows(entries: list[tuple[str, float | None]], head_ct: float,
+                  now_ts: float) -> list[tuple[str, float | None, float | None, str]]:
+    """(경로, mtime|None)을 (경로, now대비h, HEAD대비h, 판정) 행으로. **순수 함수** (c151).
+
+    핵심 성질: mtime을 못 읽은 경로를 **버리지 않는다.** 목록에서 조용히 빠지면
+    "봉쇄 3건 전부 무접촉" 같은 거짓 전수 주장이 만들어진다 — compare_fingerprint와
+    같은 규율이고, 자기규율 8회차("0건은 '없음'과 '못 봄'을 구별하지 않는다")의 적용이다.
+    못 읽은 행은 '판정 불가'로 **인쇄에 남는다**.
+
+    판정 어휘는 두 개뿐이고 결론을 만들지 않는다(이 스크립트의 상시 규약):
+    HEAD 커밋 시각보다 mtime이 뒤면 '수확 이후 접촉', 아니면 '수확 이후 무접촉'.
+    무접촉이 곧 "죽은 WIP"라는 추론은 **여기서 하지 않는다** — 그 판단은 사람 몫이고,
+    frictions.md:515-516의 비-WIP 시험(장기 mtime 불변)이 그 자[尺]다.
+    """
+    rows: list[tuple[str, float | None, float | None, str]] = []
+    for path, mt in entries:
+        if mt is None:
+            rows.append((path, None, None, "판정 불가(stat 실패·경로 부재)"))
+            continue
+        rows.append((path, (now_ts - mt) / 3600.0, (mt - head_ct) / 3600.0,
+                     "수확 이후 접촉" if mt > head_ct else "수확 이후 무접촉"))
+    return rows
+
+
+def queue_intersection(changed: list[str], queue: tuple[str, ...] = CODE_QUEUE_PATHS) -> list[str]:
+    """코드 큐 ∩ 봉쇄 경로. **순수 함수** (c151).
+
+    경로 문자열 동일성으로만 잰다 — 디렉터리 포함 관계는 세지 않는다. 큐 항목이
+    디렉터리가 되면 이 함수도 함께 바뀌어야 하고, 그 전까지 여기서 짐작하지 않는다.
+    """
+    return sorted(set(changed) & set(queue))
+
+
 def part_a() -> None:
     print("[A. 규약 (ii) — 구현 의존성]")
     dotgit = os.path.join(REPO, ".git")
@@ -535,6 +587,40 @@ def part_a() -> None:
     print(f"  uncommitted_paths_newer_than_HEAD={len(newer)}")
     for rel, delta in newer:
         print(f"    +{delta:5d}s  {rel}")
+
+    # ── 봉쇄 계측 (audit-150 R1, c151 배선) ──────────────────────────────────
+    # git status는 파일의 **존재**를 증명하고 **활성**을 증명하지 않는다. 그 구별이
+    # 없어서 영토 봉쇄의 전제('타 세션의 진성 WIP')가 43사이클간 무검증으로 지나갔고,
+    # 검증법은 루프가 c31에 자기 손으로 써 놓은 채였다(frictions.md:515-516,
+    # "장기 mtime 불변" = 비-WIP 시험). 여기 세 줄이 그 시험을 상시화한다.
+    if changed:
+        entries: list[tuple[str, float | None]] = []
+        for rel in changed:
+            full = os.path.join(REPO, rel)
+            try:
+                if os.path.isdir(full):
+                    mt = max((os.path.getmtime(os.path.join(r, f))
+                              for r, _, fs in os.walk(full) for f in fs), default=None)
+                else:
+                    mt = os.path.getmtime(full)
+            except OSError:
+                mt = None
+            entries.append((rel, mt))
+        rows = blockade_rows(entries, head_ct, time.time())
+        print("  [미커밋 경로의 활성 계측 — 존재가 아니라 활성 (audit-150 R1)]")
+        print("    now 대비 = 마지막 손댐 이후 경과. 사이클 ≈ 1일 — 판단은 사람 몫이다.")
+        print("    ※ 이 목록은 '타 트랙 WIP'가 아니라 **미커밋 전체**다. step 0(턴2)에는")
+        print("      둘이 같지만, 사이클 도중 재실행하면 자기 편집분이 ~0.0h로 함께 뜬다.")
+        for rel, since_now, vs_head, verdict in rows:
+            if since_now is None:
+                print(f"    {'':>9s} {'':>10s}  {rel}  ← {verdict}")
+            else:
+                print(f"    {since_now:8.1f}h {vs_head:+9.1f}h  {rel}  ← {verdict}")
+        inter = queue_intersection(changed)
+        print(f"    코드 큐 {list(CODE_QUEUE_PATHS)} ∩ 미커밋 {len(changed)}건"
+              f" = {len(inter)}건 {inter if inter else '(교집합 없음)'}")
+        print("    ※ 이 교집합이 절차 2의 '봉쇄를 풀 증명' 쪽 피연산자다 — 매 사이클")
+        print("      인쇄되던 무교집합(내 변경분 ∩ 봉쇄)은 방향이 반대였다(audit-150 §3).")
 
 
 def needle_reach(capsule: str, rules: dict[str, list[str]]) -> tuple[int, dict[str, int]]:

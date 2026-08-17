@@ -74,6 +74,19 @@ PROSE_FIELDS = [
 # 사이클 → 수확 커밋 (md 코퍼스 취득용). 손으로 박지 않는다: git log로 찾는다.
 HARVEST_SUBJECT = "loop(cycle {n}):"
 
+# 코퍼스 스코프 — corpus()가 md 추가줄을 긁는 대상. **정본은 이 상수 하나다** (c151).
+# 왜 상수로 올렸는가: c151이 붙인 harvest_stat.py(수확 --stat 계기, audit-150 R6)가
+# "이번 커밋의 어느 부분이 다음 사이클 코퍼스에 들어오고 어느 부분이 사각인가"를
+# 인쇄하려면 같은 스코프를 알아야 한다. 두 벌로 두면 그 순간 관측 30·34(자[尺]가
+# 선언 없이 갈라지면 시점 간 비교가 소멸)의 다음 표본이 된다 — 그래서 재선언이
+# 아니라 import다. 스코프가 바뀌면 여기만 바뀌고 두 계기가 함께 움직인다.
+# (c146 실측 계보: 코퍼스 분모 급감의 원인이 이 스코프였고 — amendments/ 밖 —
+#  그 사실이 손 노트에만 있었다. 이제 코드가 말한다.)
+CORPUS_PATHS = [
+    "research/devloop/frictions.md",
+    "research/devloop/predictions.md",
+]
+
 # ── HAND: 감사 원본 ────────────────────────────────────────────────────────
 # 저자가 원문 통독으로 작성했다. (id, 출처, 인용 니들, 판정, 사유)
 # 하드 가드 (c131, audit-130 R2): 이 표는 아래 HAND_CYCLE 전용 하드코딩이다.
@@ -177,8 +190,7 @@ def corpus(n: int) -> list[tuple[str, str]]:
 
     sha = harvest_commit(n)
     diff = subprocess.run(
-        ["git", "show", sha, "--", "research/devloop/frictions.md",
-         "research/devloop/predictions.md"],
+        ["git", "show", sha, "--", *CORPUS_PATHS],
         cwd=ROOT, capture_output=True, text=True, check=True).stdout
     added = [l[1:] for l in diff.splitlines()
              if l.startswith("+") and not l.startswith("+++")]
