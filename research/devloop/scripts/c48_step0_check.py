@@ -1105,13 +1105,33 @@ def _ledger_rows() -> list[dict]:
 
 
 def _ordinal_series(rows: list[dict], pattern: str) -> list[tuple[int, int]]:
-    """원장 행 전체에서 (cycle, 인쇄된 서수) 계열을 뽑는다. 어느 필드에 사는지는 묻지 않는다."""
+    """원장 행에서 (cycle, 인쇄된 서수) 계열을 뽑는다.
+
+    어느 **필드**에 사는지는 묻지 않되, **필드 경계는 넘지 않는다.**
+
+    c166 수리 (관측 93). 이전 판은 `json.dumps(row)`를 스캔했다. 직렬화는 값 안의
+    개행을 `\\n` **2문자**로 이스케이프하므로 직렬화본에는 실개행이 **0개**다 —
+    그래서 앵커 패턴의 `[^\\n]{0,80}` 창이 종료 조건을 잃고 필드 경계를 자유롭게
+    넘었다. 실측 피해: c164 행에서 `predictions_note` 말미의 낱말 "영토"가 다음 필드
+    `gate_pending` 서두의 **서비스율 값 49**를 삼켜, 봉쇄 라벨에 유령 이탈 1건을
+    인쇄했다(함의 앵커 c116 = 서비스율 앵커). 그 유령이 c165 `task_state`를 거쳐
+    c166에게 *"P46 (a)는 반증"*으로 인계됐다 — 관측 74의 모양(파서 거짓 값이 손
+    판정을 통과해 사실로 굳는다)이며, 이번에는 판정 직전에 잡혔다.
+
+    파싱된 값을 **필드별로** 보면 `[^\\n]`이 본래 의도대로 다시 경계가 된다.
+    한 행에 여러 필드가 같은 라벨을 인쇄하면 **첫 매치만** 쓴다(구판과 동일한 계약 —
+    행당 1표본이어야 앵커 최빈값이 행 수로 정규화된다).
+    """
     rx = re.compile(pattern)
     out = []
     for r in rows:
-        m = rx.search(json.dumps(r, ensure_ascii=False))
-        if m:
-            out.append((int(r["cycle"]), int(m.group(1))))
+        for value in r.values():
+            if not isinstance(value, str):
+                continue
+            m = rx.search(value)
+            if m:
+                out.append((int(r["cycle"]), int(m.group(1))))
+                break
     return out
 
 
