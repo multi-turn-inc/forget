@@ -953,6 +953,106 @@ def part_x() -> None:
         print("  위반 0 — 4패턴 클린.")
 
 
+# ── ㉠ 서수 1종 고정 (c161 집행, P46 · 관측 85 수용 기준 ③ / 처치 설계 = c153 별건 1) ──
+#: 자[尺]는 **하나**다: "N사이클째" = `N − start + 1` (당 사이클 **포함**).
+#: 이 표는 **손 유지 상수**다 — `CODE_QUEUE_PATHS`·`KNOWN_VOCAB_OFFENDERS`와 같은 등급.
+#: 값은 원장 계열의 최빈 앵커에서 역산했고(`tmp/c161_ordinal_series.py`), 파트 O가 매
+#: 사이클 그 역산을 다시 돌려 이 상수와 대조한다. 계열이 열리거나 닫히면 이 표를 고치고
+#: **보고에 선언**할 것. 기계가 된 것은 **산술**이고 앵커의 개시 판단은 아니다(P46 한계 ②).
+#:
+#: `A-106.1`은 **의도적으로 없다** — 그 라벨의 정규식이 40자 창 안의 원터치 값을 흡입해
+#: 계열이 오염됐다(c151 행 직독으로 확인, 관측 74와 같은 모양). 오염된 계열을 감시하는
+#: 것보다 감시하지 않는다고 **적는 것**이 정직하다.
+ORDINAL_ANCHORS = (
+    ("봉쇄(타 트랙 미커밋 잔존)", 127, r"(?:미커밋|잔존|영토)[^\n]{0,80}?(\d+)사이클째"),
+    ("게이트 서비스율 0", 116, r"서비스율[^\n]{0,40}?(\d+)사이클째"),
+    ("인스턴스 원터치 대기", 142, r"원터치[^\n]{0,60}?(\d+)사이클째"),
+)
+
+#: 계열이 같은 낱말을 다른 시기의 다른 사건에 재사용하면 한 라벨에 두 계열이 섞인다.
+#: 최근 창으로 잘라 **당대 에피소드**만 본다 — 창 밖 표본은 계열이 아니라 동음이의다.
+ORDINAL_WINDOW = 20
+
+#: ㉠ 집행 사이클. 이 경계 **이후**의 계열 이탈이 P46 (a)의 반증 사건이다 — 이전 이탈은
+#: 처치의 근거(기지)이고 반증이 아니다. 둘을 한 수로 합치면 처치가 자기 근거로 반증된다.
+ORDINAL_TREATMENT_CYCLE = 161
+
+
+def _ledger_rows() -> list[dict]:
+    rows = []
+    with open(os.path.join(REPO, "research", "devloop", "metrics.jsonl"), encoding="utf-8") as fh:
+        for line in fh:
+            if line.strip():
+                rows.append(json.loads(line))
+    if not rows:
+        raise SystemExit("[O] FATAL: 원장이 비었다 — 서수를 계산할 근거가 없다.")
+    return rows
+
+
+def _ordinal_series(rows: list[dict], pattern: str) -> list[tuple[int, int]]:
+    """원장 행 전체에서 (cycle, 인쇄된 서수) 계열을 뽑는다. 어느 필드에 사는지는 묻지 않는다."""
+    rx = re.compile(pattern)
+    out = []
+    for r in rows:
+        m = rx.search(json.dumps(r, ensure_ascii=False))
+        if m:
+            out.append((int(r["cycle"]), int(m.group(1))))
+    return out
+
+
+def part_o() -> None:
+    """[O] 서수 — 자[尺] 1종 고정 + 계기 계산 (c161 ㉠ 집행, P46).
+
+    왜. 같은 낱말 "N사이클째"가 두 규약으로 쓰였다(관측 85 (A)): 계기는 `N − start`,
+    손은 `N − start + 1`. 차이는 정확히 1이고 **같은 원장 행에 동거**했다. c153 별건 1이
+    처치를 골랐고("서수 1종 고정 + 계기가 원장에서 직접 계산해 인쇄") c154~c160 **7회
+    이월**됐다. 관측 85 수용 기준 ③이 c161 미집행을 **회피**로 못박았다.
+
+    무엇이 실제로 바뀌는가. 손이 하던 **+1 산술**이 사라진다. 계열 실측이 그 산술의
+    실패를 보였다: 서비스율 계열은 c146~c150 **5사이클 연속** 앵커를 한 칸 놓쳤다가
+    c151에 **+2 점프**로 복귀했다 — 보상 오류여서 단일 행만 보면 어느 행도 틀려 보이지
+    않는다. 봉쇄 계열은 c152에 Δ−2. 관행 ㉖("산문에만 사는 수는 추세를 만들 수 없다")의
+    직접 처치이며, 이 파트가 그 수의 **기계 거처**다.
+    """
+    rows = _ledger_rows()
+    n_exec = max(int(r["cycle"]) for r in rows) + 1
+    print("\n[O. 서수 — 자[尺] 1종 고정 + 계기 계산 (c161 ㉠ 집행, P46 · 관측 85 수용 기준 ③)]")
+    print('  정의 = "N사이클째" = N − start + 1 (당 사이클 **포함**). 자[尺]는 하나다.')
+    print(f"  프레임 N={n_exec} (원장 cycle max {n_exec - 1} +1 = 실행 사이클, **append 전**).")
+    print("  ※ 절차 5에서 원장 append 후 재실행하면 프레임이 +1 옮겨가고 값도 +1 된다 —")
+    print("    전사 시 프레임을 값과 함께 옮기거나 이 파트를 재실행할 것 (P46 한계 ⑤).")
+    print("  [아래 값을 원장·task_state에 **그대로** 전사할 것. 손 증분 금지 = P46 (a).]")
+
+    for label, start, pattern in ORDINAL_ANCHORS:
+        val = n_exec - start + 1
+        series = _ordinal_series(rows, pattern)
+        recent = [(c, o) for c, o in series
+                  if series and c > max(x for x, _ in series) - ORDINAL_WINDOW]
+        print(f"    {label}  →  **{val}사이클째**  [start c{start} · 프레임 N={n_exec}]")
+        if not recent:
+            print("       !! 계열 0본 — 정규식이 원장 문면과 다르다. '드리프트 없음'으로"
+                  " 읽지 말 것(미측정이다).")
+            continue
+        anchors = [c - o + 1 for c, o in recent]
+        modal = max(set(anchors), key=anchors.count)
+        agree = "일치" if modal == start else f"**불일치** (선언 c{start})"
+        print(f"       계열 {len(recent)}본(최근 {ORDINAL_WINDOW}창) · 최빈 앵커 c{modal} = {agree}")
+        if modal != start:
+            print("       !! 선언 상수와 계열 최빈이 갈렸다 — 상수가 틀렸거나 계열이"
+                  " 표류했다. 둘 중 무엇인지 정하고 보고에 선언할 것.")
+        pre = [c for c, o in recent if c - o + 1 != modal and c < ORDINAL_TREATMENT_CYCLE]
+        post = [c for c, o in recent if c - o + 1 != modal and c >= ORDINAL_TREATMENT_CYCLE]
+        line = f"       계열 이탈: 처치 전(기지) {len(pre)}본"
+        if pre:
+            line += f" (c{' c'.join(str(c) for c in pre)})"
+        line += f" · **처치 후 {len(post)}본**"
+        if post:
+            line += f" (c{' c'.join(str(c) for c in post)}) ← P46 (a) 반증"
+        print(line)
+        if post:
+            print("       !! 처치 후 이탈이 있다 — P46 (a)는 반증이다. 원장에 그대로 적을 것.")
+
+
 def part_f() -> None:
     """[F] 미해소 관측 인덱스 — 대장 파생 (A-95.1 루프 몫, c108 배선 · P34, 관측 52 처치).
 
@@ -1009,9 +1109,15 @@ def part_f() -> None:
         print(f"  ↳ 처치 대기 (audit-120 R2) — 분모 = 회부 존속 {len(opened)}건 전체."
               f" '처치 식별 완료·집행 대기' 부분집합은 기계가독 마커가 없어 **상한 근사**다.")
         print(f"     최고 등재 경과: 관측 {oldest} c{obs[oldest]['opened']}"
-              f" → {n_now - obs[oldest]['opened']}사이클째 미해소")
+              f" → {n_now - obs[oldest]['opened'] + 1}사이클째 미해소  [프레임 N={n_now}]")
         print(f"     최고 무갱신  : 관측 {stalest} c{obs[stalest]['last']} 마지막 갱신"
-              f" → {n_now - obs[stalest]['last']}사이클째 무갱신")
+              f" → {n_now - obs[stalest]['last'] + 1}사이클째 무갱신  [프레임 N={n_now}]")
+        # c161 ㉠: 이 두 값은 c160까지 `N − start`(개시 제외)로 인쇄됐다. 이제 파트 O와
+        # **같은 자[尺]**(당 사이클 포함)를 쓰므로 구 계열 대비 +1이다. 원장 소급 편집은
+        # 금지(c122)이므로 고치는 대신 경계를 선언한다 — P46 한계 ③의 유일한 거처.
+        print("     ※ 서수 = 당 사이클 포함(c161 ㉠ 통일, 파트 O와 동일 자[尺]).")
+        print("       c160까지의 인쇄는 개시 제외였으므로 구 계열보다 **+1**이다 —")
+        print("       추세를 읽는 손은 c161 경계에서 +1을 알 것(소급 편집 없음, P46 한계 ③).")
 
     print(f"  무태그(유형 기귀속, 계상 밖): {' '.join(str(n) for n in untagged)}"
           f"   회부 이탈: {' '.join(str(n) for n in exited)}")
@@ -1040,3 +1146,8 @@ if __name__ == "__main__":
     # part_x는 말미 — 프로브 위생은 절차 3(수행) 직전에 읽히면 된다. 파트 P와 같은
     # 이유로 파트 F의 조망 계약 아래에 둔다.
     part_x()
+    # part_o는 맨 마지막 — 서수는 절차 5(수확)에서 쓰이므로 마지막 화면이 곧 그 자리에
+    # 가장 가까운 화면이다. 파트 F의 '조망 = 마지막' 계약은 c161에 파트 P·X가 이미
+    # 아래에 붙어 실질 종료됐고(그 사실을 여기 적는다), 서수는 F의 경과값과 **같은
+    # 자[尺]**를 쓰므로 둘이 인접해 대조되는 편이 낫다.
+    part_o()
