@@ -110,6 +110,33 @@ def task_state_lag(ledger_last: int, summary: str) -> tuple[int | None, str]:
 #: 다음 사이클의 파트 S만이 판정할 수 있다 (관측 88 · P47).
 REVERIFY_FIELD = "step5_write_reverified"
 
+#: 유보 = **주장을 하지 않은 값**(c162~ 서식). 반증될 주장이 없으므로 고발 대상이 아니다.
+#: 이 술어는 계열 함수와 라이브 고발 블록이 **함께** 쓴다 — c167 이전에는 사본이 둘이었고,
+#: 계열은 유보를 면책하는데 라이브 블록은 같은 행에 `★ 모순`을 찍었다(P47 판정 거짓 양성).
+#: 벌한 대상이 하필 **정직**이었다: 유보 서식은 맨 `True`를 쓰지 않으려고 도입된 것인데
+#: 그 정직한 유보가 c155·c161의 거짓 `True`와 같은 도장을 받았다. 사본을 하나로 만든다.
+DEFERRAL_MARKERS = ("미정", "유보")
+
+
+def is_deferred(val: object) -> bool:
+    """자기보고 값이 **유보**(주장 없음)인가. bool은 주장이므로 유보가 아니다."""
+    return not isinstance(val, bool) and any(k in str(val) for k in DEFERRAL_MARKERS)
+
+
+def reverify_claim_mark(claim: object) -> str:
+    """라이브 고발 블록이 누락 구간 각 행에 찍을 도장. 순수 함수 (c167, P51).
+
+    함수로 뺀 이유는 **회귀 아래 두기 위해서**다. c162~c166 동안 이 판단은 인쇄문 안에
+    인라인으로 살았고 계열 함수와 사본 관계였다 — 그래서 조용히 갈라졌고, 갈라진 것을
+    아무 테스트도 잡지 못했다. 이제 두 경로가 `is_deferred` 하나를 공유하고, 그 공유를
+    `tests/test_devloop_step0_reverify.py`가 고정한다.
+    """
+    if not claim or claim == "**필드 없음**":
+        return "  (주장 없음)"
+    if is_deferred(claim):
+        return "  (유보 — 주장 없음)"
+    return "★ 모순"
+
 #: N+1의 restore_note에 인쇄된 파트 S 판정을 읽는 눈. 문면이 바뀌면 **거짓 음성**이고,
 #: 그 경우 '무결'이 아니라 '미측정'으로 계상해야 한다 (P47 한계 ③).
 RE_PART_S_VERDICT = re.compile(r"판정\s*=\s*(일치|지연|앞섬)")
@@ -145,7 +172,7 @@ def reverify_contradictions(rows: list[dict]) -> dict:
         val = by_cycle[c][REVERIFY_FIELD]
         if isinstance(val, bool):
             continue
-        (deferred if any(k in str(val) for k in ("미정", "유보")) else prose).append(c)
+        (deferred if is_deferred(val) else prose).append(c)
 
     checked = agree = unmeasured = 0
     contradictions: list[tuple[int, str]] = []
@@ -230,8 +257,7 @@ def part_s() -> None:
         if state_cycle is not None:
             for miss in range(state_cycle + 1, ledger_last + 1):
                 claim = (by_cycle.get(miss) or {}).get(REVERIFY_FIELD, "**필드 없음**")
-                mark = "★ 모순" if claim and claim != "**필드 없음**" else "  (주장 없음)"
-                print(f"    {mark}  c{miss}.{REVERIFY_FIELD} = {claim!r}")
+                print(f"    {reverify_claim_mark(claim)}  c{miss}.{REVERIFY_FIELD} = {claim!r}")
             print("    → 자기보고는 원장 행에 살고 그 행은 record_task_state보다 **먼저** 쓰인다")
             print("      (순서 = 원장 append → 커밋 → push → 호출 → 재조회, 관측 55 수용 기준 ②).")
             print("      구조적으로 영수증이 아니라 의도 선언이다 — 관측 88.")

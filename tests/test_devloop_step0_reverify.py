@@ -131,3 +131,60 @@ def test_falsey_self_report_is_never_a_contradiction():
     ])
     assert out["contradictions"] == []
     assert out["agree"] == 1
+
+
+# --- c167 (P51): 라이브 고발 블록과 계열 함수의 사본 분기 ---------------------
+#
+# c167 P47 판정에서 실측된 병: 같은 계기가 같은 행에 두 판정을 인쇄했다.
+# 계열 함수는 c166을 `유보`로 면책하는데(:168 "주장하지 않은 행은 반증될 주장이 없다")
+# 라이브 블록은 같은 행에 `★ 모순`을 찍었다. 유보 개념이 그쪽에만 없었기 때문이다.
+# 벌한 대상이 하필 정직이었다 — 유보 서식은 맨 `True`를 피하려고 도입된 것이다.
+
+
+def test_deferral_predicate_reads_the_reserved_forms():
+    assert c48.is_deferred("미정 — c167 파트 S가 판정")
+    assert c48.is_deferred("유보")
+
+
+def test_bool_self_report_is_a_claim_not_a_deferral():
+    # bool은 의도 선언이지만 **주장은 주장이다** — 유보로 새면 c155·c161이 면책된다.
+    assert not c48.is_deferred(True)
+    assert not c48.is_deferred(False)
+
+
+def test_live_mark_does_not_accuse_a_reserved_row():
+    # c166의 실제 값. 이것이 P47 판정에서 잡힌 거짓 양성 1건이다.
+    assert c48.reverify_claim_mark("미정 — c167 파트 S가 판정") == "  (유보 — 주장 없음)"
+
+
+def test_live_mark_still_accuses_a_true_claim():
+    # 참 양성이 죽지 않았는지 — c155·c161은 계속 고발되어야 한다.
+    assert c48.reverify_claim_mark(True) == "★ 모순"
+
+
+def test_live_mark_is_silent_when_the_field_is_absent():
+    assert c48.reverify_claim_mark("**필드 없음**") == "  (주장 없음)"
+    assert c48.reverify_claim_mark("") == "  (주장 없음)"
+
+
+def test_live_mark_accuses_exactly_what_the_series_counts():
+    """두 경로가 갈라지지 않는지 — 이 절의 존재 이유.
+
+    사본이 둘이면 다시 갈라진다. **불변식**: 파트 S가 `지연`을 본 행에 대해
+    라이브 블록의 `★ 모순`과 계열의 `contradictions` 편입은 동치여야 한다.
+
+    자기 불리 — 이 단언의 첫 판본은 *"계열이 `deferred`로 분류한 행은 고발되지
+    않는다"*였고 **틀렸다**. `False`는 유보가 아니라 실패의 시인이며, 유보가
+    아니면서도 고발되지 않는다. 술어를 `deferred` 여부로 좁혀 쓴 것이 나의 오류이고
+    테스트가 그것을 잡았다 — 계기가 아니라 **내 명세**가 틀린 경우다.
+    """
+    claims = ["미정 — c167 파트 S가 판정", "유보", True, False, "청구 산문"]
+    rows = []
+    for i, c in enumerate(claims):
+        rows.append(row(100 + 2 * i, claim=c))
+        rows.append(row(101 + 2 * i, note="→ 판정=지연`"))
+    out = c48.reverify_contradictions(rows)
+    counted = {c for c, _ in out["contradictions"]}
+    for i, c in enumerate(claims):
+        accused = c48.reverify_claim_mark(c) == "★ 모순"
+        assert accused is ((100 + 2 * i) in counted), c
