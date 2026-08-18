@@ -104,6 +104,86 @@ def task_state_lag(ledger_last: int, summary: str) -> tuple[int | None, str]:
     return state_cycle, "앞섬(원장 미기재 — 절차 5 미완주 의심)"
 
 
+#: 절차 5의 재조회 확인을 보고하는 원장 필드. **구조적으로 영수증이 아니다** — 이 필드가
+#: 사는 원장 행은 `원장 append → 커밋 → push → record_task_state → 재조회` 순서(관측 55
+#: 수용 기준 ②, c96)에서 **재조회보다 먼저** 쓰인다. 그래서 값은 의도 선언이며, 진위는
+#: 다음 사이클의 파트 S만이 판정할 수 있다 (관측 88 · P47).
+REVERIFY_FIELD = "step5_write_reverified"
+
+#: N+1의 restore_note에 인쇄된 파트 S 판정을 읽는 눈. 문면이 바뀌면 **거짓 음성**이고,
+#: 그 경우 '무결'이 아니라 '미측정'으로 계상해야 한다 (P47 한계 ③).
+RE_PART_S_VERDICT = re.compile(r"판정\s*=\s*(일치|지연|앞섬)")
+
+
+def reverify_contradictions(rows: list[dict]) -> dict:
+    """`step5_write_reverified` 자기보고를 **외부 관측**과 대조한다. 순수 함수 (c162, P47).
+
+    외부 앵커. 사이클 N의 `record_task_state`가 실제로 착지했는지 N 자신은 알 수 없다 —
+    보고가 곧 자기 보고이기 때문이다. 아는 것은 **N+1의 파트 S**다(`ledger_last` vs
+    `task_state_cycle`). 그 판정은 N+1의 `restore_note`에 인쇄돼 원장에 남는다. 따라서
+    원장 하나만으로 자기보고 대 관측의 대조가 가능하다 — 손 증분 없이(P46 (a)의 계승).
+
+    반환의 `unmeasured`가 핵심이다. 파트 S는 c93 처치 이후에만 인쇄되므로 그 이전 행들은
+    **모순이 없는 것이 아니라 잴 수 없는 것**이다. 둘을 섞으면 이 계기가 바로 자기가
+    고발하는 병(자기보고의 존재를 검사의 존재로 읽기)에 걸린다.
+
+    **`지연`만이 N의 자기보고를 반증한다** (c162 자기 수정). 첫 판본은 "판정 != 일치"를
+    모순으로 셌고 c95를 고발했다 — 오판이다. `앞섬`은 `task_state_cycle > ledger_last`,
+    즉 세대가 **존재하고 앞서** 있다는 뜻이므로 N의 쓰기는 착지했고, 병은 N+1 세션의
+    완주 선기재다(관측 55, c96 실전 첫 발화가 바로 그 자리다). 남의 병으로 N을 고발하면
+    관측 74의 모양 — 파서의 거짓 값이 손 판정을 통과해 사실로 굳는다. 그래서 `앞섬`은
+    모순이 아니라 **별도 계상**한다.
+    """
+    by_cycle = {int(r["cycle"]): r for r in rows}
+    field_rows = sorted(c for c in by_cycle if REVERIFY_FIELD in by_cycle[c])
+    # 값은 세 종류다. bool = **의도 선언**(구조적으로 영수증 불가, 관측 88).
+    # 산문 = c93·c94의 claim/epoch id — 그 시점 순서에서는 재조회가 원장 append보다
+    # **앞**이었으므로 진짜 영수증이었다. 유보 = 주장을 하지 않은 행(c162~).
+    # 셋을 한 칸에 세면 이 계기가 자기가 고발하는 병에 걸린다.
+    deferred, prose = [], []
+    for c in field_rows:
+        val = by_cycle[c][REVERIFY_FIELD]
+        if isinstance(val, bool):
+            continue
+        (deferred if any(k in str(val) for k in ("미정", "유보")) else prose).append(c)
+
+    checked = agree = unmeasured = 0
+    contradictions: list[tuple[int, str]] = []
+    ahead: list[int] = []
+    pending: int | None = None
+    for c in field_rows:
+        nxt = by_cycle.get(c + 1)
+        if nxt is None:
+            pending = c  # 후속 행이 아직 없다 = 이 세션이 그 후속이다
+            continue
+        m = RE_PART_S_VERDICT.search(str(nxt.get("restore_note") or ""))
+        if not m:
+            unmeasured += 1
+            continue
+        checked += 1
+        verdict = m.group(1)
+        if verdict == "앞섬":
+            ahead.append(c + 1)  # 병은 N+1의 선기재다 — N의 자기보고와 무관
+            agree += 1
+        elif c in deferred:
+            agree += 1  # 주장하지 않은 행은 반증될 주장이 없다
+        elif by_cycle[c][REVERIFY_FIELD] and verdict != "일치":
+            contradictions.append((c, verdict))
+        else:
+            agree += 1
+    return {
+        "field_rows": field_rows,
+        "prose_receipts": prose,
+        "deferred": deferred,
+        "checked": checked,
+        "agree": agree,
+        "contradictions": contradictions,
+        "ahead": ahead,
+        "unmeasured": unmeasured,
+        "pending": pending,
+    }
+
+
 def part_s() -> None:
     """[S] 유동층 대조 — 원장과 task_state가 같은 사이클을 가리키는가 (c93 처치, 관측 49).
 
@@ -116,13 +196,15 @@ def part_s() -> None:
     한계(정직): 이 검사는 **직전 사이클의 실패**만 잡는다. 이번 사이클 자신의 절차 5
     쓰기가 착지했는지는 호출 뒤 재조회로만 확인되며, 그 규약을 아래에 함께 인쇄한다.
     """
-    cycles = []
+    ledger_rows = []
     with open(os.path.join(REPO, "research", "devloop", "metrics.jsonl"), encoding="utf-8") as fh:
         for line in fh:
             line = line.strip()
             if line:
-                cycles.append(int(json.loads(line)["cycle"]))
+                ledger_rows.append(json.loads(line))
+    cycles = [int(r["cycle"]) for r in ledger_rows]
     ledger_last = max(cycles)
+    by_cycle = {int(r["cycle"]): r for r in ledger_rows}
     print("[S. 유동층 대조 — 원장 마지막 사이클 vs task_state 세대 (c93 처치, 관측 49)]")
     try:
         rows = (call("get_task_state", {"task_id": "devloop", "limit": 1}) or {}).get("results") or []
@@ -143,6 +225,39 @@ def part_s() -> None:
         print(f"  ★ 불일치: 사이클 {span}의 record_task_state가 스토어에 세대를 남기지 않았다.")
         print("    → 이 세션의 restore_grade(task_state 채널)는 **stale**이다. 해당 원장 행이")
         print("      완주를 주장한다면 그 주장은 이 대조로 반증된다(관측 49의 기전).")
+        # 그 원장 행이 실제로 무엇을 주장했는지 **여기서 인쇄한다** — 위 문장이 84사이클간
+        # 조건문으로만 있었고 피고발인의 이름을 부른 적이 없다 (관측 88, P47 (a)).
+        if state_cycle is not None:
+            for miss in range(state_cycle + 1, ledger_last + 1):
+                claim = (by_cycle.get(miss) or {}).get(REVERIFY_FIELD, "**필드 없음**")
+                mark = "★ 모순" if claim and claim != "**필드 없음**" else "  (주장 없음)"
+                print(f"    {mark}  c{miss}.{REVERIFY_FIELD} = {claim!r}")
+            print("    → 자기보고는 원장 행에 살고 그 행은 record_task_state보다 **먼저** 쓰인다")
+            print("      (순서 = 원장 append → 커밋 → push → 호출 → 재조회, 관측 55 수용 기준 ②).")
+            print("      구조적으로 영수증이 아니라 의도 선언이다 — 관측 88.")
+
+    # 자기보고 대 외부 관측의 **계열**. 손 증분 0 — 원장에서 매 사이클 재계산한다 (P47 (b)).
+    rv = reverify_contradictions(ledger_rows)
+    print(f"  [자기보고 대조 — `{REVERIFY_FIELD}` (c162 신설, 관측 88 · P47)]")
+    n_bare = len(rv["field_rows"]) - len(rv["prose_receipts"]) - len(rv["deferred"])
+    print(f"    필드 등장 {len(rv['field_rows'])}행"
+          f"(c{rv['field_rows'][0]}~c{rv['field_rows'][-1]}) · "
+          f"산문 영수증 {len(rv['prose_receipts'])}행 {rv['prose_receipts']} · "
+          f"유보 {len(rv['deferred'])}행 {rv['deferred']} · "
+          f"맨 True(의도 선언) {n_bare}행")
+    print(f"    외부 대조 가능 {rv['checked']}행 · 일치 {rv['agree']} · "
+          f"**모순 {len(rv['contradictions'])}** · 미측정 {rv['unmeasured']}행")
+    for c, v in rv["contradictions"]:
+        print(f"      !! c{c}: 자기보고 True 인데 c{c + 1} 파트 S = {v}")
+    if rv["ahead"]:
+        print(f"    ※ `앞섬` {len(rv['ahead'])}건 {rv['ahead']} = **모순 아님** — 세대가 앞서면"
+              " 직전 쓰기는 착지했고")
+        print("      병은 그 사이클 자신의 완주 선기재다(관측 55). 남의 병으로 고발하지 않는다.")
+    if rv["pending"] is not None:
+        print(f"    ※ c{rv['pending']}은 후속 원장 행이 없다 — **이 세션의 위 판정이 그 대조다**.")
+    print("    ※ 미측정은 무결이 아니다(파트 S는 c93 처치 이후에만 인쇄) · 문면이 바뀌면")
+    print("      정규식이 거짓 음성을 낸다 — P47 한계 ③.")
+
     print("  [쓰기 규약] 절차 5의 record_task_state는 호출로 끝나지 않는다 — 호출 뒤")
     print("    get_task_state로 **재조회**해 이번 사이클 번호가 돌아오는지 확인할 것.")
     print("    c92는 '눈으로 확인했다'고 적었고 세대는 없었다. 확인은 재조회로만 성립한다.")
