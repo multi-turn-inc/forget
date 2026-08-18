@@ -1242,6 +1242,159 @@ def part_f() -> None:
         print(f"    관측 {n:>2}  c{o['opened']}→c{o['last']}{mark}  {o['title'][:64]}")
 
 
+# ── 판정 기한 (파트 D, c164 신설 · P48 · 감사 R5 이관분 = 계기 큐 ㉦) ─────────
+#
+# 서식 변이는 **세어서** 인쇄한다. 어느 변이가 0일 때 그 0이 "그 서식이 없다"인지
+# "정규식이 못 본다"인지를 다음 손이 물을 수 있어야 한다 — P48 한계 ③의 거처.
+DEADLINE_VARIANTS = {
+    "판정.": re.compile(r"^-\s*\*\*판정\.\*\*\s*\**\s*c(\d+)"),
+    "판정 시한": re.compile(r"^-\s*\*\*판정 시한\.?\*\*\s*\**\s*c(\d+)"),
+    "판정 채널": re.compile(r"^-\s*\*\*판정 채널\.?\*\*\s*\**\s*c(\d+)"),
+}
+# 달력 기한 — P36의 `- 예측 (판정: **2026-09-10 마감**` 계열. 사이클 자[尺]와 **다른 축**
+# 이므로 따로 센다. 두 축을 한 칸에 합치면 그것이 관측 30·34(자[尺] 무선언 분기)다.
+CAL_DEADLINE_RE = re.compile(r"\*\*(\d{4}-\d{2}-\d{2})\s*마감\*\*")
+
+RUNNING_ARM = "시계-가동"
+UNSTARTED_ARM = "시계-미시작"
+OPEN_ARM_VALUES = (RUNNING_ARM, UNSTARTED_ARM)
+
+
+def parse_deadlines(text: str) -> dict:
+    """절별 판정 기한을 뽑는다. **순수 함수** — 인자 텍스트만 본다(합성 표본 검증 가능).
+
+    절 경계 정규식은 `c124_retro_prep.PSEC_RE`를 **import해서** 쓴다. 복사하면 절
+    경계의 정본이 둘이 되고, 그것이 파트 P가 이미 피한 병이다.
+    """
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from c124_retro_prep import PSEC_RE  # noqa: PLC0415
+
+    lines = text.splitlines()
+    starts = [(i, m.group(1)) for i, l in enumerate(lines) if (m := PSEC_RE.match(l))]
+    spans: dict[str, tuple[int, int]] = {}
+    for k, (i, pid) in enumerate(starts):
+        end = starts[k + 1][0] if k + 1 < len(starts) else len(lines)
+        for j in range(i + 1, end):
+            if lines[j].startswith("## "):
+                end = j
+                break
+        spans.setdefault(pid, (i, end))
+
+    hits = dict.fromkeys(DEADLINE_VARIANTS, 0)
+    cycle: dict[str, int] = {}
+    calendar: dict[str, str] = {}
+    for pid, (s, e) in spans.items():
+        for line in lines[s:e]:
+            for name, rx in DEADLINE_VARIANTS.items():
+                if (m := rx.match(line)):
+                    hits[name] += 1
+                    if name == "판정.":
+                        cycle.setdefault(pid, int(m.group(1)))
+            if (m := CAL_DEADLINE_RE.search(line)):
+                calendar.setdefault(pid, m.group(1))
+    return {"variant_hits": hits, "cycle": cycle, "calendar": calendar,
+            "sections": sorted(spans)}
+
+
+def part_d() -> None:
+    """[D] 예측 판정 기한 — 매 사이클 (c164 신설, P48, 감사 R5 이관분 = 계기 큐 ㉦).
+
+    왜. 판정 기한을 배달하는 채널이 **산문 하나**였다. c163의 P45 기한은 `task_state`
+    산문에만 실려 있었고 그 채널은 c161처럼 꼬리에서 죽으면 통째로 사라진다 —
+    c163이 P45를 제때 판정한 것은 규율이 아니라 운이며 c163 자신이 그렇게 적었다.
+    관행 ⑥의 적용: 처치를 규약 문면이 아니라 계기에 놓되, 그 계기가 열리는 주기(매
+    사이클 step 0)가 기한이 도래하는 주기와 같아야 한다.
+
+    이 파트는 인쇄하고 `exit 0`이다(P48 한계 ①). 강제는 다음 손의 몫이고, 그 몫을
+    안 하면 P48 (c)가 반증된다 — 함정을 미리 파 두었다.
+    """
+    print("\n[D. 예측 판정 기한 — 매 사이클 (c164 신설, P48 · 감사 R5 이관 = 계기 큐 ㉦)]")
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from c124_retro_prep import PRED, predictions  # noqa: PLC0415
+        parsed = parse_deadlines(PRED.read_text(encoding="utf-8"))
+        recs = {r["id"]: r for r in predictions()["records"] if r["habitat"] == "절"}
+    except Exception as exc:  # 계기 고장이 step 0을 죽이지 않는다 — 강등 후 계속
+        print(f"  !! 파트 자체가 돌지 않았다: {type(exc).__name__}: {exc}")
+        print("     → 이 사이클의 기한 판정은 **미측정**이다. '기한 없음'으로 읽지 말 것.")
+        return
+
+    rows = []
+    with open(os.path.join(REPO, "research", "devloop", "metrics.jsonl"), encoding="utf-8") as fh:
+        for line in fh:
+            if line.strip():
+                rows.append(json.loads(line))
+    n_now = max(int(r["cycle"]) for r in rows) + 1
+    today = time.strftime("%Y-%m-%d")
+
+    hits = parsed["variant_hits"]
+    print("  서식 변이별 적중: " + " · ".join(f"'{k}' {v}건" for k, v in hits.items())
+          + f"   달력 기한 {len(parsed['calendar'])}건")
+    print("  ※ 0인 변이는 '그 서식이 없다'와 '정규식이 못 본다'를 구별하지 않는다 —"
+          " P48 한계 ③.")
+
+    # 시계 위 = 팔에 미도래 어휘가 하나라도 있는 절. 가동/미시작을 **가르지 않으면**
+    # (a)의 표본 크기가 부풀려진다: 미시작은 기한 무기재가 정상이다.
+    open_arms = {pid: [(a, v) for a, v in r["arms"] if v in OPEN_ARM_VALUES]
+                 for pid, r in recs.items()}
+    pending = {pid: arms for pid, arms in open_arms.items() if arms}
+    running = {pid: arms for pid, arms in pending.items()
+               if any(v == RUNNING_ARM for _, v in arms)}
+    unstarted = sorted(set(pending) - set(running), key=_pid_key)
+
+    print(f"  시계 위 {len(pending)}건 = **가동 {len(running)}** · 미시작 {len(unstarted)}"
+          f"  [프레임 N={n_now}, 원장 cycle max +1]")
+
+    due, overdue, future, no_deadline = [], [], [], []
+    for pid in sorted(pending, key=_pid_key):
+        cyc = parsed["cycle"].get(pid)
+        cal = parsed["calendar"].get(pid)
+        is_running = pid in running
+        if cyc is not None:
+            (due if cyc == n_now else overdue if cyc < n_now else future).append(
+                (pid, f"c{cyc}", cyc - n_now, is_running))
+        elif cal is not None:
+            over = cal < today
+            (overdue if over else future).append((pid, cal, None, is_running))
+        else:
+            no_deadline.append((pid, is_running))
+
+    if due:
+        print("  ★★ 오늘이 기한이다 — 절차 2의 선택은 이 판정이다:")
+        for pid, d, _, is_run in due:
+            print(f"       {pid}  기한 {d}  ({'가동' if is_run else '미시작'})"
+                  f"  → predictions.md `## {pid}` 절의 팔 전건을 판정하고 상태줄을 갱신할 것")
+    else:
+        print("  오늘 기한인 예측 0건.")
+    for pid, d, gap, is_run in overdue:
+        tail = f" → {-gap}사이클 초과" if gap is not None else " → 달력 기한 도과"
+        print(f"  !! **도과** {pid} 기한 {d}{tail} ({'가동' if is_run else '미시작'})")
+        print("       → 판정하거나, 이월이면 **사유를 원장에 적을 것** (P48 (c) 반증 조건).")
+    if not overdue:
+        print("  도과 0건 — 다만 이 0은 '검출기가 돈다'의 증거가 아니다(관행 ㉕).")
+    for pid, d, gap, is_run in future:
+        when = f"{gap}사이클 뒤" if gap is not None else "달력 기한"
+        print(f"     예정 {pid} → {d} ({when})")
+    if no_deadline:
+        run_blind = [pid for pid, is_run in no_deadline if is_run]
+        print(f"  ↳ 사각: 기한 무기재 {len(no_deadline)}건 — 그중 **가동 {len(run_blind)}건**"
+              f"{' (' + ' '.join(run_blind) + ')' if run_blind else ''}"
+              f" · 미시작 {len(no_deadline) - len(run_blind)}건(무기재가 정상).")
+        print("     트리거형 예측은 원리적으로 이 눈 밖이다 — 정의역 선언(P48 한계 ②).")
+
+    # 회고·감사 시계는 예측 대장이 아니라 사이클 번호가 정한다. 같은 화면에 둔다 —
+    # 기한을 만나는 손이 "그 판정을 쓸 문서가 언제 열리는가"도 함께 알아야 한다(관행 ⑧).
+    try:
+        from c124_retro_prep import next_audit, next_retro  # noqa: PLC0415
+        print(f"  문서 시계: 다음 회고 c{next_retro(n_now)} · 다음 적대 감사 c{next_audit(n_now)}")
+    except Exception as exc:
+        print(f"  문서 시계 미측정: {type(exc).__name__}: {exc}")
+
+
+def _pid_key(pid: str) -> tuple[int, str]:
+    return (int(re.sub(r"\D", "", pid) or 0), pid)
+
+
 if __name__ == "__main__":
     part_n()
     # part_n을 1행에 남긴다 — 그 배너가 F-절차0 처치이고 P16 (a)가 5/5로 성립한
@@ -1255,6 +1408,11 @@ if __name__ == "__main__":
     # part_f는 말미다 — part_n 배너 1행·Body 첫 화면(P21)의 기존 계약을 건드리지 않고,
     # 인덱스는 절차 2(선택) 직전에 읽히는 마지막 화면이 된다.
     part_f()
+    # part_d는 part_f 바로 뒤 — 기한이 오늘이면 그 판정이 **절차 2의 선택**이므로,
+    # 선택 입력(미해소 관측 조망)과 같은 화면에 인접해야 한다. 파트 F의 '조망 =
+    # 마지막' 계약은 c161에 파트 P·X가 아래에 붙어 실질 종료됐다(그 사실은 파트 O
+    # 주석에 이미 적혀 있다).
+    part_d()
     # part_p는 part_f 뒤 — 대장 위생은 절차 2의 선택 입력이 아니라 절차 3의 등록
     # 직전에 읽혀야 한다. 파트 F의 조망 계약(마지막 화면)을 깨지 않으려 그 아래 붙인다.
     part_p()
