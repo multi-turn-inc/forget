@@ -170,26 +170,44 @@ def test_field_streak_empty_domain_is_unmeasured_not_zero():
 
 
 def test_real_ledger_capsule_streak_is_not_the_domain_size():
-    """실 원장 회귀 — c167 손 인쇄 77은 정의역이었고 참 연속은 48이다(관측 96).
+    """실 원장 회귀 — 손 인쇄가 정의역을 '연속'이라 불렀다(관측 96). 고정할 것은 **관계**다.
 
-    이 테스트는 두 수가 **다르다**는 사실을 고정한다. 같아지는 날이 오면(정의역 안의
-    `partial` 5건이 사라지는 날) 이 assert가 깨지고, 그때는 계약이 아니라 데이터가
-    바뀐 것이므로 이 절을 고쳐야 한다 — 조용히 통과하게 두지 않는다.
+    ★ c169 개정 (관측 100). 구본은 `domain == 77`·`streak == 48`을 **값으로** 박았다.
+    그 두 수는 이 회귀를 쓴 사이클 **자신의 원장 append**가 +1 옮긴다 — 절차 4(검증)가
+    절차 5(수확)보다 먼저이므로, 구본은 c168이 초록으로 잰 직후 c168의 수확에 붉어졌고
+    한 사이클을 잠복하다 c169에 실측됐다. 값이 아니라 원장에서 **다시 센다.**
+
+    앵커(`off_value`·`break`·`span` 시작)는 과거 행이라 프레임과 무관하게 안정하다.
+    같아지는 날(정의역 안의 `partial` 5건이 사라지는 날)이 오면 앵커 assert가 먼저
+    깨진다 — 그때는 계약이 아니라 데이터가 바뀐 것이다.
     """
     rows = c48._ledger_rows()
     st = c48.field_streak(rows, "restore_grade_capsule", "miss")
-    assert st["domain"] == 77, f"정의역이 바뀌었다: {st['domain']}"
-    assert st["streak"] == 48, f"연속이 바뀌었다: {st['streak']}"
     assert st["off_value"] == [91, 92, 93, 94, 119]
     assert st["break"] == (119, "partial")
+    assert st["span"][0] == 91
+    # 기계 재계산 — 계기의 반환값이 아니라 원장 행에서 독립으로 센다.
+    present = sorted(int(r["cycle"]) for r in rows if "restore_grade_capsule" in r)
+    assert st["domain"] == len(present), f"정의역이 재계산과 갈렸다: {st['domain']}"
+    assert st["streak"] == sum(1 for c in present if c > 119), (
+        f"연속이 재계산과 갈렸다: {st['streak']}")
+    # ★ 이 절의 존재 이유 — 연속과 정의역은 다른 수다(관측 96).
+    assert st["streak"] != st["domain"]
 
 
 def test_real_ledger_fixed_streak_matches_machine_recount():
-    """실 원장 회귀 — `frictions_fixed` 0 연속의 참값은 25이고 중단은 c142(값 3)다."""
+    """실 원장 회귀 — `frictions_fixed` 0 연속. 중단은 c142(값 3)다.
+
+    ★ c169 개정 (관측 100). 이 절의 **이름은 처음부터 «기계 재계산과 일치»를 약속했는데
+    몸은 `streak == 25`라는 값을 박고 있었다.** 이름이 옳고 몸이 틀렸다 — 몸을 이름에
+    맞췄다. 25는 c168이 검증한 시점의 참값이었고 c168의 원장 append가 26으로 옮겼다.
+    """
     rows = c48._ledger_rows()
     st = c48.field_streak(rows, "frictions_fixed", 0)
     assert st["break"] == (142, 3), f"중단점이 바뀌었다: {st['break']}"
-    assert st["streak"] == 25, f"연속이 바뀌었다: {st['streak']}"
+    present = sorted(int(r["cycle"]) for r in rows if "frictions_fixed" in r)
+    assert st["streak"] == sum(1 for c in present if c > 142), (
+        f"연속이 재계산과 갈렸다: {st['streak']}")
 
 
 def test_streak_counters_table_needs_no_hand_maintained_start():

@@ -1485,11 +1485,18 @@ UNSTARTED_ARM = "시계-미시작"
 OPEN_ARM_VALUES = (RUNNING_ARM, UNSTARTED_ARM)
 
 
-def parse_deadlines(text: str) -> dict:
-    """절별 판정 기한을 뽑는다. **순수 함수** — 인자 텍스트만 본다(합성 표본 검증 가능).
+def _pred_spans(text: str) -> tuple[list[str], dict[str, tuple[int, int]], dict[str, list[int]]]:
+    """(줄 목록, {pid: (시작, 끝)}, {중복 pid: [줄 번호…]}) — 절 경계 계산의 **한 벌**.
 
-    절 경계 정규식은 `c124_retro_prep.PSEC_RE`를 **import해서** 쓴다. 복사하면 절
-    경계의 정본이 둘이 되고, 그것이 파트 P가 이미 피한 병이다.
+    c169 이전에는 이 12줄이 `parse_deadlines` 안에만 있었고, 같은 경계를 필요로 하는
+    두 번째 계기(상태줄↔판정문 정합)를 붙이는 순간 사본이 생길 자리였다. 관행 ㊷:
+    한 계기 안에서 같은 개념의 분류는 한 벌이어야 한다.
+
+    중복 pid는 **먼저 나온 절**이 이긴다 — `setdefault`의 계약이며 두 호출자가 같은
+    절을 보게 하는 것이 목적이다. **그 정책을 반환값으로 드러낸다**: `part_d`의
+    `recs = {r["id"]: r for r in …}`는 dict 컴프리헨션이라 **나중 절**이 이기고,
+    두 정책은 **정반대**다. 그래서 중복 pid에서는 «한 절의 팔»과 «다른 절의 기한»이
+    짝지어진다. c169 실측 = P39(기지, 관측 77) · **P7(신규 — 관측 99)**.
     """
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from c124_retro_prep import PSEC_RE  # noqa: PLC0415
@@ -1497,6 +1504,7 @@ def parse_deadlines(text: str) -> dict:
     lines = text.splitlines()
     starts = [(i, m.group(1)) for i, l in enumerate(lines) if (m := PSEC_RE.match(l))]
     spans: dict[str, tuple[int, int]] = {}
+    occurrences: dict[str, list[int]] = {}
     for k, (i, pid) in enumerate(starts):
         end = starts[k + 1][0] if k + 1 < len(starts) else len(lines)
         for j in range(i + 1, end):
@@ -1504,6 +1512,18 @@ def parse_deadlines(text: str) -> dict:
                 end = j
                 break
         spans.setdefault(pid, (i, end))
+        occurrences.setdefault(pid, []).append(i + 1)
+    dups = {pid: at for pid, at in occurrences.items() if len(at) > 1}
+    return lines, spans, dups
+
+
+def parse_deadlines(text: str) -> dict:
+    """절별 판정 기한을 뽑는다. **순수 함수** — 인자 텍스트만 본다(합성 표본 검증 가능).
+
+    절 경계는 `_pred_spans`(→ `c124_retro_prep.PSEC_RE`)에 위임한다. 복사하면 절
+    경계의 정본이 둘이 되고, 그것이 파트 P가 이미 피한 병이다.
+    """
+    lines, spans, _dups = _pred_spans(text)
 
     hits = dict.fromkeys(DEADLINE_VARIANTS, 0)
     cycle: dict[str, int] = {}
@@ -1519,6 +1539,103 @@ def parse_deadlines(text: str) -> dict:
                 calendar.setdefault(pid, m.group(1))
     return {"variant_hits": hits, "cycle": cycle, "calendar": calendar,
             "sections": sorted(spans)}
+
+
+# ── 상태줄 ↔ 판정문 정합 (c169 신설 · 관측 90 처치 · 관측 98 · P54) ──────────
+#
+# 판정 표지의 **서식지**다. 순진한 자[尺](`MARK_RE` 단독)로 재면 오늘 대장의 시계 아래
+# 38건 중 23건이 "판정문 부재"로 나오고 **그 23건은 전부 판정문을 갖고 있다**(관측 98).
+# 서식지를 더할 때마다 23 → 8 → 0. 이 상수가 이 계기의 유일한 정본이며 사본을 갖지
+# 않는다 — 네 번째 서식지가 발견되면 고칠 곳은 여기 한 곳이다(P54 한계 ③).
+VERDICT_HABITATS = (
+    ("불릿", re.compile(r"^\s*-\s*\*{0,2}(결과|판정|처분)")),
+    # P44: `- **★ 판정 (사이클 160 적대 감사 …)**` — `★`가 `\*{0,2}`를 넘긴다.
+    ("불릿-강조접두", re.compile(r"^\s*-\s*[\*★☆\s]+(결과|판정|처분)")),
+    # P15: `### P15 — 판정 (audit-70 위임 판정 …)` — 판정문이 **소제목**으로 산다.
+    # `###`는 절을 끊지 않으므로(끊는 것은 `## `) 이 줄은 그 절의 몸 안에 있다.
+    ("소제목", re.compile(r"^#{3,}\s.*(판정|처분|결과)")),
+)
+
+#: 손 유지 상수 — "도장 있는데 상태줄이 시계 위"가 **참 고발이 아닌** 절.
+#: 값은 사유이며, 사유 없는 등재는 면죄부다(P54 (c) 반증 조건). 파트 P의
+#: `KNOWN_VOCAB_OFFENDERS`와 같은 계열의 손 유지분 — 늘어나면 보고에 선언할 것.
+STAMP_ONLY_ADJUDICATED = {
+    "P4": "도장 줄 = `처분 (사이클 78): 집행 시작`이고 절 본문이 "
+          "*'이 처분은 판정이 아니라 착공 선언'*이라고 자기가 적는다 (c169 직독)",
+}
+
+_UNRECORDED = "무기재"
+
+
+def status_stamp_reconcile(text: str) -> dict:
+    """상태줄과 판정 표지를 마주 세운다. **순수 함수** — 인자 텍스트만 본다.
+
+    왜 (관측 90). 파트 D의 판별 입력은 각 절의 `- 상태:` **한 줄**이고, 그 줄을 쓰는 손과
+    판정문을 쓰는 손은 같은 손이되 **다른 줄**이다. 상태줄만 내려가고 판정문이 없으면
+    파트 D는 그 예측을 시계에서 내리고 **영원히 침묵한다** — 거짓 음성이며 그 침묵이
+    "판정 완료"로 읽힌다. 반대 방향(판정문만 있고 상태줄이 가동)은 `도과`를 불러 손을
+    부르므로 **안전한 쪽**이다. 두 실패는 대칭이 아니다.
+
+    고발의 문턱을 «도장 없음»이 아니라 «**표지 자체가 없음**»으로 낮춘 것은 의도다:
+    `_is_verdict_line`(도장 판별)은 도장 없는 진짜 처분 줄을 버린다는 것이 c124 손 판정
+    (P18·P26·P28·P29)으로 **이미 측정돼 있다.** 그 기지의 오류를 고발로 승격하면
+    계기는 첫날 늑대소년이 된다(관측 87의 종착지). 무도장 절은 **고발이 아니라 별도 칸**이다.
+    """
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from c124_retro_prep import STATUS_RE, _is_verdict_line, parse_status  # noqa: PLC0415
+
+    lines, spans, dups = _pred_spans(text)
+    sections: dict[str, dict] = {}
+    for pid, (s, e) in spans.items():
+        body = lines[s:e]
+        field = next((m.group(1) for l in body if (m := STATUS_RE.match(l.strip()))), None)
+        arms = parse_status(field)[0] if field is not None else []
+        vals = [v for _, v in arms]
+        habitat_hits = dict.fromkeys((n for n, _ in VERDICT_HABITATS), 0)
+        markers: list[str] = []
+        for line in body:
+            hit = False
+            for name, rx in VERDICT_HABITATS:
+                if rx.match(line):
+                    habitat_hits[name] += 1
+                    hit = True
+            if hit:
+                markers.append(line.strip())
+        sections[pid] = {
+            "field": field,
+            "open": sum(1 for v in vals if v in OPEN_ARM_VALUES),
+            "closed": sum(1 for v in vals
+                          if v not in OPEN_ARM_VALUES and v != _UNRECORDED),
+            "habitat_hits": habitat_hits,
+            "markers": len(markers),
+            "stamped": sum(1 for m in markers if _is_verdict_line(m)),
+        }
+
+    def _pick(pred) -> list[str]:
+        return [pid for pid, r in sections.items() if pred(r)]
+
+    down = _pick(lambda r: r["closed"] and not r["open"])
+    stamp_only = _pick(lambda r: r["open"] and not r["closed"] and r["stamped"])
+    return {
+        # 중복 pid — 이 계기는 **먼저**를, `part_d`의 `recs`는 **나중**을 택한다(정반대).
+        "duplicate_pids": dups,
+        # 손 유지 상수로 가른다 — 기지분을 매 사이클 고발하면 그 인쇄가 곧 소음이 되고,
+        # 소음이 된 인쇄는 다음 손이 읽지 않는다(관측 87). 사유는 상수가 들고 있다.
+        "stamp_only_new": [p for p in stamp_only if p not in STAMP_ONLY_ADJUDICATED],
+        "stamp_only_known": [p for p in stamp_only if p in STAMP_ONLY_ADJUDICATED],
+        "sections": sections,
+        "down": down,
+        # ★ 조용한 쪽 = 관측 90의 진짜 고발 대상. 상태줄은 내려갔는데 표지가 없다.
+        "silent_drop": [p for p in down if sections[p]["markers"] == 0],
+        # 팔 일부만 판정났는데 표지가 없다 — 같은 병의 약한 판본.
+        "partial_drop": _pick(lambda r: r["closed"] and r["open"] and r["markers"] == 0),
+        # 표지는 있으나 무도장 — c124가 이미 잰 v2의 거래. **고발 아님**.
+        "unstamped_down": [p for p in down if sections[p]["markers"]
+                           and sections[p]["stamped"] == 0],
+        "clean_down": [p for p in down if sections[p]["stamped"]],
+        # 안전한 쪽 = 도장 달린 판정 줄이 있는데 상태줄 전건이 시계 위.
+        "stamp_only": stamp_only,
+    }
 
 
 def part_d() -> None:
@@ -1607,6 +1724,17 @@ def part_d() -> None:
               f" · 미시작 {len(no_deadline) - len(run_blind)}건(무기재가 정상).")
         print("     트리거형 예측은 원리적으로 이 눈 밖이다 — 정의역 선언(P48 한계 ②).")
 
+    # ── 상태줄 ↔ 판정문 정합 (c169 신설 · 관측 90 처치 · P54) ─────────────────
+    # 파트 D 안에 둔 것은 의도다: 이 파트의 판별 입력이 곧 상태줄이므로, 그 입력의
+    # 신뢰도는 판별 결과와 **같은 화면**에 있어야 한다(관행 ㉘).
+    try:
+        _print_status_stamp(status_stamp_reconcile(PRED.read_text(encoding="utf-8")))
+    except Exception as exc:
+        # 미측정을 **인쇄하고 계속한다** — 아래 문서 시계는 이 계기와 독립이므로
+        # 여기서 return하면 무관한 인쇄가 함께 죽는다(계기 고장의 전파).
+        print(f"\n  [상태줄↔판정문 정합] !! 미측정: {type(exc).__name__}: {exc}")
+        print("     → '정합 위반 0'으로 읽지 말 것.")
+
     # 회고·감사 시계는 예측 대장이 아니라 사이클 번호가 정한다. 같은 화면에 둔다 —
     # 기한을 만나는 손이 "그 판정을 쓸 문서가 언제 열리는가"도 함께 알아야 한다(관행 ⑧).
     try:
@@ -1614,6 +1742,52 @@ def part_d() -> None:
         print(f"  문서 시계: 다음 회고 c{next_retro(n_now)} · 다음 적대 감사 c{next_audit(n_now)}")
     except Exception as exc:
         print(f"  문서 시계 미측정: {type(exc).__name__}: {exc}")
+
+
+def _print_status_stamp(rec: dict) -> None:
+    """정합 인쇄 — 계산(`status_stamp_reconcile`)과 가른다.
+
+    가르는 이유: 계산은 순수 함수여서 합성 표본으로 회귀에 걸리고, 인쇄는 그렇지
+    않다. 둘을 한 함수에 두면 회귀가 인쇄 문자열에 묶여 서식 변경마다 깨진다.
+    """
+    down, silent = rec["down"], rec["silent_drop"]
+    print("\n  [상태줄↔판정문 정합 — c169 신설 (관측 90 처치 · 관측 98 · P54)]")
+    print(f"    시계 아래(전건 판정 선언) {len(down)}건"
+          f" — 도장 있음 {len(rec['clean_down'])}"
+          f" · 표지만(무도장) {len(rec['unstamped_down'])}"
+          f" · **표지 자체 없음 {len(silent)}**")
+    habitats = {n: sum(r["habitat_hits"][n] for r in rec["sections"].values())
+                for n, _ in VERDICT_HABITATS}
+    print("    표지 서식지별 적중: "
+          + " · ".join(f"'{k}' {v}건" for k, v in habitats.items()))
+    print("    ※ 서식지 목록은 **오늘 실측한 3종**이지 전수가 아니다 — 넷째가 있으면 이 눈은"
+          " 다시 오고발한다(P54 한계 ③). 순진한 자[尺] 단독이면 오늘 오고발 23건(관측 98).")
+    if silent:
+        print("    !! **상태줄 단독 하강(판정문 부재)** — 조용한 거짓 음성, 관측 90의 고발 대상:")
+        for pid in sorted(silent, key=_pid_key):
+            print(f"         {pid}  상태: {rec['sections'][pid]['field']}")
+        print("       → 판정문을 쓰거나, 상태줄을 되돌릴 것. 침묵이 '판정 완료'로 읽힌다.")
+    else:
+        print("    상태줄 단독 하강 0건 — 다만 이 0은 서식지 목록이 전수일 때만 참이다.")
+    if rec["partial_drop"]:
+        print("    !! 부분 하강(팔 일부 판정 + 표지 부재): "
+              + " ".join(sorted(rec["partial_drop"], key=_pid_key)))
+    if rec["stamp_only_new"]:
+        print("    !! **상태줄 미갱신(도장 단독)** — 안전한 쪽 거짓 양성 방향, 손을 부른다:")
+        for pid in sorted(rec["stamp_only_new"], key=_pid_key):
+            print(f"         {pid}  상태: {rec['sections'][pid]['field']}"
+                  f"  (도장 {rec['sections'][pid]['stamped']}건)")
+    for pid in sorted(rec["stamp_only_known"], key=_pid_key):
+        print(f"    [기지·손 유지 상수] {pid} — {STAMP_ONLY_ADJUDICATED[pid]}")
+    print("    ※ 두 갈래를 **둘 다** 인쇄한다 — 어느 쪽도 침묵이 아니다(관측 90 기대 동작).")
+    if rec["duplicate_pids"]:
+        print("    !! **중복 pid — 두 계기의 해소 정책이 정반대다** (관측 99 · 77 계열):")
+        for pid, at in sorted(rec["duplicate_pids"].items(), key=lambda kv: _pid_key(kv[0])):
+            where = " · ".join(f"L{n}" for n in at)
+            print(f"         {pid}  절 {len(at)}본 ({where})"
+                  f"  → 이 눈·기한 파서 = **먼저**(L{at[0]}) / 파트 D 팔 = **나중**(L{at[-1]})")
+        print("       → 한 절의 팔과 다른 절의 기한이 짝지어진다. 정책을 고르기 전에"
+              " 번호를 가르는 것이 정본 처치다(개명 패킷 = 게이트 대기).")
 
 
 def _pid_key(pid: str) -> tuple[int, str]:
