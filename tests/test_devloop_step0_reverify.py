@@ -188,3 +188,81 @@ def test_live_mark_accuses_exactly_what_the_series_counts():
     for i, c in enumerate(claims):
         accused = c48.reverify_claim_mark(c) == "★ 모순"
         assert accused is ((100 + 2 * i) in counted), c
+
+
+# --- c168 2세션 (P53): 파트 S가 못 보는 사망 — 두 채널이 함께 낡는 창 ---------------
+#
+# c168 1세션이 원장 append **직전에** 죽었다. 원장도 task_state도 c167에 머물렀으므로
+# 파트 S는 `판정=일치`를 인쇄했다 — 무결이 아니라 **무증상**이다. 증거는 작업 트리에만
+# 있었고(devloop 소유 5경로가 미커밋이면서 HEAD보다 새로움), 파트 A가 그것을 이미
+# 인쇄하고 있었는데 두 인쇄가 연결되지 않아 손이 사람 눈으로 이었다.
+
+
+def test_uncommitted_devloop_output_is_death_evidence():
+    # c168 1세션이 남긴 실제 모양: devloop 소유 경로가 수확 이후 접촉됐다.
+    rows = [("research/devloop/predictions.md", 0.5, +18.1, c48.TOUCHED_AFTER_HARVEST)]
+    out = c48.predecessor_death_evidence(rows)
+    assert [p for p, _, _ in out["evidence"]] == ["research/devloop/predictions.md"]
+    assert out["unknown"] == []
+
+
+def test_other_track_wip_is_not_death_evidence():
+    # 핵심 단언. 봉쇄 5건(proxy.py 등)은 42사이클째 미커밋이고 **타 트랙 소유**다.
+    # 이것을 증거로 세면 이 눈은 매 사이클 사망을 외치고 곧 무시된다 — 관측 87의 모양.
+    rows = [
+        ("forget/proxy.py", 0.2, +18.0, c48.TOUCHED_AFTER_HARVEST),
+        ("research/replay/candidates_v0.jsonl", 0.3, +18.0, c48.TOUCHED_AFTER_HARVEST),
+    ]
+    assert c48.predecessor_death_evidence(rows)["evidence"] == []
+
+
+def test_devloop_path_untouched_since_harvest_is_not_evidence():
+    # 수확 이후 무접촉이면 그 파일은 이번 세대의 산출이 아니다.
+    rows = [("research/devloop/frictions.md", 300.0, -125.6, c48.UNTOUCHED_AFTER_HARVEST)]
+    assert c48.predecessor_death_evidence(rows)["evidence"] == []
+
+
+def test_unreadable_mtime_is_unknown_not_absence():
+    # blockade_rows와 같은 규율: 못 읽은 행을 버리면 "증거 0건"이 거짓 전수 주장이 된다.
+    rows = [("research/devloop/gate-queue.md", None, None, "판정 불가(stat 실패·경로 부재)")]
+    out = c48.predecessor_death_evidence(rows)
+    assert out["evidence"] == []
+    assert out["unknown"] == ["research/devloop/gate-queue.md"]
+
+
+def test_devloop_test_files_are_owned_too():
+    # 1세션은 tests/test_devloop_step0_ordinals.py도 남겼다. 소유 범위가 md에만
+    # 걸리면 그 산출은 증거에서 새고, 사망이 절반만 보인다.
+    rows = [("tests/test_devloop_step0_ordinals.py", 0.5, +18.0, c48.TOUCHED_AFTER_HARVEST),
+            ("tests/test_forget_proxy.py", 0.5, +18.0, c48.TOUCHED_AFTER_HARVEST)]
+    got = [p for p, _, _ in c48.predecessor_death_evidence(rows)["evidence"]]
+    assert got == ["tests/test_devloop_step0_ordinals.py"]
+
+
+def test_verdict_vocabulary_is_one_copy_not_two():
+    """판정 어휘가 사본이면 조용히 갈라진다 (관행 ㊷ = 관측 94의 교훈).
+
+    이 단언이 잡는 것: blockade_rows가 인쇄하는 판정 문자열과
+    predecessor_death_evidence가 비교하는 문자열이 **같은 상수**인가. 리터럴로
+    갈라지면 이 눈은 영원히 증거 0건을 인쇄하고, 그 0은 침묵과 구별되지 않는다.
+    """
+    head_ct, now = 1_000_000.0, 1_100_000.0
+    rows = c48.blockade_rows(
+        [("research/devloop/predictions.md", head_ct + 500.0),   # 수확 이후 접촉
+         ("research/devloop/frictions.md", head_ct - 500.0)],    # 수확 이후 무접촉
+        head_ct, now)
+    got = [p for p, _, _ in c48.predecessor_death_evidence(rows)["evidence"]]
+    assert got == ["research/devloop/predictions.md"]
+
+
+def test_agreement_verdict_does_not_clear_a_death():
+    """관측 97의 계약. `일치`와 사망 증거는 **동시에 참일 수 있다**.
+
+    c168 1세션의 실제 상태를 두 순수 함수로 재현한다: 원장 167 · task_state 167이면
+    파트 S는 `일치`인데, 같은 순간 작업 트리에는 c168 산출이 미커밋으로 있었다.
+    두 값이 함께 참인 것이 이 관측의 전부이며, 하나라도 거짓이면 이 눈은 불필요하다.
+    """
+    _, verdict = c48.task_state_lag(167, "[devloop 사이클 167 — 2026-08-19, 일반]")
+    assert verdict == "일치"
+    rows = [("research/devloop/predictions.md", 0.5, +18.1, c48.TOUCHED_AFTER_HARVEST)]
+    assert c48.predecessor_death_evidence(rows)["evidence"]

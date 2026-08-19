@@ -110,3 +110,92 @@ def test_real_ledger_blockade_series_agrees_with_declared_anchor():
     post = [c for c, o in recent
             if c - o + 1 != start and c >= c48.ORDINAL_TREATMENT_CYCLE]
     assert post == [], f"처치({c48.ORDINAL_TREATMENT_CYCLE}) 이후 이탈: {post}"
+
+
+# ── field_streak — 상태형 계수기 (c168 신설, 관측 96 · P52) ──────────────────
+#
+# 왜 이 절이 있는가. P46은 **산술형** 계수기 셋만 기계화했고, 원장 산문에 살던
+# **상태형** 둘은 계기 밖에서 손이 증분했다. c168 실측: `fixed` 연속 0은 3 적게,
+# 캡슐 miss 연속은 29 많게 인쇄됐다 — 방향이 반대라 한 행만 보면 둘 다 정상으로
+# 보인다. 캡슐 쪽 오류의 기전이 이 절이 고정하는 계약이다: 손이 인쇄한 수는
+# **연속**이 아니라 **정의역 크기**였다(c161~c167 7사이클 연속 일치).
+
+
+def test_field_streak_counts_consecutive_not_domain():
+    """관측 96의 정중앙 — 연속과 정의역은 다른 수이고, 섞이면 안 된다."""
+    rows = [
+        {"cycle": 1, "restore_grade_capsule": "partial"},
+        {"cycle": 2, "restore_grade_capsule": "miss"},
+        {"cycle": 3, "restore_grade_capsule": "partial"},
+        {"cycle": 4, "restore_grade_capsule": "miss"},
+        {"cycle": 5, "restore_grade_capsule": "miss"},
+    ]
+    st = c48.field_streak(rows, "restore_grade_capsule", "miss")
+    assert st["streak"] == 2, "역순 연속은 c4~c5 둘뿐이다"
+    assert st["domain"] == 5, "정의역은 필드를 가진 행 전체다"
+    assert st["streak"] != st["domain"], "이 둘이 같아지면 계약이 사라진다"
+    assert st["break"] == (3, "partial")
+    assert st["off_value"] == [1, 3]
+
+
+def test_field_streak_ignores_rows_without_the_field():
+    """필드가 없는 행은 정의역 밖이다 — '없음'을 '값 불일치'로 세면 연속이 끊긴다."""
+    rows = [
+        {"cycle": 1},
+        {"cycle": 2, "restore_grade_capsule": "miss"},
+        {"cycle": 3},
+        {"cycle": 4, "restore_grade_capsule": "miss"},
+    ]
+    st = c48.field_streak(rows, "restore_grade_capsule", "miss")
+    assert st["streak"] == 2 and st["domain"] == 2
+    assert st["span"] == (2, 4) and st["break"] is None
+
+
+def test_field_streak_is_order_independent():
+    """원장 파일 순서에 의존하지 않는다 — cycle로 정렬해서 센다."""
+    rows = [
+        {"cycle": 5, "frictions_fixed": 0},
+        {"cycle": 3, "frictions_fixed": 2},
+        {"cycle": 4, "frictions_fixed": 0},
+    ]
+    st = c48.field_streak(rows, "frictions_fixed", 0)
+    assert st["streak"] == 2 and st["break"] == (3, 2)
+
+
+def test_field_streak_empty_domain_is_unmeasured_not_zero():
+    """정의역 0은 '연속 0'이 아니라 **미측정**이다 — 인쇄가 그렇게 갈라져야 한다."""
+    st = c48.field_streak([{"cycle": 1}], "restore_grade_capsule", "miss")
+    assert st["streak"] == 0 and st["domain"] == 0
+    assert st["span"] is None and st["frame_last"] is None
+
+
+def test_real_ledger_capsule_streak_is_not_the_domain_size():
+    """실 원장 회귀 — c167 손 인쇄 77은 정의역이었고 참 연속은 48이다(관측 96).
+
+    이 테스트는 두 수가 **다르다**는 사실을 고정한다. 같아지는 날이 오면(정의역 안의
+    `partial` 5건이 사라지는 날) 이 assert가 깨지고, 그때는 계약이 아니라 데이터가
+    바뀐 것이므로 이 절을 고쳐야 한다 — 조용히 통과하게 두지 않는다.
+    """
+    rows = c48._ledger_rows()
+    st = c48.field_streak(rows, "restore_grade_capsule", "miss")
+    assert st["domain"] == 77, f"정의역이 바뀌었다: {st['domain']}"
+    assert st["streak"] == 48, f"연속이 바뀌었다: {st['streak']}"
+    assert st["off_value"] == [91, 92, 93, 94, 119]
+    assert st["break"] == (119, "partial")
+
+
+def test_real_ledger_fixed_streak_matches_machine_recount():
+    """실 원장 회귀 — `frictions_fixed` 0 연속의 참값은 25이고 중단은 c142(값 3)다."""
+    rows = c48._ledger_rows()
+    st = c48.field_streak(rows, "frictions_fixed", 0)
+    assert st["break"] == (142, 3), f"중단점이 바뀌었다: {st['break']}"
+    assert st["streak"] == 25, f"연속이 바뀌었다: {st['streak']}"
+
+
+def test_streak_counters_table_needs_no_hand_maintained_start():
+    """상태형 표는 앵커 상수를 갖지 않는다 — 손이 유지할 값이 없어야 처치가 성립한다."""
+    for entry in c48.STREAK_COUNTERS:
+        label, field, value, claim_rx = entry
+        assert isinstance(label, str) and isinstance(field, str)
+        assert len(entry) == 4, "start 상수가 끼어들면 관측 96의 처치가 무너진다"
+        assert "사이클째" not in claim_rx, "산술형 자[尺]의 정규식이 섞였다"

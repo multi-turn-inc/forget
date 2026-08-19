@@ -262,6 +262,35 @@ def part_s() -> None:
             print("      (순서 = 원장 append → 커밋 → push → 호출 → 재조회, 관측 55 수용 기준 ②).")
             print("      구조적으로 영수증이 아니라 의도 선언이다 — 관측 88.")
 
+    # ── 직전 세션 사망 의심 — 파트 S의 사각 (c168 2세션 신설, 관측 97 · P53) ──────────
+    # `일치`는 무결의 증거가 아니다. 위 대조는 두 채널을 **서로** 재므로 함께 낡으면
+    # 침묵하고, 원장 append 전에 죽은 세션이 정확히 그 창이다. 그 창의 유일한 증거는
+    # **작업 트리**이며 파트 A가 이미 인쇄해 왔다 — 오늘 붙이는 것은 두 인쇄의 연결이다.
+    try:
+        dd = predecessor_death_evidence(
+            blockade_rows(changed_entries(), int(run(["git", "log", "-1", "--format=%ct"])),
+                          time.time()))
+    except Exception as exc:  # noqa: BLE001 — 검사 불가도 관측이며 침묵보다 낫다
+        print(f"  [직전 세션 사망 의심] 판정 불가 — {type(exc).__name__}: {exc}")
+    else:
+        ev, unk = dd["evidence"], dd["unknown"]
+        print("  [직전 세션 사망 의심 — devloop 소유 미커밋 ∩ HEAD보다 새로움"
+              " (c168 신설, 관측 97 · P53)]")
+        if ev:
+            print(f"    ★★ 증거 {len(ev)}건 — 직전 세션이 **원장 append 전에** 죽었을 수 있다."
+                  f" 위 판정({verdict})은 이 사망을 배제하지 않는다.")
+            for path, since_now, vs_head in ev:
+                since = f"{since_now:8.1f}h" if since_now is not None else f"{'?':>9s}"
+                print(f"       {since} {vs_head:+9.1f}h  {path}")
+            print("    → 확인 순서: ① 그 산출물이 어느 사이클 것인지 파일 안에서 직독")
+            print("      ② tmp/cNNN_* 산출물 ③ 원장에 그 사이클 행이 있는가. 있으면 c166형")
+            print("      (원장 착지·커밋 실패) · 없으면 c168형(원장 미착지 = 이 눈의 표적).")
+        else:
+            print(f"    증거 0건(devloop 소유 미커밋 없음) · 판정 불가 {len(unk)}건"
+                  f"{' ' + str(unk) if unk else ''}")
+        print("    ※ 이 눈은 **step 0에서만** 유효하다 — 사이클 도중 재실행하면 내 편집분이")
+        print("      같은 조건에 걸린다(파트 A의 같은 주의와 동일한 이유).")
+
     # 자기보고 대 외부 관측의 **계열**. 손 증분 0 — 원장에서 매 사이클 재계산한다 (P47 (b)).
     rv = reverify_contradictions(ledger_rows)
     print(f"  [자기보고 대조 — `{REVERIFY_FIELD}` (c162 신설, 관측 88 · P47)]")
@@ -659,6 +688,18 @@ def porcelain_changed_paths(raw: str) -> list[str]:
 # 조용히 틀리는 것보다 낫다. 큐가 바뀌면 이 줄을 바꾸고 사이클 보고에 선언한다.
 CODE_QUEUE_PATHS = ("forget/store.py",)
 
+#: 봉쇄 계측의 판정 어휘. **문자열도 분류다** — 두 곳에서 리터럴로 쓰면 조용히 갈라지고,
+#: 갈라진 쪽이 고발을 담당한다(관행 ㊷, 관측 94의 교훈). 파트 S의 사망 의심 검사는 이
+#: 판정을 재계산하지 않고 **그대로 재사용**한다.
+TOUCHED_AFTER_HARVEST = "수확 이후 접촉"
+UNTOUCHED_AFTER_HARVEST = "수확 이후 무접촉"
+
+#: devloop 루프가 **소유한** 경로. 이 경로의 미커밋 변경은 타 트랙 WIP가 아니라 이 루프
+#: 자신의 산출이므로, step 0 시점에 존재한다면 그것을 만든 세션은 커밋에 도달하지 못했다.
+#: 손 유지 상수 — 소유 범위가 바뀌면 이 줄을 고치고 사이클 보고에 선언한다
+#: (CODE_QUEUE_PATHS·ORDINAL_ANCHORS·DEFERRAL_MARKERS와 같은 규율).
+DEVLOOP_OWNED_PREFIXES = ("research/devloop/", "tests/test_devloop_")
+
 
 def blockade_rows(entries: list[tuple[str, float | None]], head_ct: float,
                   now_ts: float) -> list[tuple[str, float | None, float | None, str]]:
@@ -680,7 +721,7 @@ def blockade_rows(entries: list[tuple[str, float | None]], head_ct: float,
             rows.append((path, None, None, "판정 불가(stat 실패·경로 부재)"))
             continue
         rows.append((path, (now_ts - mt) / 3600.0, (mt - head_ct) / 3600.0,
-                     "수확 이후 접촉" if mt > head_ct else "수확 이후 무접촉"))
+                     TOUCHED_AFTER_HARVEST if mt > head_ct else UNTOUCHED_AFTER_HARVEST))
     return rows
 
 
@@ -691,6 +732,63 @@ def queue_intersection(changed: list[str], queue: tuple[str, ...] = CODE_QUEUE_P
     디렉터리가 되면 이 함수도 함께 바뀌어야 하고, 그 전까지 여기서 짐작하지 않는다.
     """
     return sorted(set(changed) & set(queue))
+
+
+def changed_entries(changed: list[str] | None = None) -> list[tuple[str, float | None]]:
+    """(미커밋 경로, mtime|None) 목록. 파트 A와 파트 S가 **함께** 쓴다 (c168 2세션).
+
+    한 벌로 두는 이유는 관행 ㊷다 — 같은 개념(무엇이 미커밋이고 언제 손댔는가)의 계산이
+    두 파트에 사본으로 살면 조용히 갈라지고, 갈라진 쪽이 판정을 담당하게 된다. mtime을
+    못 읽은 경로를 **버리지 않는다**(None으로 남긴다) — blockade_rows와 같은 규율.
+    """
+    if changed is None:
+        changed = porcelain_changed_paths(run_raw(["git", "status", "--porcelain"]))
+    entries: list[tuple[str, float | None]] = []
+    for rel in changed:
+        full = os.path.join(REPO, rel)
+        try:
+            if os.path.isdir(full):
+                mt = max((os.path.getmtime(os.path.join(r, f))
+                          for r, _, fs in os.walk(full) for f in fs), default=None)
+            else:
+                mt = os.path.getmtime(full)
+        except OSError:
+            mt = None
+        entries.append((rel, mt))
+    return entries
+
+
+def predecessor_death_evidence(
+    rows: list[tuple[str, float | None, float | None, str]],
+    owned: tuple[str, ...] = DEVLOOP_OWNED_PREFIXES,
+) -> dict:
+    """직전 세션이 **원장 append 전에** 죽었다는 증거. 순수 함수 (c168 2세션, 관측 97 · P53).
+
+    왜 파트 S가 이것을 못 보는가. 파트 S는 원장과 task_state를 **서로** 잰다. 그래서 두
+    채널이 **함께** 낡으면 `일치`가 나온다 — 절차 5의 첫 걸음(원장 append) 전에 죽은
+    세션은 둘 다 건드리지 않았으므로 그 대조는 무증상이다.
+
+    사망의 지문은 세 종류이고 **쓰기 순서가 그것을 정한다**(관측 97):
+      c96  — task_state를 먼저 써서 `앞섬`   → 파트 S가 잡았다
+      c166 — 원장까지 쓰고 커밋 전에 죽어 `지연` → 파트 S가 잡았다
+      c168 1세션 — 원장 append 직전에 죽어 `일치` → **파트 S가 못 봤다**
+    셋째가 조용한 것은 우연이 아니라 관측 55 처치의 대가다: '완주 선기재'를 막으려
+    record_task_state를 맨 뒤로 밀자, 맨 앞에서 죽는 창이 두 채널을 같은 세대로 남겼다.
+
+    증거는 이미 인쇄되고 있었다 — 파트 A의 `uncommitted_paths_newer_than_HEAD`. 없던 것은
+    계측이 아니라 **두 인쇄의 연결**이다. `unknown`을 따로 돌려주는 이유는 이 파일의 상시
+    규약: mtime을 못 읽은 행을 버리면 "증거 0건"이 거짓 전수 주장이 된다.
+    """
+    evidence: list[tuple[str, float | None, float | None]] = []
+    unknown: list[str] = []
+    for path, since_now, vs_head, verdict in rows:
+        if not path.startswith(tuple(owned)):
+            continue
+        if vs_head is None:
+            unknown.append(path)
+        elif verdict == TOUCHED_AFTER_HARVEST:
+            evidence.append((path, since_now, vs_head))
+    return {"evidence": evidence, "unknown": unknown}
 
 
 def part_a() -> None:
@@ -735,19 +833,9 @@ def part_a() -> None:
     # 검증법은 루프가 c31에 자기 손으로 써 놓은 채였다(frictions.md:515-516,
     # "장기 mtime 불변" = 비-WIP 시험). 여기 세 줄이 그 시험을 상시화한다.
     if changed:
-        entries: list[tuple[str, float | None]] = []
-        for rel in changed:
-            full = os.path.join(REPO, rel)
-            try:
-                if os.path.isdir(full):
-                    mt = max((os.path.getmtime(os.path.join(r, f))
-                              for r, _, fs in os.walk(full) for f in fs), default=None)
-                else:
-                    mt = os.path.getmtime(full)
-            except OSError:
-                mt = None
-            entries.append((rel, mt))
-        rows = blockade_rows(entries, head_ct, time.time())
+        # 경로·mtime 수집은 `changed_entries` 한 벌이다 — 파트 S의 사망 의심 검사가 같은
+        # 함수를 쓴다(c168 2세션, 관행 ㊷). 사본이 둘이면 조용히 갈라진다.
+        rows = blockade_rows(changed_entries(changed), head_ct, time.time())
         print("  [미커밋 경로의 활성 계측 — 존재가 아니라 활성 (audit-150 R1)]")
         print("    now 대비 = 마지막 손댐 이후 경과. 사이클 ≈ 1일 — 판단은 사람 몫이다.")
         print("    ※ 이 목록은 '타 트랙 WIP'가 아니라 **미커밋 전체**다. step 0(턴2)에는")
@@ -1118,6 +1206,59 @@ ORDINAL_WINDOW = 20
 #: 처치의 근거(기지)이고 반증이 아니다. 둘을 한 수로 합치면 처치가 자기 근거로 반증된다.
 ORDINAL_TREATMENT_CYCLE = 161
 
+#: c168 신설 (관측 96 처치 · P52). P46이 기계화한 것은 **산술형** 계수기 셋뿐이었다
+#: (`ORDINAL_ANCHORS` — 값 = `N − start + 1`). 원장 산문에는 **상태형** 계수기가 따로
+#: 살고 있었고 그 둘은 계기 밖에서 손이 증분했다. c168 실측: `fixed` 연속 0은 참값보다
+#: **3 적게**(주장 22 · 참 25), 캡슐 miss 연속은 **29 많게**(주장 77 · 참 48) 인쇄됐다.
+#: 방향이 반대라 한 사이클의 행만 보면 어느 쪽도 틀려 보이지 않는다 — P46이 산술형에서
+#: 잡은 보상 오류와 같은 모양이다.
+#:
+#: 상태형은 앵커 상수가 **필요 없다**: 원장 필드 자신이 개시 시점을 안다. 그래서 이 표에는
+#: `start`가 없고, 손이 유지할 값도 없다. 넷째 원소는 **손 인쇄 대조용** 정규식이다.
+STREAK_COUNTERS = (
+    ("`frictions_fixed` 0 연속", "frictions_fixed", 0,
+     r"(?:fixed|`fixed`)[^0-9]{0,14}?(\d+)\s*연속"),
+    ("캡슐 miss 연속", "restore_grade_capsule", "miss",
+     r"캡슐[^0-9]{0,20}?(\d+)\s*연속"),
+)
+
+
+def field_streak(rows: list[dict], field: str, value: object) -> dict:
+    """원장 역순으로 `field == value`가 끊길 때까지 센다. **순수 함수.**
+
+    자[尺] 선언 (관측 85 · 96). 이 계수기의 프레임은 파트 O 산술형과 **다르다**:
+    산술형은 실행 사이클을 포함하지만(`N − start + 1`), 상태형이 세는 것은 **원장에
+    이미 쓰인 행**이고 실행 사이클의 행은 아직 없다. 두 자[尺]를 한 수로 합치면
+    그것이 관측 96이 잡은 병이므로, 값과 프레임을 **항상 같이** 인쇄한다.
+
+    `domain`(필드를 가진 행 수)을 함께 돌려주는 이유가 관측 96의 정중앙이다:
+    c161~c167 **7사이클** 동안 손이 *"캡슐 miss N연속"*으로 인쇄한 수는 실제로 이
+    `domain`이었다(c161 71·c163 73·…·c167 77 = 정의역과 매 사이클 정확히 일치, 참
+    연속값은 42·44·…·48). 라벨은 *연속*이라 말하고 값은 *정의역*을 말했다 — 두 수를
+    계기가 **나란히** 인쇄하면 그 갈라짐이 화면에서 드러난다(관행 ㊴).
+
+    `off_value`는 정의역 안에서 값이 다른 행이다. *"도입 이래 전부 miss"*류 주장은
+    이 목록이 비어야 참이며, c168 실측으로 **거짓**이었다(c91~c94·c119 = `partial` 5건).
+    """
+    ordered = sorted((r for r in rows if field in r), key=lambda r: int(r["cycle"]))
+    domain = [int(r["cycle"]) for r in ordered]
+    off_value = [int(r["cycle"]) for r in ordered if r.get(field) != value]
+    streak, brk = 0, None
+    for r in reversed(ordered):
+        if r.get(field) == value:
+            streak += 1
+        else:
+            brk = (int(r["cycle"]), r.get(field))
+            break
+    return {
+        "streak": streak,
+        "break": brk,
+        "domain": len(domain),
+        "span": (domain[0], domain[-1]) if domain else None,
+        "off_value": off_value,
+        "frame_last": domain[-1] if domain else None,
+    }
+
 
 def _ledger_rows() -> list[dict]:
     rows = []
@@ -1212,6 +1353,44 @@ def part_o() -> None:
         print(line)
         if post:
             print("       !! 처치 후 이탈이 있다 — P46 (a)는 반증이다. 원장에 그대로 적을 것.")
+
+    print("  [상태형 계수기 — c168 신설 (관측 96 처치 · P52). 산술형과 **프레임이 다르다**:")
+    print("   원장에 이미 쓰인 행만 센다(실행 사이클 행은 아직 없다). 값과 프레임을 같이 전사할 것.]")
+    for label, field, value, claim_rx in STREAK_COUNTERS:
+        st = field_streak(rows, field, value)
+        if st["frame_last"] is None:
+            print(f"    {label}  →  !! 필드 `{field}` 보유 행 0 — 미측정이다"
+                  " ('연속 0'으로 읽지 말 것).")
+            continue
+        span = st["span"]
+        print(f"    {label}  →  **{st['streak']}연속**"
+              f"  [프레임 = 원장 최종 c{st['frame_last']} · 실행 사이클 c{n_exec} **미포함**]")
+        print(f"       정의역 {st['domain']}행 (c{span[0]}~c{span[1]}) · "
+              f"중단 = {'c%d 값 %r' % st['break'] if st['break'] else '없음(정의역 전체가 연속)'}")
+        if st["off_value"] != []:
+            shown = " ".join(f"c{c}" for c in st["off_value"][:8])
+            print(f"       정의역 내 값 다른 행 {len(st['off_value'])}건: {shown}"
+                  f"{' …' if len(st['off_value']) > 8 else ''}"
+                  "  ← '도입 이래 전부'류 주장은 이 목록이 비어야 참이다")
+        if st["streak"] != st["domain"]:
+            print(f"       ※ **연속 {st['streak']} ≠ 정의역 {st['domain']}** — 라벨이"
+                  " '연속'인데 정의역을 적으면 관측 96 재발이다(P52 (a) 반증).")
+        rx = re.compile(claim_rx)
+        claimed = None
+        last = max(rows, key=lambda r: int(r["cycle"]))
+        for v in last.values():
+            if isinstance(v, str) and (m := rx.search(v)):
+                claimed = int(m.group(1))
+                break
+        if claimed is None:
+            print(f"       직전 행(c{last['cycle']}) 손 인쇄 = 무기재 (대조 불가)")
+        else:
+            gap = claimed - st["streak"]
+            verdict = "일치" if gap == 0 else f"**어긋남 {gap:+d}**"
+            print(f"       직전 행(c{last['cycle']}) 손 인쇄 {claimed} 대 계기 "
+                  f"{st['streak']} = {verdict}"
+                  + ("" if gap == 0 else
+                     f" (정의역 {st['domain']}과의 차 {claimed - st['domain']:+d})"))
 
 
 def part_f() -> None:
