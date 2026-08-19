@@ -350,11 +350,23 @@ def part_n() -> None:
     print("     감사 사이클의 metrics 정독 임무는 번호 결정 단계와 별개로 허용된다.)")
     print(f"[N. 사이클 번호 — cycle 필드 max+1]")
     print(f"  last_cycle={max(cycles)}  N={n}  mode={mode} (N%10={n % 10}, N%5={n % 5})")
-    print("[T. 턴 배치 규약 — audit-90 R1 (ii) 이중화 (c91 집행)]")
-    print("    턴1 = LOOP.md+cycle-prompt.md Read + ToolSearch(5스키마) 같은 응답에 묶음")
-    print("    턴2 = get_task_state + 이 스크립트 + git status 병렬 / 턴3 = 첫 유효 행동")
-    print("    ※ 이 인쇄는 턴2에 열리므로 **턴1 규약을 집행할 수 없다**(관측 47).")
-    print("       턴1 이전 채널은 저장소 루트 CLAUDE.md와 캡슐이다 — 판정은 P29.")
+    print("[T. 턴 배치 규약 — **정본 = 저장소 루트 CLAUDE.md (c135 개정본)** · c91 문면 폐기]")
+    print("    A. 기적재 하네스(ToolSearch 불요) = **2턴**")
+    print("       턴1 = cycle-prompt.md Read + get_task_state(devloop) + 이 스크립트"
+          " + git status **4중 병렬**")
+    print("       턴2 = (비감사면 LOOP.md Read +) 첫 유효 행동  →  restore_turns **2**")
+    print("    B. 미적재 하네스(ToolSearch 필요) = **3턴**")
+    print("       턴1 = cycle-prompt.md Read + ToolSearch(5스키마) / 턴2 = 위 3중 병렬")
+    print("       턴3 = 첫 유효 행동  →  restore_turns **3**")
+    print("    ★ **LOOP.md를 턴1에 읽지 않는다** — 모드(위 N%10)를 알기 전에 열면 적대")
+    print("       감사가 금독 대상을 노출한 채 시작된다(P40). 비감사면 턴2에 읽는다.")
+    print("    ※ restore_note에 하네스 A/B를 **병기**할 것 — 두 계열이 한 분모에 섞이면")
+    print("       지표가 판정 불가가 된다.")
+    print("    ※ 이 인쇄는 턴2(A)·턴2(B)에 열리므로 **턴1 규약을 집행할 수 없다**(관측 47)")
+    print("       — 턴1 이전 채널은 CLAUDE.md와 캡슐이다. 판정은 P29·P38(지지 5/5)·P40.")
+    print("    ※ c171까지 이 파트는 c91 문면(*'턴1 = LOOP.md+cycle-prompt.md Read'*)을")
+    print("       인쇄했고 CLAUDE.md c135가 그것을 폐기한 뒤로 **두 채널이 서로를 반박**")
+    print("       했다(관측 102). 회귀 = tests/test_devloop_step0_turn_protocol.py.")
     print("[H. 절차 5 — 다음 HAND 분모는 손으로 옮겨적지 않는다 (audit-150 R6, P42)]")
     print("    수확 커밋 직후: .venv/bin/python research/devloop/scripts/harvest_stat.py"
           f" --cycle {n}")
@@ -1132,6 +1144,30 @@ def part_p() -> None:
         print(f"  [기지·게이트 대기] {pid}: {len(errs)}건 — 손 유지 상수 KNOWN_VOCAB_OFFENDERS 등재분")
 
 
+#: c171 신설 (관측 103 처치 (i)). 파트 X는 12사이클 동안 위반 4건을 **옳게** 인쇄했고
+#: c167·c169는 처치도 사유도 없이 이월했다 — P45의 판정문이 명명한 병("깨진 것은 인쇄를
+#: 읽는 손")이 판정 6사이클 뒤에 두 번 재발했다. 이 표는 «사유가 적혔다»를 판정하는
+#: 어휘이며 **손 유지 상수**다(파트 P의 VOCAB·`CODE_QUEUE_PATHS`와 같은 등급).
+#: 인쇄해서 어휘의 거짓 음성이 화면에 보이게 한다.
+VIOLATION_REASON_TERMS = ("파트 X", "probe_guard", "hasattr-삼항", "getattr-기본값",
+                          "except-pass", "except-빈리터럴", "일회용 프로브")
+
+
+def reason_recorded(row: dict, terms: tuple[str, ...] = VIOLATION_REASON_TERMS) -> list[str]:
+    """원장 행에 프로브 위반의 «사유 기재»로 볼 낱말이 있는가. **순수 함수** — 그래서 테스트된다.
+
+    거짓 방향을 **선언한다**: 어휘 밖 표현으로 적으면 이 눈은 «미기재»라고 과하게
+    고발한다. 과잉 고발은 루프에 **불리한** 방향이므로 그렇게 골랐다 — 관측 76·93·104가
+    잡은 병이 하나같이 «루프에 유리한 거짓 음성»이었고, 자[尺]를 만들 때 기울기의
+    방향을 고르는 것이 그 병의 유일한 예방이다.
+    """
+    got: list[str] = []
+    for value in row.values():
+        if isinstance(value, str):
+            got.extend(t for t in terms if t in value and t not in got)
+    return got
+
+
 def part_x() -> None:
     """[X] 일회용 프로브 인구조사 — 매 사이클 (c158 신설, P45, c157 HAND 별건 3).
 
@@ -1178,6 +1214,28 @@ def part_x() -> None:
                   f"{os.path.relpath(v['path'], REPO)}:{v['line']}  [{v['kind']}]  {v['src']}")
         print("     → 당 사이클 산출이면 처치하고, 과거분이면 **사유를 원장에 적을 것**")
         print("       (P45 (b) 반증 조건 = 인쇄됐는데 처치도 사유 기재도 없이 이월).")
+
+        # ── 사유 기재 감시 (c171 신설, 관측 103 처치 (i)) ──
+        # 인쇄는 상태를 알리고 **행동을 요구하지 않는다**. 그래서 12사이클 중 2회
+        # (c167·c169) 무사유 이월이 났다. 이 줄이 요구를 문면에서 계기로 옮긴다.
+        recent = sorted(_ledger_rows(), key=lambda r: int(r["cycle"]))[-5:]
+        marks = [(int(r["cycle"]), reason_recorded(r)) for r in recent]
+        print(f"  [사유 기재 감시 — c171 신설 (관측 103 처치 (i))"
+              f" · 어휘 {len(VIOLATION_REASON_TERMS)}값]")
+        print("    최근 5행: "
+              + " · ".join(f"c{c} {'○' if hit else '**✗**'}" for c, hit in marks))
+        last_c, last_hit = marks[-1]
+        if last_hit:
+            print(f"    직전 행 c{last_c} = 기재 **있음** "
+                  f"(적중: {', '.join(f'`{t}`' for t in last_hit)})")
+        else:
+            print(f"    !! 직전 행 c{last_c}은 위반을 인쇄받고 **사유를 적지 않았다**"
+                  " — 관측 103의 이월 사건이 방금 하나 더 났다.")
+        print(f"    ★ 요구: 이 사이클 원장에 위반 {len(viol)}건의 **사유 또는 처치**를 적어라.")
+        print("       미기재는 다음 사이클 이 줄이 ✗로 검출한다(관측 103 수용 기준 (i)).")
+        print(f"    어휘(손 유지 상수) = {' · '.join(VIOLATION_REASON_TERMS)}")
+        print("       ※ 어휘 밖 표현으로 적으면 이 눈은 **과잉 고발**한다 — 거짓 음성이")
+        print("         루프에 유리하지 않은 방향으로 기울게 골랐다(관측 76·104의 교훈).")
     else:
         print("  위반 0 — 4패턴 클린.")
 
@@ -1192,11 +1250,40 @@ def part_x() -> None:
 #: `A-106.1`은 **의도적으로 없다** — 그 라벨의 정규식이 40자 창 안의 원터치 값을 흡입해
 #: 계열이 오염됐다(c151 행 직독으로 확인, 관측 74와 같은 모양). 오염된 계열을 감시하는
 #: 것보다 감시하지 않는다고 **적는 것**이 정직하다.
+#: ★ c171 — 봉쇄 앵커 확장을 **시도했고 실측으로 물렀다.** 기록을 남기는 것이 이 주석의
+#: 일이다. 시도: `|봉쇄[^\n]{0,24}?(\d+)사이클째`를 합집합으로 더해 c170 미등재(관측 104)를
+#: 닫으려 했다. 사전 실측은 «창 안에 새로 드는 행 = c170 1본, 앵커 일치»여서 안전해
+#: 보였다 — **그 실측이 집합만 비교하고 값을 비교하지 않았다.**
+#:
+#: 실제 결과: 겹치는 행 **c161의 값이 35 → 34로 바뀌었고** 파트 O가 `처치 후 이탈 1본
+#: (c161) ← P46 (a) 반증`을 인쇄했다. c161 행 직독으로 정체 확정 —
+#: `restore_note`가 *"봉쇄 34사이클째[c160 기준] → 파트 O 인쇄 **35**[c161] 정합"*이라고
+#: **직전 프레임 값을 인용**하고 있었고, `_ordinal_series`는 필드 dict 순서의 **첫 매치**를
+#: 쓰므로 `restore_note`(인용)가 `tests`·`work`(자기 주장 35)를 앞질렀다.
+#: 즉 확장은 **인용된 과거 값을 이 행의 주장으로 읽는** 거짓 양성을 만들었다 —
+#: 관측 93의 유령과 같은 자리이며, 이번에는 유령을 내가 만들었다.
+#:
+#: 그래서 정규식은 **c166 판본으로 되돌린다**(확장 없음). 관측 104의 처치는 정규식이
+#: 아니라 **피복 인쇄**다: 못 보는 행을 «보이게» 하는 것과 «억지로 보는» 것은 다르고,
+#: 후자는 방금 값을 위조했다. 인용과 자기 주장을 가르는 처치(필드 화이트리스트 또는
+#: 인용 구간 배제)는 설계가 필요하므로 청구로 올린다 = `A-171.1`.
+#: 재현: `tmp/c171_c161_disambiguate.py` · `tmp/c171_loose_coverage.py`.
 ORDINAL_ANCHORS = (
     ("봉쇄(타 트랙 미커밋 잔존)", 127, r"(?:미커밋|잔존|영토)[^\n]{0,80}?(\d+)사이클째"),
     ("게이트 서비스율 0", 116, r"서비스율[^\n]{0,40}?(\d+)사이클째"),
     ("인스턴스 원터치 대기", 142, r"원터치[^\n]{0,60}?(\d+)사이클째"),
 )
+
+#: c171 신설 (관측 104). 미등재의 원인은 둘이다: 그 행이 라벨을 **안 적었다**와, 적었는데
+#: **정규식이 못 봤다**. 파트 O는 둘을 같은 침묵으로 인쇄했고 그래서 c170의 무검출이
+#: 12사이클을 조용히 통과했다. 느슨 탐침은 앵커 낱말을 요구하지 않고 **라벨 핵 낱말 +
+#: 서수 문면**만 찾는다 — 그래서 "적혀 있었다"를 증명할 수 있다. 계열 계산에는 쓰지
+#: 않는다(정의역을 흐린다). **진단 전용**이며, 여기 걸리고 계열에 없으면 그것이 사각이다.
+LOOSE_ORDINAL_PROBES = {
+    "봉쇄(타 트랙 미커밋 잔존)": r"봉쇄[^\n]{0,24}?(\d+)사이클째",
+    "게이트 서비스율 0": r"서비스율[^\n]{0,40}?(\d+)사이클째",
+    "인스턴스 원터치 대기": r"원터치[^\n]{0,60}?(\d+)사이클째",
+}
 
 #: 계열이 같은 낱말을 다른 시기의 다른 사건에 재사용하면 한 라벨에 두 계열이 섞인다.
 #: 최근 창으로 잘라 **당대 에피소드**만 본다 — 창 밖 표본은 계열이 아니라 동음이의다.
@@ -1288,6 +1375,12 @@ def _ordinal_series(rows: list[dict], pattern: str) -> list[tuple[int, int]]:
     파싱된 값을 **필드별로** 보면 `[^\\n]`이 본래 의도대로 다시 경계가 된다.
     한 행에 여러 필드가 같은 라벨을 인쇄하면 **첫 매치만** 쓴다(구판과 동일한 계약 —
     행당 1표본이어야 앵커 최빈값이 행 수로 정규화된다).
+
+    c171 수리 (관측 104). 구판은 `m.group(1)`을 박아 써서 **대안마다 그룹을 갖는 합집합
+    패턴에서 죽었다**(`TypeError: int() argument … not 'NoneType'`). 관측 104의 처치가
+    봉쇄 앵커를 합집합으로 넓히는 것이었으므로 이 자리가 먼저 열려야 했다. 값 그룹은
+    **첫 비-None**을 쓰고, 전부 None이면 **소리 내어 죽는다** — 조용히 넘기면 그 라벨의
+    계열이 0본이 되고, 0본은 '드리프트 없음'으로 오독된다(파트 O가 경고하는 그 모양).
     """
     rx = re.compile(pattern)
     out = []
@@ -1297,9 +1390,51 @@ def _ordinal_series(rows: list[dict], pattern: str) -> list[tuple[int, int]]:
                 continue
             m = rx.search(value)
             if m:
-                out.append((int(r["cycle"]), int(m.group(1))))
+                got = [g for g in m.groups() if g is not None]
+                if not got:
+                    raise ValueError(
+                        f"패턴이 매치했는데 값 그룹이 전부 None이다: {pattern!r} — "
+                        "합집합 패턴은 대안마다 값 그룹을 가져야 한다. 조용히 넘기지 않는다.")
+                out.append((int(r["cycle"]), int(got[0])))
                 break
     return out
+
+
+def series_coverage(rows: list[dict], series: list[tuple[int, int]],
+                    window: int = ORDINAL_WINDOW) -> dict:
+    """계열이 **누구를** 보는가. c171 신설 (관측 104 처치 · P50 (b) 반증의 처치).
+
+    왜. 파트 O는 `계열 N본`이라는 **수**만 인쇄했다. 그래서 어떤 행이 라벨을 옳게
+    적어서 조용한 것과, 정규식이 그 행을 **아예 못 봐서** 조용한 것이 화면에서 같은
+    모양이었다. c171 실측: 봉쇄 계열은 창 구간 21사이클 중 16본(76%)만 보고 있었고
+    **미등재에 최신 행 c170이 들어 있었다** — 다음 손이 실제로 전사할 행이 그것이다.
+    합성 주입으로 확인: 계열에 보이는 행(c169)에 틀린 서수를 넣으면 검출하고, 최신
+    행(c170)에 넣으면 **침묵한다.** 기전은 살아 있고 정의역이 비어 있었다.
+
+    `absent`의 원인은 둘이고 이 함수는 **가르지 않는다**: 그 행이 라벨을 안 적었을
+    수도, 적었는데 정규식이 못 봤을 수도 있다. 가르는 것은 파트 O의 느슨 탐침
+    (`LOOSE_ORDINAL_PROBES`) 몫이다 — 여기서 섞으면 다시 한 침묵이 된다.
+    """
+    cycles = sorted(int(r["cycle"]) for r in rows)
+    seen = {c for c, _ in series}
+    if not cycles:
+        return {"span": [], "seen": [], "absent": [], "newest": None,
+                "newest_seen": False, "pct": None}
+    newest = cycles[-1]
+    if not seen:
+        return {"span": [], "seen": [], "absent": [], "newest": newest,
+                "newest_seen": False, "pct": None}
+    lo = max(seen) - window + 1
+    span = [c for c in cycles if c >= lo]
+    absent = [c for c in span if c not in seen]
+    return {
+        "span": span,
+        "seen": [c for c in span if c in seen],
+        "absent": absent,
+        "newest": newest,
+        "newest_seen": newest in seen,
+        "pct": (len(span) - len(absent)) / len(span) * 100 if span else None,
+    }
 
 
 def part_o() -> None:
@@ -1339,6 +1474,30 @@ def part_o() -> None:
         modal = max(set(anchors), key=anchors.count)
         agree = "일치" if modal == start else f"**불일치** (선언 c{start})"
         print(f"       계열 {len(recent)}본(최근 {ORDINAL_WINDOW}창) · 최빈 앵커 c{modal} = {agree}")
+
+        # ── 피복 (c171 신설, 관측 104 처치) — «몇 본»이 아니라 «누구를 보는가» ──
+        cov = series_coverage(rows, series)
+        if cov["pct"] is not None:
+            print(f"       피복 {len(cov['seen'])}/{len(cov['span'])}사이클"
+                  f" ({cov['pct']:.0f}%) · 미등재 "
+                  + ("없음" if not cov["absent"]
+                     else "c" + " c".join(str(c) for c in cov["absent"])))
+            if not cov["newest_seen"]:
+                print(f"       !! 최신 행 c{cov['newest']}이 **미등재**다 — 이 라벨의 다음"
+                      " 전사 오류는 무검출로 통과한다(관측 104의 실측 기전).")
+            loose = LOOSE_ORDINAL_PROBES.get(label)
+            if loose and cov["absent"]:
+                probed = dict(_ordinal_series([r for r in rows
+                                               if int(r["cycle"]) in set(cov["absent"])], loose))
+                if probed:
+                    print("       ↳ 미등재 중 **적혀 있었다**(느슨 탐침 적중 = 정규식 사각): "
+                          + " ".join(f"c{c}:{o}" for c, o in sorted(probed.items())))
+                silent = [c for c in cov["absent"] if c not in probed]
+                if silent:
+                    print("       ↳ 미등재 중 **안 적었다**(탐침도 침묵 = 그 행이 라벨 무기재): "
+                          + "c" + " c".join(str(c) for c in silent))
+                print("       ※ 이 두 줄이 갈라지는 것이 처치의 전부다 — 구판은 둘을 같은"
+                      " 침묵으로 인쇄했다.")
         if modal != start:
             print("       !! 선언 상수와 계열 최빈이 갈렸다 — 상수가 틀렸거나 계열이"
                   " 표류했다. 둘 중 무엇인지 정하고 보고에 선언할 것.")

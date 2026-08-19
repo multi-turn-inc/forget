@@ -152,10 +152,27 @@ def main() -> int:
         q = work[:QUERY_CAP]
         plan.append((n, q, cutoff))
         cut_iso = datetime.fromtimestamp(cutoff, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        print(f"  c{n}: work {len(work)}자 → 질의 {len(q)}자 sha8={sha8(q)} "
-              f"· 적격 < {cut_iso} (loop(cycle {n-1}) 수확)")
+        print(f"  c{n}: work {len(work)}자 → 질의 {len(q)}자 (피복 {len(q) / len(work) * 100:.1f}%)"
+              f" sha8={sha8(q)} · 적격 < {cut_iso} (loop(cycle {n-1}) 수확)")
     if not plan:
         raise ProbeFailure("적격 표본 0건 — 재생할 것이 없다")
+
+    # ── 피복률 (c171 신설, 관측 91 수용 기준 (i)) ────────────────────────────
+    # 왜. 이 계기의 검색 계약은 c121과 한 글자도 다르지 않은데(`QUERY_CAP=300` 고정)
+    # `work`가 4.18배 자라는 동안 질의 피복률이 3.69배 줄었다. 계기는 터지지도
+    # 침묵하지도 않고 **같은 단위로 계속 인쇄**했으므로 6개의 `silent_miss=0`이
+    # 서로 다른 감도의 0인 채로 한 계열에 섞였다. 그 감도를 산출에 싣는다.
+    covs = [len(q) / len(rows[n]["work"]) * 100 for n, q, _ in plan]
+    mean_cov = sum(covs) / len(covs)
+    mean_len = sum(len(rows[n]["work"]) for n, _, _ in plan) / len(plan)
+    print(f"\n  [피복률 — c171 신설 (관측 91 수용 기준 (i)) · QUERY_CAP={QUERY_CAP} 고정]")
+    print(f"    창 평균 work {mean_len:.1f}자 · 창 평균 피복 **{mean_cov:.1f}%**"
+          f" (최소 {min(covs):.1f}% · 최대 {max(covs):.1f}%)")
+    print("    ★ `silent_misses`를 원장에 적을 때 이 수를 **함께** 적어라 — 값 단독")
+    print("      기재는 계열 오염이다(관측 91 수용 기준 (ii)).")
+    print("    기지 대조: c116~c120 창 44.8% (c121 실행) vs c160~c164 창 12.2% (c165 실행)")
+    print("      → 같은 코드가 다른 감도의 자[尺]였다. 소급 산출 = 관측 91 (iii)"
+          " 처분 문단의 표.")
 
     print(f"\n[B. 재생 — recall=low · top_k={args.top_k} · trace 미전달 "
           f"· 서버측 created_at<cutoff + 클라 재검증]")
