@@ -141,6 +141,19 @@ def reverify_claim_mark(claim: object) -> str:
 #: 그 경우 '무결'이 아니라 '미측정'으로 계상해야 한다 (P47 한계 ③).
 RE_PART_S_VERDICT = re.compile(r"판정\s*=\s*(일치|지연|앞섬)")
 
+#: c172 신설 (관측 107). 위 한계 ③은 c162에 **선언**됐고 c172에 처음 **실측**됐다:
+#: P51 (a)의 판정 창 c168~c172 5본 중 c170이 판정을 적었는데 엄격 눈이 못 봤다 —
+#: 문면이 ``파트 S `ledger_last=169 = task_state_cycle=169` 일치``로 `판정=` 접두 없이
+#: 백틱 뒤에 값을 놓았기 때문이다. 그래서 `미측정`은 두 가지를 한 수에 넣고 있었다:
+#: 그 사이클이 **안 적었다**(c169 — 느슨 탐침도 침묵)와, **적었는데 눈이 못 봤다**(c170).
+#: 관측 104가 파트 O에서 고친 것과 **같은 병이며 다른 계기**다.
+#:
+#: 느슨 탐침은 진단 전용이다 — 계열 계산(모순 판정)에 **쓰지 않는다.** 이유는 P51 자신이
+#: 가르쳐 줬다: 이 계기의 고발 대상은 «정직»이고, 산문을 흐리게 읽어 얻은 판정으로
+#: 자기보고를 반증하면 벌하는 쪽이 다시 정직이 된다. 진단은 넓게, 고발은 좁게.
+RE_PART_S_VERDICT_LOOSE = re.compile(
+    r"(?:파트 S|task_state_cycle|ledger_last)[^\n]{0,80}?(일치|지연|앞섬)")
+
 
 def reverify_contradictions(rows: list[dict]) -> dict:
     """`step5_write_reverified` 자기보고를 **외부 관측**과 대조한다. 순수 함수 (c162, P47).
@@ -178,14 +191,22 @@ def reverify_contradictions(rows: list[dict]) -> dict:
     contradictions: list[tuple[int, str]] = []
     ahead: list[int] = []
     pending: int | None = None
+    # 미측정의 두 원인을 가른다 (c172, 관측 107). `blind`는 **후속 행이 판정을 적었는데
+    # 엄격 눈이 못 본** 경우다 — 이 목록이 비어 있지 않으면 그것이 이 계기의 사각이고,
+    # 계열 계산에는 반영하지 않는다(진단 전용, 위 상수 주석의 사유).
+    blind: list[tuple[int, str]] = []
+    silent: list[int] = []
     for c in field_rows:
         nxt = by_cycle.get(c + 1)
         if nxt is None:
             pending = c  # 후속 행이 아직 없다 = 이 세션이 그 후속이다
             continue
-        m = RE_PART_S_VERDICT.search(str(nxt.get("restore_note") or ""))
+        note = str(nxt.get("restore_note") or "")
+        m = RE_PART_S_VERDICT.search(note)
         if not m:
             unmeasured += 1
+            loose = RE_PART_S_VERDICT_LOOSE.search(note)
+            (blind.append((c + 1, loose.group(1))) if loose else silent.append(c + 1))
             continue
         checked += 1
         verdict = m.group(1)
@@ -207,6 +228,8 @@ def reverify_contradictions(rows: list[dict]) -> dict:
         "contradictions": contradictions,
         "ahead": ahead,
         "unmeasured": unmeasured,
+        "unmeasured_blind": blind,    # 후속 행이 **적었다** — 엄격 눈의 사각 (관측 107)
+        "unmeasured_silent": silent,  # 후속 행이 **안 적었다** — 정직한 침묵
         "pending": pending,
     }
 
@@ -310,8 +333,27 @@ def part_s() -> None:
         print("      병은 그 사이클 자신의 완주 선기재다(관측 55). 남의 병으로 고발하지 않는다.")
     if rv["pending"] is not None:
         print(f"    ※ c{rv['pending']}은 후속 원장 행이 없다 — **이 세션의 위 판정이 그 대조다**.")
+    # 미측정의 두 원인 (c172 신설, 관측 107 처치) — 파트 O 피복 처치와 같은 자[尺].
+    if rv["unmeasured_blind"]:
+        blind = rv["unmeasured_blind"]
+        print(f"    ↳ 미측정 중 **적혀 있었다**(느슨 탐침 적중 = 엄격 눈의 사각) {len(blind)}건: "
+              + " ".join(f"c{c}:{v}" for c, v in blind))
+        # 느슨 적중값이 `일치`가 아니면 **고발에 관계된 사실이 사각에 앉아 있다**. 진단
+        # 전용 규율은 유지하되(고발은 좁게) 이 경우만은 소리를 낸다 — c172 실측은 26건
+        # 전부 `일치`였고, 그 비용 0은 측정된 값이지 설계의 보장이 아니다.
+        loud = [(c, v) for c, v in blind if v != "일치"]
+        if loud:
+            print("       !! 사각의 값이 `일치`가 아니다 — 고발 경로가 못 보는 자리에"
+                  f" 판정이 있다: {loud}")
+            print("          → 해당 행의 자기보고를 **손으로** 대조하라. 느슨 탐침은"
+                  " 고발하지 않는다(관측 107 ②).")
+    if rv["unmeasured_silent"]:
+        s = rv["unmeasured_silent"]
+        head = "c" + " c".join(str(c) for c in s[:12]) + (" …" if len(s) > 12 else "")
+        print(f"    ↳ 미측정 중 **안 적었다**(탐침도 침묵 = 그 행이 판정 무기재) {len(s)}건: {head}")
     print("    ※ 미측정은 무결이 아니다(파트 S는 c93 처치 이후에만 인쇄) · 문면이 바뀌면")
-    print("      정규식이 거짓 음성을 낸다 — P47 한계 ③.")
+    print("      정규식이 거짓 음성을 낸다 — P47 한계 ③. **위 두 줄이 그 한계의 실측이며,")
+    print("      느슨 탐침은 진단 전용이다 — 고발(모순 판정)에는 쓰지 않는다(관측 107).**")
 
     print("  [쓰기 규약] 절차 5의 record_task_state는 호출로 끝나지 않는다 — 호출 뒤")
     print("    get_task_state로 **재조회**해 이번 사이클 번호가 돌아오는지 확인할 것.")
@@ -1400,6 +1442,38 @@ def _ordinal_series(rows: list[dict], pattern: str) -> list[tuple[int, int]]:
     return out
 
 
+def _ordinal_field_matches(row: dict, pattern: str) -> list[tuple[str, int]]:
+    """한 행에서 이 패턴이 맞는 **모든 필드**와 값을 dict 순서로 돌려준다. **순수 함수.**
+
+    c172 세션2 신설 (관측 108). `_ordinal_series`는 행당 **첫 매치**만 쓰고 나머지를 버린다
+    — 그 계약은 앵커 최빈값을 행 수로 정규화하기 위해 필요하지만, 버려진 매치가 바로
+    «이 행의 자기 주장»일 수 있다. c171(c161 행)과 c172(자기 행)에서 **두 번** 그랬다:
+    앞 필드가 다른 사이클의 값을 **인용**하고, 뒤 필드가 자[尺]대로 적은 자기 주장을 들고
+    있었다. 첫 매치만 보면 그 행이 틀린 값을 주장한 것처럼 보인다.
+
+    이 함수는 **판단하지 않는다.** 인용과 자기 주장을 가르는 규칙(필드 화이트리스트 대
+    인용 구간 배제)은 설계이고 게이트 대기다(`A-171.1`). 여기서 하는 일은 손이 어차피
+    해야 하는 판독 — «어느 필드가 무엇을 냈는가» — 를 화면에 올려 두는 것뿐이다.
+    c171은 이 판독을 손으로 했고(`tmp/c171_c161_disambiguate.py`), c172 세션2도 손으로
+    했다(`tmp/c172s2_ordinal_deviation.py`). 두 번 같은 프로브를 쓴 것이 계기화의 근거다.
+    """
+    rx = re.compile(pattern)
+    out: list[tuple[str, int]] = []
+    for field, value in row.items():
+        if not isinstance(value, str):
+            continue
+        m = rx.search(value)
+        if not m:
+            continue
+        got = [g for g in m.groups() if g is not None]
+        if not got:
+            raise ValueError(
+                f"패턴이 매치했는데 값 그룹이 전부 None이다: {pattern!r} — "
+                "합집합 패턴은 대안마다 값 그룹을 가져야 한다. 조용히 넘기지 않는다.")
+        out.append((field, int(got[0])))
+    return out
+
+
 def series_coverage(rows: list[dict], series: list[tuple[int, int]],
                     window: int = ORDINAL_WINDOW) -> dict:
     """계열이 **누구를** 보는가. c171 신설 (관측 104 처치 · P50 (b) 반증의 처치).
@@ -1503,15 +1577,36 @@ def part_o() -> None:
                   " 표류했다. 둘 중 무엇인지 정하고 보고에 선언할 것.")
         pre = [c for c, o in recent if c - o + 1 != modal and c < ORDINAL_TREATMENT_CYCLE]
         post = [c for c, o in recent if c - o + 1 != modal and c >= ORDINAL_TREATMENT_CYCLE]
-        line = f"       계열 이탈: 처치 전(기지) {len(pre)}본"
+        line = f"       계열 이탈 후보: 처치 전(기지) {len(pre)}본"
         if pre:
             line += f" (c{' c'.join(str(c) for c in pre)})"
         line += f" · **처치 후 {len(post)}본**"
         if post:
-            line += f" (c{' c'.join(str(c) for c in post)}) ← P46 (a) 반증"
+            line += f" (c{' c'.join(str(c) for c in post)})"
         print(line)
         if post:
-            print("       !! 처치 후 이탈이 있다 — P46 (a)는 반증이다. 원장에 그대로 적을 것.")
+            # c172 세션2 개정 (관측 108). 구판은 여기서 *"P46 (a)는 반증이다. 원장에
+            # 그대로 적을 것"*을 인쇄했다 — 이 검출기가 **정당화할 수 없는 판정**이다.
+            # 이탈의 원인은 둘이고(그 행이 틀린 값을 주장했다 / 앞 필드의 **인용값**이
+            # 첫 매치를 먹었다) 둘을 가르는 처치는 `A-171.1`이며 게이트 대기다.
+            # 실측 2/2가 거짓 양성이었으므로 기본 문면을 «반증»으로 두면 원장에 거짓
+            # 반증이 실린다 — c171은 손 판독으로 막았고 c172는 자기 행을 볼 수 없었다.
+            print("       !! 처치 후 이탈 **후보**가 있다 — **P46 (a) 반증으로 적기 전에**"
+                  " 인용과 자기 주장을 가를 것.")
+            print("          이 검출기는 둘을 분별하지 못한다(`A-171.1` 게이트 대기)."
+                  " 아래 필드별 매치를 읽어라:")
+            print("          · 앞 필드가 **다른 사이클의 값을 인용**하고 뒤 필드가 자[尺]대로"
+                  " 적었으면 → **거짓 양성**(반증 아님).")
+            print("          · 이 행의 **자기 주장**이 자[尺]와 갈리면 → 그때가 P46 (a) 반증이다.")
+            print("          선례 2건 모두 거짓 양성: c161(c171 손 판독) · c172(c172s2 손 판독).")
+            by_cycle_o = {int(r["cycle"]): r for r in rows}
+            for c in post:
+                exp = c - modal + 1
+                print(f"          c{c}: 자[尺] {exp} · 필드별 매치 —")
+                for i, (fld, got) in enumerate(_ordinal_field_matches(by_cycle_o[c], pattern)):
+                    tag = "  ← 계열이 쓰는 값(dict 순서 첫 매치)" if i == 0 else ""
+                    mark = "" if got == exp else "  [자[尺]와 다름]"
+                    print(f"             [{fld}] {got}{mark}{tag}")
 
     print("  [상태형 계수기 — c168 신설 (관측 96 처치 · P52). 산술형과 **프레임이 다르다**:")
     print("   원장에 이미 쓰인 행만 센다(실행 사이클 행은 아직 없다). 값과 프레임을 같이 전사할 것.]")

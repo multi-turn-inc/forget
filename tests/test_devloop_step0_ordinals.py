@@ -390,3 +390,129 @@ def test_widening_the_blockade_anchor_would_read_a_quoted_value_as_a_claim():
         "봉쇄 앵커에 확장이 다시 들어왔다 — c171이 실측으로 무른 변경이다."
         " 인용과 자기 주장을 가르는 설계 없이 넓히면 P46 (a)에 유령 반증이 인쇄된다"
         " (청구 A-171.1).")
+
+
+# ── 인용 유령은 라벨을 가리지 않는다 (c172 세션2 신설, 관측 108) ──────────────────
+#
+# 왜 이 절이 위 절과 **따로** 있는가. 위 절(c171)은 *"봉쇄 앵커를 넓히면 유령이 나온다"*를
+# 고정한다 — 즉 **확장을 막는** 문이다. 그런데 c172 행에서 유령이 실제로 나온 곳은
+# **원터치 라벨이고 확장 없는 출하 패턴**이었다. 60자 창이 이미 충분히 넓었기 때문이다.
+#
+# 즉 c171의 처치는 기전이 아니라 **한 라벨의 기회**를 닫았고, 기전(`dict 순서 첫 매치`)은
+# `A-171.1`로 게이트에 올라간 채 살아 있었다. 그 기전은 루프가 **권장하는 좋은 습관**이
+# 방아쇠다: «감사하는 행을 인용하라». c172는 P57 피복 사각을 문서화하려고 c171 원장의
+# *'원터치 30사이클째'*를 인용했고, 그 인용이 자기 행의 자기 주장(31)을 앞질렀다.
+#
+# 그래서 이 절이 고정하는 것은 «확장 금지»가 아니라 **판독 가능성**이다: 이탈 후보가
+# 나왔을 때 인용과 자기 주장이 화면에서 갈라지는가.
+
+ONETOUCH = c48.ORDINAL_ANCHORS[2][2]
+
+
+def test_field_matches_exposes_every_field_the_row_matched():
+    """`_ordinal_field_matches`는 첫 매치에서 멈추지 않고 dict 순서로 전량 돌려준다."""
+    row = {"cycle": 900, "a": "원터치 7사이클째", "n": 5, "b": "원터치 9사이클째",
+           "c": "관계없는 산문"}
+    assert c48._ordinal_field_matches(row, ONETOUCH) == [("a", 7), ("b", 9)]
+
+
+def test_field_matches_dies_loudly_when_no_value_group():
+    """계열 추출과 **같은** 하드 실패 계약 — 조용히 넘기면 사각이 생긴다."""
+    import pytest
+    with pytest.raises(ValueError, match="값 그룹"):
+        c48._ordinal_field_matches({"cycle": 1, "work": "원터치"}, r"원터치(\d+)?")
+
+
+def test_a_quoted_ordinal_in_an_earlier_field_outranks_the_self_claim():
+    """★ 관측 108의 기전 — **합성 표본**으로 고정한다 (관행 ⑯).
+
+    실 원장 c172가 정확히 이 모양이었다. 그러나 이 절은 실 원장을 읽지 않는다:
+    `A-171.1`이 승인돼 기전이 고쳐지면 실 원장 기반 assert는 **고치는 쪽을 벌한다**
+    (c171의 관측 106이 그 자물쇠였다). 능력은 합성으로, 실 데이터는 인쇄로.
+    """
+    row = {
+        "cycle": 900,
+        # 앞 필드 = 다른 사이클의 값을 **인용**한다. 루프가 권장하는 습관이다.
+        "predictions_note": "c171은 자기 원장에 *'원터치 30사이클째(c171 미등재)'*로 적었다",
+        # 뒤 필드 = 이 행의 **자기 주장**. 파트 O 인쇄를 그대로 전사한 값.
+        "tests": "**인스턴스 원터치 대기 31사이클째** [start c142 · 프레임 N=172]",
+    }
+    # 계열은 첫 매치를 쓴다 = 인용값. 이것이 거짓 이탈의 출처다.
+    assert dict(c48._ordinal_series([row], ONETOUCH)) == {900: 30}
+    # 필드별 판독은 둘을 **갈라** 보여 준다 — 손이 판정할 수 있는 최소 재료.
+    assert c48._ordinal_field_matches(row, ONETOUCH) == [
+        ("predictions_note", 30), ("tests", 31)]
+
+
+def test_series_value_is_always_the_first_field_match():
+    """계약 증인 — 실 원장 전 행·전 앵커에서 계열 값 == 필드별 판독의 **첫** 값.
+
+    프레임 독립이고 데이터가 자라도 참이어야 한다. `A-171.1`이 «필드 화이트리스트»로
+    해결되면 이 계약은 **의도적으로** 깨진다 — 그때 이 절이 붉어지는 것이 옳다.
+    이 절은 결함을 잠그지 않는다(결함은 «첫 매치»가 아니라 «첫 매치를 판정에 쓰는 것»).
+    """
+    rows = c48._ledger_rows()
+    by_cycle = {int(r["cycle"]): r for r in rows}
+    for label, _start, pattern in c48.ORDINAL_ANCHORS:
+        for cyc, val in c48._ordinal_series(rows, pattern):
+            got = c48._ordinal_field_matches(by_cycle[cyc], pattern)
+            assert got, f"{label} c{cyc}: 계열은 봤는데 필드별 판독이 비었다"
+            assert got[0][1] == val, (
+                f"{label} c{cyc}: 계열 {val} ≠ 첫 필드 매치 {got[0]} — 두 함수의"
+                " 순회 순서가 갈렸다. 하나를 고쳤으면 둘 다 고쳐라.")
+
+
+def test_deviation_is_reported_as_candidate_not_as_a_verdict():
+    """★ 파트 O의 경보가 **판정 동사**를 쓰지 않는다 (관측 108 처치).
+
+    구판 문면 = *"P46 (a)는 반증이다. 원장에 그대로 적을 것."* — 이 검출기가 정당화할
+    수 없는 판정이다. 실측 2/2(c161·c172)가 거짓 양성이었고, 규약을 문자 그대로 따른
+    손은 원장에 거짓 반증을 실었을 것이다. c171은 손 판독으로 막았고 c172는 자기 행을
+    원리적으로 볼 수 없었다(이탈은 N+1에서만 보인다 = 관측 100의 구조).
+    """
+    src = SCRIPT.read_text(encoding="utf-8")
+    assert "P46 (a)는 반증이다. 원장에 그대로 적을 것" not in src, (
+        "무조건 반증 문면이 돌아왔다 — 인용/자기 주장 분별(`A-171.1`) 없이는"
+        " 이 경보가 판정을 지시할 수 없다.")
+    assert "이탈 **후보**" in src, "이탈을 «후보»로 부르는 문면이 사라졌다"
+    assert "_ordinal_field_matches(by_cycle_o[c], pattern)" in src, (
+        "경보가 필드별 판독을 더는 인쇄하지 않는다 — 그것이 없으면 다음 손은"
+        " 프로브를 다시 써야 하고, 두 세션이 이미 그렇게 했다.")
+
+
+def test_real_ledger_deviation_assert_covers_one_label_of_three():
+    """★ 관행 ⑨ — 계기가 덮는 범위를 성공으로 착각하지 않는다. **다섯째 표본.**
+
+    `test_real_ledger_blockade_series_agrees_with_declared_anchor`는
+    `ORDINAL_ANCHORS[0]`(봉쇄) **하나만** 본다. 파트 O 인쇄는 셋을 본다. 그래서 유령이
+    원터치에서 발화했을 때 **565 초록이 그것을 말하지 않았다.**
+
+    이 절은 그 간극을 assert로 **선언**한다 — 넓히는 것은 의도적 행위여야 하고,
+    그때 이 절이 붉어져 «무엇을 넓혔는지» 적게 만든다. 각 라벨의 현재 이탈 후보는
+    **인쇄만** 한다(관행 ⑯): 후보의 존재는 라벨마다 다른 사유를 갖고, 그중 둘은
+    이미 거짓 양성으로 판독됐다.
+    """
+    rows = c48._ledger_rows()
+    by_cycle = {int(r["cycle"]): r for r in rows}
+    src = Path(__file__).read_text(encoding="utf-8")
+    assert "c48.ORDINAL_ANCHORS[0]\n" in src, (
+        "봉쇄 전용 assert의 범위가 바뀌었다 — 셋을 다 보게 넓혔다면 이 절의"
+        " 문면도 함께 고치고 사유를 적어라(간극을 조용히 닫지 않는다).")
+
+    census = {}
+    for label, _s, pattern in c48.ORDINAL_ANCHORS:
+        series = c48._ordinal_series(rows, pattern)
+        if not series:
+            census[label] = "계열 0본"
+            continue
+        lo = max(c for c, _ in series) - c48.ORDINAL_WINDOW + 1
+        anchors = [c - o + 1 for c, o in series if c >= lo]
+        modal = max(set(anchors), key=anchors.count)
+        cand = [(c, o, c48._ordinal_field_matches(by_cycle[c], pattern))
+                for c, o in series if c >= lo and c - o + 1 != modal
+                and c >= c48.ORDINAL_TREATMENT_CYCLE]
+        census[label] = cand
+    print("\n[이탈 후보 인구조사 — assert 아님, 상태 인쇄]")
+    for label, cand in census.items():
+        print(f"  {label}: {cand}")
+    assert len(census) == len(c48.ORDINAL_ANCHORS)
