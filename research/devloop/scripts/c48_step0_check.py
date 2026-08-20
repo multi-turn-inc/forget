@@ -1344,12 +1344,29 @@ ORDINAL_TREATMENT_CYCLE = 161
 #:
 #: 상태형은 앵커 상수가 **필요 없다**: 원장 필드 자신이 개시 시점을 안다. 그래서 이 표에는
 #: `start`가 없고, 손이 유지할 값도 없다. 넷째 원소는 **손 인쇄 대조용** 정규식이다.
+#: c173 개정 (관측 109). 넷째 원소는 이제 **값 추출기가 아니라 어휘 식별자**다.
+#: 구판은 `fixed[^0-9]{0,14}?(\d+)\s*연속`처럼 이름에 값을 붙여 한 번에 뽑았고, 창 c169~c172
+#: 실측으로 **실제 손 인쇄 4건 중 0건을 잡고 이름값 1건을 오검**했다 — 검출률 0/4에
+#: 거짓 경보 1. 기전은 하나다: 이 계수기의 **이름이 `fixed 0`**이므로 그 이름 뒤의
+#: 숫자 슬롯이 **이름값 0에 먼저 먹힌다.** 그래서 c169 *"`frictions_fixed` 0 = 26연속"* ·
+#: c170 *"`fixed` 0을 또 적는다 — 27연속"* · c171 *"0 아니다. 28연속"*이 전부 침묵했고,
+#: c172 *"`fixed` 0연속은 이 행에서 1연속"*만 **0**으로 잡혔다.
+#: 즉 이름은 거짓 양성을 **공급**하면서 참 양성을 **가로막는다.**
 STREAK_COUNTERS = (
-    ("`frictions_fixed` 0 연속", "frictions_fixed", 0,
-     r"(?:fixed|`fixed`)[^0-9]{0,14}?(\d+)\s*연속"),
-    ("캡슐 miss 연속", "restore_grade_capsule", "miss",
-     r"캡슐[^0-9]{0,20}?(\d+)\s*연속"),
+    ("`frictions_fixed` 0 연속", "frictions_fixed", 0, r"(?:frictions_)?fixed"),
+    ("캡슐 miss 연속", "restore_grade_capsule", "miss", r"캡슐"),
 )
+
+#: 값 서식은 계수기와 무관하게 하나다. 어휘 식별과 값 추출을 **두 단계로 가르는** 것이
+#: 관측 109 처치의 전부다 — 한 정규식에 이름과 값을 함께 넣으면 둘이 서로를 먹는다.
+STREAK_VALUE_RX = re.compile(r"(\d+)\s*연속")
+
+#: 어휘 언급 **뒤** 이 폭 안의 값만 후보로 본다. 필드 전체를 긁으면 남의 계수기가
+#: 섞인다 — c172 `restore_note`의 *"c167 이래 **6연속** 동일 증상"*은 «캡슐» 낱말과
+#: 같은 필드에 살지만 SessionStart 훅 계수기이고, 그것을 캡슐 후보로 세면 계기가
+#: **무기재를 «전량 불일치»로 오고발**한다. 실측 거리: 참 후보 c169~c172 4건 전부
+#: 30자 이내 · 남의 계수기 2건은 100자 초과. 60은 그 사이에서 골랐다.
+STREAK_CLAIM_WINDOW = 60
 
 
 def field_streak(rows: list[dict], field: str, value: object) -> dict:
@@ -1387,6 +1404,101 @@ def field_streak(rows: list[dict], field: str, value: object) -> dict:
         "off_value": off_value,
         "frame_last": domain[-1] if domain else None,
     }
+
+
+#: c173 신설 (관측 110 처치). 상태형 계수기의 **선언 프레임**. 서식 = `프레임 = 원장 최종 cN`.
+#: 산술형의 `[프레임 N=173]`과 서식이 달라야 두 자[尺]가 한 정규식에 섞이지 않는다.
+FRAME_RX = re.compile(r"프레임\s*=\s*원장\s*최종\s*c(\d+)")
+
+
+def streak_claim_matches(row: dict, vocab_rx: str) -> list[tuple[str, int]]:
+    """계수기 어휘를 언급한 필드에서 `N연속` **전량**을 (필드, 값)으로. 순수 함수 (c173, 관측 109).
+
+    두 단계다. ① 어휘(`vocab_rx`)로 **필드**를 고르고 ② 그 필드에서 값 서식을 전량
+    긁는다. 한 정규식에 이름과 값을 함께 넣던 구판은 창 c169~c172에서 **검출 0/4 ·
+    거짓 경보 1**을 냈다 — 이름이 `fixed 0`이라 숫자 슬롯을 이름값이 먼저 먹었고, 같은
+    이름이 참 양성도 가로막았다.
+
+    **첫 매치를 쓰지 않는 이유는 따로 있다**(관측 108·109 공통). c172는 한 문장에
+    *"`fixed` 0연속은 이 행에서 **1연속**이다"*를 적었다 — 앞의 0은 **계수기의 이름**이고
+    뒤의 1이 **자기 주장**이다. 순서로는 이름이 먼저 오므로 첫 매치는 언제나 이름을
+    집는다. 그래서 판정은 값 하나가 아니라 **집합**에서 내리고, 판정의 자[尺]는
+    `declared_frames`가 주는 **선언 프레임**이다.
+
+    범위는 **어휘 언급 뒤 `STREAK_CLAIM_WINDOW`자**로 좁힌다. 필드 전체를 긁던 첫
+    판본은 c172 `restore_note`의 훅 계수기(*"c167 이래 **6연속**"*)를 캡슐 후보로 세어
+    **무기재를 «전량 불일치»로 오고발**했다 — 눈먼 것을 고치다 없는 갈라짐을 만드는 것은
+    관측 108이 겨눈 바로 그 병이므로, 같은 사이클에 두 방향을 다 막는다.
+
+    선언된 한계 둘. ① **이름값이 프레임 값과 같으면 이 눈은 갈라짐을 못 본다** — c172가
+    정확히 그 자리다(이름값 0 = 선언 프레임 c171의 계기값 0). 그 행의 자기 주장이 1임을
+    아는 것은 *"이 행에서"* 같은 문면이고, 그것을 정규식으로 가르는 것은 다음 처치다.
+    **즉 이 처치는 P52 (a) 반증을 재현하지 못한다 — 진단이 아니라 재발 방지다.**
+    ② 창 안의 무관한 값은 여전히 후보다. 그래서 판정 문면은 «적중 있음»이지 «일치»가
+    아니다 — 이 눈은 손을 면책하지 않는다.
+    """
+    vrx = re.compile(vocab_rx)
+    out: list[tuple[str, int]] = []
+    for fld, v in row.items():
+        if not isinstance(v, str):
+            continue
+        seen: set[int] = set()  # 어휘가 여러 번 나오면 창이 겹친다 — 같은 값 매치를 한 번만 센다
+        for vm in vrx.finditer(v):
+            lo = vm.end()
+            for m in STREAK_VALUE_RX.finditer(v[lo:lo + STREAK_CLAIM_WINDOW]):
+                if (pos := lo + m.start()) not in seen:
+                    seen.add(pos)
+                    out.append((fld, int(m.group(1))))
+    return out
+
+
+def declared_frames(row: dict) -> dict[str, int]:
+    """**필드별** 상태형 프레임 선언. 순수 함수 (c173, 관측 110).
+
+    왜 필드별인가. 한 행이 두 계수기의 프레임을 따로 선언할 수 있고, 행 단위로 첫
+    매치 하나를 쓰면 한 계수기의 프레임이 다른 계수기의 값을 심판한다 — 관측
+    108·109의 공통 기전을 세 번째로 반복하는 셈이다. 그래서 같은 필드 안에서만
+    값과 프레임을 마주 세운다.
+
+    관측 110이 잡은 것: 계기는 값을 **자기가 고른 한 프레임**에서만 재고, 행이
+    스스로 선언한 프레임이 그 값의 프레임과 같은지는 묻지 않았다. c172는 값
+    **1**(자기행 포함 = 프레임 c172)에 라벨 **c171**(자기행 미포함)을 달았고 571
+    초록을 통과했다. 어느 쪽을 의도로 읽어도 그 행의 절반이 거짓이다.
+    """
+    out: dict[str, int] = {}
+    for fld, v in row.items():
+        if isinstance(v, str) and (m := FRAME_RX.search(v)):
+            out[fld] = int(m.group(1))
+    return out
+
+
+def streak_headline(claims: list[tuple[str, int]], frame_streaks: dict[str, int],
+                    self_streak: int, self_frame: object) -> list[str]:
+    """적중을 낸 자[尺]의 이름 목록. 빈 목록 = 전량 불일치. 순수 함수 (c173 세션2, 관측 111).
+
+    왜 이 함수가 있는가. 구판 헤드라인은 후보 집합을 **자기행 포함 프레임의 값** 하나로만
+    심판했다. 그런데 그 행이 값을 적은 시점에 파트 O가 인쇄한 값은 **프레임 N−1**의 것이고
+    규약은 *'아래 값을 원장에 **그대로** 전사할 것'*이다. 두 요구가 다르므로 **규약을 지킨
+    행은 구조적으로 언제나 «전량 불일치»가 된다.**
+
+    c173 실측이 그 대칭을 보였다: 전사한 c173 행은 «전량 불일치», 라벨이 틀린 c172 행은
+    «적중 있음»(이름값 0이 선언 프레임 c171의 값 0과 우연히 같아서). **헤드라인이 규약
+    준수를 벌하고 위반을 상찬했다** — 관측 106의 자물쇠가 회귀가 아니라 **인쇄**에 난 것이다.
+
+    처치는 «선언 프레임이 있으면 그 프레임의 값으로 심판»이다. 두 자[尺]를 **둘 다** 인정하고
+    어느 쪽이 적중을 냈는지 이름을 인쇄한다 — 어느 하나로 좁히면 다른 쪽을 적은 정직한 행이
+    벌을 받는다(c169는 두 프레임을 다 적었고 P52 판정에서 «정직한 서식»으로 계상됐다).
+
+    선언된 한계. 적중의 **존재**만 말하고 손을 면책하지 않는다 — 후보 집합은 과수집분
+    (이름값·인용값)을 포함하며 그 사실은 호출부가 계속 인쇄한다(관측 109의 선언된 한계).
+    """
+    matched: list[str] = []
+    if self_streak in {v for _, v in claims}:
+        matched.append(f"자기행 포함 프레임 c{self_frame}")
+    for fld, fv in sorted(frame_streaks.items()):
+        if fv in {v for f, v in claims if f == fld}:
+            matched.append(f"[{fld}] 선언 프레임의 값 {fv}")
+    return matched
 
 
 def _ledger_rows() -> list[dict]:
@@ -1610,7 +1722,7 @@ def part_o() -> None:
 
     print("  [상태형 계수기 — c168 신설 (관측 96 처치 · P52). 산술형과 **프레임이 다르다**:")
     print("   원장에 이미 쓰인 행만 센다(실행 사이클 행은 아직 없다). 값과 프레임을 같이 전사할 것.]")
-    for label, field, value, claim_rx in STREAK_COUNTERS:
+    for label, field, value, vocab_rx in STREAK_COUNTERS:
         st = field_streak(rows, field, value)
         if st["frame_last"] is None:
             print(f"    {label}  →  !! 필드 `{field}` 보유 행 0 — 미측정이다"
@@ -1629,22 +1741,56 @@ def part_o() -> None:
         if st["streak"] != st["domain"]:
             print(f"       ※ **연속 {st['streak']} ≠ 정의역 {st['domain']}** — 라벨이"
                   " '연속'인데 정의역을 적으면 관측 96 재발이다(P52 (a) 반증).")
-        rx = re.compile(claim_rx)
-        claimed = None
         last = max(rows, key=lambda r: int(r["cycle"]))
-        for v in last.values():
-            if isinstance(v, str) and (m := rx.search(v)):
-                claimed = int(m.group(1))
-                break
-        if claimed is None:
+        claims = streak_claim_matches(last, vocab_rx)
+        frames = declared_frames(last)
+        if not claims:
             print(f"       직전 행(c{last['cycle']}) 손 인쇄 = 무기재 (대조 불가)")
         else:
-            gap = claimed - st["streak"]
-            verdict = "일치" if gap == 0 else f"**어긋남 {gap:+d}**"
-            print(f"       직전 행(c{last['cycle']}) 손 인쇄 {claimed} 대 계기 "
-                  f"{st['streak']} = {verdict}"
-                  + ("" if gap == 0 else
-                     f" (정의역 {st['domain']}과의 차 {claimed - st['domain']:+d})"))
+            vals = sorted({v for _, v in claims})
+            # 관측 111 (c173 세션2). 선언 프레임의 값을 **헤드라인 심판에 먼저** 계산한다 —
+            # 아래 필드별 절이 쓰는 값과 같은 값이며, 구판은 이것을 헤드라인에 쓰지 않아
+            # 규약대로 전사한 행을 «전량 불일치»로 인쇄했다.
+            frame_streaks = {
+                fld: field_streak([r for r in rows if int(r["cycle"]) <= fr],
+                                  field, value)["streak"]
+                for fld, fr in frames.items() if any(f == fld for f, _ in claims)
+            }
+            matched = streak_headline(claims, frame_streaks, st["streak"], st["frame_last"])
+            print(f"       직전 행(c{last['cycle']}) 손 인쇄 후보 **{len(claims)}건**"
+                  f" · 값 집합 {vals} · 계기 {st['streak']}(자기행 포함 프레임)"
+                  f" → {'**적중 있음** — ' + ' · '.join(matched) if matched else '**전량 불일치**'}")
+            print("          ※ «적중 있음»은 «일치»가 아니다 — 후보는 과수집분을 포함하며"
+                  " 이 눈은 손을 면책하지 않는다(관측 109 처치의 선언된 한계).")
+            for fld, v in claims:
+                marks = []
+                if v == st["streak"]:
+                    marks.append("자기행 포함 프레임의 계기값")
+                if v == st["domain"]:
+                    marks.append("**정의역 = 관측 96 재발 조건**")
+                if isinstance(value, int) and v == value:
+                    marks.append("계수기의 **이름값** — 주장이 아닐 수 있다(관측 109)")
+                print(f"          [{fld}] {v}  {{{'·'.join(marks) or '어느 값과도 불일치'}}}")
+            # 관측 110. 값을 계기가 고른 한 프레임에서만 재던 것이 P52 (a) 반증의
+            # 기전이다 — 행이 **스스로 선언한** 프레임을 여기서 처음 심판에 쓴다.
+            if not frames:
+                print("          ※ 선언 프레임 무기재 — 값의 프레임을 검증할 수 없다"
+                      "(관측 110의 사각: 갈라짐이 있어도 이 눈은 침묵한다).")
+            for fld, fr in sorted(frames.items()):
+                fld_vals = {v for f, v in claims if f == fld}
+                if not fld_vals:
+                    continue
+                at = {"streak": frame_streaks[fld]}  # 헤드라인과 같은 값 — 재계산하지 않는다
+                if at["streak"] in fld_vals:
+                    print(f"          [{fld}] 선언 프레임 c{fr} · 그 프레임 계기값"
+                          f" {at['streak']} = **후보에 있음**")
+                else:
+                    print(f"          !! [{fld}] **선언 프레임 c{fr}의 계기값"
+                          f" {at['streak']}이 후보 {sorted(fld_vals)}에 없다.**"
+                          f" 자기행 포함 프레임(c{st['frame_last']}) 값 {st['streak']}은"
+                          f" {'후보에 있다' if st['streak'] in fld_vals else '그것도 없다'}"
+                          " — 값과 선언 프레임이 갈렸고, 어느 쪽을 의도로 읽어도 이 행의"
+                          " 절반이 거짓이다(관측 110 · P52 (a) 반증 기전).")
 
 
 def part_f() -> None:
