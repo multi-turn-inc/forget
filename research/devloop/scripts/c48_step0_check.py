@@ -779,6 +779,58 @@ def blockade_rows(entries: list[tuple[str, float | None]], head_ct: float,
     return rows
 
 
+def predicate_divergence(
+    rows: list[tuple[str, float | None, float | None, str]],
+    prefixes: tuple[str, ...] = DEVLOOP_OWNED_PREFIXES,
+) -> dict[str, object]:
+    """절차 2 봉쇄의 **두 술어**를 나란히 계산한다. **순수 함수** (c175, 관측 113).
+
+    규약(`cycle-prompt.md:27`)이 쓰는 것은 **존재 술어**다 —
+    "devloop 외의 미커밋 변경이 **있으면** 코드 사이클 금지".
+    관측 81의 처치가 재기 시작한 것은 **활성 술어**다 — "그중 살아 있는 것이 있는가".
+    c151~c174 24사이클 동안 계기는 활성을 인쇄했고 규약은 존재를 읽었으며,
+    `pcus`는 24행 전부 +1이었다(출력 불변). **이 함수는 두 술어가 갈리는 자리를 보인다.**
+
+    상수를 발명하지 않는다. "며칠이면 죽은 WIP인가"는 이 스크립트가 정할 것이 아니므로,
+    문턱 T를 **자유 변수로 남기고 갈림 구간만** 낸다:
+
+        활성 술어(T) = 봉쇄  ⟺  min(경과) < T   (T보다 최근에 손댄 외부 경로가 있다)
+        두 술어가 갈린다     ⟺  min(경과) ≥ T   (아무것도 활성이 아닌데 존재 술어는 막는다)
+
+    그러므로 갈림 구간은 `T ≤ min(경과)`이고, 그 경계값 하나가 전부다.
+
+    **결론 문장을 만들지 않는다** — 이 스크립트의 상시 규약(c151 blockade_rows와 동일).
+    갈림의 존재를 보이는 것과 "진행해도 좋다"는 다르고, 후자는 사람 몫이다.
+    규약이 아직 존재 술어이므로 **갈려도 따를 것은 존재 술어다**(관측 113 수용 기준 ②).
+
+    mtime을 못 읽은 외부 경로가 하나라도 있으면 활성 술어는 **판정 불가**다 —
+    못 읽은 것을 "오래됐다"로도 "최근"으로도 세지 않는다(자기규율: 0건은 '없음'과
+    '못 봄'을 구별하지 않는다).
+    """
+    foreign = [r for r in rows if not r[0].startswith(prefixes)]
+    if not foreign:
+        return {"foreign": [], "existence": "해제", "activity": "해제",
+                "diverges_at_or_below": None, "unreadable": 0, "note": "외부 경로 0건"}
+
+    unreadable = [r for r in foreign if r[1] is None]
+    readable = [r for r in foreign if r[1] is not None]
+    if unreadable or not readable:
+        return {"foreign": foreign, "existence": "봉쇄", "activity": "판정 불가",
+                "diverges_at_or_below": None, "unreadable": len(unreadable),
+                "note": "mtime 미판독 경로가 있어 활성 술어를 세울 수 없다"}
+
+    youngest = min(readable, key=lambda r: r[1])
+    return {
+        "foreign": foreign,
+        "existence": "봉쇄",
+        "activity": "문턱 의존",
+        "diverges_at_or_below": youngest[1],
+        "youngest_path": youngest[0],
+        "unreadable": 0,
+        "note": "",
+    }
+
+
 def queue_intersection(changed: list[str], queue: tuple[str, ...] = CODE_QUEUE_PATHS) -> list[str]:
     """코드 큐 ∩ 봉쇄 경로. **순수 함수** (c151).
 
@@ -904,6 +956,29 @@ def part_a() -> None:
               f" = {len(inter)}건 {inter if inter else '(교집합 없음)'}")
         print("    ※ 이 교집합이 절차 2의 '봉쇄를 풀 증명' 쪽 피연산자다 — 매 사이클")
         print("      인쇄되던 무교집합(내 변경분 ∩ 봉쇄)은 방향이 반대였다(audit-150 §3).")
+
+        # ── 두 술어 대조 (c175 배선, 관측 113) ───────────────────────────────
+        # 관측 81의 처치는 활성을 **재게** 했고, 규약은 여전히 존재를 **읽는다**.
+        # 24사이클(c151~c174) 동안 계기는 인쇄했고 pcus는 24행 전부 +1이었다 —
+        # 계측이 보고에 들어가고 결정에 들어가지 않았다. 아래가 그 갈림을 보인다.
+        pd = predicate_divergence(rows)
+        print("  [두 술어 대조 — 규약이 읽는 술어 vs 계기가 재는 술어 (c175, 관측 113)]")
+        print(f"    규약 문면(cycle-prompt.md:27) = **존재** 술어  →  판정 **{pd['existence']}**")
+        n_foreign = len(pd["foreign"])  # type: ignore[arg-type]
+        print(f"    외부(비-devloop) 미커밋 경로 = {n_foreign}건")
+        boundary = pd["diverges_at_or_below"]
+        if boundary is None:
+            print(f"    활성 술어 = **{pd['activity']}**  ({pd['note']})")
+        else:
+            print(f"    최연소 외부 경로 = {boundary:.1f}h  ({pd['youngest_path']})")
+            print(f"    → 활성 술어(문턱 T) = 봉쇄 ⟺ T > {boundary:.1f}h")
+            print(f"    → **두 술어는 T ≤ {boundary:.1f}h 에서 갈린다**"
+                  f" · T > {boundary:.1f}h 에서 일치한다")
+        print("    ※ 문턱 T는 이 스크립트가 정하지 않는다 — 상수를 발명하면 그 상수가")
+        print("      다음 손에게 규약으로 배달된다(c174가 상수 23에서 겪은 것).")
+        print("    ※ **갈려도 따를 것은 존재 술어다** — 규약이 아직 그것이다.")
+        print("      이 인쇄를 무단 코드 사이클의 근거로 쓰지 말 것(관측 113 수용 기준 ②).")
+        print("      규약 문면 개정은 게이트 대기 `A-175.1`. 판정 = P63(c180).")
 
 
 def needle_reach(capsule: str, rules: dict[str, list[str]]) -> tuple[int, dict[str, int]]:
