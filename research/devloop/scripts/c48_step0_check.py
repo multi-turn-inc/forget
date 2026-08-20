@@ -1943,10 +1943,19 @@ def parse_deadlines(text: str) -> dict:
 
 # ── 상태줄 ↔ 판정문 정합 (c169 신설 · 관측 90 처치 · 관측 98 · P54) ──────────
 #
-# 판정 표지의 **서식지**다. 순진한 자[尺](`MARK_RE` 단독)로 재면 오늘 대장의 시계 아래
-# 38건 중 23건이 "판정문 부재"로 나오고 **그 23건은 전부 판정문을 갖고 있다**(관측 98).
-# 서식지를 더할 때마다 23 → 8 → 0. 이 상수가 이 계기의 유일한 정본이며 사본을 갖지
-# 않는다 — 네 번째 서식지가 발견되면 고칠 곳은 여기 한 곳이다(P54 한계 ③).
+# 판정 표지의 **서식지**다. 서식지를 더할 때마다 고발이 줄고, 이 상수가 이 계기의 유일한
+# 정본이며 사본을 갖지 않는다 — 네 번째 서식지가 발견되면 고칠 곳은 여기 한 곳이다(P54 한계 ③).
+#
+# ★ 문면 정정 (c174, 관측 112 · 관행 ⓮ 표지). 이 주석은 c169~c173 동안 이렇게 적혀 있었다:
+#   *"순진한 자[尺](`MARK_RE` 단독)로 재면 시계 아래 38건 중 **23건**이 «판정문 부재»로
+#    나오고 그 23건은 전부 판정문을 갖고 있다 … 23 → 8 → 0"*
+# **«38»은 재현되고 «23»은 재현되지 않는다.** c174가 세 자[尺](이 계기·`tmp/c169_status_
+# stamp_baseline.py`·import 없는 독립 자[尺])로 4스냅샷을 재니 «표지 없음»은 **8**이고,
+# **23은 «도장 없음»의 수**다(같은 `MARK_RE`, 다른 술어). 즉 이 주석은 두 술어의 수를
+# 한 계열('23 → 8 → 0')로 이어 붙였다. 실제로는 «표지 없음» 8 → 0이 이 계기의 일이고
+# «도장 없음» 23은 c168·c169·HEAD 내내 23으로 **이 계기가 손대지 않은 축**이다.
+# 그래서 아래 인쇄는 상수를 버리고 **두 술어를 각각 계산해 라벨과 함께** 낸다.
+NAIVE_HABITAT = "불릿"   #: 순진한 자[尺] = 서식지 1종(= `MARK_RE` + 들여쓰기 둔감)
 VERDICT_HABITATS = (
     ("불릿", re.compile(r"^\s*-\s*\*{0,2}(결과|판정|처분)")),
     # P44: `- **★ 판정 (사이클 160 적대 감사 …)**` — `★`가 `\*{0,2}`를 넘긴다.
@@ -1993,12 +2002,15 @@ def status_stamp_reconcile(text: str) -> dict:
         vals = [v for _, v in arms]
         habitat_hits = dict.fromkeys((n for n, _ in VERDICT_HABITATS), 0)
         markers: list[str] = []
+        narrow: list[str] = []          # 순진한 자[尺](서식지 1종)만 걸린 줄 — 관측 112
         for line in body:
             hit = False
             for name, rx in VERDICT_HABITATS:
                 if rx.match(line):
                     habitat_hits[name] += 1
                     hit = True
+                    if name == NAIVE_HABITAT:
+                        narrow.append(line.strip())
             if hit:
                 markers.append(line.strip())
         sections[pid] = {
@@ -2009,6 +2021,10 @@ def status_stamp_reconcile(text: str) -> dict:
             "habitat_hits": habitat_hits,
             "markers": len(markers),
             "stamped": sum(1 for m in markers if _is_verdict_line(m)),
+            # 관측 112 — 같은 자[尺]의 **두 술어**를 따로 들고 있는다. 하나로 뭉치면
+            # 어느 쪽 수인지 알 수 없고, 그 모호함이 대조군을 유령으로 만들었다.
+            "narrow_markers": len(narrow),
+            "narrow_stamped": sum(1 for m in narrow if _is_verdict_line(m)),
         }
 
     def _pick(pred) -> list[str]:
@@ -2035,6 +2051,15 @@ def status_stamp_reconcile(text: str) -> dict:
         "clean_down": [p for p in down if sections[p]["stamped"]],
         # 안전한 쪽 = 도장 달린 판정 줄이 있는데 상태줄 전건이 시계 위.
         "stamp_only": stamp_only,
+        # ── 관측 112 처치: 순진한 자[尺] 대조를 **술어별로** 계산한다 ──────────
+        # 왜 상수가 아니라 계산인가. c169 등록문은 이 자리에 «23»을 손으로 적었고
+        # 그 23은 **«도장 없음»의 수**였는데 표의 머리는 «표지 없음»이었다. c174가
+        # 세 자[尺]로 재니 «표지 없음»은 **8**이고 «도장 없음»은 **23**이며, 처치가
+        # 실제로 끈 것은 8→0이고 23은 창 전체(c168·c169·HEAD) 불변이다. 즉 처치의
+        # 가치를 광고한 수가 처치가 손대지 않은 축의 수였다. 상수로 두면 그 혼동이
+        # 매 사이클 인쇄되므로 **두 술어를 각각 계산해 라벨과 함께** 내보낸다.
+        "naive_silent": [p for p in down if sections[p]["narrow_markers"] == 0],
+        "naive_unstamped": [p for p in down if sections[p]["narrow_stamped"] == 0],
     }
 
 
@@ -2161,7 +2186,15 @@ def _print_status_stamp(rec: dict) -> None:
     print("    표지 서식지별 적중: "
           + " · ".join(f"'{k}' {v}건" for k, v in habitats.items()))
     print("    ※ 서식지 목록은 **오늘 실측한 3종**이지 전수가 아니다 — 넷째가 있으면 이 눈은"
-          " 다시 오고발한다(P54 한계 ③). 순진한 자[尺] 단독이면 오늘 오고발 23건(관측 98).")
+          " 다시 오고발한다(P54 한계 ③).")
+    print("    [순진한 자[尺](서식지 1종) 대조 — **술어를 값과 함께** 인쇄한다"
+          " (c174 처치, 관측 112 · 98)]")
+    print(f"       «표지 없음» = **{len(rec['naive_silent'])}건**"
+          "   ← 이 계기가 끈 축(3서식지로 0이 된다)")
+    print(f"       «도장 없음» = **{len(rec['naive_unstamped'])}건**"
+          "   ← **별 축. 이 계기는 여기에 손대지 않았다**(한계 ④가 문턱을 여기서 내렸다)")
+    print("       ※ 두 수는 같은 자[尺]의 **다른 술어**다. P54 등록 표는 뒤의 수를 앞의"
+          " 열에 적었고 c174 처분이 그것을 정정했다 — **수를 인용하기 전에 술어를 물어라.**")
     if silent:
         print("    !! **상태줄 단독 하강(판정문 부재)** — 조용한 거짓 음성, 관측 90의 고발 대상:")
         for pid in sorted(silent, key=_pid_key):
