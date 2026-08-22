@@ -979,6 +979,10 @@ def part_a() -> None:
         print("    ※ **갈려도 따를 것은 존재 술어다** — 규약이 아직 그것이다.")
         print("      이 인쇄를 무단 코드 사이클의 근거로 쓰지 말 것(관측 113 수용 기준 ②).")
         print("      규약 문면 개정은 게이트 대기 `A-175.1`. 판정 = P63(c180).")
+        if boundary is not None:
+            print("    ★ 의무: 갈림이 인쇄된 사이클의 원장은 ① 갈렸다 ② 존재 술어를")
+            print("      따랐다 를 둘 다 적는다 — 이 줄이 그 의무의 배달 채널이다")
+            print("      (관측 115 · P63 (b) 반증의 항구 처치, audit-180 R1 · c185 배선).")
 
 
 def needle_reach(capsule: str, rules: dict[str, list[str]]) -> tuple[int, dict[str, int]]:
