@@ -1431,14 +1431,41 @@ ORDINAL_TREATMENT_CYCLE = 161
 #: c170 *"`fixed` 0을 또 적는다 — 27연속"* · c171 *"0 아니다. 28연속"*이 전부 침묵했고,
 #: c172 *"`fixed` 0연속은 이 행에서 1연속"*만 **0**으로 잡혔다.
 #: 즉 이름은 거짓 양성을 **공급**하면서 참 양성을 **가로막는다.**
+#: c191 편입 (관측 119 수용 기준 ③ · 계기 큐 ㉰). `rt`(restore_turns) 불변 계수기는
+#: c170~c189 **20사이클**을 손 증분으로 살았고 c189에 «50사이클 연속»을 적었다 — 참값
+#: 58. 씨앗이 «연속»이 아니라 그 감사가 쓰던 **창의 크기 30**이었고(관측 96의 정의
+#: 그대로), 이후 이중 증분 1회가 겹쳤다. 이 계수기는 A-106.1의 **유일한 정량 근거**로
+#: 매 사이클 인용되므로 표류가 청구의 증거를 오염시킨다(오차 방향은 자기 불리 — 과소).
+#:
+#: **어휘를 `` `rt` ``(백틱 포함)로 좁힌 이유.** 맨 `rt`는 «partial»의 부분문자열이고
+#: `restore_grade` 값이 그 낱말을 상시 인쇄한다 — 좁히지 않으면 남의 계수기가 후보로
+#: 섞인다(c172 `restore_note` 오고발과 같은 기전). **선언된 한계**: 백틱 없이 적은
+#: 사이클은 이 눈에 «무기재»로 보인다. 거짓 음성이며, 손을 면책하는 방향이 아니다.
+#:
+#: ★ **이 계수기는 오고발을 안고 태어난다 — c191 첫 실행 실측.** 대조 대상인 c190 행은
+#: 관측 119를 *주조한* 행이고, 그 절은 증상을 적기 위해 옛 표류값을 **인용**한다
+#: («`rt` 50사이클 연속»이 `frictions_note`·`work` 두 필드에). 이 눈은 인용과 자기
+#: 주장을 가르지 못하므로(A-171.1 = 게이트 대기, 파트 O가 산술형에 대해 선언한 바로 그
+#: 한계) 후보 집합에 50이 섞이고, 게다가 같은 필드의 «프레임 = 원장 최종 c189»는
+#: **`fixed` 계수기의 선언**이라 rt 주장과 짝지어진다(관측 99의 모양: 한 절의 팔과 다른
+#: 절의 기한이 짝지어진다). 결과 = `!!` 한 줄. **그것은 c190의 결함이 아니다** —
+#: c190의 자기 주장은 `restore_note`의 **59**이고 자기행 포함 프레임 계기값과 일치한다.
+#: 관측 36의 재현이다(관측 기록이 관측 대상을 바꾼다: 증상 인용이 계기의 입력이 된다).
+#: 처치는 인용∖주장 분별이며 **계기 큐 ㉱**로 상신한다 — 여기서 발명하지 않는다.
 STREAK_COUNTERS = (
     ("`frictions_fixed` 0 연속", "frictions_fixed", 0, r"(?:frictions_)?fixed"),
     ("캡슐 miss 연속", "restore_grade_capsule", "miss", r"캡슐"),
+    ("`rt` 불변 2 연속", "restore_turns", 2, r"`rt`"),
 )
 
 #: 값 서식은 계수기와 무관하게 하나다. 어휘 식별과 값 추출을 **두 단계로 가르는** 것이
 #: 관측 109 처치의 전부다 — 한 정규식에 이름과 값을 함께 넣으면 둘이 서로를 먹는다.
-STREAK_VALUE_RX = re.compile(r"(\d+)\s*연속")
+#:
+#: c191 확장 (관측 119). 구판은 `(\d+)\s*연속`이었고 `rt` 계수기의 실제 서식은
+#: **«N사이클 연속»**이다 — 즉 이 눈은 그 계수기를 **20사이클간 한 번도 못 봤다.**
+#: 계기화되지 않아 표류한 것이 첫 겹이고, 표류를 잡을 대조기가 서식을 몰랐던 것이
+#: 둘째 겹이다. 두 기존 계수기의 출력은 이 확장으로 바뀌지 않는다(c191 실측 대조).
+STREAK_VALUE_RX = re.compile(r"(\d+)\s*(?:사이클\s*)?연속")
 
 #: 어휘 언급 **뒤** 이 폭 안의 값만 후보로 본다. 필드 전체를 긁으면 남의 계수기가
 #: 섞인다 — c172 `restore_note`의 *"c167 이래 **6연속** 동일 증상"*은 «캡슐» 낱말과
@@ -1578,6 +1605,81 @@ def streak_headline(claims: list[tuple[str, int]], frame_streaks: dict[str, int]
         if fv in {v for f, v in claims if f == fld}:
             matched.append(f"[{fld}] 선언 프레임의 값 {fv}")
     return matched
+
+
+#: c191 신설 (관측 119 수용 기준 ④). 라벨 키 = 값 **바로 앞** 문맥의 꼬리 2토큰.
+STREAK_LABEL_WINDOW = 30
+STREAK_DECOR_RX = re.compile(r"[*`«»·\[\](){}:,．\.]+")
+#: 재발 문턱 — 자[尺]가 아니라 **분류 보조선**이다(한계 ③).
+STREAK_RECUR_MIN = 5
+#: 생존 창 — 최근 이 폭 안에 마지막 인쇄가 있어야 «지금 표류 중»이다. 죽은 계수기를
+#: 매 사이클 고발하면 이 눈이 소음기가 된다(관측 74 계열: 신호:소음이 처치의 전부).
+STREAK_LIVE_WINDOW = 5
+
+
+def _streak_label_key(context: str) -> str:
+    plain = STREAK_DECOR_RX.sub(" ", context)
+    toks = [t for t in re.sub(r"\d+", " ", plain).split() if t]
+    return " ".join(toks[-2:]) if toks else "(무문맥)"
+
+
+def uninstrumented_streaks(rows: list[dict]) -> list[dict]:
+    """원장 산문의 «N연속» 주장 중 **계기화되지 않은 채 살아 있는** 가족 (관측 119 ④).
+
+    왜 목록이 아니라 탐지기인가. 관측 119가 물은 것은 *"오늘 셋 중 하나가 밖이었다면
+    **넷째가 있는지 아무도 모른다**"*이다. 손이 유지하는 스냅샷 목록은 그 물음에
+    답하지 못한다 — 다섯째가 내일 태어나면 목록에 없으므로 영원히 안 보인다.
+    그래서 어휘를 선언하지 않고 원장에서 **긁어서 군집**한다.
+
+    **진단 전용이다 — 고발하지 않는다**(관측 107 규율). 라벨 키가 꼬리 2토큰이라
+    같은 계수기가 문면을 바꾸면 두 가족으로 갈린다(과분할). 과분할은 계수기를
+    **놓치는** 방향이 아니라 **중복 보고**하는 방향이며, 그쪽이 루프에 불리하므로
+    의도한 선택이다(관측 76·104의 교훈: 거짓 음성을 루프에 유리하게 기울이지 않는다).
+
+    선언된 한계 ① 값 서식은 `STREAK_VALUE_RX` 둘뿐이다 — «N회 연속»·«연속 N»은 이 눈
+    밖이고, 그것은 «그 서식이 없다»가 아니라 «안 쟀다»는 뜻이다. ② 계기화 판정은 어휘
+    정규식 적중이므로, 계기화된 계수기가 문면을 바꾸면 **X로 오분류**된다.
+
+    **판정은 라벨 키가 아니라 `raw` 문맥에 건다.** 키는 장식(백틱·괄호)을 지운 뒤의
+    문자열이고 `STREAK_COUNTERS`의 어휘 중 하나는 `` `rt` ``처럼 **장식이 곧 식별자**다
+    — 키에 걸면 그 계수기는 계기화한 그 사이클에도 «X»로 인쇄된다. c191 첫 실행이
+    정확히 그것을 냈고(자기 처치를 자기가 미처치로 고발), 이 줄이 그 수리다.
+    """
+    if not rows:
+        return []
+    last_cycle = max(int(r["cycle"]) for r in rows)
+    fam: dict[str, dict[int, list[tuple[str, int]]]] = {}
+    raws: dict[str, list[str]] = {}
+    for row in rows:
+        cyc = int(row["cycle"])
+        for fld, val in row.items():
+            if not isinstance(val, str):
+                continue
+            for m in STREAK_VALUE_RX.finditer(val):
+                lo = max(0, m.start() - STREAK_LABEL_WINDOW)
+                raw = val[lo:m.start()]
+                key = _streak_label_key(raw)
+                fam.setdefault(key, {}).setdefault(cyc, []).append((fld, int(m.group(1))))
+                raws.setdefault(key, []).append(raw)
+
+    vocab = [re.compile(v) for _, _, _, v in STREAK_COUNTERS]
+    out = []
+    for key, byc in fam.items():
+        cycles = sorted(byc)
+        if len(cycles) < STREAK_RECUR_MIN:
+            continue
+        if cycles[-1] < last_cycle - STREAK_LIVE_WINDOW + 1:
+            continue
+        if any(rx.search(r) for rx in vocab for r in raws[key]):
+            continue
+        series = [(c, byc[c][0][1]) for c in cycles]
+        out.append({
+            "key": key,
+            "cycles": cycles,
+            "series": series,
+            "fields": sorted({f for c in cycles for f, _ in byc[c]}),
+        })
+    return sorted(out, key=lambda d: (-len(d["cycles"]), d["key"]))
 
 
 def _ledger_rows() -> list[dict]:
@@ -1870,6 +1972,22 @@ def part_o() -> None:
                           f" {'후보에 있다' if st['streak'] in fld_vals else '그것도 없다'}"
                           " — 값과 선언 프레임이 갈렸고, 어느 쪽을 의도로 읽어도 이 행의"
                           " 절반이 거짓이다(관측 110 · P52 (a) 반증 기전).")
+
+    # 관측 119 수용 기준 ④ — c191 신설. 위 표는 «계기화한 것»만 인쇄한다. 그 표의
+    # 침묵이 «밖에 아무도 없다»로 읽힌 것이 관측 119의 20사이클이었다.
+    loose = uninstrumented_streaks(rows)
+    print("  [미계기화 «N연속» 탐지 — c191 신설 (관측 119 수용 기준 ④ · 계기 큐 ㉰)]")
+    print(f"    재발(≥{STREAK_RECUR_MIN}사이클) · 생존(최근 {STREAK_LIVE_WINDOW}창) ·"
+          f" 계기화 **X** = **{len(loose)}가족**")
+    print("    ※ **진단 전용 — 고발하지 않는다**(관측 107). 라벨 키가 꼬리 2토큰이라"
+          " 과분할한다: 한 계수기가 두 가족으로 갈릴 수 있다(중복 보고 방향).")
+    for d in loose:
+        head, tail = d["series"][:3], d["series"][-3:]
+        print(f"    · «{d['key']}»  cycles={len(d['cycles'])}"
+              f"  c{d['cycles'][0]}~c{d['cycles'][-1]}  필드={d['fields']}")
+        print(f"        값 계열(첫 매치): {head} … {tail}")
+    if not loose:
+        print("    (없음 — 다만 이 침묵은 위 두 한계 안에서만 참이다.)")
 
 
 def part_f() -> None:
