@@ -5271,7 +5271,16 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
             str(memory.get("created_at") or "") > memory_as_of
             or str(memory.get("updated_at") or "") > memory_as_of
         ):
-            continue
+            # 재부상(renewal) 예외: supersede는 텍스트를 건드리지 않고 updated_at만
+            # 올린다(코드 확인 2026-08-23). 그 bump 때문에 "7월엔 뭐라고 믿었지"류
+            # 시점 질의가 당시 현행이던 사실을 통째로 잃었다 — 실측 재부상 0/14.
+            # supersede 주석이 유일한 갱신 사유로 보이는 행(superseded_at 보유,
+            # created ≤ as_of)은 살린다. supersede 이전에 텍스트 편집이 있었던
+            # 드문 행은 편집 후 문면이 보일 수 있다 — 수용하고 여기 적어둔다.
+            meta_as_of = memory.get("metadata") or {}
+            if not (meta_as_of.get("superseded_at")
+                    and str(memory.get("created_at") or "") <= memory_as_of):
+                continue
         in_primary_scope = matches_filters(memory, filters)
         if not in_primary_scope and not (scope_fallback and _scope_fallback_eligible(memory, filters)):
             continue
@@ -5317,13 +5326,19 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
             # breakdown reassemble the score (observation 33).
             score_breakdown["feedback"] = round(adjusted - score, 4)
         score = adjusted
-        if (memory.get("metadata") or {}).get("superseded_at"):
-            # Supersession is a deterministic, agent-issued staleness signal
-            # (unlike the inferred harmful penalty), so demote hard — but
-            # never remove: "did X change?" questions still need the old
-            # fact retrievable, annotated as superseded.
-            score = round(score * _superseded_score_multiplier(), 4)
-            score_breakdown["superseded"] = True
+        memory_meta_early = memory.get("metadata") or {}
+        if memory_meta_early.get("superseded_at"):
+            # 억제 간선 (본선 3, 2026-08-23): 억압은 저장된 상태가 아니라 인출 시점의
+            # 경쟁이다 — 대체본이 함께 인출될 때 그 대체본이 구본을 누른다. 링크가
+            # 있으면(superseded_by) 강등을 경쟁 패스(_apply_inhibition_edges)로 미룬다.
+            # 무조건 ×0.45는 신공간 점수 대역에서 전역 문턱(0.1) 아래로 가라앉아
+            # 구본을 사실상 삭제했다 — 실측: 계약 쌍 18개 전건 비가시, 재부상 0/14.
+            # 링크 없는 supersede(구식 주석)만 종전 강등을 유지한다 — 경쟁자를 모른다.
+            if memory_meta_early.get("superseded_by"):
+                score_breakdown["superseded"] = True    # 경쟁 패스가 질서를 정한다
+            else:
+                score = round(score * _superseded_score_multiplier(), 4)
+                score_breakdown["superseded"] = True
             superseded_ids.add(memory["id"])
         if (memory.get("metadata") or {}).get("hook"):
             # Session-capture entries are pointers for rehydration, not facts.
@@ -5368,6 +5383,7 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
     )
     if rerank:
         scored = rerank_memory_results(query, scored, project_id=project_id, top_n=top_k)
+    scored = _apply_inhibition_edges(scored, project_id=project_id, as_of=memory_as_of)
     scored.sort(key=lambda item: (item["score"], item["updated_at"]), reverse=True)
     if temporal_rerank:
         adjusted = _promote_newer_siblings(scored, scored_embeddings, superseded_ids, project_id)
@@ -5582,6 +5598,84 @@ def memory_feedback_map(project_id: str) -> dict[str, dict[str, Any]]:
 
 def _superseded_score_multiplier() -> float:
     return _float_or(os.getenv("MEM1_SUPERSEDED_SCORE_MULT"), 0.45)
+
+
+def _apply_inhibition_edges(
+    scored: list[dict[str, Any]],
+    project_id: str | None = None,
+    as_of: str = "",
+) -> list[dict[str, Any]]:
+    """supersede를 저장된 딱지가 아니라 인출 시점의 경쟁으로 집행한다. (본선 3)
+
+    신경 사양 (extinction/renewal · retrieval-induced suppression): 새 학습은 옛
+    기억을 지우지 않는다 — 함께 인출될 때 이긴다. 여기서의 번역:
+
+      대체본이 함께 인출됨   → 대체본이 구본 바로 위에 서고 구본은 그 아래로
+      대체본이 인출 안 됨    → 간선을 따라 대체본을 데려온다 (edge promotion —
+                              구본의 검색력을 후계자가 승계한다; 유사도 추측이
+                              아니라 원장이 아는 정확한 간선이다)
+      대체본이 죽음/부재     → 구본을 누르지 않는다 (주제의 유일한 담지자를
+                              누르면 주제가 통째로 사라진다 — renewal)
+      as_of < supersede 시점 → 경쟁 자체가 아직 없다 (그때는 구본이 현행이었다)
+    """
+    edges: list[tuple[int, str]] = []      # (구본의 scored 내 위치, 대체본 id)
+    by_id = {str(item.get("id")): i for i, item in enumerate(scored)}
+    for i, item in enumerate(scored):
+        meta = item.get("metadata") or {}
+        successor = meta.get("superseded_by")
+        if not meta.get("superseded_at") or not successor:
+            continue
+        if as_of and str(meta.get("superseded_at")) > str(as_of):
+            continue                        # 시점 질의: supersede 이전 — 구본이 현행
+        edges.append((i, str(successor)))
+    if not edges:
+        return scored
+
+    demote = _superseded_score_multiplier()
+    appended: list[dict[str, Any]] = []
+    for old_index, successor_id in edges:
+        old = scored[old_index]
+        old_score = float(old.get("score") or 0.0)
+        succ_index = by_id.get(successor_id)
+        if succ_index is not None:
+            successor = scored[succ_index]
+        else:
+            row = _memory_row_for_inhibition(successor_id, project_id)
+            if row is None:
+                # 후계자가 죽었다 — 구본이 주제의 유일한 담지자. 누르지 않는다.
+                (old.setdefault("score_breakdown", {}) if isinstance(old.get("score_breakdown"), dict)
+                 else old.setdefault("score_breakdown", {}))["renewal"] = True
+                continue
+            successor = strip_internal(row)
+            # 승계: 후계자는 구본의 검색력을 물려받아 바로 위에 선다.
+            successor["score"] = round(old_score, 4)
+            successor["score_breakdown"] = {"inherited_from": str(old.get("id"))}
+            trust = (row.get("metadata") or {}).get("trust")
+            if trust:
+                successor["trust"] = trust
+            appended.append(successor)
+            by_id[successor_id] = len(scored) + len(appended) - 1
+        # 억압: 구본은 후계자 아래로 (곱 강등이되, 후계자보다 위로는 못 간다)
+        succ_score = float(successor.get("score") or 0.0)
+        old["score"] = round(min(old_score * demote if demote < 1 else old_score,
+                                 succ_score * 0.95), 4)
+        if isinstance(old.get("score_breakdown"), dict):
+            old["score_breakdown"]["inhibited_by"] = successor_id
+    return scored + appended
+
+
+def _memory_row_for_inhibition(memory_id: str, project_id: str | None) -> dict[str, Any] | None:
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT * FROM memories WHERE id = ? AND deleted = 0", (memory_id,)
+        ).fetchone()
+    if row is None:
+        return None
+    item = dict(row)
+    for field in ("metadata", "categories"):
+        item[field] = json_loads(item.get(field), {}) if item.get(field) else {}
+    item.pop("embedding", None)
+    return item
 
 
 def _temporal_rerank_enabled(payload: dict[str, Any], project_id: str | None = None) -> bool:
