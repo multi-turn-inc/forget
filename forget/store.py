@@ -21,12 +21,15 @@ from .ports import enforce_project_quota
 from . import hybrid_workspace, scope_guard
 from .db import get_db, json_dumps, json_loads
 from .memory_engine import (
+    anchor_applies,
     categorize,
     cosine_similarity,
     deterministic_embedding,
+    episode_anchor,
     extract_linked_entities,
     keyword_overlap_score,
     low_value_memory_reason,
+    message_content_text,
     normalize_entity,
     rerank_score,
     score_memory,
@@ -3877,17 +3880,40 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
     _record_gate_drops(gate_drops, payload, project_id=project_id, event_id=event_id)
     created: list[dict[str, Any]] = []
     vector_upserts: list[tuple[dict[str, Any], list[float]]] = []
+    hebbian = _hebbian_enabled(payload)
+    hebbian_merges: list[dict[str, Any]] = []
+    gate_merges: list[dict[str, Any]] = []
     # Normalize client-supplied timestamps (mem0 v3 clients send unix ints) to
     # ISO strings — stored timestamps are compared lexicographically elsewhere.
     now_raw = payload.get("created_at") or payload.get("timestamp") or payload.get("custom_timestamp") or utc_now()
     now_parsed = parse_datetime(now_raw)
     now = now_parsed.isoformat() if now_parsed else utc_now()
 
+    # 일화 결합 — 원자화가 벗겨낸 주제를 사실에 다시 묶는다. (2026-08-23, docs/episodic-binding.md)
+    # 실측된 병: "캐시 배치 실측 완료 …: 10턴 누적 A 3674 vs B 4601 = 20.1% 절감"이 원장에는
+    # 뒷토막만 남아 '캐시'도 '배치'도 사라진다(최근 40건 중 21건이 이런 조각). 앵커는 표시
+    # 텍스트와 hash를 건드리지 않고 임베딩 입력과 metadata에만 실린다 — 기존 소비자 불변.
+    episode_source = ""
+    for message in payload.get("messages") or []:
+        content = message_content_text(message.get("content")) if isinstance(message, dict) else str(message)
+        if content and len(content.strip()) > 20:
+            episode_source = content
+            break
+    if not episode_source:
+        episode_source = str(payload.get("text") or "")
+    # episode_binding=False는 대조군 팔이다 — 같은 원문을 결합 없이 써서 효과를 잰다.
+    anchor = episode_anchor(episode_source) if _bool_or(payload.get("episode_binding"), True) else ""
+    n_facts = len(fact_records)
+
     with get_db() as conn:
-        for record in fact_records:
+        for fact_idx, record in enumerate(fact_records):
             fact = record["fact"]
             source_role = _claim_source_role(record)
             record_metadata = {**metadata, "trust": _memory_trust(source_role, fact)}
+            bind = anchor if anchor_applies(fact, anchor) else ""
+            if anchor:
+                record_metadata["episode"] = {"event_id": event_id, "anchor": anchor,
+                                              "idx": fact_idx, "n": n_facts, "bound": bool(bind)}
             categories = categorize(fact, metadata)
             for scope in record["scopes"]:
                 primary_type = next((field for field in ("user_id", "agent_id", "app_id", "run_id") if scope.get(field)), None)
@@ -3901,7 +3927,20 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
                     if existing:
                         skipped_duplicate += 1
                         continue
-                embedding = embed_text(fact, project_id=project_id)
+                if hebbian:
+                    merged_info = _hebbian_merge_near_duplicate(
+                        conn, project_id=project_id, scope=scope, fact=fact,
+                        record_metadata=record_metadata, record_input=record["input"], now=now,
+                    )
+                    if merged_info is not None:
+                        hebbian_merges.append({k: merged_info[k] for k in ("id", "overlap", "evidence_count", "text_changed")})
+                        if merged_info.get("vector") is not None:
+                            vector_upserts.append(merged_info["vector"])
+                        gate_merges.append({"text": fact[:300], "role": "fact",
+                                            "reason": f"hebbian_merge:{merged_info['id']}"})
+                        continue
+                # 부호화에만 결합을 싣는다 — hash는 bare fact 그대로이므로 중복 판정 의미 불변.
+                embedding = embed_text(f"{bind} — {fact}" if bind else fact, project_id=project_id)
                 conn.execute(
                     """
                     INSERT INTO memories (
@@ -3983,7 +4022,10 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
     for memory_record, embedding in vector_upserts:
         vector_upsert_memory(memory_record, embedding, project_id)
     accounting["duplicate_skipped"] = skipped_duplicate
+    accounting["hebbian_merged"] = len(hebbian_merges)
     accounting["memories_created"] = len(created)
+    if gate_merges:
+        _record_gate_drops(gate_merges, payload, project_id=project_id, event_id=event_id)
     violations = add_accounting_violations(accounting)
     if violations:
         accounting["identity_violations"] = violations
@@ -4020,9 +4062,202 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
             "junk_total": sum(skipped_junk.values()),
             "duplicate": skipped_duplicate,
         }
+    if hebbian_merges:
+        response["merged"] = hebbian_merges
     if scope_guard_warning:
         response["scope_guard"] = {"verdict": "foreign", "warning": scope_guard_warning}
     return response
+
+
+_HEBBIAN_WINDOW = 400      # 쓰기당 비교하는 최근 후보 수 (같은 스코프)
+_HEBBIAN_THRESHOLD = 0.62  # 읽기 필터(0.55)보다 엄격: 읽기는 시야만 가리지만 병합은 저장을 바꾼다
+
+
+def _hebbian_enabled(payload: dict[str, Any]) -> bool:
+    value = payload.get("hebbian")
+    if value is not None:
+        return bool(value)
+    return os.getenv("MEM1_HEBBIAN_MERGE", "1").lower() not in {"0", "false", "no"}
+
+
+_HEBBIAN_TOKEN_RE = re.compile(r"[0-9]+(?:\.[0-9]+)?|[A-Za-z가-힣]{2,}")
+_HEBBIAN_DIGIT_RE = re.compile(r"[0-9]+(?:\.[0-9]+)?")
+
+
+def _hebbian_token_matches(a: str, b: str) -> bool:
+    if a == b or a in b or b in a:
+        return True
+    # 공유 접두 ≥ 짧은 토큰의 60% — 한국어 활용형(마신다/마시는)을 이어붙이되
+    # 다른 내용어(커피/홍차)는 갈라놓는 가장 싼 선.
+    n = min(len(a), len(b))
+    k = 0
+    while k < n and a[k] == b[k]:
+        k += 1
+    return k >= max(2, int(0.6 * n))
+
+
+def _hebbian_safe_to_merge(a: str, b: str) -> bool:
+    """Near-duplicate surface is necessary but not sufficient to merge.
+
+    "target is staging" vs "target is production" is one word apart and trigram-
+    identical enough to fool any overlap score — yet it is a contradiction pair
+    that belongs to supersede, not merge. Merging it silently destroys the very
+    distinction the ledger exists to keep (caught by the supersede contract test,
+    2026-08-23). Three deterministic guards:
+      1. digit runs must agree exactly — numbers are never paraphrase,
+      2. negation polarity must agree — a denial is not a restatement,
+      3. every content token on BOTH sides must find a fuzzy match on the other —
+         merge only what is unmistakably the same statement said again.
+
+    Guard 3 is deliberately bidirectional. The one-directional version passed
+    "todo: publish X" ↔ "X is published" (the differing word sat in the longer
+    text) and thereby merged a *plan* into its *completion* — the exact
+    plan-vs-done distinction the trust system exists to keep (caught by the
+    consolidation cycle test, 2026-08-23). Expansions that add new content words
+    now append instead of merging; read-path dedup and gist distillation own
+    that redundancy. A destructive-leaning write op earns strictness.
+    """
+    if sorted(_HEBBIAN_DIGIT_RE.findall(a)) != sorted(_HEBBIAN_DIGIT_RE.findall(b)):
+        return False
+    if bool(NEGATION_RE.search(a)) != bool(NEGATION_RE.search(b)):
+        return False
+    tokens_a = [t for t in _HEBBIAN_TOKEN_RE.findall(a) if not _HEBBIAN_DIGIT_RE.fullmatch(t)]
+    tokens_b = [t for t in _HEBBIAN_TOKEN_RE.findall(b) if not _HEBBIAN_DIGIT_RE.fullmatch(t)]
+    for token in tokens_a:
+        if not any(_hebbian_token_matches(token, cand) for cand in tokens_b):
+            return False
+    for token in tokens_b:
+        if not any(_hebbian_token_matches(token, cand) for cand in tokens_a):
+            return False
+    return True
+
+
+def _hebbian_merge_near_duplicate(
+    conn: Any,
+    *,
+    project_id: str,
+    scope: dict[str, Any],
+    fact: str,
+    record_metadata: dict[str, Any],
+    record_input: Any,
+    now: str,
+) -> dict[str, Any] | None:
+    """Strengthen instead of append: a restated fact reinforces its original.
+
+    A brain does not allocate a second engram for a repetition — it potentiates
+    the first. Appending near-identical rows spends bounded L1 capacity on copies
+    and forces every reader to re-deduplicate (measured 2026-08-23: two facts
+    occupied four of five recall slots). Merging at write kills that at the source.
+
+    Rules: the richer text wins; ``evidence_count`` climbs; trust only upgrades
+    (green over yellow), never downgrades; history keeps the losing text; the
+    merge itself is gate-logged — forgetting a duplicate is still forgetting.
+    """
+    grams = _context_trigrams(fact)
+    if not grams:
+        return None
+    rows = conn.execute(
+        """
+        SELECT id, memory, metadata FROM memories
+        WHERE project_id = ? AND deleted = 0
+          AND COALESCE(user_id, '') = ? AND COALESCE(agent_id, '') = ?
+          AND COALESCE(app_id, '') = ? AND COALESCE(run_id, '') = ?
+        ORDER BY created_at DESC LIMIT ?
+        """,
+        (
+            project_id,
+            scope.get("user_id") or "",
+            scope.get("agent_id") or "",
+            scope.get("app_id") or "",
+            scope.get("run_id") or "",
+            _HEBBIAN_WINDOW,
+        ),
+    ).fetchall()
+    best = None
+    best_overlap = 0.0
+    for row in rows:
+        other = _context_trigrams(str(row[1] or ""))
+        if not other:
+            continue
+        overlap = len(grams & other) / min(len(grams), len(other))
+        if overlap > best_overlap and overlap > _HEBBIAN_THRESHOLD:
+            if not _hebbian_safe_to_merge(fact, str(row[1] or "")):
+                continue  # 표면은 닮았지만 내용어·숫자·부정이 갈린다 — supersede의 영역
+            best_overlap, best = overlap, row
+    if best is None or best_overlap <= _HEBBIAN_THRESHOLD:
+        return None
+
+    existing_id, existing_text, existing_meta_raw = str(best[0]), str(best[1] or ""), best[2]
+    try:
+        merged_meta = json_loads(existing_meta_raw) if existing_meta_raw else {}
+    except Exception:
+        merged_meta = {}
+    if not isinstance(merged_meta, dict):
+        merged_meta = {}
+    merged_meta["evidence_count"] = int(merged_meta.get("evidence_count") or 1) + 1
+    merged_meta["last_reinforced_at"] = now
+    trust_rank = {"green": 2, "yellow": 1, "red": 0}
+    new_trust = record_metadata.get("trust") if isinstance(record_metadata.get("trust"), dict) else {}
+    old_trust = merged_meta.get("trust") if isinstance(merged_meta.get("trust"), dict) else {}
+    if trust_rank.get(str(new_trust.get("light")), -1) > trust_rank.get(str(old_trust.get("light")), -1):
+        merged_meta["trust"] = new_trust  # 승격만 — 강한 출처의 재진술이 약한 출처를 끌어올린다
+
+    keep_text = fact if len(fact) > len(existing_text) else existing_text
+    text_changed = keep_text != existing_text
+    embedding = embed_text(keep_text, project_id=project_id) if text_changed else None
+    if text_changed:
+        conn.execute(
+            "UPDATE memories SET memory = ?, metadata = ?, embedding = ?, updated_at = ? WHERE id = ?",
+            (keep_text, json_dumps(merged_meta), encode_embedding(embedding), now, existing_id),
+        )
+    else:
+        conn.execute(
+            "UPDATE memories SET metadata = ?, updated_at = ? WHERE id = ?",
+            (json_dumps(merged_meta), now, existing_id),
+        )
+    conn.execute(
+        """
+        INSERT INTO memory_history (
+            id, memory_id, project_id, event, input, old_memory, new_memory,
+            user_id, agent_id, app_id, run_id, metadata, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            str(new_id()),
+            existing_id,
+            project_id,
+            "UPDATE",
+            json_dumps(record_input),
+            existing_text,
+            keep_text,
+            scope.get("user_id"),
+            scope.get("agent_id"),
+            scope.get("app_id"),
+            scope.get("run_id"),
+            json_dumps({**merged_meta, "hebbian_overlap": round(best_overlap, 3)}),
+            now,
+            now,
+        ),
+    )
+    result: dict[str, Any] = {
+        "id": existing_id,
+        "overlap": round(best_overlap, 3),
+        "evidence_count": merged_meta["evidence_count"],
+        "text_changed": text_changed,
+    }
+    if text_changed and embedding is not None:
+        result["vector"] = (
+            {
+                "id": existing_id,
+                "memory": keep_text,
+                "project_id": project_id,
+                **scope,
+                "metadata": merged_meta,
+                "updated_at": now,
+            },
+            embedding,
+        )
+    return result
 
 
 def _add_sanitize_enabled(payload: dict[str, Any]) -> bool:
@@ -4970,15 +5205,22 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
     # Dial names are the stable contract; mechanisms are disposable
     # incumbents, re-seated whenever the harness crowns a better one.
     recall_mode = {"low": "", "medium": "", "high": "gate", "extra": "reader"}.get(recall_mode, recall_mode)
-    if recall_mode == "reflex":
-        return _search_memories_reflex(payload, project_id)
-    if recall_mode == "gate":
-        return _search_memories_gate(payload, project_id)
-    if recall_mode == "reader":
-        # 'extra' gear: one decade up from gate — the LLM reads ~100
-        # candidates at near-full text instead of 40 keyhole snippets.
-        # Measured prize (2026-08-04): gold recall@100 = 0.992 vs @40 0.967.
-        return _search_memories_gate(payload, project_id, wide_k=100, snippet_chars=500, layer="reader-v2")
+    # 계층 기어는 내부 v1 검색을 부르므로 `trace`를 안쪽에 넘기지 않는다 —
+    # 넘기면 반사 기어가 각도마다 트레이스를 만들고(주소는 하나도 반환되지 않음)
+    # 게이트 기어는 광폭 후보의 주소를 최종 선택의 주소로 착각하게 만든다.
+    # 주소는 실제로 돌려준 선택에 대해 바깥에서 한 번 기록한다.
+    if recall_mode in {"reflex", "gate", "reader"}:
+        inner = {key: value for key, value in payload.items() if key != "trace"}
+        if recall_mode == "reflex":
+            result = _search_memories_reflex(inner, project_id)
+        elif recall_mode == "gate":
+            result = _search_memories_gate(inner, project_id)
+        else:
+            # 'extra' gear: one decade up from gate — the LLM reads ~100
+            # candidates at near-full text instead of 40 keyhole snippets.
+            # Measured prize (2026-08-04): gold recall@100 = 0.992 vs @40 0.967.
+            result = _search_memories_gate(inner, project_id, wide_k=100, snippet_chars=500, layer="reader-v2")
+        return _layered_recall_result(result, payload=payload, project_id=project_id)
     started_at = utc_now()
     start_time = time.perf_counter()
     query = str(payload.get("query") or "").strip()
@@ -5042,6 +5284,16 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
             vector_score = cosine_similarity(query_embedding, memory_embedding)
         score = round((rule_score * rule_weight) + (vector_score * vector_weight), 4)
         score_breakdown: dict[str, Any] = {"rule": rule_score, "vector": round(float(vector_score), 4)}
+        # 일화 앵커의 어휘 기여 — 조각은 주제어를 잃었지만 앵커는 갖고 있다.
+        # 더하기만 한다(상한 0.12): 문면 매칭을 깎으면 verbatim 질의가 후퇴하고, 그건
+        # 사전 등록된 후퇴 금지 가드다(docs/episodic-binding.md §판정 기준).
+        anchor_text = ((memory.get("metadata") or {}).get("episode") or {}).get("anchor") or ""
+        if anchor_text:
+            anchor_overlap = keyword_overlap_score(query, anchor_text)
+            if anchor_overlap:
+                bonus = min(0.12, round(0.3 * anchor_overlap, 4))
+                score = min(1.0, round(score + bonus, 4))
+                score_breakdown["episode_anchor"] = bonus
         entity_overlap = query_entities.intersection(entity_links.get(memory["id"], set()))
         if entity_overlap:
             score = min(1.0, round(score + min(0.14, 0.06 * len(entity_overlap)), 4))
@@ -5140,35 +5392,87 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
         # 도움이었는지 소음이었는지 기록할 곳이 없었다 (실측 2026-08-06:
         # 습관은 배선됐는데 "Context trace not found"). 경량 행 하나로
         # record_context_outcome이 붙을 주소를 만든다.
-        trace_id = str(new_id())
-        selected_ids = [str(item.get("id")) for item in response["results"] if item.get("id")]
-        trace_scores = {str(item.get("id")): float(item.get("score") or 0.0) for item in response["results"] if item.get("id")}
-        with get_db() as conn:
-            conn.execute(
-                """
-                INSERT INTO context_traces (
-                    trace_id, project_id, task_id, task_phase, policy_version, query,
-                    filters, candidate_ids, selected_ids, rejected_ids, scores, roles,
-                    decision_reasons, token_cost, payload, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    trace_id, project_id, "", "", _CONTEXT_SELECTOR_POLICY_VERSION, query,
-                    json_dumps(filters), json_dumps(selected_ids), json_dumps(selected_ids),
-                    json_dumps([]), json_dumps(trace_scores), json_dumps({}),
-                    json_dumps({}), 0,
-                    json_dumps({
-                        "schema_version": CONTEXT_TRACE_SCHEMA_VERSION,
-                        "trace_id": trace_id,
-                        "trace_query": query,
-                        "search_payload": {"query": query, "filters": filters, "top_k": top_k},
-                        "source": payload.get("trace") if isinstance(payload.get("trace"), str) else "search_memories",
-                    }),
-                    utc_now(),
-                ),
-            )
-        response["trace_id"] = trace_id
+        response["trace_id"] = _record_search_trace(
+            project_id=project_id, query=query, filters=filters, top_k=top_k,
+            results=response["results"], source=payload.get("trace"),
+        )
     return response
+
+
+def _record_search_trace(
+    *,
+    project_id: str,
+    query: str,
+    filters: dict[str, Any],
+    top_k: int,
+    results: list[dict[str, Any]],
+    source: Any,
+) -> str:
+    """Write the feedback address for one search and return its id.
+
+    Extracted 2026-08-23 because the layered recall gears (reflex, gate,
+    reader) call the v1 search internally and then **rebuild** their response
+    as {"results", "recall_layer"} — dropping trace_id. Measured consequence:
+    the row was written (the counter moved) but the caller never learned the
+    address, so the turn-recall hook could not print a feedback address and
+    could not attribute usage. 784 turn_recall traces, zero with labels.
+
+    The reflex gear was worse than lossy: it searched once per angle, so each
+    user-facing recall minted several traces and none of them was reachable.
+    Layers now strip `trace` from their inner calls and record one address for
+    the selection they actually returned.
+    """
+    trace_id = str(new_id())
+    selected_ids = [str(item.get("id")) for item in results if item.get("id")]
+    trace_scores = {str(item.get("id")): float(item.get("score") or 0.0) for item in results if item.get("id")}
+    with get_db() as conn:
+        conn.execute(
+            """
+            INSERT INTO context_traces (
+                trace_id, project_id, task_id, task_phase, policy_version, query,
+                filters, candidate_ids, selected_ids, rejected_ids, scores, roles,
+                decision_reasons, token_cost, payload, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                trace_id, project_id, "", "", _CONTEXT_SELECTOR_POLICY_VERSION, query,
+                json_dumps(filters), json_dumps(selected_ids), json_dumps(selected_ids),
+                json_dumps([]), json_dumps(trace_scores), json_dumps({}),
+                json_dumps({}), 0,
+                json_dumps({
+                    "schema_version": CONTEXT_TRACE_SCHEMA_VERSION,
+                    "trace_id": trace_id,
+                    "trace_query": query,
+                    "search_payload": {"query": query, "filters": filters, "top_k": top_k},
+                    "source": source if isinstance(source, str) else "search_memories",
+                }),
+                utc_now(),
+            ),
+        )
+    return trace_id
+
+
+def _layered_recall_result(
+    result: dict[str, Any],
+    *,
+    payload: dict[str, Any],
+    project_id: str,
+) -> dict[str, Any]:
+    """Give a layered gear's result the feedback address of its own selection."""
+    if not payload.get("trace"):
+        return result
+    try:
+        result["trace_id"] = _record_search_trace(
+            project_id=project_id,
+            query=str(payload.get("query") or "").strip(),
+            filters=payload.get("filters") or {},
+            top_k=int(payload.get("top_k") or 10),
+            results=list(result.get("results") or []),
+            source=payload.get("trace"),
+        )
+    except Exception:
+        pass      # 주소를 못 만드는 것이 회상을 죽여선 안 된다
+    return result
 
 
 def _scope_fallback_enabled(payload: dict[str, Any]) -> bool:
@@ -7198,6 +7502,128 @@ def _context_diversity_tradeoffs(
         "diversity_tradeoff_max_score_gap": round(max_gap, 4),
         "diversity_tradeoff_samples": tradeoffs[:5],
     }
+
+
+_CONTEXT_TRUST_LIGHT_WEIGHTS = {"green": 1.15, "yellow": 1.0, "red": 0.30}
+_CONTEXT_TRUST_KIND_WEIGHTS = {"action_report": 0.85}
+
+
+def _context_recency_factor(memory: dict[str, Any]) -> float:
+    """A gentle tilt toward newer memories, never a cliff.
+
+    A ledger that has been written to for months answers "what did I decide last
+    night" and "who am I" from the same pool, and the second question must not be
+    starved to serve the first. The exponent is deliberately small.
+    """
+    if not _CONTEXT_RECENCY_EXP:
+        return 1.0
+    try:
+        born = parse_datetime(str(memory.get("created_at") or ""))
+        if born is None:
+            return 1.0
+        age_days = max((utc_now() - born).total_seconds() / 86400.0, 0.0)
+    except Exception:
+        return 1.0
+    return (age_days + 1.0) ** (-_CONTEXT_RECENCY_EXP)
+
+
+def _context_trust_rank(memory: dict[str, Any]) -> float:
+    """Relevance tempered by how the ledger learned this, and by how fresh it is.
+
+    Similarity alone treats "the user told me this" and "I inferred this" as the
+    same fact. They are not: acting on an unverified inference is the failure the
+    trust light exists to prevent, and an unverified completion claim
+    (``action_report``) is weaker still. Provenance therefore has to reach the
+    ranker, not just the reader.
+    """
+    trust = memory.get("trust") if isinstance(memory.get("trust"), dict) else {}
+    score = memory.get("score")
+    base = float(score) if isinstance(score, (int, float)) else 0.0
+    light = _CONTEXT_TRUST_LIGHT_WEIGHTS.get(str(trust.get("light") or ""), 1.0)
+    kind = _CONTEXT_TRUST_KIND_WEIGHTS.get(str(trust.get("kind") or ""), 1.0)
+    return base * light * kind * _context_recency_factor(memory)
+
+
+_CONTEXT_NEAR_DUPLICATE_THRESHOLD = 0.55
+# Recency exponent for context ranking. Swept against a held-out set of facts
+# (2026-08-23); 0.0 disables the tilt entirely.
+_CONTEXT_RECENCY_EXP = 0.0
+
+
+def _context_trigrams(text: str) -> set[str]:
+    return {text[i:i + 3] for i in range(max(0, len(text) - 2))}
+
+
+def _context_is_near_duplicate(text: str, kept: list[set[str]]) -> bool:
+    """Character-trigram overlap against what the budget already holds.
+
+    The retriever can return the same fact twice — restated, re-ingested, or
+    written by two different sessions — and the budget has no way to tell, so a
+    capsule silently spends half its room saying one thing twice. Cheap enough to
+    run inline; no embedding call, no second round trip.
+    """
+    grams = _context_trigrams(text)
+    if not grams:
+        return False
+    for prior in kept:
+        if not prior:
+            continue
+        overlap = len(grams & prior) / min(len(grams), len(prior))
+        if overlap > _CONTEXT_NEAR_DUPLICATE_THRESHOLD:
+            return True
+    return False
+
+
+def _context_spend_remaining_budget(
+    selected: list[dict[str, Any]],
+    budgeted: list[dict[str, Any]],
+    budget_tokens: int,
+) -> list[dict[str, Any]]:
+    """Fill leftover budget with the best candidates the slot pass did not take.
+
+    Slot capacity and token budget are separate limits, and the slot cap binds
+    first: a caller asking for 900 tokens was getting 269 of them spent while 17
+    ranked candidates were dropped (measured 2026-08-23). Structure is worth a
+    cap — leaving two thirds of the room a caller paid for empty is not.
+    Slot-selected memories keep their order and their priority; this only appends.
+    """
+    used = sum(int(item.get("context_tokens") or 0) for item in selected)
+    room = budget_tokens - used
+    if room <= 0:
+        return selected
+    chosen_ids = {str(item.get("id")) for item in selected}
+    filled = list(selected)
+    for memory in budgeted:
+        if str(memory.get("id")) in chosen_ids:
+            continue
+        cost = int(memory.get("context_tokens") or 0)
+        if cost <= 0 or cost > room:
+            continue
+        filled.append(memory)
+        chosen_ids.add(str(memory.get("id")))
+        room -= cost
+    return filled
+
+
+def _context_bind_anchor(memory: dict[str, Any], text: str) -> str:
+    """조각 앞에 일화 앵커를 되붙여 단독 해독 가능하게 만든다 (렌더 전용).
+
+    앵커가 없거나 사실이 이미 주제어를 품고 있으면 그대로 둔다 — 중복은 예산 낭비다.
+    """
+    anchor = ((memory.get("metadata") or {}).get("episode") or {}).get("anchor") or ""
+    if anchor and anchor_applies(text, anchor):
+        return f"{anchor} — {text}"
+    return text
+
+
+def _context_rank_by_trust(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Order candidates before the budget consumes them.
+
+    The budget loop takes candidates in order and stops when full, so order *is*
+    selection. Sorting is stable: equal-ranked memories keep the retriever's own
+    ordering.
+    """
+    return sorted(candidates, key=_context_trust_rank, reverse=True)
 
 
 def _context_memory_is_superseded(memory: dict[str, Any]) -> bool:
@@ -12039,7 +12465,15 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
                     break
         except Exception:
             workspace_current = None
-    workspace_line = _workspace_context_line(workspace_current) if isinstance(workspace_current, dict) else ""
+    # disable_resume_workspace must also drop the workspace line, not just the
+    # resume_workspace object: the line is what actually reaches the model, so a
+    # half-honored flag leaked another agent's in-progress task into a caller that
+    # had explicitly asked for none (found while wiring a second adapter, 2026-08-23).
+    workspace_line = (
+        ""
+        if resume_workspace_disabled
+        else (_workspace_context_line(workspace_current) if isinstance(workspace_current, dict) else "")
+    )
     workspace_tokens = min(token_estimate(workspace_line), budget_tokens) if workspace_line else 0
     search = search_memories({**search_payload, "recall": "low"}, project_id=project_id)
     search_candidates = search["results"]
@@ -12110,12 +12544,22 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
             max_backfill=min(max(working_memory_slots, 1), 3),
         )
         candidates.extend(backfill_candidates)
+    candidates = _context_rank_by_trust(candidates)
     budgeted: list[dict[str, Any]] = []
     budgeted_lines: list[str] = []
     budgeted_tokens = workspace_tokens
+    kept_grams: list[set[str]] = []
+    duplicate_filtered_memory_ids: list[str] = []
     for memory in candidates:
         text = str(memory.get("memory", "")).strip()
         if not text:
+            continue
+        # 결합 복원 — 저장본은 bare fact이지만 모델이 읽는 줄에는 주제를 되붙인다.
+        # 회상돼도 해독 불가한 조각(최근 40건 중 52%)이 예산만 먹는 것을 막는다.
+        # 저장은 불변이고 렌더만 바뀐다: 이 줄이 곧 "요지로 단서, 문면으로 확인"이다.
+        text = _context_bind_anchor(memory, text)
+        if _context_is_near_duplicate(text, kept_grams):
+            duplicate_filtered_memory_ids.append(str(memory.get("id")))
             continue
         cost = token_estimate(text)
         if budgeted_tokens and budgeted_tokens + cost > budget_tokens:
@@ -12125,12 +12569,14 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
             text = " ".join(words[:budget_tokens])
             cost = token_estimate(text)
         budgeted_tokens += cost
+        kept_grams.append(_context_trigrams(text))
         item = dict(memory)
         item["reason"] = _context_reason(item)
         item["context_tokens"] = cost
         budgeted.append(item)
         budgeted_lines.append(f"- {text}")
     selected = _select_working_memory_slots(budgeted, working_memory_slots, str(search_payload["query"] or ""))
+    selected = _context_spend_remaining_budget(selected, budgeted, budget_tokens)
     budgeted_line_by_id = {str(memory.get("id")): line for memory, line in zip(budgeted, budgeted_lines) if memory.get("id")}
     lines = [
         budgeted_line_by_id.get(str(memory.get("id")), f"- {str(memory.get('memory') or '').strip()}")
@@ -12257,23 +12703,28 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
     result["evidence"] = _context_evidence(result)
     if _bool_or(payload.get("verify_evidence", payload.get("verify")), False):
         result["verification"] = verify_context_evidence({"context_result": result}, project_id=project_id)
-    trace_summary = _record_context_trace(
-        project_id=project_id,
-        payload=payload,
-        search_payload=search_payload,
-        raw_candidates=current_candidates,
-        candidates=candidates,
-        budgeted=budgeted,
-        selected=selected,
-        role_backfill=role_backfill,
-        task_scope_filtered_memory_ids=task_scope_filtered_memory_ids,
-        workspace_duplicate_filtered_memory_ids=workspace_duplicate_filtered_memory_ids,
-        result=result,
-        workspace_current=workspace_current if isinstance(workspace_current, dict) else None,
-    )
-    result["context_trace_id"] = trace_summary["trace_id"]
-    result["context_trace"] = trace_summary
-    result["evidence"]["context_trace_id"] = trace_summary["trace_id"]
+    # record_trace=False는 평가·회귀 실행용 건식 모드다. 트레이스 기록이 무조건이던 동안
+    # 조립기를 평가하려면 평가 대상인 신호(context_traces)를 오염시켜야 했다 — 평가 133회가
+    # 원장에 가짜 트레이스 133개를 남기고, 그것이 다음 평가셋으로 다시 채굴된다. 기본값은
+    # 켜짐이므로 실사용 계측은 그대로다. (2026-08-23)
+    if _bool_or(payload.get("record_trace"), True):
+        trace_summary = _record_context_trace(
+            project_id=project_id,
+            payload=payload,
+            search_payload=search_payload,
+            raw_candidates=current_candidates,
+            candidates=candidates,
+            budgeted=budgeted,
+            selected=selected,
+            role_backfill=role_backfill,
+            task_scope_filtered_memory_ids=task_scope_filtered_memory_ids,
+            workspace_duplicate_filtered_memory_ids=workspace_duplicate_filtered_memory_ids,
+            result=result,
+            workspace_current=workspace_current if isinstance(workspace_current, dict) else None,
+        )
+        result["context_trace_id"] = trace_summary["trace_id"]
+        result["context_trace"] = trace_summary
+        result["evidence"]["context_trace_id"] = trace_summary["trace_id"]
     record_usage(
         project_id,
         "context_assemble",

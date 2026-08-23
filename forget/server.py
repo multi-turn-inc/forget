@@ -25,6 +25,7 @@ from .db import init_db
 from .mcp import TOOLS, handle_mcp_rpc, mem1_capabilities_payload
 from .store import (
     add_memories,
+    assemble_context,
     delete_memories,
     delete_memory,
     get_event,
@@ -211,9 +212,15 @@ def memories_create(payload: dict[str, Any]) -> dict[str, Any]:
     result = add_memories(payload)
     event = get_event(result["event_id"])
     created = event.get("results", [])
-    if not created:
-        return result
-    return get_memory(created[0]["id"])
+    if created:
+        return get_memory(created[0]["id"])
+    # A near-duplicate write strengthens its original instead of appending
+    # (Hebbian merge) — the caller still gets a memory object back: the
+    # reinforced one. POSTing a restatement is not an error.
+    merged = result.get("merged") or []
+    if merged:
+        return get_memory(merged[0]["id"])
+    return result
 
 
 @app.post("/v1/memories/search/", dependencies=[Depends(auth)])
@@ -223,6 +230,19 @@ def memories_search(payload: dict[str, Any]) -> dict[str, Any]:
     if payload.get("enable_graph"):
         result["relations"] = memory_relations(result.get("results", []))
     return result
+
+
+@app.post("/v1/context/assemble/", dependencies=[Depends(auth)])
+def context_assemble(payload: dict[str, Any]) -> dict[str, Any]:
+    """Assemble one turn's context capsule.
+
+    Search returns candidates; assembly decides what the model reads — that is the
+    product, and it was reachable only over MCP. Every non-MCP adapter (editor
+    plugins, agent harnesses) therefore had to reimplement ranking, dedup and
+    budgeting for itself, and drift from this one. Same assembler, every transport.
+    """
+    filters = payload.get("filters") or {field: payload[field] for field in ENTITY_FIELDS if field in payload}
+    return assemble_context({**payload, "filters": filters})
 
 
 @app.post("/v2/memories/", dependencies=[Depends(auth)])
