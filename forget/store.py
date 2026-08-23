@@ -7578,6 +7578,7 @@ def _context_spend_remaining_budget(
     selected: list[dict[str, Any]],
     budgeted: list[dict[str, Any]],
     budget_tokens: int,
+    reserved_tokens: int = 0,
 ) -> list[dict[str, Any]]:
     """Fill leftover budget with the best candidates the slot pass did not take.
 
@@ -7586,8 +7587,12 @@ def _context_spend_remaining_budget(
     ranked candidates were dropped (measured 2026-08-23). Structure is worth a
     cap — leaving two thirds of the room a caller paid for empty is not.
     Slot-selected memories keep their order and their priority; this only appends.
+
+    `reserved_tokens` is what the context already spends outside this list (the
+    resume-workspace line). Ignoring it overstated the room and could push the
+    assembled context past the budget the caller asked for.
     """
-    used = sum(int(item.get("context_tokens") or 0) for item in selected)
+    used = reserved_tokens + sum(int(item.get("context_tokens") or 0) for item in selected)
     room = budget_tokens - used
     if room <= 0:
         return selected
@@ -12562,12 +12567,13 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
             duplicate_filtered_memory_ids.append(str(memory.get("id")))
             continue
         cost = token_estimate(text)
-        if budgeted_tokens and budgeted_tokens + cost > budget_tokens:
-            break
-        if cost > budget_tokens:
-            words = text.split()
-            text = " ".join(words[:budget_tokens])
-            cost = token_estimate(text)
+        # 한 후보가 안 맞는다고 선택을 끝내지 않는다. 예전에는 여기서 break였고, 그래서
+        # 앞자리의 긴 후보 하나가 뒤의 짧은 후보 전부의 기회를 삼켰다 — 실측(2026-08-23,
+        # 평가셋 v1 machine_resume): 후보 10건이 있는데도 budgeted 0인 질의 3건, 1인 질의
+        # 3건으로 정직한 층의 21%가 빈 맥락을 받았다. 워크스페이스 줄이 800토큰 예산의
+        # 453~779를 먼저 먹은 뒤 첫 후보가 안 들어가면 그것으로 끝이었다.
+        if budgeted_tokens + cost > budget_tokens:
+            continue      # 안 맞으면 건너뛴다. 자르는 것은 아래 최후 수단의 몫이다
         budgeted_tokens += cost
         kept_grams.append(_context_trigrams(text))
         item = dict(memory)
@@ -12575,8 +12581,26 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
         item["context_tokens"] = cost
         budgeted.append(item)
         budgeted_lines.append(f"- {text}")
+    # 기아 방지: 후보가 있는데 한 건도 못 담았다면 최상위 후보를 남은 자리에 맞춰 자른다.
+    # 자른 기억은 온전하지 않지만, 빈 맥락은 회상이 아니라 침묵이다.
+    if candidates and not budgeted:
+        head, room = candidates[0], max(0, budget_tokens - workspace_tokens)
+        text = _context_bind_anchor(head, str(head.get("memory", "")).strip())
+        if text and room > 0:
+            words = text.split()
+            while words and token_estimate(" ".join(words)) > room:
+                words = words[:-1]
+            text = " ".join(words)
+            if text:
+                item = dict(head)
+                item["reason"] = _context_reason(item)
+                item["context_tokens"] = token_estimate(text)
+                item["context_truncated"] = True
+                budgeted.append(item)
+                budgeted_lines.append(f"- {text}")
+                kept_grams.append(_context_trigrams(text))
     selected = _select_working_memory_slots(budgeted, working_memory_slots, str(search_payload["query"] or ""))
-    selected = _context_spend_remaining_budget(selected, budgeted, budget_tokens)
+    selected = _context_spend_remaining_budget(selected, budgeted, budget_tokens, reserved_tokens=workspace_tokens)
     budgeted_line_by_id = {str(memory.get("id")): line for memory, line in zip(budgeted, budgeted_lines) if memory.get("id")}
     lines = [
         budgeted_line_by_id.get(str(memory.get("id")), f"- {str(memory.get('memory') or '').strip()}")
