@@ -26,7 +26,26 @@ JUDGE_TEMPLATES 문면 그대로 — 판정자 편향은 팔 간 상쇄된다 (�
       +2pp 미만 → 기각. 타 유형에서 C − B ≤ −3pp면 부작용으로 채택 불가.
   부기: 팔별 평균 컨텍스트 토큰을 반드시 병기한다 — 효율 축이 주장의 절반이다.
 
-사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABC]
+## 추기 (2026-08-24 새벽 — 계기 고장 4호 공시와 교정 등록, 숫자 보기 전 고정)
+
+  P-L2-C(예산 무릎 스윕)는 설계 그대로 **불활성**이었다: assemble_context 내부
+  검색이 top_k 기본 10이라 후보 풀이 수도꼭지에서 이미 좁혀져(문항당 ~7건 ·
+  1.1k tok), 예산 2k/4k/8k는 하류 노브였다. 두 스윕 런이 바이트 동일 — 부산물로
+  파이프라인 결정론(temp 0)은 검증됐다. 원장 정정: B의 −23pp는 "예산 2k의 조립"이
+  아니라 "**후보 10건**의 조립"의 성적이다.
+
+  P-L2-C′ (교정 스윕): LME_B_TOPK=84로 A와 동일한 후보 풀을 주고 예산 {2k,4k,8k}.
+      무릎 규칙 동일 — B84(b) ≥ A−2pp인 최소 b* = "조립 등가점", 절감비(17.3k/b*)
+      병기. 8k에서도 A−5pp 미달이면 이 리더·이 세분성에서 단발 조립 열세 확정.
+  P-L2-D (더듬기 — 정훈 발의 "기억을 한 턴만에 끝내야 되는 건가. 사람은 부족한
+      기억을 더듬어가며 길게 끄집어낸다"): D = 실제 캡슐(top_k 10 · 예산 2k, B와
+      같은 출발선) + SEARCH 루프 ≤5회(회당 top_k 10, 기수번 기억 중복 제거).
+      리더가 "SEARCH: <검색어>" 한 줄을 내면 추가 회수해 이어붙이고 다시 읽는다.
+      채택: D ≥ A−5pp 그리고 평균 누적 토큰 ≤ 6k → "작은 캡슐 + 더듬기" 제품 경로.
+      부분 지지: D ≥ B+10pp → 더듬기 유효, 상한은 리더 역량.
+      기각: D < B+5pp → 이 리더에서 더듬기 무효 (도구 규약·리더 교체로 이월).
+
+사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABCD]
       (이어달리기: 출력 JSONL의 완료 문항은 건너뛴다)
 """
 from __future__ import annotations
@@ -89,6 +108,41 @@ def judge(qtype: str, question: str, answer: str, hyp: str) -> bool:
     out = llm("You are a strict grader.",
               template.format(q=question, a=answer, r=hyp), max_tokens=8)
     return out.strip().lower().startswith("yes")
+
+
+def read_groping(question: str, qdate: str, context: str, searcher, max_rounds: int = 5):
+    """팔 D — 더듬기(strategic recall). 사람의 인출은 한 턴이 아니다: 단서를
+    만들고(생성), 맞는지 보고(재인), 다시 더듬는다. 그 최소 기계화 — 도구 호출
+    규약이 없는 로컬 리더로도 돌게, SEARCH: 한 줄 규약으로 루프를 돈다.
+
+    반환 (답, 누적 컨텍스트 토큰 — 라운드마다 리더에게 보인 프롬프트의 합, 검색 횟수).
+    """
+    shown = context
+    total_tok = 0
+    n_search = 0
+    for round_i in range(max_rounds + 1):
+        last = round_i == max_rounds
+        system = ("You answer questions about the user based ONLY on the provided memory excerpts. "
+                  f"The question is asked on {qdate}. Use the memory dates to resolve any relative "
+                  "time references. "
+                  + ("You may not search again. Answer concisely from the excerpts; if the needed "
+                     "information is not there, say you don't know."
+                     if last else
+                     "If the excerpts fully answer the question, answer concisely. If anything "
+                     "needed is missing, do NOT guess: reply with exactly one line in the form\n"
+                     "SEARCH: <3-8 search keywords, include absolute dates if relevant>"))
+        user = f"<memories>\n{shown}\n</memories>\n\nQuestion: {question}\nAnswer concisely."
+        total_tok += token_est(user)
+        out = llm(system, user)
+        m = re.match(r"^\s*SEARCH:\s*(.+)$", out, re.IGNORECASE)
+        if not m or last:
+            # 누적(스테이트리스 지불)과 최종 컨텍스트(캐시 리더 지불) 둘 다 —
+            # 프리픽스 캐시가 있으면 재독 라운드는 거의 공짜라 후자가 실효 비용.
+            return out, total_tok, n_search, token_est(shown)
+        n_search += 1
+        extra = searcher(m.group(1).strip()[:300])
+        shown = shown + "\n" + (extra or "(추가 회수 결과 없음 — 같은 검색을 반복하지 말 것)")
+    return out, total_tok, n_search, token_est(shown)
 
 
 def expand_query(question: str, qdate: str) -> str:
@@ -161,18 +215,19 @@ def main() -> None:
                 row["A_tok"] = token_est(ctx)
                 row["A_hyp"] = hyp[:200]
 
-            if "B" in args.arms or "C" in args.arms:
+            if any(a in args.arms for a in "BCD"):
                 def assembled(query: str):
                     r = assemble_context({"query": query, "filters": {"user_id": scope},
+                                          "top_k": int(os.environ.get("LME_B_TOPK", "10")),
                                           "budget_tokens": int(os.environ.get("LME_B_BUDGET", "2000")), "record_trace": False,
                                           "disable_resume_workspace": True})
                     memories = r.get("memories") or []
                     lines = [f"- [{str(m.get('created_at'))[:10]}] {str(m.get('memory'))}"
                              for m in memories]
-                    return "\n".join(lines)
+                    return "\n".join(lines), {str(m.get("id")) for m in memories}
 
             if "B" in args.arms:
-                ctx = assembled(question)
+                ctx, _ = assembled(question)
                 hyp = read_answer(question, qdate, ctx)
                 row["B"] = judge(inst["question_type"], question, str(inst["answer"]), hyp)
                 row["B_tok"] = token_est(ctx)
@@ -183,18 +238,38 @@ def main() -> None:
                     expansion = expand_query(question, qdate)
                 except Exception:
                     expansion = ""
-                ctx = assembled(f"{question} {expansion}".strip())
+                ctx, _ = assembled(f"{question} {expansion}".strip())
                 hyp = read_answer(question, qdate, ctx)
                 row["C"] = judge(inst["question_type"], question, str(inst["answer"]), hyp)
                 row["C_tok"] = token_est(ctx)
                 row["C_exp"] = expansion[:150]
                 row["C_hyp"] = hyp[:200]
 
+            if "D" in args.arms:
+                ctx0, seen_d = assembled(question)
+                def searcher(q: str) -> str:
+                    res = search_memories({"query": q, "filters": {"user_id": scope}, "top_k": 10})
+                    lines = []
+                    for m in res.get("results") or []:
+                        mid = str(m.get("id"))
+                        if mid in seen_d:
+                            continue
+                        seen_d.add(mid)
+                        lines.append(f"- [{str(m.get('created_at'))[:10]}] {str(m.get('memory'))}")
+                    return "\n".join(lines)
+                hyp, dtok, nsrch, dctx = read_groping(question, qdate, ctx0, searcher)
+                row["D"] = judge(inst["question_type"], question, str(inst["answer"]), hyp)
+                row["D_tok"] = dtok
+                row["D_srch"] = nsrch
+                row["D_ctx"] = dctx
+                row["D_hyp"] = hyp[:200]
+
             fout.write(json.dumps(row, ensure_ascii=False) + "\n")
             fout.flush()
             marks = " ".join(f"{a}={'O' if row.get(a) else 'X'}" for a in args.arms if a in row)
             print(f"  [{qi}] {inst['question_type'][:18]:18s} {marks} "
-                  f"(tok A:{row.get('A_tok','-')} B:{row.get('B_tok','-')} C:{row.get('C_tok','-')})",
+                  f"(tok A:{row.get('A_tok','-')} B:{row.get('B_tok','-')} C:{row.get('C_tok','-')}"
+                  f" D:{row.get('D_tok','-')}/{row.get('D_srch','-')}회)",
                   flush=True)
 
     rows = [json.loads(l) for l in open(OUT)]
@@ -226,6 +301,12 @@ def main() -> None:
         side = (acc("C", None)[0] - acc("B", None)[0]) * 100
         print(f"P-L2-B: (temporal+multi) C−B = {d:+.1f}pp → "
               + ("접지 채택" if d >= 5 else ("기각" if d < 2 else "회색")) + f" · 전체 부작용 {side:+.1f}pp")
+    if "D" in args.arms:
+        srch = [r.get("D_srch", 0) for r in rows if "D" in r]
+        if srch:
+            print(f"P-L2-D 부기: 평균 검색 {sum(srch)/len(srch):.1f}회 · "
+                  f"검색 0회 {sum(1 for s in srch if s == 0)}건 · "
+                  f"5회 소진 {sum(1 for s in srch if s >= 5)}건 (판정은 A·B 참조점 대조로 원장에서)")
     for qtype in sorted({r['type'] for r in rows}):
         line = f"  {qtype:26s}"
         for arm in args.arms:
