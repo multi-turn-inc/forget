@@ -12587,9 +12587,14 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
         head, room = candidates[0], max(0, budget_tokens - workspace_tokens)
         text = _context_bind_anchor(head, str(head.get("memory", "")).strip())
         if text and room > 0:
+            # 비례 추정으로 한 번에 줄이고, 남으면 몇 번만 더 깎는다. 단어를 하나씩
+            # 떼며 매번 재는 방식은 긴 기억에서 O(n²)이 된다 (수천 단어 × 수천 호출).
             words = text.split()
-            while words and token_estimate(" ".join(words)) > room:
-                words = words[:-1]
+            total = token_estimate(text)
+            if total > room and total > 0:
+                words = words[: max(1, int(len(words) * room / total))]
+            while len(words) > 1 and token_estimate(" ".join(words)) > room:
+                words = words[: max(1, int(len(words) * 0.9))]
             text = " ".join(words)
             if text:
                 item = dict(head)
