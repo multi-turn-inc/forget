@@ -36,6 +36,7 @@ import sqlite3
 import subprocess
 import sys
 import time
+import traceback
 import urllib.request
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
@@ -65,12 +66,37 @@ def run_raw(cmd: list[str]) -> str:
     return subprocess.run(cmd, cwd=REPO, capture_output=True, text=True).stdout
 
 
+class ForgetRpcError(RuntimeError):
+    """서버가 규격대로 돌려준 **오류 봉투**를 그대로 나르는 예외 (c192, 관측 121 ㉠).
+
+    구판은 `body["result"]`를 무조건 인덱싱했다. 서버가 JSON-RPC `error`를 돌려주면
+    그 줄이 `KeyError: 'result'`로 죽었고 — **서버가 보낸 진단이 전부 버려졌다.**
+    c192 실측: 코드 −32603 / 메시지 'list index out of range'를 눈으로 보기까지
+    별도 진단 스크립트 3본이 들었다. 그 문자열은 처음부터 응답 안에 있었다.
+
+    규율: 계기는 **남의 오류를 자기 오류로 오역하지 않는다.** 오역은 두 번 손해다 —
+    진단을 잃고, 게다가 계기 자신이 고장난 것처럼 보여 엉뚱한 곳을 파게 만든다.
+    """
+
+    def __init__(self, tool: str, code: object, message: str) -> None:
+        self.tool = tool
+        self.code = code
+        self.message = message
+        super().__init__(f"{tool}: forget 서버 오류 [{code}] {message}")
+
+
 def call(name: str, arguments: dict) -> dict:
     payload = {"jsonrpc": "2.0", "id": 1, "method": "tools/call",
                "params": {"name": name, "arguments": arguments}}
     req = urllib.request.Request(FORGET_URL, data=json.dumps(payload).encode("utf-8"),
                                  headers={"Content-Type": "application/json"})
     body = json.loads(urllib.request.urlopen(req, timeout=20).read())
+    if "result" not in body:
+        err = body.get("error") if isinstance(body.get("error"), dict) else {}
+        # 봉투에 error도 없으면 그 사실 자체를 메시지에 담는다 — 모르는 것을
+        # 그럴듯한 기본값으로 접지 않는다(compare_fingerprint의 규율).
+        raise ForgetRpcError(name, err.get("code", UNKNOWN),
+                             str(err.get("message") or f"result·error 둘 다 없음: {body!r}"[:300]))
     return json.loads(body["result"]["content"][0]["text"])
 
 
@@ -1018,7 +1044,18 @@ def part_b() -> None:
     if pf:
         args["filters"] = pf
         args["project"] = project
-    capsule = str(call("prepare_context_autopilot", args).get("capsule_text") or "").strip()
+    try:
+        capsule = str(call("prepare_context_autopilot", args).get("capsule_text") or "").strip()
+    except ForgetRpcError:
+        # c192(관측 121 수용 기준 ④): 캡슐을 **못 본 것**과 **봤는데 무용한 것**은
+        # 다른 사건이다. 원장의 `recall_*`에는 후자의 칸밖에 없어서, 여기서 조용히
+        # 빈 캡슐로 접히면 그 사이클은 «miss»로 계상되고 miss 계열에 1이 더해진다 —
+        # 그것은 측정이 아니라 발명이다(관측 104: 모르는 것을 0으로 적지 않는다).
+        # 그래서 계열에 값을 주지 않고 **판정 불가**를 인쇄한 뒤 위로 올린다.
+        print("  캡슐 판정 = **판정 불가** (채널 사망 — 조회 자체가 실패했다)")
+        print("    ※ 이 사이클의 캡슐 계열에 miss를 더하지 말 것. 못 본 것은 miss가 아니다.")
+        print("    ※ 니들 대조(V1·V2·V3)·원문 인쇄·sha256도 전부 측정되지 않았다.")
+        raise
     shown = capsule[:budget]
     print(f"  budget={budget} capsule_chars={len(capsule)} truncated={len(capsule) > budget}")
 
@@ -2424,32 +2461,75 @@ def _pid_key(pid: str) -> tuple[int, str]:
     return (int(re.sub(r"\D", "", pid) or 0), pid)
 
 
+def run_part(label: str, fn, deaths: list[tuple[str, str]]) -> None:
+    """파트 하나를 격리 실행한다. 사망은 **전파되지 않되 조용하지도 않다** (c192, 관측 121 ㉡).
+
+    구조 이전: `main()`이 11파트를 무보호로 순차 호출했다. c192 실측 — 6번째
+    `part_b`가 죽자 뒤의 **5파트(F·D·P·X·O)가 통째로 실행되지 않았고**, stdout에는
+    앞 5파트의 정상 출력만 남아 **정상 종료한 보고서와 구별되지 않았다.**
+    무기억으로 태어나는 손은 «파트 O가 없다»를 알아채려면 «파트 O가 있어야 한다»를
+    미리 알아야 하는데, 그것이 정확히 없는 것이다.
+
+    ★ 격리의 자기 위협(P67 한계 ①): 파트가 죽어도 보고서가 «대체로» 나오면 사망은
+    고쳐야 할 사건이 아니라 읽고 넘기는 배너가 된다. 그래서 셋을 **함께** 건다 —
+    자리마다 사망 배너 · 말미 사망 요약 · `exit 1`. 사망 0이면 이 함수는 문면을
+    **한 글자도** 더하지 않는다(P67 (c) 팔이 그것을 반증 대상으로 고정한다).
+    """
+    try:
+        fn()
+    except ForgetRpcError as exc:
+        # 남의 오류 — 계기가 고장난 것이 아니다. 그 구별을 화면에 적는다.
+        deaths.append((label, f"forget 서버 오류 [{exc.code}] {exc.message}"))
+        print(f"\n[!! 파트 {label} 사망 — **서버측**] {exc.tool}: [{exc.code}] {exc.message}")
+        print(f"    이 파트의 출력은 없다. 계기의 결함이 아니라 forget 서버가 돌려준 오류다.")
+        print(f"    → 뒤의 파트는 계속 실행된다(c192 처치). 사망 요약은 말미에 있다.")
+    except Exception as exc:  # noqa: BLE001 — 격리가 목적이므로 광폭 포획이 맞다
+        deaths.append((label, f"{type(exc).__name__}: {exc}"))
+        print(f"\n[!! 파트 {label} 사망 — **계기측**] {type(exc).__name__}: {exc}")
+        traceback.print_exc()
+        print(f"    → 뒤의 파트는 계속 실행된다(c192 처치). 사망 요약은 말미에 있다.")
+
+
 if __name__ == "__main__":
-    part_n()
+    # c192(관측 121·P67): 순서와 그 이유는 아래 주석 그대로다 — 바뀐 것은 **호출
+    # 방식뿐**이다. 각 파트를 run_part로 감싸 한 파트의 사망이 나머지를 데려가지
+    # 못하게 한다. 사망 0이면 출력·종료 코드는 종전과 동일하다.
+    deaths: list[tuple[str, str]] = []
     # part_n을 1행에 남긴다 — 그 배너가 F-절차0 처치이고 P16 (a)가 5/5로 성립한
     # 작동 중인 처치다. 몸 지문은 그 **직후**(여전히 첫 화면)에 세운다.
     # part_s는 그 바로 다음 — 복원의 신뢰성 판정이 몸 지문보다 앞선다(c93).
-    part_s()
-    part_body()
-    part_recall()
-    part_a()
-    part_b()
+    run_part("N", part_n, deaths)
+    run_part("S", part_s, deaths)
+    run_part("Body", part_body, deaths)
+    run_part("R", part_recall, deaths)
+    run_part("A", part_a, deaths)
+    run_part("B", part_b, deaths)
     # part_f는 말미다 — part_n 배너 1행·Body 첫 화면(P21)의 기존 계약을 건드리지 않고,
     # 인덱스는 절차 2(선택) 직전에 읽히는 마지막 화면이 된다.
-    part_f()
+    run_part("F", part_f, deaths)
     # part_d는 part_f 바로 뒤 — 기한이 오늘이면 그 판정이 **절차 2의 선택**이므로,
     # 선택 입력(미해소 관측 조망)과 같은 화면에 인접해야 한다. 파트 F의 '조망 =
     # 마지막' 계약은 c161에 파트 P·X가 아래에 붙어 실질 종료됐다(그 사실은 파트 O
     # 주석에 이미 적혀 있다).
-    part_d()
+    run_part("D", part_d, deaths)
     # part_p는 part_f 뒤 — 대장 위생은 절차 2의 선택 입력이 아니라 절차 3의 등록
     # 직전에 읽혀야 한다. 파트 F의 조망 계약(마지막 화면)을 깨지 않으려 그 아래 붙인다.
-    part_p()
+    run_part("P", part_p, deaths)
     # part_x는 말미 — 프로브 위생은 절차 3(수행) 직전에 읽히면 된다. 파트 P와 같은
     # 이유로 파트 F의 조망 계약 아래에 둔다.
-    part_x()
+    run_part("X", part_x, deaths)
     # part_o는 맨 마지막 — 서수는 절차 5(수확)에서 쓰이므로 마지막 화면이 곧 그 자리에
     # 가장 가까운 화면이다. 파트 F의 '조망 = 마지막' 계약은 c161에 파트 P·X가 이미
     # 아래에 붙어 실질 종료됐고(그 사실을 여기 적는다), 서수는 F의 경과값과 **같은
     # 자[尺]**를 쓰므로 둘이 인접해 대조되는 편이 낫다.
-    part_o()
+    run_part("O", part_o, deaths)
+
+    # 말미 사망 요약 — 격리가 사망을 «읽고 넘기는 배너»로 만들지 않기 위한 셋 중 둘째.
+    # 사망 0이면 이 블록은 아무것도 인쇄하지 않는다(P67 (c) 팔).
+    if deaths:
+        print(f"\n[!] **사망 파트 {len(deaths)}건 / 전체 11** — 아래 파트의 출력은 이 화면에 없다.")
+        for label, why in deaths:
+            print(f"    - 파트 {label}: {why}")
+        print("    이 사이클의 step 0은 **부분 실행**이다. 없는 파트의 검산 의무를")
+        print("    «해당 없음»으로 적지 말 것 — 안 본 것과 없는 것은 다르다(관측 104·121).")
+        sys.exit(1)
