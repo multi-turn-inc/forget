@@ -77,10 +77,14 @@ def main() -> None:
     t0 = time.time()
     for qi, inst in enumerate(sample):
         scope = f"lme-{inst['question_id']}"
+        with get_db() as conn:
+            already = conn.execute(
+                "SELECT count(*) FROM memories WHERE user_id = ? AND deleted = 0", (scope,)
+            ).fetchone()[0]
         dates = inst.get("haystack_dates") or []
         session_ids = inst.get("haystack_session_ids") or []
-        n_mem = 0
-        for si, session in enumerate(inst["haystack_sessions"]):
+        n_mem = already
+        for si, session in enumerate(inst["haystack_sessions"] if not already else []):
             created = normalize_date(dates[si] if si < len(dates) else inst.get("question_date", ""))
             sid = str(session_ids[si]) if si < len(session_ids) else f"s{si}"
             if args.granularity == "session":
@@ -108,26 +112,62 @@ def main() -> None:
             print(f"  [{qi}] {inst['question_id']} 증거 기억 0 — 건너뜀 (주석 세션 미인게스트?)")
             continue
 
+        # 계기 교정 (2026-08-24, [96] 해부에서): 주석은 세션 단위인데 턴 단위 회수로
+        # 채점하면 분모가 무관 턴(키보드 잡담)으로 부풀어 정상 검색이 0.12로 찍힌다 —
+        # 실제로는 결정적 턴이 rank 2였다. 1차 지표를 주석 결에 맞춘다:
+        #   needle    = 최고 순위 gold 턴 (바늘을 표면화했는가)
+        #   coverage  = 증거 세션마다 ≥1턴이 창 안 (세션 단위 주석 그대로)
+        # 턴 회수는 부차로 유지·병기한다.
+        with get_db() as conn:
+            session_of = {str(r[0]): json.loads(r[1] or "{}").get("lme_session")
+                          for r in conn.execute(
+                              "SELECT id, metadata FROM memories WHERE user_id = ? AND deleted = 0",
+                              (scope,))}
         res = search_memories({"query": inst["question"], "filters": {"user_id": scope},
-                               "top_k": args.top_k, "trace": False})
+                               "top_k": 500})
         ranked = [str(m.get("id")) for m in res.get("results") or []]
-        sel = set(ranked[: args.top_k])
-        ceiling_hit = len(gold_ids & sel) / len(gold_ids)   # 검색이 top_k 안에 데려온 비율
-        top10_hit = len(gold_ids & set(ranked[:10])) / len(gold_ids)
-        stats["ceiling"].append(ceiling_hit)
-        stats["selected"].append(top10_hit)
-        stats["per_type"].setdefault(inst["question_type"], []).append((ceiling_hit, top10_hit))
-        print(f"  [{qi}] {inst['question_type'][:20]:20s} 기억 {n_mem:4d} · 증거 {len(gold_ids)} "
-              f"· top-{args.top_k} 회수 {ceiling_hit:.2f} · top-10 {top10_hit:.2f}")
+        rank_of = {mid: i for i, mid in enumerate(ranked)}
+        gold_ranks = sorted(rank_of.get(g, 10**9) for g in gold_ids)
+        needle = gold_ranks[0]
+        sess_min: dict[str, int] = {}
+        for g in gold_ids:
+            sess = str(session_of.get(g))
+            sess_min[sess] = min(sess_min.get(sess, 10**9), rank_of.get(g, 10**9))
+        cov84 = sum(1 for v in sess_min.values() if v < args.top_k) / len(sess_min)
+        cov10 = sum(1 for v in sess_min.values() if v < 10) / len(sess_min)
+        turn84 = sum(1 for r in gold_ranks if r < args.top_k) / len(gold_ranks)
+        row = {"qid": inst["question_id"], "type": inst["question_type"], "n_mem": n_mem,
+               "needle": needle, "cov84": cov84, "cov10": cov10, "turn84": turn84,
+               "sess_min": sess_min}
+        stats.setdefault("rows", []).append(row)
+        stats["per_type"].setdefault(inst["question_type"], []).append(row)
+        print(f"  [{qi}] {inst['question_type'][:20]:20s} needle {needle if needle<10**9 else '∞':>4} "
+              f"· 세션커버@{args.top_k} {cov84:.2f} @10 {cov10:.2f} · 턴회수 {turn84:.2f}", flush=True)
 
-    n = len(stats["ceiling"])
+    rows = stats.get("rows") or []
+    n = len(rows)
     if n:
+        import statistics
+        out_path = os.environ.get("LME_EVAL_DUMP", "")
+        if out_path:
+            with open(out_path, "w") as f:
+                for row in rows:
+                    f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        def agg(vals):
+            needle10 = sum(1 for v in vals if v["needle"] < 10) / len(vals)
+            needle84 = sum(1 for v in vals if v["needle"] < args.top_k) / len(vals)
+            mrr = sum(1.0 / (1 + v["needle"]) for v in vals) / len(vals)
+            c84 = sum(v["cov84"] for v in vals) / len(vals)
+            c10 = sum(v["cov10"] for v in vals) / len(vals)
+            t84 = sum(v["turn84"] for v in vals) / len(vals)
+            return needle10, needle84, mrr, c84, c10, t84
         print(f"\n{n}문항 · {time.time()-t0:.0f}s · 세분성 {args.granularity}")
-        print(f"증거 회수: top-{args.top_k} {sum(stats['ceiling'])/n:.3f} · top-10 {sum(stats['selected'])/n:.3f}")
+        print(f"{'유형':26s} {'n':>3s} {'바늘@10':>7s} {'바늘@84':>7s} {'MRR':>6s} {'커버@84':>7s} {'커버@10':>7s} {'턴@84':>6s}")
         for qtype, vals in sorted(stats["per_type"].items()):
-            c = sum(v[0] for v in vals) / len(vals)
-            s = sum(v[1] for v in vals) / len(vals)
-            print(f"  {qtype:26s} n={len(vals):3d}  top-k {c:.2f} · top-10 {s:.2f}")
+            a = agg(vals)
+            print(f"{qtype:26s} {len(vals):3d} {a[0]:7.2f} {a[1]:7.2f} {a[2]:6.3f} {a[3]:7.2f} {a[4]:7.2f} {a[5]:6.2f}")
+        a = agg(rows)
+        print(f"{'전체':26s} {n:3d} {a[0]:7.2f} {a[1]:7.2f} {a[2]:6.3f} {a[3]:7.2f} {a[4]:7.2f} {a[5]:6.2f}")
 
 
 if __name__ == "__main__":
