@@ -19,7 +19,8 @@ CONTEXTS = Path(__file__).resolve().parent.parent / "research/eval/attn_contexts
 
 def load(path: str) -> dict[str, dict]:
     rows = {}
-    for line in Path(path).open():
+    # answer_head가 바이트 경계에서 잘려 깨진 UTF-8이 올 수 있다 — 질량과 무관하므로 관용.
+    for line in Path(path).open(encoding="utf-8", errors="replace"):
         r = json.loads(line)
         for s in r["seats"]:
             s["density"] = s["mass"] / max(1, s["tokens"])   # 좌석 길이 보정
