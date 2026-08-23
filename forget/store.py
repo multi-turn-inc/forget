@@ -11,6 +11,7 @@ import shutil
 import time
 from contextvars import ContextVar
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
 
@@ -5384,10 +5385,14 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
     if rerank:
         scored = rerank_memory_results(query, scored, project_id=project_id, top_n=top_k)
     scored = _apply_inhibition_edges(scored, project_id=project_id, as_of=memory_as_of)
-    if not memory_as_of:
-        # 시점 질의에는 확산 안 함 — 간선은 현재 원장의 것이라 과거를 오염시킨다
-        scored = _apply_spreading_activation(scored, project_id, filters, top_k)
     scored.sort(key=lambda item: (item["score"], item["updated_at"]), reverse=True)
+    if not memory_as_of:
+        # 시점 질의에는 확산 안 함 — 간선은 현재 원장의 것이라 과거를 오염시킨다.
+        # **정렬 뒤에 호출한다**: 확산은 "상위 적중을 씨앗으로" 흘리는데, 정렬 전
+        # scored[:8]은 DB 순회 순서의 임의 8건이다 (실측 2026-08-24: 표적이 씨앗의
+        # 1홉 이웃인데도 활성이 0). 본선 4의 첫 두 변형도 이 임의 씨앗으로 측정됐다.
+        scored = _apply_spreading_activation(scored, project_id, filters, top_k)
+        scored.sort(key=lambda item: (item["score"], item["updated_at"]), reverse=True)
     if temporal_rerank:
         adjusted = _promote_newer_siblings(scored, scored_embeddings, superseded_ids, project_id)
         adjusted += _demote_stale_siblings(scored, scored_embeddings, superseded_ids, project_id)
@@ -5622,7 +5627,6 @@ def _apply_inhibition_edges(
       as_of < supersede 시점 → 경쟁 자체가 아직 없다 (그때는 구본이 현행이었다)
     """
     edges: list[tuple[int, str]] = []      # (구본의 scored 내 위치, 대체본 id)
-    by_id = {str(item.get("id")): i for i, item in enumerate(scored)}
     for i, item in enumerate(scored):
         meta = item.get("metadata") or {}
         successor = meta.get("superseded_by")
@@ -5636,13 +5640,15 @@ def _apply_inhibition_edges(
 
     demote = _superseded_score_multiplier()
     appended: list[dict[str, Any]] = []
+    # 인덱스가 아니라 객체를 든다: 아래에서 새 후계자를 append하면 인덱스는
+    # 미래의 연결 리스트를 가리키게 되고, 다음 순회의 조회가 범위를 벗어난다
+    # (IndexError 실측 2026-08-24, 확산이 목록을 늘린 뒤 재현).
+    obj_by_id: dict[str, dict[str, Any]] = {str(item.get("id")): item for item in scored}
     for old_index, successor_id in edges:
         old = scored[old_index]
         old_score = float(old.get("score") or 0.0)
-        succ_index = by_id.get(successor_id)
-        if succ_index is not None:
-            successor = scored[succ_index]
-        else:
+        successor = obj_by_id.get(successor_id)
+        if successor is None:
             row = _memory_row_for_inhibition(successor_id, project_id)
             if row is None:
                 # 후계자가 죽었다 — 구본이 주제의 유일한 담지자. 누르지 않는다.
@@ -5657,7 +5663,7 @@ def _apply_inhibition_edges(
             if trust:
                 successor["trust"] = trust
             appended.append(successor)
-            by_id[successor_id] = len(scored) + len(appended) - 1
+            obj_by_id[successor_id] = successor
         # 억압: 구본은 후계자 아래로 (곱 강등이되, 후계자보다 위로는 못 간다)
         succ_score = float(successor.get("score") or 0.0)
         old["score"] = round(min(old_score * demote if demote < 1 else old_score,
@@ -5728,26 +5734,61 @@ def _spreading_graph(project_id: str) -> dict[str, list[tuple[str, float]]]:
             successor = (json_loads(meta_raw, {}) or {}).get("superseded_by")
             if successor and str(successor) in alive:
                 link(str(mid), str(successor), 1.0)
-        # 엔티티 (좁은 대역 + 차수 감쇠)
-        by_entity: dict[str, list[str]] = {}
-        for mid, entity in conn.execute(
-            "SELECT DISTINCT memory_id, normalized_entity FROM memory_entities "
-            "WHERE project_id = ? AND entity_type IN ('person','organization','acronym','location')",
-            (project_id,)):
-            name = str(entity or "").strip().lower()
-            if (str(mid) in alive and _SPREADING_ENTITY_RE.match(name)
-                    and name not in _SPREADING_ENTITY_JUNK):
-                by_entity.setdefault(name, []).append(str(mid))
-        for members in by_entity.values():
-            members = list(dict.fromkeys(members))
-            if not (2 <= len(members) <= _SPREADING_ENTITY_DEGREE_MAX):
-                continue
-            w = 1.0 / (len(members) ** 0.5)
-            hub = members[0]                      # 성긴 스타 연결 — 클리크 폭발 방지
-            for other in members[1:]:
-                link(hub, other, w)
+    # 술어 간선 기질 (R3, 2026-08-24) — LLM 추출 트리플 + 엔티티 해소의 파생 파일.
+    # co-mention(memory_entities)은 **완전히 배제**한다: 'Here'를 person으로 4,146건
+    # 뽑는 추출기가 본선 4 반증(도달 -22pp)의 원인이었고, 경로 제약의 첫 요구사항이
+    # "공허한 동거가 아니라 명시된 관계만"이다.
+    _link_substrate_edges(link, alive)
     _SPREADING_CACHE[project_id] = (_time.monotonic(), adjacency)
     return adjacency
+
+
+_SUBSTRATE_PATH = os.getenv("MEM1_GRAPH_SUBSTRATE") or str(
+    Path.home() / ".forget/graph_substrate.sqlite3")
+_SUBSTRATE_FANOUT_MAX = int(_float_or(os.getenv("MEM1_SPREADING_FANOUT_MAX"), 30))
+_SUBSTRATE_VACUOUS = frozenset({"RELATED_TO", "REFERENCES", "MENTIONS", "ASSOCIATED_WITH"})
+
+
+def _link_substrate_edges(link, alive: set[str]) -> None:
+    """기질의 술어 간선을 기억-기억 인접으로 접는다 (Cohen & Kjeldsen 제약 적용).
+
+    간선은 엔티티 사이에 있고 확산은 기억 사이에서 일어나므로, 같은 술어 간선의
+    양끝 엔티티를 언급한 기억들을 잇는다. 제약(전부 실측 분포에서 등록,
+    docs/graph-substrate-research.md §4.6):
+      팬아웃 — 차수 > 30 엔티티는 확산의 통로가 되지 않는다 (devloop 352 등
+               정당하지만 무판별한 머리 9개를 끊고 중간대 68개는 살린다)
+      경로   — 공허 술어(RELATED_TO 등) 배제, co-mention 완전 배제
+    """
+    if not os.path.exists(_SUBSTRATE_PATH):
+        return
+    try:
+        con = sqlite3.connect(f"file:{_SUBSTRATE_PATH}?mode=ro", uri=True)
+    except Exception:
+        return
+    try:
+        degree: dict[str, int] = {}
+        for src, dst in con.execute("SELECT src, dst FROM edges"):
+            degree[str(src)] = degree.get(str(src), 0) + 1
+            degree[str(dst)] = degree.get(str(dst), 0) + 1
+        mentions: dict[str, list[str]] = {}
+        for mid, entity in con.execute("SELECT memory_id, entity FROM mentions"):
+            if str(mid) in alive and degree.get(str(entity), 0) <= _SUBSTRATE_FANOUT_MAX:
+                mentions.setdefault(str(entity), []).append(str(mid))
+        for src, relation, dst in con.execute("SELECT src, relation, dst FROM edges"):
+            if str(relation).upper() in _SUBSTRATE_VACUOUS:
+                continue
+            left, right = mentions.get(str(src)) or [], mentions.get(str(dst)) or []
+            if not left or not right or len(left) * len(right) > 400:
+                continue          # 곱 폭발 방지 — 남은 머리도 여기서 다시 걸린다
+            weight = 1.0 / ((len(left) * len(right)) ** 0.5)
+            for a in dict.fromkeys(left):
+                for b in dict.fromkeys(right):
+                    if a != b:
+                        link(a, b, weight)
+    except Exception:
+        return
+    finally:
+        con.close()
 
 
 def _apply_spreading_activation(
@@ -5794,12 +5835,19 @@ def _apply_spreading_activation(
     # 밖)은 밀어 올리고, 아예 못 온 이웃은 확산 질량만으로 입장시킨다.
     # 첫 판(추가만) 실측 Δ+0pp: 형제는 대개 하위권에 '이미 있어서' 추가 대상이
     # 아니었고 보너스도 없었다 — 가산이 빠지면 확산은 아무것도 못 바꾼다.
+    # 직접 증거 불추월 (R3 등록 규칙): 확산은 씨앗 최저점 아래에서만 순서를 바꾼다.
+    # 본선 4 변형 2의 유해(자기 top-1 -32pp)가 정확히 이 클램프의 부재였다.
+    seed_floor = min((float(item.get("score") or 0.0) for item in scored[:8]), default=0.0)
+    ceiling = max(0.0, seed_floor - 0.001)
     appended = []
     for mid, mass in sorted(activation.items(), key=lambda kv: -kv[1])[:12]:
         existing = by_id.get(mid)
         if existing is not None:
-            bonus = round(min(0.25, mass), 4)
-            existing["score"] = round(min(1.0, float(existing.get("score") or 0.0) + bonus), 4)
+            base = float(existing.get("score") or 0.0)
+            bonus = round(min(0.25, mass, max(0.0, ceiling - base)), 4)
+            if bonus <= 0:
+                continue
+            existing["score"] = round(base + bonus, 4)
             if isinstance(existing.get("score_breakdown"), dict):
                 existing["score_breakdown"]["spreading"] = bonus
             continue
@@ -5809,7 +5857,7 @@ def _apply_spreading_activation(
         if row is None or not matches_filters(row, filters):
             continue
         item = strip_internal(row)
-        item["score"] = round(min(0.99, mass), 4)
+        item["score"] = round(min(ceiling, mass), 4)
         item["score_breakdown"] = {"spreading": round(mass, 4)}
         trust = (row.get("metadata") or {}).get("trust")
         if trust:
