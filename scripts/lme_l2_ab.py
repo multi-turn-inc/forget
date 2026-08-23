@@ -117,11 +117,14 @@ def main() -> None:
     by_type: dict[str, list] = {}
     for q in pool:
         by_type.setdefault(q["question_type"], []).append(q)
+    # 표본은 항상 n=100 정본 목록에서 앞 N개 — L1과 같은 문항·같은 벤치 스코프를
+    # 보장한다 (스모크가 --n에 따라 다른 문항을 뽑아 빈 스코프를 때리던 결함 수리).
+    N_CANON = 100
     sample = []
     for qtype, items in sorted(by_type.items()):
-        k = max(1, round(args.n * len(items) / len(pool)))
+        k = max(1, round(N_CANON * len(items) / len(pool)))
         sample.extend(rng.sample(items, min(k, len(items))))
-    sample = sample[: args.n] if len(sample) > args.n else sample
+    sample = (sample[:N_CANON] if len(sample) > N_CANON else sample)[: args.n]
 
     done = set()
     if os.path.exists(OUT):
@@ -139,10 +142,13 @@ def main() -> None:
             question, qdate = inst["question"], inst.get("question_date", "")
             row = {"qid": inst["question_id"], "type": inst["question_type"]}
 
+            probe = search_memories({"query": question, "filters": {"user_id": scope}, "top_k": 84})
+            if not probe.get("results"):
+                print(f"  [{qi}] {inst['question_id']} 스코프 비어 있음 — 건너뜀", flush=True)
+                continue
             if "A" in args.arms:
-                res = search_memories({"query": question, "filters": {"user_id": scope}, "top_k": 84})
                 lines = [f"- [{str(m.get('created_at'))[:10]}] {str(m.get('memory'))}"
-                         for m in res.get("results") or []]
+                         for m in probe.get("results") or []]
                 ctx = "\n".join(lines)
                 hyp = read_answer(question, qdate, ctx)
                 row["A"] = judge(inst["question_type"], question, str(inst["answer"]), hyp)
