@@ -36,6 +36,11 @@ def main() -> None:
     ap.add_argument("--split", default="test", choices=["test", "dev", "all"])
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--out", default="")
+    ap.add_argument("--no-workspace", action="store_true",
+                    help="이어가기 줄을 끈 팔. 그 줄이 먹는 예산(중위 57%% 실측)을 "
+                         "기억에 돌려주면 얼마나 더 담기는지 재는 여유값 측정용. "
+                         "주의: 이 채점기는 그 줄의 값을 측정하지 못한다(gold는 기억 id뿐) — "
+                         "여기서 오르는 수는 '끄는 게 낫다'가 아니라 '여유가 이만큼'이다.")
     args = ap.parse_args()
 
     from forget.store import assemble_context  # DB 경로 확정 후 import
@@ -51,6 +56,8 @@ def main() -> None:
     t0 = time.time()
     for n, it in enumerate(items, 1):
         payload = {"query": it["query"], "filters": it["filters"], "record_trace": False}
+        if args.no_workspace:
+            payload["disable_resume_workspace"] = True
         try:
             res = assemble_context(payload)
         except Exception as exc:

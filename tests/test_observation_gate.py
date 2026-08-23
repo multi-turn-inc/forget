@@ -84,6 +84,25 @@ def test_session_shards_are_rejected_by_sanitize() -> None:
     assert low_value_memory_reason('User is planning to move into my new home soon') == ""
 
 
+def test_tool_call_markup_is_rejected_by_sanitize() -> None:
+    # 실원장 실표본 (2026-08-23): 에이전트 자신의 도구 호출 인자가 "사용자가 말한
+    # 지속 사실"로 저장돼 있었다 — 동일 사본 3개 포함 21건. 마크업은 발화가 아니다.
+    from forget.memory_engine import low_value_memory_reason
+
+    for junk in (
+        'User said: <parameter name="source_role">assistant',
+        'User said: <parameter name="metadata">{"cycle": 61, "track": "devloop"}',
+        '<invoke name="add_memory">',
+    ):
+        assert low_value_memory_reason(junk) == "tool_call_markup", junk
+    # XML을 *이야기하는* 정상 산문은 통과해야 한다 — 개발자의 원장이다.
+    for prose in (
+        "HTML의 <div> 태그 안에 파라미터를 넣는 설계는 기각했다",
+        "함수 매개변수(parameter) 명명 규칙을 snake_case로 정했다",
+    ):
+        assert low_value_memory_reason(prose) == "", prose
+
+
 def test_kill_switch_restores_old_behavior(monkeypatch) -> None:
     monkeypatch.setenv("MEM1_OBSERVATION_GATE", "0")
     facts = _facts([{"role": "assistant", "content": "Consider offering a buy-it-now option for the painting."}])

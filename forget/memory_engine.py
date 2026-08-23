@@ -487,6 +487,15 @@ _SESSION_SHARD_RE = re.compile(
     r'"(phase|rolloutIds|memory_citation|final_answer|turn_id|output_text|input_text'
     r'|model_context_window|total_tokens|rate_limits?)"\s*[:\]}]'
 )
+# Agent tool-call markup captured as if it were speech. Measured in the dogfood
+# corpus 2026-08-23: 123 of 6,097 live memories (2.0%) carried it, including
+# three identical copies of `User said: <parameter name="source_role">assistant`
+# — the agent's own invocation arguments stored as durable facts about the user.
+# Same family as the already-blocked "User said: {" JSON prefix; only the syntax
+# differs. A real durable fact does not contain an invocation tag.
+_TOOL_CALL_MARKUP_RE = re.compile(
+    r'</?(parameter|invoke|function_calls|function_results)\b|<[a-z_]*:?(invoke|parameter)\b|\bantml:'
+)
 
 # Default ceiling for an auto-captured "memory". A durable fact is a
 # sentence, not a transcript page; anything longer is almost always a raw
@@ -511,6 +520,8 @@ def low_value_memory_reason(text: str, max_chars: int = LOW_VALUE_MAX_CHARS) -> 
         return "transcript_or_raw"
     if '"payload"' in stripped or _RAW_EVENT_RE.search(stripped):
         return "raw_json_event"
+    if _TOOL_CALL_MARKUP_RE.search(stripped):
+        return "tool_call_markup"
     if _SESSION_SHARD_RE.search(stripped):
         return "session_shard"
     if _SECRET_RUN_RE.search(stripped):
