@@ -2297,6 +2297,132 @@ def status_stamp_reconcile(text: str) -> dict:
     }
 
 
+# ── 상설 계기 인용·표본 칸 — ㉶+㉬ 병합 (c196 신설 · amendment-195 §4-① · P68) ──
+#
+# 왜. P64 (b)·P65 (b)가 **같은 두 사이클(c191·c192)**에서 동시 반증됐다 — 상설 계기
+# ㉮·㉭의 값이 원장에서 동시 무인용. 병은 계기 개별의 규율이 아니라 **그 사이클의
+# 원장 쓰기 규율**이다(관측 103 보강, c194). 이 눈은 직전 원장 행에서 계기별 어휘
+# 매치 후보를 인쇄한다. **진단 전용 — 고발하지 않는다**(관측 107): 질의 자동 판정의
+# 실측 거짓 양성 0/2(P65 (c))이므로 자동 판정 금지, 인쇄 + 손 판독.
+INSTRUMENT_QUEUE_PATH = os.path.join(REPO, "research", "devloop", "instrument-queue.md")
+
+#: 손 유지 상수 — 상설 계기별 인용 탐지 어휘(느슨 — 과잉 매치 방향, 거짓 음성이
+#: 루프에 유리하지 않게). 기원: ㉮ = tmp/c193_p64_citation.py · ㉭ = tmp/c194_p65_
+#: citation.py 의 TOKENS 각 9종 승격 — tmp는 승계가 보장되지 않는 거처다(am-195 §4-①).
+#: 명단 자체는 `permanent_instruments`가 instrument-queue.md에서 **직독**한다 —
+#: 어휘 없는 신입 상설 계기는 «어휘 미등록»으로 인쇄된다(침묵하지 않는다).
+PERMANENT_INSTRUMENT_VOCAB: dict[str, tuple[str, ...]] = {
+    "㉮": ("range_count", "㉮", "범위∖계수", "범위\\계수", "불일치",
+          "짝", "c188_", "검산", "동격"),
+    "㉭": ("declare_diff", "㉭", "선언∖", "선언\\", "프레임 이동뿐",
+          "c189_", "질의", "부기 선언", "정본 diff"),
+}
+
+#: 처분 문면이 «파트 N 상설»이면 step 0 내장 계기다 — 값은 그 파트의 전사 의무가
+#: 나르므로 이 인용 눈의 정의역 밖이다(예: ㉰ = 파트 O 상설).
+_EMBEDDED_RX = re.compile(r"파트\s*\S+\s*상설")
+
+
+def permanent_instruments(text: str) -> list[dict]:
+    """instrument-queue.md «집행·해소 이력» 표에서 처분에 «상설»이 든 항을 직독한다.
+
+    **순수 함수** — 인자 텍스트만 본다. 명단을 상수로 박지 않는 이유: 다음 상설
+    계기가 태어날 때 이 눈이 침묵하는 것이 정확히 관측 119(정의역 미선언)의
+    재발이기 때문이다(am-195 §4-① 정의역 조항).
+    """
+    rows: list[dict] = []
+    in_history = False
+    for line in text.splitlines():
+        if line.startswith("## "):
+            in_history = line.startswith("## 집행·해소 이력")
+            continue
+        stripped = line.strip()
+        if not in_history or not stripped.startswith("|"):
+            continue
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        if len(cells) < 3 or cells[0] == "항" or set(cells[0]) <= set("-: "):
+            continue
+        marker, content, disposal = cells[0], cells[1], cells[2]
+        if "상설" not in disposal:
+            continue
+        rows.append({"marker": marker, "content": content, "disposal": disposal,
+                     "embedded": bool(_EMBEDDED_RX.search(disposal))})
+    return rows
+
+
+def instrument_citation(row: dict, roster: list[dict],
+                        vocab: dict[str, tuple[str, ...]] | None = None) -> list[dict]:
+    """직전 원장 행에서 상설 계기별 어휘 매치 **후보**를 뽑는다. **순수 함수.**
+
+    판정은 손 몫, 계기는 후보만 — tmp/c193·c194 citation 프로브의 계약 승계.
+    문맥 40자를 함께 담아 손이 과잉 매치를 가려낼 수 있게 한다.
+    """
+    if vocab is None:
+        vocab = PERMANENT_INSTRUMENT_VOCAB
+    blob = " ".join(str(v) for v in row.values())
+    out: list[dict] = []
+    for inst in roster:
+        rec = {**inst, "hits": [], "ctx": []}
+        if inst["embedded"]:
+            rec["status"] = "내장"
+        elif inst["marker"] not in vocab:
+            rec["status"] = "어휘 미등록"
+        else:
+            hits = [t for t in vocab[inst["marker"]] if t in blob]
+            rec["hits"] = hits
+            for t in hits:
+                i = blob.find(t)
+                rec["ctx"].append(f"{t!r}: …{blob[max(0, i - 20):i + 40]}…")
+            rec["status"] = "적혀 있었다" if hits else "안 적었다"
+        out.append(rec)
+    return out
+
+
+SAMPLE_CELL_RX = re.compile(r"표본\s*=\s*(\d+)\s*건")
+VERDICT_STAMP_CYCLE_RX = re.compile(r"판정\s*\(사이클\s*(\d+)")
+SAMPLE_CELL_SINCE = 196      #: 탈소음 — 소급 없음(am-195 §4-①). 구판은 집계 한 줄.
+SAMPLE_CELL_FORMAT_CYCLE = 185  #: 표본 칸 서식 도입(am-185 §4-⑥)
+
+
+def sample_cell_scan(text: str, since: int = SAMPLE_CELL_SINCE) -> dict:
+    """«지지» 절의 표본 칸 유무를 잰다. **순수 함수** — 질의 후보만, 고발 없음.
+
+    탈소음(am-195 §4-①): 표본 칸 의무는 판정 도장이 c{since} 이후인 절에만 적용.
+    구판(그 이전 착지)은 일괄 고발하지 않고 집계 한 줄 — 그 감사는 c200 몫이다.
+    도장 자[尺]는 «판정 (사이클 N» 1종뿐이다: 다른 서식(«판정 (c76» 등)의 절은
+    `unstamped`로 분류돼 신/구를 못 가른다 — 사각을 값으로 반환한다.
+    """
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from c124_retro_prep import STATUS_RE, parse_status  # noqa: PLC0415
+
+    lines, spans, _dups = _pred_spans(text)
+    new_ok, candidates, legacy, unstamped = [], [], [], []
+    for pid, (s, e) in spans.items():
+        body = lines[s:e]
+        field = next((m.group(1) for l in body if (m := STATUS_RE.match(l.strip()))), None)
+        arms = parse_status(field)[0] if field is not None else []
+        if not any(v == "지지" for _, v in arms):
+            continue
+        stamps = [int(m.group(1)) for l in body
+                  for m in VERDICT_STAMP_CYCLE_RX.finditer(l)]
+        if not stamps:
+            unstamped.append(pid)
+            continue
+        landing = max(stamps)
+        if landing < since:
+            legacy.append(pid)
+            continue
+        samples = [int(m.group(1)) for l in body for m in SAMPLE_CELL_RX.finditer(l)]
+        if any(n >= 1 for n in samples):
+            new_ok.append((pid, landing, max(samples)))
+        else:
+            candidates.append(
+                (pid, landing, "표본 칸 부재" if not samples else "표본 = 0건"))
+    return {"new_ok": new_ok, "candidates": candidates,
+            "legacy": sorted(legacy, key=_pid_key),
+            "unstamped": sorted(unstamped, key=_pid_key), "since": since}
+
+
 def part_d() -> None:
     """[D] 예측 판정 기한 — 매 사이클 (c164 신설, P48, 감사 R5 이관분 = 계기 큐 ㉦).
 
@@ -2394,6 +2520,18 @@ def part_d() -> None:
         print(f"\n  [상태줄↔판정문 정합] !! 미측정: {type(exc).__name__}: {exc}")
         print("     → '정합 위반 0'으로 읽지 말 것.")
 
+    # ── 상설 계기 인용·표본 칸 — ㉶+㉬ 병합 (c196 신설 · am-195 §4-① · P68) ────
+    # 파트 D 안에 둔 것은 의도다: 이 눈의 정의역(판정문·도장)이 곧 이 파트의 입력이고,
+    # 배달 채널 ①(P68 등록문 명시)이 이 파트의 매 사이클 인쇄이기 때문이다.
+    try:
+        with open(INSTRUMENT_QUEUE_PATH, encoding="utf-8") as fh:
+            roster = permanent_instruments(fh.read())
+        _print_instrument_eyes(roster, rows[-1],
+                               sample_cell_scan(PRED.read_text(encoding="utf-8")))
+    except Exception as exc:
+        print(f"\n  [상설 계기 인용·표본 칸 — ㉶+㉬] !! 미측정: {type(exc).__name__}: {exc}")
+        print("     → '무인용 0·질의 0'으로 읽지 말 것.")
+
     # 회고·감사 시계는 예측 대장이 아니라 사이클 번호가 정한다. 같은 화면에 둔다 —
     # 기한을 만나는 손이 "그 판정을 쓸 문서가 언제 열리는가"도 함께 알아야 한다(관행 ⑧).
     try:
@@ -2455,6 +2593,59 @@ def _print_status_stamp(rec: dict) -> None:
                   f"  → 이 눈·기한 파서 = **먼저**(L{at[0]}) / 파트 D 팔 = **나중**(L{at[-1]})")
         print("       → 한 절의 팔과 다른 절의 기한이 짝지어진다. 정책을 고르기 전에"
               " 번호를 가르는 것이 정본 처치다(개명 패킷 = 게이트 대기).")
+
+
+def _print_instrument_eyes(roster: list[dict], last_row: dict, scan: dict) -> None:
+    """㉶+㉬ 인쇄 — 계산과 가른다(`_print_status_stamp`와 같은 이유)."""
+    n_last = last_row.get("cycle")
+    print("\n  [상설 계기 인용·표본 칸 — ㉶+㉬ 병합 (c196 신설, am-195 §4-① · P68)"
+          " — **진단 전용·고발 없음**(관측 107)]")
+    standalone = [r for r in roster if not r["embedded"]]
+    embedded = [r for r in roster if r["embedded"]]
+    line = (f"    정의역(instrument-queue.md «집행·해소 이력» 직독)"
+            f" = 처분 «상설» {len(roster)}항 — 검사 대상 {len(standalone)}항")
+    if embedded:
+        line += (f" · 내장 {len(embedded)}항({' '.join(r['marker'] for r in embedded)}"
+                 " — 그 파트의 전사 의무 몫, 이 눈 밖)")
+    print(line)
+    print(f"    검사 = 직전 원장 행 c{n_last}의 계기별 어휘 매치"
+          "(느슨 — 과잉 매치 방향 · **후보만, 판정은 손**):")
+    for rec in instrument_citation(last_row, standalone):
+        if rec["status"] == "어휘 미등록":
+            print(f"      {rec['marker']} — **어휘 미등록** — 신입 상설 계기다:"
+                  " `PERMANENT_INSTRUMENT_VOCAB`에 어휘를 등재하라(침묵 방지 인쇄).")
+        elif rec["status"] == "적혀 있었다":
+            print(f"      {rec['marker']} «적혀 있었다»(후보) — 어휘 {rec['hits']}")
+            for c in rec["ctx"][:4]:
+                print(f"          {c}")
+        else:
+            print(f"      {rec['marker']} «안 적었다» — 어휘 무매치 → 손 판독:"
+                  " 규약 ⑬ 선언(수확 후 실행분)이면 다음 사이클 원장 전사 의무를 확인하라.")
+    print("    ※ «적혀 있었다»는 인용 확정이 아니다 — 어휘가 느슨해 일반 산문"
+          "(질의·검산·불일치)에 과잉 매치한다. 문맥을 손으로 가려라"
+          "(P65 (c) 거짓 양성 0/2가 자동 판정 금지의 근거).")
+    print("    ※ 사각(선언): 1세션 사망 사이클은 원장 행이 없어 이 눈 밖 —"
+          " A-156.1의 몫이며 이 눈은 그 대체가 아니다(c191이 그 실측).")
+    print(f"    [표본 칸 — ㉬ (탈소음: 판정 도장 c{scan['since']}+ 절만 · 소급 없음,"
+          " am-195 §4-①)]")
+    if scan["candidates"]:
+        for pid, landing, why in sorted(scan["candidates"], key=lambda t: _pid_key(t[0])):
+            print(f"      → 질의(고발 아님): {pid} — 판정 c{landing} «지지»인데 {why}."
+                  " 마감-표본부재로 적을 것을 지지로 포장한 자리인지 손으로 판독하라"
+                  "(am-185 §4-⑥).")
+    elif scan["new_ok"]:
+        cells = " ".join(f"{p}(판정 c{l} · 표본 {n}건)" for p, l, n in scan["new_ok"])
+        print(f"      신규(판정 c{scan['since']}+) 지지 절 질의 0건 — 표본 칸 보유"
+              f" {len(scan['new_ok'])}건: {cells}")
+    else:
+        print(f"      신규(판정 c{scan['since']}+) 지지 절 질의 0건 — 해당 절 자체가 아직 없다.")
+    print(f"      구판 지지 절 {len(scan['legacy'])}건 — 표본 칸 서식 도입"
+          f"(c{SAMPLE_CELL_FORMAT_CYCLE}) 이후에도 소급 없음 · 그 감사는 c200 몫"
+          "(am-195 부록 A-3).")
+    if scan["unstamped"]:
+        print(f"      ↳ 사각: 지지인데 «판정 (사이클 N» 도장 무표기 {len(scan['unstamped'])}건"
+              " — 착지 사이클을 못 읽어 신/구 분류 불가(도장 자[尺] 1종의 한계): "
+              + " ".join(scan["unstamped"]))
 
 
 def _pid_key(pid: str) -> tuple[int, str]:
