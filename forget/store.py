@@ -5384,6 +5384,9 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
     if rerank:
         scored = rerank_memory_results(query, scored, project_id=project_id, top_n=top_k)
     scored = _apply_inhibition_edges(scored, project_id=project_id, as_of=memory_as_of)
+    if not memory_as_of:
+        # 시점 질의에는 확산 안 함 — 간선은 현재 원장의 것이라 과거를 오염시킨다
+        scored = _apply_spreading_activation(scored, project_id, filters, top_k)
     scored.sort(key=lambda item: (item["score"], item["updated_at"]), reverse=True)
     if temporal_rerank:
         adjusted = _promote_newer_siblings(scored, scored_embeddings, superseded_ids, project_id)
@@ -5661,6 +5664,157 @@ def _apply_inhibition_edges(
                                  succ_score * 0.95), 4)
         if isinstance(old.get("score_breakdown"), dict):
             old["score_breakdown"]["inhibited_by"] = successor_id
+    return scored + appended
+
+
+_SPREADING_CACHE: dict[str, tuple[float, dict[str, list[tuple[str, float]]]]] = {}
+_SPREADING_TTL_S = 600.0
+_SPREADING_ENTITY_DEGREE_MAX = 50
+_SPREADING_ENTITY_RE = re.compile(r"^[a-z가-힣][\w가-힣 .\-]{2,40}$")
+_SPREADING_ENTITY_JUNK = frozenset(
+    "here users do this you can if the and for with from that not are was were "
+    "make add set get new old use used using user said tool observed session".split()
+)
+
+
+def _spreading_graph(project_id: str) -> dict[str, list[tuple[str, float]]]:
+    """확산 활성의 간선 지도 — ACT-R 둘째 항(Σ W·S)의 재료. (본선 4)
+
+    간선 세 종, 신뢰 순:
+      일화     같은 ADD 이벤트에서 태어난 조각들 (결정적 — 같은 선언의 형제)
+      supersede 원장이 아는 정확한 계승 간선
+      엔티티   공동 언급 (오염 실측: 추출기가 'Here'·'Do'를 person으로 뽑아 최대
+               허브가 정크다 — 유형·차수 2~50·문면 검사로 좁히고 1/√차수 감쇠)
+
+    프로세스 캐시 + TTL: 최신 쓰기 몇 건이 늦게 보이는 것은 수용한다 — 확산은
+    보너스 경로이지 정본 검색이 아니다.
+    """
+    import time as _time
+
+    cached = _SPREADING_CACHE.get(project_id)
+    if cached and _time.monotonic() - cached[0] < _SPREADING_TTL_S:
+        return cached[1]
+    adjacency: dict[str, list[tuple[str, float]]] = {}
+
+    def link(a: str, b: str, w: float) -> None:
+        adjacency.setdefault(a, []).append((b, w))
+        adjacency.setdefault(b, []).append((a, w))
+
+    with get_db() as conn:
+        alive = {str(r[0]) for r in conn.execute(
+            "SELECT id FROM memories WHERE project_id = ? AND deleted = 0", (project_id,))}
+        # 일화: 신규 쓰기 경로는 metadata.episode.event_id, 백필 행은 ADD input 동일성
+        groups: dict[str, list[str]] = {}
+        for mid, meta_raw in conn.execute(
+            "SELECT id, metadata FROM memories WHERE project_id = ? AND deleted = 0 "
+            "AND metadata LIKE '%episode%'", (project_id,)):
+            episode = (json_loads(meta_raw, {}) or {}).get("episode") or {}
+            if episode.get("event_id"):
+                groups.setdefault(f"ev:{episode['event_id']}", []).append(str(mid))
+        for mid, raw in conn.execute(
+            "SELECT memory_id, input FROM memory_history WHERE project_id = ? AND event='ADD' "
+            "AND input IS NOT NULL AND length(input) > 40", (project_id,)):
+            if str(mid) in alive:
+                groups.setdefault(f"in:{hash(str(raw))}", []).append(str(mid))
+        for members in groups.values():
+            members = [m for m in dict.fromkeys(members) if m in alive][:12]
+            for i, a in enumerate(members):
+                for b in members[i + 1:]:
+                    link(a, b, 1.0)
+        # supersede
+        for mid, meta_raw in conn.execute(
+            "SELECT id, metadata FROM memories WHERE project_id = ? AND deleted = 0 "
+            "AND metadata LIKE '%superseded_by%'", (project_id,)):
+            successor = (json_loads(meta_raw, {}) or {}).get("superseded_by")
+            if successor and str(successor) in alive:
+                link(str(mid), str(successor), 1.0)
+        # 엔티티 (좁은 대역 + 차수 감쇠)
+        by_entity: dict[str, list[str]] = {}
+        for mid, entity in conn.execute(
+            "SELECT DISTINCT memory_id, normalized_entity FROM memory_entities "
+            "WHERE project_id = ? AND entity_type IN ('person','organization','acronym','location')",
+            (project_id,)):
+            name = str(entity or "").strip().lower()
+            if (str(mid) in alive and _SPREADING_ENTITY_RE.match(name)
+                    and name not in _SPREADING_ENTITY_JUNK):
+                by_entity.setdefault(name, []).append(str(mid))
+        for members in by_entity.values():
+            members = list(dict.fromkeys(members))
+            if not (2 <= len(members) <= _SPREADING_ENTITY_DEGREE_MAX):
+                continue
+            w = 1.0 / (len(members) ** 0.5)
+            hub = members[0]                      # 성긴 스타 연결 — 클리크 폭발 방지
+            for other in members[1:]:
+                link(hub, other, w)
+    _SPREADING_CACHE[project_id] = (_time.monotonic(), adjacency)
+    return adjacency
+
+
+def _apply_spreading_activation(
+    scored: list[dict[str, Any]],
+    project_id: str,
+    filters: dict[str, Any],
+    top_k: int,
+) -> list[dict[str, Any]]:
+    """상위 적중을 씨앗으로 간선을 따라 활성을 흘려, 어휘·벡터가 못 데려온
+    이웃을 후보로 승급시킨다 (2홉 절단 확산 — ACT-R도 고정점까지 돌리지 않는다).
+
+    검색 천장을 올리는 유일한 로컬 후보 경로: 랭킹은 검색이 데려오지 않은 것을
+    구제할 수 없다(실측 2026-08-23, recency 스윕 무반응). 끄기: MEM1_SPREADING=0.
+    """
+    # 기본 끔 (2026-08-23 반증): 형제-도달 탐침에서 변형 1(추가만) Δ+0pp 불활성,
+    # 변형 2(가산 +0.25) Δ-22pp·자기 top-1 -32pp 유해 — 정크 엔티티 허브가
+    # 무관 조각을 직접 증거 위로 밀어 올렸다. 간선 질이 전제다. 재방문 조건:
+    # 엔티티 추출 정화 또는 라벨 학습 간선 가중치 (docs/neurocomputational-roadmap.md)
+    if str(os.getenv("MEM1_SPREADING", "0")).strip().lower() in {"0", "false", "off"}:
+        return scored
+    if not scored:
+        return scored
+    graph = _spreading_graph(project_id)
+    if not graph:
+        return scored
+    by_id = {str(item.get("id")): item for item in scored}
+    seed_ids = {str(item.get("id")) for item in scored[:8]}
+    seeds = [(str(item.get("id")), float(item.get("score") or 0.0)) for item in scored[:8]]
+    activation: dict[str, float] = {}
+    frontier = dict(seeds)
+    for _hop in range(2):
+        nxt: dict[str, float] = {}
+        for node, mass in frontier.items():
+            for neighbor, w in graph.get(node, ())[:24]:
+                gain = mass * w * 0.5
+                if gain < 0.01 or neighbor in seed_ids:
+                    continue
+                activation[neighbor] = activation.get(neighbor, 0.0) + gain
+                nxt[neighbor] = max(nxt.get(neighbor, 0.0), gain)
+        frontier = nxt
+    if not activation:
+        return scored
+    # ACT-R은 가산이다: A = B + Σ 확산. 이미 인출된 이웃(문턱은 넘었지만 top-k
+    # 밖)은 밀어 올리고, 아예 못 온 이웃은 확산 질량만으로 입장시킨다.
+    # 첫 판(추가만) 실측 Δ+0pp: 형제는 대개 하위권에 '이미 있어서' 추가 대상이
+    # 아니었고 보너스도 없었다 — 가산이 빠지면 확산은 아무것도 못 바꾼다.
+    appended = []
+    for mid, mass in sorted(activation.items(), key=lambda kv: -kv[1])[:12]:
+        existing = by_id.get(mid)
+        if existing is not None:
+            bonus = round(min(0.25, mass), 4)
+            existing["score"] = round(min(1.0, float(existing.get("score") or 0.0) + bonus), 4)
+            if isinstance(existing.get("score_breakdown"), dict):
+                existing["score_breakdown"]["spreading"] = bonus
+            continue
+        if len(appended) >= 5:
+            continue
+        row = _memory_row_for_inhibition(mid, project_id)
+        if row is None or not matches_filters(row, filters):
+            continue
+        item = strip_internal(row)
+        item["score"] = round(min(0.99, mass), 4)
+        item["score_breakdown"] = {"spreading": round(mass, 4)}
+        trust = (row.get("metadata") or {}).get("trust")
+        if trust:
+            item["trust"] = trust
+        appended.append(item)
     return scored + appended
 
 
