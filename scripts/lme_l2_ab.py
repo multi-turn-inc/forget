@@ -164,7 +164,7 @@ def main() -> None:
             if "B" in args.arms or "C" in args.arms:
                 def assembled(query: str):
                     r = assemble_context({"query": query, "filters": {"user_id": scope},
-                                          "budget_tokens": 2000, "record_trace": False,
+                                          "budget_tokens": int(os.environ.get("LME_B_BUDGET", "2000")), "record_trace": False,
                                           "disable_resume_workspace": True})
                     memories = r.get("memories") or []
                     lines = [f"- [{str(m.get('created_at'))[:10]}] {str(m.get('memory'))}"
