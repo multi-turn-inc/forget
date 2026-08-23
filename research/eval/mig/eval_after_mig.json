@@ -1,0 +1,913 @@
+{
+  "split": "all",
+  "strata": {
+    "machine_resume": {
+      "n": 28.0,
+      "gold": 52.0,
+      "gold_in_cand": 19.0,
+      "gold_in_sel": 13.0,
+      "hit_any": 10.0
+    },
+    "machine_helped": {
+      "n": 35.0,
+      "gold": 169.0,
+      "gold_in_cand": 105.0,
+      "gold_in_sel": 98.0,
+      "hit_any": 32.0
+    },
+    "human_helped": {
+      "n": 12.0,
+      "gold": 92.0,
+      "gold_in_cand": 35.0,
+      "gold_in_sel": 26.0,
+      "hit_any": 11.0
+    },
+    "human_noise": {
+      "n": 51.0,
+      "forbid": 282.0,
+      "forbid_resel": 29.0,
+      "reinject_any": 14.0
+    },
+    "machine_noise": {
+      "n": 7.0,
+      "forbid": 29.0,
+      "forbid_resel": 11.0,
+      "reinject_any": 6.0
+    }
+  },
+  "items": [
+    {
+      "id": "0ca8b084764d",
+      "stratum": "machine_resume",
+      "gold_hit": "0/3",
+      "ceiling": "0/3",
+      "n_sel": 8
+    },
+    {
+      "id": "4a141f0324cd",
+      "stratum": "machine_resume",
+      "gold_hit": "0/2",
+      "ceiling": "0/2",
+      "n_sel": 1
+    },
+    {
+      "id": "cd531f548255",
+      "stratum": "machine_resume",
+      "gold_hit": "0/1",
+      "ceiling": "0/1",
+      "n_sel": 3
+    },
+    {
+      "id": "a55443fd7127",
+      "stratum": "machine_helped",
+      "gold_hit": "2/7",
+      "ceiling": "2/7",
+      "n_sel": 10
+    },
+    {
+      "id": "7c87032683c4",
+      "stratum": "machine_helped",
+      "gold_hit": "2/4",
+      "ceiling": "2/4",
+      "n_sel": 8
+    },
+    {
+      "id": "49051ed8c0b5",
+      "stratum": "machine_helped",
+      "gold_hit": "2/3",
+      "ceiling": "2/3",
+      "n_sel": 8
+    },
+    {
+      "id": "c6ba9f069af4",
+      "stratum": "machine_helped",
+      "gold_hit": "0/3",
+      "ceiling": "0/3",
+      "n_sel": 6
+    },
+    {
+      "id": "8f389a76cb07",
+      "stratum": "machine_helped",
+      "gold_hit": "1/4",
+      "ceiling": "1/4",
+      "n_sel": 7
+    },
+    {
+      "id": "5f11d37c4778",
+      "stratum": "machine_helped",
+      "gold_hit": "0/3",
+      "ceiling": "0/3",
+      "n_sel": 5
+    },
+    {
+      "id": "27564d3bc209",
+      "stratum": "machine_resume",
+      "gold_hit": "2/4",
+      "ceiling": "2/4",
+      "n_sel": 9
+    },
+    {
+      "id": "ec44a7e324e2",
+      "stratum": "machine_resume",
+      "gold_hit": "0/2",
+      "ceiling": "0/2",
+      "n_sel": 5
+    },
+    {
+      "id": "e97e27ccfead",
+      "stratum": "machine_resume",
+      "gold_hit": "2/3",
+      "ceiling": "2/3",
+      "n_sel": 10
+    },
+    {
+      "id": "d1897f92deef",
+      "stratum": "machine_resume",
+      "gold_hit": "0/2",
+      "ceiling": "0/2",
+      "n_sel": 3
+    },
+    {
+      "id": "1af606d90502",
+      "stratum": "machine_resume",
+      "gold_hit": "1/3",
+      "ceiling": "1/3",
+      "n_sel": 9
+    },
+    {
+      "id": "f6788c02788d",
+      "stratum": "machine_helped",
+      "gold_hit": "2/6",
+      "ceiling": "2/6",
+      "n_sel": 10
+    },
+    {
+      "id": "0152ff501457",
+      "stratum": "machine_resume",
+      "gold_hit": "1/3",
+      "ceiling": "1/3",
+      "n_sel": 7
+    },
+    {
+      "id": "93024cb7404f",
+      "stratum": "human_helped",
+      "gold_hit": "3/5",
+      "ceiling": "3/5",
+      "n_sel": 9
+    },
+    {
+      "id": "8375c470d8ea",
+      "stratum": "human_noise",
+      "reinject": "0/5",
+      "n_sel": 10
+    },
+    {
+      "id": "21d25c0c6a1d",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "723a88b6a979",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "7bdb6e745bd9",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "8d58f3b3822c",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "40bd76d9516b",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "3d401714e87f",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "0aad037095a9",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "562d6f3001bf",
+      "stratum": "human_noise",
+      "reinject": "1/5",
+      "n_sel": 5
+    },
+    {
+      "id": "53fd19d386b4",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "4ed40d32d7f4",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "aebc47296ca7",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "0b463d09810b",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "dd2fe13959e4",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "68d532929d53",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "10c7d16c0498",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "aeda43c232db",
+      "stratum": "human_helped",
+      "gold_hit": "0/4",
+      "ceiling": "1/4",
+      "n_sel": 6
+    },
+    {
+      "id": "4ee414f48bfa",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "4f92f7784c44",
+      "stratum": "human_helped",
+      "gold_hit": "2/4",
+      "ceiling": "3/4",
+      "n_sel": 6
+    },
+    {
+      "id": "cae6a10c9959",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "f8ed0adc626f",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "57a869c67bf6",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "1f16a3ec6629",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "fbb21cac1801",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "595b01ad2a16",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "a18091f8597e",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "d0079b1a9325",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "10a2767809d7",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "ede3beb003ef",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "a4af1401f656",
+      "stratum": "machine_resume",
+      "gold_hit": "1/2",
+      "ceiling": "1/2",
+      "n_sel": 8
+    },
+    {
+      "id": "33dcb0fb801f",
+      "stratum": "human_noise",
+      "reinject": "0/4",
+      "n_sel": 6
+    },
+    {
+      "id": "99f6d884b2a1",
+      "stratum": "human_noise",
+      "reinject": "0/3",
+      "n_sel": 6
+    },
+    {
+      "id": "45f72648d882",
+      "stratum": "human_noise",
+      "reinject": "0/3",
+      "n_sel": 6
+    },
+    {
+      "id": "6aeed2941e88",
+      "stratum": "human_noise",
+      "reinject": "0/3",
+      "n_sel": 6
+    },
+    {
+      "id": "a04bd6dd472d",
+      "stratum": "human_noise",
+      "reinject": "0/3",
+      "n_sel": 6
+    },
+    {
+      "id": "a151809223c8",
+      "stratum": "human_noise",
+      "reinject": "0/3",
+      "n_sel": 6
+    },
+    {
+      "id": "214fa90cdf66",
+      "stratum": "human_noise",
+      "reinject": "0/3",
+      "n_sel": 6
+    },
+    {
+      "id": "173600536e0b",
+      "stratum": "human_helped",
+      "gold_hit": "1/5",
+      "ceiling": "2/5",
+      "n_sel": 5
+    },
+    {
+      "id": "a5eb2f67423d",
+      "stratum": "human_noise",
+      "reinject": "2/5",
+      "n_sel": 10
+    },
+    {
+      "id": "6c00357f4a87",
+      "stratum": "human_noise",
+      "reinject": "0/5",
+      "n_sel": 8
+    },
+    {
+      "id": "b0eada8f7e75",
+      "stratum": "human_noise",
+      "reinject": "0/5",
+      "n_sel": 8
+    },
+    {
+      "id": "5aada4378db9",
+      "stratum": "human_noise",
+      "reinject": "1/5",
+      "n_sel": 10
+    },
+    {
+      "id": "18fd445c60f7",
+      "stratum": "human_noise",
+      "reinject": "1/10",
+      "n_sel": 7
+    },
+    {
+      "id": "0b1e6282dbe1",
+      "stratum": "human_noise",
+      "reinject": "2/10",
+      "n_sel": 9
+    },
+    {
+      "id": "fa77b8c230c8",
+      "stratum": "machine_helped",
+      "gold_hit": "0/6",
+      "ceiling": "1/6",
+      "n_sel": 7
+    },
+    {
+      "id": "0fdb9583588c",
+      "stratum": "machine_resume",
+      "gold_hit": "0/1",
+      "ceiling": "0/1",
+      "n_sel": 6
+    },
+    {
+      "id": "333bac43ed9e",
+      "stratum": "human_helped",
+      "gold_hit": "3/9",
+      "ceiling": "4/9",
+      "n_sel": 6
+    },
+    {
+      "id": "70af615d99fd",
+      "stratum": "human_noise",
+      "reinject": "3/10",
+      "n_sel": 8
+    },
+    {
+      "id": "09630e7fb912",
+      "stratum": "human_helped",
+      "gold_hit": "1/10",
+      "ceiling": "1/10",
+      "n_sel": 6
+    },
+    {
+      "id": "001408772c02",
+      "stratum": "human_noise",
+      "reinject": "0/10",
+      "n_sel": 6
+    },
+    {
+      "id": "264267037d32",
+      "stratum": "human_helped",
+      "gold_hit": "3/9",
+      "ceiling": "4/9",
+      "n_sel": 6
+    },
+    {
+      "id": "33639c43fed7",
+      "stratum": "human_noise",
+      "reinject": "3/10",
+      "n_sel": 7
+    },
+    {
+      "id": "62115d8bc817",
+      "stratum": "human_helped",
+      "gold_hit": "3/10",
+      "ceiling": "3/10",
+      "n_sel": 10
+    },
+    {
+      "id": "bb23cd24083a",
+      "stratum": "human_noise",
+      "reinject": "2/10",
+      "n_sel": 5
+    },
+    {
+      "id": "4b688640b80f",
+      "stratum": "human_noise",
+      "reinject": "0/10",
+      "n_sel": 6
+    },
+    {
+      "id": "38464241ba76",
+      "stratum": "human_noise",
+      "reinject": "2/10",
+      "n_sel": 8
+    },
+    {
+      "id": "db77557f4e85",
+      "stratum": "human_noise",
+      "reinject": "2/10",
+      "n_sel": 9
+    },
+    {
+      "id": "f68f56b4f035",
+      "stratum": "human_noise",
+      "reinject": "4/10",
+      "n_sel": 7
+    },
+    {
+      "id": "6a4d7405e606",
+      "stratum": "machine_helped",
+      "gold_hit": "5/7",
+      "ceiling": "5/7",
+      "n_sel": 9
+    },
+    {
+      "id": "efb0db3a4f2f",
+      "stratum": "machine_resume",
+      "gold_hit": "0/2",
+      "ceiling": "0/2",
+      "n_sel": 7
+    },
+    {
+      "id": "afb4455d0a76",
+      "stratum": "machine_noise",
+      "reinject": "1/2",
+      "n_sel": 10
+    },
+    {
+      "id": "30ea938514ea",
+      "stratum": "machine_noise",
+      "reinject": "3/7",
+      "n_sel": 7
+    },
+    {
+      "id": "1a07920c2065",
+      "stratum": "machine_noise",
+      "reinject": "2/6",
+      "n_sel": 7
+    },
+    {
+      "id": "9f0d931251bf",
+      "stratum": "human_noise",
+      "reinject": "2/10",
+      "n_sel": 10
+    },
+    {
+      "id": "868beb9d9733",
+      "stratum": "machine_resume",
+      "gold_hit": "0/1",
+      "ceiling": "1/1",
+      "n_sel": 6
+    },
+    {
+      "id": "8b982a347271",
+      "stratum": "machine_noise",
+      "reinject": "2/4",
+      "n_sel": 7
+    },
+    {
+      "id": "e866ebef30ed",
+      "stratum": "machine_noise",
+      "reinject": "2/4",
+      "n_sel": 10
+    },
+    {
+      "id": "b7a1301db70c",
+      "stratum": "human_helped",
+      "gold_hit": "3/9",
+      "ceiling": "4/9",
+      "n_sel": 6
+    },
+    {
+      "id": "e9ddd62a41d2",
+      "stratum": "human_noise",
+      "reinject": "3/10",
+      "n_sel": 7
+    },
+    {
+      "id": "a0f39a8b65f6",
+      "stratum": "machine_resume",
+      "gold_hit": "1/1",
+      "ceiling": "1/1",
+      "n_sel": 6
+    },
+    {
+      "id": "f389ad81559a",
+      "stratum": "machine_noise",
+      "reinject": "1/5",
+      "n_sel": 6
+    },
+    {
+      "id": "6edf690b5d9c",
+      "stratum": "machine_resume",
+      "gold_hit": "0/1",
+      "ceiling": "1/1",
+      "n_sel": 5
+    },
+    {
+      "id": "43e6b8c952bd",
+      "stratum": "machine_resume",
+      "gold_hit": "1/2",
+      "ceiling": "1/2",
+      "n_sel": 7
+    },
+    {
+      "id": "993c1bc97080",
+      "stratum": "human_helped",
+      "gold_hit": "3/9",
+      "ceiling": "4/9",
+      "n_sel": 6
+    },
+    {
+      "id": "08c4440d66a8",
+      "stratum": "machine_resume",
+      "gold_hit": "0/2",
+      "ceiling": "0/2",
+      "n_sel": 9
+    },
+    {
+      "id": "cc55a61317f8",
+      "stratum": "machine_helped",
+      "gold_hit": "5/7",
+      "ceiling": "5/7",
+      "n_sel": 10
+    },
+    {
+      "id": "d1b4ace0567e",
+      "stratum": "machine_helped",
+      "gold_hit": "1/2",
+      "ceiling": "1/2",
+      "n_sel": 7
+    },
+    {
+      "id": "2e22bdb0528f",
+      "stratum": "machine_helped",
+      "gold_hit": "2/6",
+      "ceiling": "2/6",
+      "n_sel": 7
+    },
+    {
+      "id": "17c3f5087398",
+      "stratum": "machine_helped",
+      "gold_hit": "4/4",
+      "ceiling": "4/4",
+      "n_sel": 7
+    },
+    {
+      "id": "99e20de5b5f1",
+      "stratum": "machine_helped",
+      "gold_hit": "1/3",
+      "ceiling": "1/3",
+      "n_sel": 6
+    },
+    {
+      "id": "1c897652b34d",
+      "stratum": "machine_helped",
+      "gold_hit": "4/5",
+      "ceiling": "4/5",
+      "n_sel": 9
+    },
+    {
+      "id": "ec05c648fe7e",
+      "stratum": "machine_helped",
+      "gold_hit": "3/6",
+      "ceiling": "3/6",
+      "n_sel": 10
+    },
+    {
+      "id": "208123f37f8e",
+      "stratum": "machine_helped",
+      "gold_hit": "2/6",
+      "ceiling": "4/6",
+      "n_sel": 6
+    },
+    {
+      "id": "8e150de1169c",
+      "stratum": "machine_helped",
+      "gold_hit": "4/7",
+      "ceiling": "5/7",
+      "n_sel": 7
+    },
+    {
+      "id": "c970bdf2ff85",
+      "stratum": "machine_helped",
+      "gold_hit": "3/6",
+      "ceiling": "5/6",
+      "n_sel": 7
+    },
+    {
+      "id": "4f80c11f4b44",
+      "stratum": "machine_helped",
+      "gold_hit": "1/6",
+      "ceiling": "2/6",
+      "n_sel": 6
+    },
+    {
+      "id": "e06121d47e0c",
+      "stratum": "machine_helped",
+      "gold_hit": "4/6",
+      "ceiling": "4/6",
+      "n_sel": 10
+    },
+    {
+      "id": "07bd52cbd414",
+      "stratum": "machine_helped",
+      "gold_hit": "5/6",
+      "ceiling": "5/6",
+      "n_sel": 10
+    },
+    {
+      "id": "90ba0d715cf8",
+      "stratum": "machine_helped",
+      "gold_hit": "5/5",
+      "ceiling": "5/5",
+      "n_sel": 10
+    },
+    {
+      "id": "8fc2122086d8",
+      "stratum": "machine_helped",
+      "gold_hit": "4/4",
+      "ceiling": "4/4",
+      "n_sel": 10
+    },
+    {
+      "id": "95c46c5653e8",
+      "stratum": "machine_helped",
+      "gold_hit": "4/4",
+      "ceiling": "4/4",
+      "n_sel": 10
+    },
+    {
+      "id": "8e8d3254183a",
+      "stratum": "machine_helped",
+      "gold_hit": "3/4",
+      "ceiling": "3/4",
+      "n_sel": 10
+    },
+    {
+      "id": "07a214e226ba",
+      "stratum": "machine_helped",
+      "gold_hit": "4/7",
+      "ceiling": "4/7",
+      "n_sel": 9
+    },
+    {
+      "id": "4ab70690fb57",
+      "stratum": "machine_helped",
+      "gold_hit": "3/4",
+      "ceiling": "3/4",
+      "n_sel": 10
+    },
+    {
+      "id": "0cd8c9379ffd",
+      "stratum": "machine_helped",
+      "gold_hit": "3/4",
+      "ceiling": "3/4",
+      "n_sel": 10
+    },
+    {
+      "id": "dd3340e3e101",
+      "stratum": "machine_helped",
+      "gold_hit": "3/4",
+      "ceiling": "3/4",
+      "n_sel": 10
+    },
+    {
+      "id": "6762577e5690",
+      "stratum": "machine_helped",
+      "gold_hit": "3/4",
+      "ceiling": "3/4",
+      "n_sel": 10
+    },
+    {
+      "id": "8f8f8cbabc4a",
+      "stratum": "machine_helped",
+      "gold_hit": "4/4",
+      "ceiling": "4/4",
+      "n_sel": 10
+    },
+    {
+      "id": "4a84b4fc97d4",
+      "stratum": "machine_helped",
+      "gold_hit": "3/4",
+      "ceiling": "3/4",
+      "n_sel": 10
+    },
+    {
+      "id": "de6e7f4243d8",
+      "stratum": "machine_helped",
+      "gold_hit": "3/4",
+      "ceiling": "3/4",
+      "n_sel": 10
+    },
+    {
+      "id": "ea41ac5a843e",
+      "stratum": "machine_helped",
+      "gold_hit": "3/4",
+      "ceiling": "3/4",
+      "n_sel": 10
+    },
+    {
+      "id": "cdc4991814d5",
+      "stratum": "machine_resume",
+      "gold_hit": "0/1",
+      "ceiling": "0/1",
+      "n_sel": 6
+    },
+    {
+      "id": "67a44e01f63d",
+      "stratum": "machine_resume",
+      "gold_hit": "0/1",
+      "ceiling": "1/1",
+      "n_sel": 6
+    },
+    {
+      "id": "639dfdd6cd24",
+      "stratum": "machine_resume",
+      "gold_hit": "1/2",
+      "ceiling": "1/2",
+      "n_sel": 8
+    },
+    {
+      "id": "1b95cd565c0e",
+      "stratum": "machine_noise",
+      "reinject": "0/1",
+      "n_sel": 6
+    },
+    {
+      "id": "2daa2686efc3",
+      "stratum": "machine_resume",
+      "gold_hit": "2/4",
+      "ceiling": "3/4",
+      "n_sel": 8
+    },
+    {
+      "id": "6798d3b68715",
+      "stratum": "machine_resume",
+      "gold_hit": "0/1",
+      "ceiling": "0/1",
+      "n_sel": 8
+    },
+    {
+      "id": "7936aad022c9",
+      "stratum": "machine_resume",
+      "gold_hit": "0/1",
+      "ceiling": "1/1",
+      "n_sel": 7
+    },
+    {
+      "id": "2f4283350f4e",
+      "stratum": "human_helped",
+      "gold_hit": "1/10",
+      "ceiling": "2/10",
+      "n_sel": 5
+    },
+    {
+      "id": "14fe941812e6",
+      "stratum": "human_noise",
+      "reinject": "1/10",
+      "n_sel": 7
+    },
+    {
+      "id": "40a34c4a7442",
+      "stratum": "machine_resume",
+      "gold_hit": "0/2",
+      "ceiling": "0/2",
+      "n_sel": 7
+    },
+    {
+      "id": "267ed2961f64",
+      "stratum": "machine_resume",
+      "gold_hit": "1/2",
+      "ceiling": "1/2",
+      "n_sel": 8
+    },
+    {
+      "id": "a7d9b40013ad",
+      "stratum": "machine_resume",
+      "gold_hit": "0/1",
+      "ceiling": "0/1",
+      "n_sel": 6
+    },
+    {
+      "id": "f9bd911bc716",
+      "stratum": "machine_resume",
+      "gold_hit": "0/1",
+      "ceiling": "0/1",
+      "n_sel": 7
+    },
+    {
+      "id": "f1bfc6b03100",
+      "stratum": "machine_resume",
+      "gold_hit": "0/1",
+      "ceiling": "1/1",
+      "n_sel": 6
+    },
+    {
+      "id": "1354516d1ee8",
+      "stratum": "human_helped",
+      "gold_hit": "3/8",
+      "ceiling": "4/8",
+      "n_sel": 6
+    }
+  ]
+}
