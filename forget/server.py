@@ -232,6 +232,34 @@ def memories_search(payload: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+@app.post("/v1/similarity/", dependencies=[Depends(auth)])
+def texts_similarity(payload: dict[str, Any]) -> dict[str, Any]:
+    """Max cosine of each source text against a set of target texts.
+
+    Exists for semantic usage detection (mechanical-echo v3): the 6-gram verbatim
+    check caught 0 of 60 natural usages of real memories — models paraphrase, they
+    don't quote 80-char runs (measured 2026-08-23, scripts/eval_semantic_echo.py).
+    Hooks send memory probes as sources and the session's assistant sentences as
+    targets; the same server embedding stack that indexes memories judges usage,
+    so the two never drift apart.
+    """
+    sources = [str(t) for t in (payload.get("sources") or []) if str(t).strip()][:64]
+    targets = [str(t) for t in (payload.get("targets") or []) if str(t).strip()][:400]
+    if not sources or not targets:
+        return JSONResponse({"error": "sources and targets are required"}, status_code=400)
+    from .memory_engine import cosine_similarity
+    from .providers import embed_text
+
+    target_vecs = [embed_text(t) for t in targets]
+    results = []
+    for source in sources:
+        vec = embed_text(source)
+        sims = [cosine_similarity(vec, tv) for tv in target_vecs]
+        best = max(range(len(sims)), key=lambda i: sims[i])
+        results.append({"max_similarity": round(float(sims[best]), 4), "target_index": best})
+    return {"results": results, "n_sources": len(sources), "n_targets": len(targets)}
+
+
 @app.post("/v1/context/assemble/", dependencies=[Depends(auth)])
 def context_assemble(payload: dict[str, Any]) -> dict[str, Any]:
     """Assemble one turn's context capsule.
