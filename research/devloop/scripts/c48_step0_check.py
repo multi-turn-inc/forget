@@ -37,6 +37,7 @@ import subprocess
 import sys
 import time
 import traceback
+import urllib.parse
 import urllib.request
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
@@ -473,11 +474,47 @@ def _installed_dist_info() -> str:
     return os.path.basename(di[0]).replace(".dist-info", "") if di else UNKNOWN
 
 
+def editable_target(direct_url_text: str) -> str | None:
+    """dist-info `direct_url.json` 본문에서 editable 설치의 대상 경로를 뽑는다. **순수 함수**.
+
+    editable 선언이 없거나, JSON이 깨졌거나, file:// 스킴이 아니면 None —
+    채취 실패는 UNKNOWN으로 남는다(모르는 것을 일치로 보고하지 않는다).
+    반환은 URL 디코드된 로컬 경로다(비ASCII 워크트리 이름이 %인코딩으로 온다).
+    """
+    try:
+        info = json.loads(direct_url_text)
+    except (TypeError, json.JSONDecodeError):
+        return None
+    if not isinstance(info, dict) or not (info.get("dir_info") or {}).get("editable"):
+        return None
+    url = str(info.get("url") or "")
+    if not url.startswith("file://"):
+        return None
+    return urllib.parse.unquote(url[len("file://"):])
+
+
 def _installed_vs_repo() -> str:
-    """설치본과 저장소본의 최상위 .py 해시 대조 (c66_body_identity.py에서 이식)."""
+    """설치본과 저장소본의 최상위 .py 해시 대조 (c66_body_identity.py에서 이식).
+
+    c197 확장(notes/cycle-197-body-recalibration.md §③): 복사본 디렉토리가 없고
+    dist-info가 editable 설치를 선언하면 `editable:<대상 경로>`를 낸다 — 영구
+    «판정 불가»가 아니라 **다른 종류의 몸**이다. 대상 경로가 다른 체크아웃으로
+    바뀌거나 복사본 설치로 회귀하면 문자열이 갈려 «재교정 필요»가 뜬다.
+    """
     inst = glob.glob(os.path.expanduser("~/.forget/venv/lib/python3*/site-packages/forget"))
     repo_pkg = os.path.join(REPO, "forget")
-    if not inst or not os.path.isdir(repo_pkg):
+    if not inst:
+        for du in glob.glob(os.path.expanduser(
+                "~/.forget/venv/lib/python3*/site-packages/forget_ai-*.dist-info/direct_url.json")):
+            try:
+                with open(du, encoding="utf-8") as fh:
+                    target = editable_target(fh.read())
+            except OSError:
+                continue
+            if target:
+                return f"editable:{target}"
+        return UNKNOWN
+    if not os.path.isdir(repo_pkg):
         return UNKNOWN
 
     def digest(path: str) -> str:

@@ -65,6 +65,22 @@ def test_real_change_outranks_unknown():
     assert unknown == ["store_vec"]
 
 
+def test_editable_target_extracts_decoded_path():
+    """c197 확장: editable 설치는 미채취가 아니라 대상 경로가 지문이다."""
+    text = json.dumps({"dir_info": {"editable": True},
+                       "url": "file:///Users/x/%EB%82%B4-repo"})
+    assert c48.editable_target(text) == "/Users/x/내-repo"
+
+
+def test_editable_target_never_guesses():
+    """editable 선언 없음·깨진 JSON·비 file 스킴은 전부 None — UNKNOWN 경로 유지."""
+    assert c48.editable_target(json.dumps({"url": "file:///x"})) is None
+    assert c48.editable_target("not json") is None
+    assert c48.editable_target(json.dumps(
+        {"dir_info": {"editable": True}, "url": "https://pypi.org/x"})) is None
+    assert c48.editable_target(json.dumps(["dir_info"])) is None
+
+
 def test_baseline_file_covers_every_fingerprint_key():
     """baseline과 지문 정의가 어긋나면 대조가 영구 '판정 불가'로 죽는다.
 
