@@ -11,7 +11,10 @@ from typing import Any
 from .utils import CJK_CHAR_RE, STOPWORDS, parse_datetime, tokenize
 
 
-SENTENCE_RE = re.compile(r"(?<=[.!?])\s+|\n+")
+# 경계는 '단어에 붙은' 문장부호 뒤에서만 연다. 홀로 선 마침표(` . `)는 문장 끝이
+# 아니라 토큰이다 — 실사례: "pip install -e . --no-deps"가 여기서 잘려
+# "--no-deps) → launchctl …"라는 머리 없는 조각이 원장에 남았다 (2026-08-23).
+SENTENCE_RE = re.compile(r"(?<=[.!?])(?<!\s[.!?])\s+|\n+")
 COMPOUND_USER_CLAUSE_RE = re.compile(
     r"\s+(?:and|but)\s+(?=I\s+(?:am|work|teach|have|moved|just moved|live|prefer|like|love|avoid|use|want|need)\b)",
     re.IGNORECASE,
