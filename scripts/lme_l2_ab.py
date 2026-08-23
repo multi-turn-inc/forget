@@ -149,6 +149,12 @@ def main() -> None:
             if "A" in args.arms:
                 lines = [f"- [{str(m.get('created_at'))[:10]}] {str(m.get('memory'))}"
                          for m in probe.get("results") or []]
+                # 공개 상한 (1차 실행 후 정정 기록): 일부 multi-session 덤프가 24k
+                # 서버 창을 초과해 400 — 덤프도 리더 창에서 잘리는 것이 실무이므로
+                # A = "top-84, 추정 18k 토큰까지, 순위 보존·꼬리 탈락"으로 명시한다.
+                # 바늘은 거의 항상 상위권(MRR 0.914)이라 증거 탈락은 드물다.
+                while lines and sum(len(l) for l in lines) // 4 > 18000:
+                    lines.pop()
                 ctx = "\n".join(lines)
                 hyp = read_answer(question, qdate, ctx)
                 row["A"] = judge(inst["question_type"], question, str(inst["answer"]), hyp)
