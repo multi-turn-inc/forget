@@ -38,8 +38,23 @@ def main() -> None:
     cut = int(len(rows) * 0.85)
     train, holdout = rows[:cut], rows[cut:]
 
+    def clean_input(raw: str) -> str:
+        # 계기 수리 (P-W-1 1차 런 부검): input 필드는 서버가 ensure_ascii로
+        # 저장한 JSON 문자열 — 그대로 쓰면 모델이 \uXXXX 이스케이프를 보고
+        # 흉내 낸다 (베이스 0.000의 뿌리, 어댑터 승리의 오염원: 형식 해독 학습).
+        # JSON 파싱해 정상 한글 대화문으로 복원한다.
+        try:
+            msgs = json.loads(raw)
+            if isinstance(msgs, list):
+                return "\n".join(
+                    f"{m.get('role', '?')}: {m.get('content', '')}" for m in msgs
+                    if isinstance(m, dict))
+        except (ValueError, TypeError):
+            pass
+        return raw
+
     def fmt(r):
-        return {"system": SYSTEM, "user": r["input"][:1500],
+        return {"system": SYSTEM, "user": clean_input(r["input"])[:1500],
                 "assistant": "\n".join(f"- {f}" for f in r["facts"])}
 
     with open(OUT_DIR / "w1_train.jsonl", "w") as f:
