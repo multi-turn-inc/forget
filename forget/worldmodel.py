@@ -69,6 +69,13 @@ CREATE TABLE IF NOT EXISTS event_order (
     source TEXT NOT NULL,
     PRIMARY KEY (before_id, after_id)
 );
+CREATE TABLE IF NOT EXISTS dismissals (
+    loop_id TEXT PRIMARY KEY,     -- 마찰 #1 수리: 결정 해소의 영수증. 범용 키 —
+                                  -- 고리는 'loop-<id>', 엔티티 기대는 'entity:<이름>'
+    reason TEXT NOT NULL,         -- 사유 의무 — 빈 해소는 없다
+    source_ref TEXT NOT NULL,     -- 근거 포인터 (기억 id·문서·결정 기록)
+    at TEXT NOT NULL
+);
 """
 
 
@@ -216,6 +223,11 @@ def rebuild(world_db: str = DEFAULT_WORLD_DB, ledger_db: str = DEFAULT_LEDGER_DB
                 elapsed = (now - max(opened, evidence)).total_seconds()
                 status = "stale" if elapsed >= STALE_AFTER_S else "open"
             prev = existing.get(cand["id"])
+            if prev == "closed_dismissed" and cand["resolution"] is None:
+                # 마찰 #1: 결정 해소 보존 — 원장이 여전히 침묵(yellow)이면
+                # 부활 금지. 진짜 증거(green/red)는 이 분기를 지나쳐 dismiss를
+                # 이긴다 (관측 > 결정).
+                continue
             conn.execute(
                 "INSERT INTO loops (id, kind, title, status, opened_at, last_evidence_at,"
                 " deadline, source_ref, updated_at) VALUES (?,?,?,?,?,?,?,?,?) "
@@ -246,6 +258,88 @@ def rebuild(world_db: str = DEFAULT_WORLD_DB, ledger_db: str = DEFAULT_LEDGER_DB
     finally:
         conn.close()
     return stats
+
+
+def _require_receipt(reason: str, source_ref: str) -> tuple[str, str]:
+    if not (reason or "").strip():
+        raise ValueError("dismiss에는 사유가 필요하다 — 빈 해소는 없다")
+    if not (source_ref or "").strip():
+        raise ValueError("dismiss에는 영수증(source_ref)이 필요하다")
+    return reason.strip(), source_ref.strip()
+
+
+def dismiss_entity(world_db: str, entity: str, reason: str, source_ref: str,
+                   now: datetime | None = None) -> dict[str, Any]:
+    """엔티티 무소식 기대의 결정 해소 — stale_entities가 이 영수증을 읽고 거른다.
+
+    고리와 달리 엔티티 기대는 파생 시점에 계산되므로 FSM이 없다 — 영수증
+    행 자체가 상태다. 원장이 다시 그 엔티티를 언급하면 무소식 자체가
+    소멸하므로 부활 문제가 없다 (관측이 자연히 이긴다).
+    """
+    reason, source_ref = _require_receipt(reason, source_ref)
+    now = now or _utcnow()
+    conn = _open_world(world_db)
+    try:
+        conn.execute(
+            "INSERT INTO dismissals (loop_id, reason, source_ref, at) VALUES (?,?,?,?) "
+            "ON CONFLICT(loop_id) DO UPDATE SET reason=excluded.reason,"
+            " source_ref=excluded.source_ref, at=excluded.at",
+            (f"entity:{entity}", reason, source_ref, _iso(now)),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return {"entity": entity, "dismissed": True, "reason": reason, "source_ref": source_ref}
+
+
+def _dismissed_entities(world_db: str) -> set[str]:
+    try:
+        conn = sqlite3.connect(f"file:{world_db}?mode=ro", uri=True)
+    except sqlite3.OperationalError:
+        return set()
+    try:
+        rows = conn.execute(
+            "SELECT loop_id FROM dismissals WHERE loop_id LIKE 'entity:%'").fetchall()
+    except sqlite3.OperationalError:      # 테이블 없음 = 해소 이력 없음
+        return set()
+    finally:
+        conn.close()
+    return {r[0][len("entity:"):] for r in rows}
+
+
+def dismiss(world_db: str, loop_id: str, reason: str, source_ref: str,
+            now: datetime | None = None) -> dict[str, Any]:
+    """마찰 #1 수리 — 결정에 의한 기대 해소 (사유·영수증 의무).
+
+    관측이 아니라 결정으로 닫는 종단 상태 'closed_dismissed'. FSM 전이는
+    cause='decision'으로 기록되고 영수증은 dismissals에 남는다. 원장에 진짜
+    증거(green/red)가 나중에 도착하면 rebuild가 dismiss를 **이긴다** —
+    관측 > 결정 (분리 원칙 A의 연장: 세계가 말하면 사람의 추정은 물러난다).
+    """
+    reason, source_ref = _require_receipt(reason, source_ref)
+    now = now or _utcnow()
+    conn = _open_world(world_db)
+    try:
+        row = conn.execute("SELECT status FROM loops WHERE id = ?", (loop_id,)).fetchone()
+        if row is None:
+            raise KeyError(f"고리 없음: {loop_id}")
+        prev = row[0]
+        if prev.startswith("closed"):
+            return {"loop_id": loop_id, "status": prev, "changed": False}
+        conn.execute("UPDATE loops SET status='closed_dismissed', updated_at=? WHERE id=?",
+                     (_iso(now), loop_id))
+        _record(conn, loop_id, prev, "closed_dismissed", "decision", now)
+        conn.execute(
+            "INSERT INTO dismissals (loop_id, reason, source_ref, at) VALUES (?,?,?,?) "
+            "ON CONFLICT(loop_id) DO UPDATE SET reason=excluded.reason,"
+            " source_ref=excluded.source_ref, at=excluded.at",
+            (loop_id, reason.strip(), source_ref.strip(), _iso(now)),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return {"loop_id": loop_id, "status": "closed_dismissed", "changed": True,
+            "reason": reason.strip(), "source_ref": source_ref.strip()}
 
 
 def tick(world_db: str = DEFAULT_WORLD_DB, now: datetime | None = None) -> int:
@@ -518,13 +612,16 @@ def entity_card(name: str, substrate_db: str = DEFAULT_SUBSTRATE_DB,
 def stale_entities(min_freq: int = 10, stale_days: int = 21,
                    substrate_db: str = DEFAULT_SUBSTRATE_DB,
                    ledger_db: str = DEFAULT_LEDGER_DB,
-                   now: datetime | None = None, limit: int = 10) -> list[dict[str, Any]]:
+                   now: datetime | None = None, limit: int = 10,
+                   world_db: str = DEFAULT_WORLD_DB) -> list[dict[str, Any]]:
     """엔티티 기관 v0 질의 ② — 무소식 기대 (시간 구동, 분리 원칙 A).
 
     자주 언급되던 엔티티가 stale_days 이상 조용하면 "무소식이 정보다"를
     기대로 승격: 후속 확인 후보. 문턱은 이상(≥), 경과일은 내림.
+    결정 해소된 엔티티(dismiss_entity 영수증)는 거른다 — 마찰 #1 수리.
     """
     now = now or _utcnow()
+    dismissed = _dismissed_entities(world_db)
     sub = sqlite3.connect(f"file:{substrate_db}?mode=ro", uri=True)
     try:
         ents = [r[0] for r in sub.execute(
@@ -539,7 +636,7 @@ def stale_entities(min_freq: int = 10, stale_days: int = 21,
     out = []
     try:
         for ent, mids in mention_map.items():
-            if not mids:
+            if not mids or ent in dismissed:
                 continue
             marks = ",".join("?" * len(mids))
             row = led.execute(
@@ -561,15 +658,28 @@ def stale_entities(min_freq: int = 10, stale_days: int = 21,
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="텍스트 세계모델 v0 상태 코어")
-    ap.add_argument("command", choices=["rebuild", "tick", "snapshot"])
+    ap.add_argument("command", choices=["rebuild", "tick", "snapshot", "dismiss"])
     ap.add_argument("--world-db", default=DEFAULT_WORLD_DB)
     ap.add_argument("--ledger-db", default=DEFAULT_LEDGER_DB)
     ap.add_argument("--limit", type=int, default=10)
+    ap.add_argument("--loop-id", help="dismiss 대상 고리 id")
+    ap.add_argument("--entity", help="dismiss 대상 무소식 엔티티 이름")
+    ap.add_argument("--reason", help="dismiss 사유 (의무)")
+    ap.add_argument("--ref", help="dismiss 영수증 포인터 (의무)")
     args = ap.parse_args()
     if args.command == "rebuild":
         print(json.dumps(rebuild(args.world_db, args.ledger_db), ensure_ascii=False))
     elif args.command == "tick":
         print(f"시간 전이 {tick(args.world_db)}건")
+    elif args.command == "dismiss":
+        if not (args.reason and args.ref) or not (bool(args.loop_id) ^ bool(args.entity)):
+            ap.error("dismiss에는 (--loop-id 또는 --entity 하나) + --reason --ref가 필요하다")
+        if args.loop_id:
+            print(json.dumps(dismiss(args.world_db, args.loop_id, args.reason, args.ref),
+                             ensure_ascii=False))
+        else:
+            print(json.dumps(dismiss_entity(args.world_db, args.entity, args.reason, args.ref),
+                             ensure_ascii=False))
     else:
         for exp in expectations(args.world_db, limit=args.limit):
             print(f"[{exp['status']:5s}] {exp['days_open']:4d}일 · {exp['title'][:70]}")

@@ -10,7 +10,7 @@ import json
 import sqlite3
 from datetime import datetime, timedelta, timezone
 
-from forget.worldmodel import STALE_AFTER_S, expectations, rebuild, tick
+from forget.worldmodel import STALE_AFTER_S, dismiss, expectations, rebuild, tick
 
 NOW = datetime(2026, 8, 24, 12, 0, 0, tzinfo=timezone.utc)
 
@@ -152,6 +152,53 @@ def test_timeline_window_is_half_open(tmp_path):
     assert count_events(world, like="우쿨렐레") == 2
 
 
+def test_dismiss_requires_receipt_and_hides_expectation(tmp_path):
+    # 마찰 #1 수리 계약: 결정 해소는 사유+영수증 의무, 해소된 기대는 밴드에서 사라진다.
+    ledger = _ledger(tmp_path, [_mem("m1", "show hn 준비", "yellow",
+                                     "2026-07-28T00:00:00Z")])
+    world = str(tmp_path / "world.sqlite3")
+    rebuild(world, ledger, now=NOW)
+    assert len(expectations(world, now=NOW)) == 1
+    import pytest
+    with pytest.raises(ValueError):
+        dismiss(world, "loop-m1", "", "ref")          # 빈 사유 거부
+    with pytest.raises(ValueError):
+        dismiss(world, "loop-m1", "사유", "  ")       # 빈 영수증 거부
+    out = dismiss(world, "loop-m1", "dsh-forget 보류 결정으로 실효",
+                  "docs/personal-world-model-design.md 게이트 결정", now=NOW)
+    assert out["changed"] and out["status"] == "closed_dismissed"
+    assert expectations(world, now=NOW) == []          # 밴드에서 소멸
+    conn = sqlite3.connect(world)
+    assert conn.execute("SELECT reason FROM dismissals WHERE loop_id='loop-m1'").fetchone()
+    assert conn.execute("SELECT cause FROM transitions WHERE loop_id='loop-m1' "
+                        "AND to_status='closed_dismissed'").fetchone()[0] == "decision"
+    conn.close()
+
+
+def test_rebuild_preserves_dismissal_until_real_evidence(tmp_path):
+    # 관측 > 결정: 원장이 침묵(yellow)이면 dismiss 보존, 진짜 증거(green)가
+    # 도착하면 dismiss를 이기고 closed_confirmed로 전이한다.
+    ledger = _ledger(tmp_path, [_mem("m2", "미검증 주장", "yellow",
+                                     "2026-07-28T00:00:00Z")])
+    world = str(tmp_path / "world.sqlite3")
+    rebuild(world, ledger, now=NOW)
+    dismiss(world, "loop-m2", "결정으로 해소", "결정 기록", now=NOW)
+    rebuild(world, ledger, now=NOW)                    # 원장 그대로 → 부활 금지
+    conn = sqlite3.connect(world)
+    assert conn.execute("SELECT status FROM loops WHERE id='loop-m2'").fetchone()[0] \
+        == "closed_dismissed"
+    conn.close()
+    led = sqlite3.connect(ledger)                      # 원장이 green으로 관측 확정
+    led.execute("UPDATE memories SET metadata=? WHERE id='m2'",
+                (json.dumps({"trust": {"kind": "action_report", "light": "green"}}),))
+    led.commit(); led.close()
+    rebuild(world, ledger, now=NOW)
+    conn = sqlite3.connect(world)
+    assert conn.execute("SELECT status FROM loops WHERE id='loop-m2'").fetchone()[0] \
+        == "closed_confirmed"
+    conn.close()
+
+
 def test_rebuild_user_scope_isolation(tmp_path):
     # P-WM-2 파생 계약: 다중 스코프 원장(벤치)에서 user_id를 주면 그 스코프의
     # 세계만 파생된다 — 문항 간 사건 누수는 곧 오염된 기대다.
@@ -261,6 +308,30 @@ def test_stale_entities_threshold_inclusive_and_ranked(tmp_path):
     assert names == ["alpha", "beta"]      # 25일 > 21일(경계 포함) · gamma 신선 · tiny 저빈도 제외
     assert out[0]["days_quiet"] == 25
     assert "무소식" in out[0]["expectation"]
+
+
+def test_dismiss_entity_hides_from_stale_and_requires_receipt(tmp_path):
+    # 마찰 #1의 원 사례가 엔티티 무소식('show hn')이었다 — 결정 해소가
+    # stale_entities에서 걸러지고, 영수증 없는 해소는 거부된다.
+    from forget.worldmodel import dismiss_entity
+    quiet = (NOW - _td(days=27)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    sub = _substrate(tmp_path, [("show hn", 1, 30)], [("s1", "show hn")])
+    ledger = _ledger(tmp_path, [("s1", "show hn 준비", "{}", quiet, quiet, 0)])
+    world = str(tmp_path / "world.sqlite3")
+    assert [e["entity"] for e in stale_entities(
+        min_freq=10, stale_days=21, substrate_db=sub, ledger_db=ledger,
+        now=NOW, world_db=world)] == ["show hn"]
+    import pytest
+    with pytest.raises(ValueError):
+        dismiss_entity(world, "show hn", "사유", "")
+    dismiss_entity(world, "show hn", "dsh-forget 보류 결정으로 실효", "게이트 결정 기록", now=NOW)
+    assert stale_entities(min_freq=10, stale_days=21, substrate_db=sub,
+                          ledger_db=ledger, now=NOW, world_db=world) == []
+    # 세계 DB가 아예 없어도 읽기 경로는 조용히 무해소 취급 (파일 생성 금지)
+    assert [e["entity"] for e in stale_entities(
+        min_freq=10, stale_days=21, substrate_db=sub, ledger_db=ledger,
+        now=NOW, world_db=str(tmp_path / "no-such.sqlite3"))] == ["show hn"]
+    assert not (tmp_path / "no-such.sqlite3").exists()
 
 
 # ---- 루틴 기관 v0 (주기 검출 + 부재 기대) ----
