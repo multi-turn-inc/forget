@@ -20,6 +20,10 @@ def _fresh_db(tmp_path, monkeypatch):
     monkeypatch.setenv("MEM1_DB_PATH", str(tmp_path / "prospect.sqlite3"))
     monkeypatch.setenv("MEM1_RECALL_TEMPORAL", "0")
     monkeypatch.delenv("MEM1_PROSPECTION", raising=False)
+    # 격리: 확장 밴드가 실기질(~/.forget)을 읽지 못하게 고스트 경로로 —
+    # 없으면 이 테스트들이 이 기계의 실제 무소식 엔티티를 주입받는다.
+    monkeypatch.setattr(worldmodel, "DEFAULT_SUBSTRATE_DB", str(tmp_path / "ghost-sub.sqlite3"))
+    monkeypatch.setattr(worldmodel, "DEFAULT_LEDGER_DB", str(tmp_path / "ghost-led.sqlite3"))
     init_db()
     yield
 
@@ -52,7 +56,7 @@ def test_default_off_no_band(tmp_path, monkeypatch):
     monkeypatch.setattr(worldmodel, "DEFAULT_WORLD_DB", world)
     result = _assemble("u-off")
     assert result.get("prospection") == []
-    assert not any("[전망]" in l for l in result.get("context_lines", []) or [])
+    assert "[전망]" not in str(result.get("context") or "")
 
 
 def test_flag_on_injects_expectation_and_reserves_budget(tmp_path, monkeypatch):
@@ -73,3 +77,28 @@ def test_missing_world_db_is_silent_and_not_created(tmp_path, monkeypatch):
     result = _assemble("u-ghost", include_prospection=True)
     assert result["prospection"] == []
     assert not os.path.exists(ghost)  # 읽기 경로는 파일을 만들지 않는다
+
+
+def test_band_includes_quiet_entity_until_dismissed(tmp_path, monkeypatch):
+    # 밴드 확장 계약 (마찰 #1 수리 후): 무소식 기대 1칸이 [전망]에 실리고,
+    # dismiss_entity 영수증이 있으면 빠진다 — 기대의 전 생애주기가 밴드에서 돈다.
+    world = str(tmp_path / "world.sqlite3")
+    _seed_world(world)
+    sub = str(tmp_path / "sub.sqlite3")
+    conn = sqlite3.connect(sub)
+    conn.execute("CREATE TABLE entities (name TEXT, type_id INTEGER, freq INTEGER)")
+    conn.execute("CREATE TABLE mentions (memory_id TEXT, entity TEXT)")
+    conn.execute("INSERT INTO entities VALUES ('show hn', 1, 30)")
+    conn.execute("INSERT INTO mentions VALUES ('m1', 'show hn')")
+    conn.commit(); conn.close()
+    monkeypatch.setattr(worldmodel, "DEFAULT_WORLD_DB", world)
+    monkeypatch.setattr(worldmodel, "DEFAULT_SUBSTRATE_DB", sub)
+    monkeypatch.setattr(worldmodel, "DEFAULT_LEDGER_DB", world + ".ledger")  # m1: 2026-08-01
+    on = _assemble("u-quiet", include_prospection=True)
+    kinds = [i.get("kind") for i in on["prospection"]]
+    assert "quiet_entity" in kinds and len(on["prospection"]) == 2  # 고리 1 + 무소식 1
+    ctx = str(on.get("context") or "")
+    assert "[전망]" in ctx and "무소식" in ctx
+    worldmodel.dismiss_entity(world, "show hn", "보류 결정으로 실효", "게이트 결정")
+    after = _assemble("u-quiet2", include_prospection=True)
+    assert "quiet_entity" not in [i.get("kind") for i in after["prospection"]]

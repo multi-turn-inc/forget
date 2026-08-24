@@ -12832,6 +12832,30 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
                 # 바인딩이라 테스트 격리(monkeypatch)와 런타임 교체가 안 먹는다.
                 prospection_items = _worldmodel.expectations(
                     _worldmodel.DEFAULT_WORLD_DB, limit=2)
+                # 밴드 확장 (2026-08-25, 마찰 #1 수리 직후): 비-고리 기대 1칸 —
+                # 무소식 우선, 없으면 루틴 부재. dismiss가 생기기 전엔 해소
+                # 불가능한 기대를 밴드에 싣는 것이 마찰 재생산이라 막아뒀었다.
+                # 총 ≤3줄 (힌트도 예산 — P-PM-2·H의 교훈). 경로 인자는 모두
+                # 호출 시점 모듈 속성으로 — 기본 인자는 정의 시점 바인딩.
+                extra_item: dict[str, Any] | None = None
+                try:
+                    quiet = _worldmodel.stale_entities(
+                        limit=1, substrate_db=_worldmodel.DEFAULT_SUBSTRATE_DB,
+                        ledger_db=_worldmodel.DEFAULT_LEDGER_DB,
+                        world_db=_worldmodel.DEFAULT_WORLD_DB)
+                    if quiet:
+                        extra_item = {"kind": "quiet_entity", **quiet[0]}
+                except Exception:
+                    extra_item = None
+                if extra_item is None:
+                    try:
+                        absent = _worldmodel.routine_expectations(_worldmodel.DEFAULT_WORLD_DB)
+                        if absent:
+                            extra_item = {"kind": "routine_absence", **absent[0]}
+                    except Exception:
+                        extra_item = None
+                if extra_item is not None:
+                    prospection_items = list(prospection_items) + [extra_item]
                 prospection_lines = [f"[전망] {item['expectation']}" for item in prospection_items]
         except Exception:
             prospection_items = []
