@@ -5410,6 +5410,23 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
         metadata={"top_k": top_k, "result_count": len(scored[:top_k])},
     )
     response: dict[str, Any] = {"results": scored[:top_k]}
+    # B-② G-신호 (2026-08-25): 더듬기 절제에서 최강이었던 외부 신호 게이트
+    # (G 0.730)의 계기들을 검색 응답에 상시 노출한다 — 소비자는 에이전트의
+    # 반복 인출(자기사용 규약 3항). 사람의 FOK가 내성이 아니라 인출 유창성
+    # 계측이듯, 기계의 "충분한가"도 물어보지 않고 잰다. 추가 질의 0 — 이미
+    # 손에 있는 결과에서 계산. 강도 밴드는 신공간 실측(관련 0.40~0.46,
+    # 턴리콜 문턱 0.33)에서 유도.
+    top_results = response["results"]
+    top_score = max((float(m.get("score") or 0.0) for m in top_results), default=0.0)
+    strength = "strong" if top_score >= 0.45 else ("moderate" if top_score >= 0.33 else "weak")
+    span_days = len({str(m.get("created_at") or "")[:10] for m in top_results if m.get("created_at")})
+    response["instrument"] = {
+        "top_score": round(top_score, 4),
+        "strength": strength,
+        "evidence_span_days": span_days,
+        "result_count": len(top_results),
+        "pool_exhausted": len(scored) < top_k,
+    }
     if payload.get("trace"):
         # body A1 (one-person RFC): 턴 회상에도 피드백 주소를 준다.
         # 지금까지 search 경로는 트레이스를 안 남겨서, 주입된 기억이
