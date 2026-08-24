@@ -116,3 +116,55 @@ def test_expectations_rank_oldest_first_and_skip_closed(tmp_path):
     assert [e["loop_id"] for e in exps] == ["loop-a", "loop-b"]
     assert exps[0]["days_open"] == 54
     assert "증거 확인 또는 정정" in exps[0]["expectation"]
+
+
+# ---- 사건 기관 v0 (시간축 절반: t·정밀도·부분순서) ----
+
+from forget.worldmodel import (add_order_edge, count_events, interval_days,
+                               order_of, timeline)
+
+
+def _event_ledger(tmp_path):
+    return _ledger(tmp_path, [
+        ("e1", "우쿨렐레 공연 연습 시작", json.dumps({"episode": {"anchor": "우쿨렐레 연습 개시 (2026-07-01)"}}),
+         "2026-07-01T09:00:00Z", "2026-07-01T09:00:00Z", 0),
+        ("e2", "우쿨렐레 공연 본무대", "{}", "2026-07-15T18:00:00Z", "2026-07-15T18:00:00Z", 0),
+        ("e3", "하와이 여행 출발", "{}", "2026-08-01T07:00:00Z", "2026-08-01T07:00:00Z", 0),
+    ])
+
+
+def test_events_rebuild_anchor_title_and_precision(tmp_path):
+    world = str(tmp_path / "world.sqlite3")
+    stats = rebuild(world, _event_ledger(tmp_path), now=NOW)
+    assert stats["events"] == 3
+    evs = timeline(world)
+    assert [e["id"] for e in evs] == ["ev-e1", "ev-e2", "ev-e3"]  # 시간 오름차순
+    assert evs[0]["title"].startswith("우쿨렐레 연습 개시")          # 앵커가 제목
+    assert evs[0]["t_precision"] == "second"
+
+
+def test_timeline_window_is_half_open(tmp_path):
+    world = str(tmp_path / "world.sqlite3")
+    rebuild(world, _event_ledger(tmp_path), now=NOW)
+    # [7/01 09:00, 7/15 18:00) — 시작 포함, 끝 배제 (경계 의미 명시)
+    evs = timeline(world, since="2026-07-01T09:00:00Z", until="2026-07-15T18:00:00Z")
+    assert [e["id"] for e in evs] == ["ev-e1"]
+    assert count_events(world, like="우쿨렐레") == 2
+
+
+def test_interval_days_signed_floor(tmp_path):
+    world = str(tmp_path / "world.sqlite3")
+    rebuild(world, _event_ledger(tmp_path), now=NOW)
+    assert interval_days(world, "ev-e1", "ev-e2") == 14
+    assert interval_days(world, "ev-e2", "ev-e1") == -14
+    assert interval_days(world, "ev-e1", "ev-없음") is None
+
+
+def test_partial_order_edges_beat_missing_dates(tmp_path):
+    world = str(tmp_path / "world.sqlite3")
+    rebuild(world, _event_ledger(tmp_path), now=NOW)
+    assert order_of(world, "ev-e1", "ev-e2") == "before"   # 시각 비교
+    add_order_edge(world, "ev-e3", "ev-e1", source="사용자 진술")
+    assert order_of(world, "ev-e3", "ev-e1") == "before"   # 명시 간선이 1순위
+    assert order_of(world, "ev-e1", "ev-e3") == "after"
+    assert order_of(world, "ev-없음1", "ev-없음2") is None    # 모르는 순서는 지어내지 않음
