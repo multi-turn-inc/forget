@@ -24,6 +24,19 @@ todo_ledger 발판의 구조적 결함 세 가지를 장기로 교체한다:
   부기: 추출 호출 수·추정 토큰을 반드시 병기 (공정 비용 축)
   절차: 라이선스 미확정 → 로컬 실행만, 공개 숫자 금지. 포크 러너는
   스크래치에만 두고 저장소에는 이 모듈(자작)만 커밋한다.
+
+## P-PM-1c 판정 (2026-08-24): 채택 — cross-day miss 0.0% (수리 2건 후).
+   잔존 병: update miss 55.6 · proactive-required 28.2.
+
+## P-PM-2 등록 (재도전, 숫자 보기 전 고정 — 앵커 1c: F1 71.1 · 교차일 0.0 ·
+   갱신 55.6 · 채널 28.2):
+  개입: ①추출 update/cancel 어휘 강화("moved to/now at/no longer" 명시)
+  ②추출이 단서의 숨은 채널을 추정(에이전트 가시 채널 목록 전달 — 공정)
+  ③상태 블록에 "⚠ UPDATED TODAY" 마커(신판 사용 강조) ④채널 단서 의도의
+  조회 의무 힌트("query하지 않으면 불가시 — 오늘 최소 1회").
+  주판정: update miss ≤ 33.3% (ledger 동률) · 부판정: proactive-required
+  hit ≥ 40% · 가드: cross-day miss ≤ 14.3%(1건 허용) ∧ Set F1 ≥ 70.0.
+  채택 = 주판정 ∧ 가드. 부판정은 병기만.
 """
 from __future__ import annotations
 
@@ -56,8 +69,9 @@ EXTRACT_SCHEMA = {
                     "op": {"enum": ["new", "update", "cancel", "complete"]},
                     "desc": {"type": "string"},
                     "when": {"type": "string"},
+                    "channel": {"type": "string"},
                 },
-                "required": ["op", "desc", "when"],
+                "required": ["op", "desc", "when", "channel"],
                 "additionalProperties": False,
             },
         },
@@ -85,9 +99,15 @@ Output JSON with:
 - ops: intentions to record. op=new for a newly announced future task (desc = short
   canonical description of the activity itself, stable across days — never use
   handle names like task_3; when = exact time "HH:MM", or "cue: <trigger>", or
-  "unknown"). op=update when the text changes the time/details of a previously
-  announced task (give the NEW when). op=cancel when a task is called off.
+  "unknown"). op=update when the text changes the time/details/trigger of a
+  previously announced task — ALWAYS emit an update op for phrases like
+  "moved to", "now at", "instead", "no longer at", "rescheduled" (give the NEW
+  when). op=cancel for "called off", "does not need to happen", "cancelled".
   op=complete only when the text states the task was already done.
+  channel: if the task's trigger lives on a hidden state channel from this list
+  — {channels} — name it (e.g. a grade being released → course_portal, a
+  package arriving → shipment_status, money threshold → bank_balance).
+  Otherwise "".
   Record only genuine prospective tasks (things to do later) — NOT the current
   ongoing activity options (A/B/C) and NOT generic scenery.
 - handle_map: for handles (task_N) present in the CURRENT step action menu whose
@@ -160,22 +180,28 @@ class WorldStore:
             kind = op.get("op")
             desc = str(op.get("desc") or "").strip()
             when = str(op.get("when") or "unknown").strip()
+            channel = str(op.get("channel") or "").strip()
             if not desc:
                 continue
             idx = self._find(desc)
             if kind == "new":
                 if idx is None:
-                    self.items.append({"desc": desc[:120], "when": when,
-                                       "status": "pending", "born_day": self.day_index})
-                # 이미 있으면 중복 공고 — 무시 (supersede 아님)
+                    self.items.append({"desc": desc[:120], "when": when, "channel": channel,
+                                       "status": "pending", "born_day": self.day_index,
+                                       "updated_day": None})
+                elif channel and not self.items[idx].get("channel"):
+                    self.items[idx]["channel"] = channel   # 재공고가 채널 정보를 보강
             elif kind == "update" and idx is not None:
                 old = self.items[idx]
                 old["status"] = "superseded"          # 구판을 닫고
                 self.items.append({"desc": desc[:120], "when": when,   # 신판을 연다
-                                   "status": "pending", "born_day": old["born_day"]})
+                                   "channel": channel or old.get("channel", ""),
+                                   "status": "pending", "born_day": old["born_day"],
+                                   "updated_day": self.day_index})
             elif kind == "update" and idx is None:
-                self.items.append({"desc": desc[:120], "when": when,
-                                   "status": "pending", "born_day": self.day_index})
+                self.items.append({"desc": desc[:120], "when": when, "channel": channel,
+                                   "status": "pending", "born_day": self.day_index,
+                                   "updated_day": self.day_index})
             elif kind == "cancel" and idx is not None:
                 self.items[idx]["status"] = "canceled"
             elif kind == "complete" and idx is not None:
@@ -218,23 +244,34 @@ class WorldStore:
                 continue
             age = self.day_index - item["born_day"]
             handle = rev_map.get(idx)
+            updated_now = item.get("updated_day") == self.day_index
             lines.append(
-                f"- \"{item['desc']}\" | when: {item['when']}"
+                ("- ⚠ UPDATED TODAY — use this newest version: " if updated_now else "- ")
+                + f"\"{item['desc']}\" | when: {item['when']}"
+                + (f" | cue channel: {item['channel']}" if item.get("channel") else "")
                 + (f" | announced {age} day(s) ago" if age > 0 else "")
                 + (f" | today's handle: {handle}" if handle else " | not in current menu")
             )
         hints = []
         if any(re.match(r"^\d{1,2}:\d{2}$", i["when"]) for i in pend) and not time_known:
             hints.append("time-based intentions exist and current time is unknown → consider check_time")
+        cue_channels = sorted({i["channel"] for i in pend
+                               if i.get("channel") and i["channel"] in channels})
+        for ch in cue_channels[:4]:
+            hints.append(f"pending cue lives on hidden channel '{ch}' — it is invisible "
+                         f"until you query_state({ch}); query it at least once today")
         for ch in channels:
+            if ch in cue_channels:
+                continue
             token = ch.replace("_", " ")
             if any(token in _norm(i["when"]) or token in _norm(i["desc"]) for i in pend):
                 hints.append(f"cue may live on hidden channel '{ch}' → consider query_state")
         if hints:
-            lines.append("Hints: " + " ; ".join(hints[:3]))
+            lines.append("Hints: " + " ; ".join(hints[:4]))
         return "\n".join(lines)
 
-    def extraction_prompt(self, text: str) -> str:
+    def extraction_prompt(self, text: str, channels: list[str] | None = None) -> str:
         pend = self.pending()
         pending_txt = "\n".join(f"- {i['desc']} (when: {i['when']})" for i in pend) or "(none)"
-        return EXTRACT_PROMPT.format(pending=pending_txt, text=text[:4000])
+        return EXTRACT_PROMPT.format(pending=pending_txt, text=text[:4000],
+                                     channels=", ".join(channels or []) or "(none)")
