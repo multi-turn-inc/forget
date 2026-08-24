@@ -12776,6 +12776,26 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
         else (_workspace_context_line(workspace_current) if isinstance(workspace_current, dict) else "")
     )
     workspace_tokens = min(token_estimate(workspace_line), budget_tokens) if workspace_line else 0
+    # 전망 밴드 (기대 헤드 v0, 2026-08-24 — 탑다운 헌장 L2 "예측 기계"의 첫 배선):
+    # 세계모델의 열린-고리 기대를 캡슐에 소량 주입한다. 기본 꺼짐(opt-in) —
+    # include_prospection 페이로드 또는 MEM1_PROSPECTION=1. 파생 DB가 없으면
+    # 조용히 건너뛴다(fail-open): 캡슐은 세계모델 없이도 온전해야 하고,
+    # 읽기 경로가 파일을 만들어서도 안 된다.
+    prospection_items: list[dict[str, Any]] = []
+    prospection_lines: list[str] = []
+    if _bool_or(payload.get("include_prospection"), os.environ.get("MEM1_PROSPECTION") == "1"):
+        try:
+            from forget import worldmodel as _worldmodel
+            if os.path.exists(_worldmodel.DEFAULT_WORLD_DB):
+                # 경로는 모듈 속성에서 매 호출 읽는다 — 기본 인자는 정의 시점
+                # 바인딩이라 테스트 격리(monkeypatch)와 런타임 교체가 안 먹는다.
+                prospection_items = _worldmodel.expectations(
+                    _worldmodel.DEFAULT_WORLD_DB, limit=2)
+                prospection_lines = [f"[전망] {item['expectation']}" for item in prospection_items]
+        except Exception:
+            prospection_items = []
+            prospection_lines = []
+    prospection_tokens = sum(token_estimate(line) for line in prospection_lines)
     search = search_memories({**search_payload, "recall": "low"}, project_id=project_id)
     search_candidates = search["results"]
     current_candidates = [memory for memory in search_candidates if not _context_memory_is_superseded(memory)]
@@ -12901,7 +12921,9 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
                 budgeted_lines.append(f"- {text}")
                 kept_grams.append(_context_trigrams(text))
     selected = _select_working_memory_slots(budgeted, working_memory_slots, str(search_payload["query"] or ""))
-    selected = _context_spend_remaining_budget(selected, budgeted, budget_tokens, reserved_tokens=workspace_tokens)
+    selected = _context_spend_remaining_budget(
+        selected, budgeted, budget_tokens,
+        reserved_tokens=workspace_tokens + prospection_tokens)
     budgeted_line_by_id = {str(memory.get("id")): line for memory, line in zip(budgeted, budgeted_lines) if memory.get("id")}
     lines = [
         budgeted_line_by_id.get(str(memory.get("id")), f"- {str(memory.get('memory') or '').strip()}")
@@ -12911,13 +12933,15 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
     selected_ids = {item.get("id") for item in selected}
     omitted_memory_ids = [memory["id"] for memory in candidates if memory.get("id") not in selected_ids]
     context_lines = [workspace_line] if workspace_line else []
+    context_lines.extend(prospection_lines)
     context_lines.extend(lines)
     result = {
         "project_id": project_id,
         "query": search_payload["query"],
         "filters": search_payload["filters"],
         "budget_tokens": budget_tokens,
-        "used_tokens": used_tokens + workspace_tokens,
+        "used_tokens": used_tokens + workspace_tokens + prospection_tokens,
+        "prospection": prospection_items,
         "total_candidates": len(candidates),
         "raw_candidate_count": len(search_candidates),
         "task_scope_filtered_count": len(task_scope_filtered_memory_ids),
