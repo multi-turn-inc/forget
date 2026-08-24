@@ -73,7 +73,17 @@ JUDGE_TEMPLATES 문면 그대로 — 판정자 편향은 팔 간 상쇄된다 (�
       사이: 회색 — 중복 우세, 유형별 스위칭(질문 유형에 따라 E/G 선택)을
       차기 등록 후보로 이월.
 
-사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABCDEGH]
+## 추기 4 (2026-08-24 밤 — 유형별 라우팅, H 기각["개입을 쌓으면 간섭"]의 수확)
+
+  팔 R = 질문 문면 라우팅: MULTI_EVIDENCE_RE(세기·비교·정렬 어휘) 매치 →
+  G(외부 게이트, multi-session 최강 0.65), 비매치 → E(체크리스트,
+  knowledge-update 최강 0.87). 개입은 하나만 — 지시 과적 회피가 설계 논지.
+  판정 (숫자 보기 전 고정, 참조 E 0.720 · G 0.730 · H 0.680):
+      채택: R ≥ 0.75 (라우팅이 상보성을 실수확)
+      기각: R ≤ 0.730 (라우팅 무익 — 단일 최강 팔 G로 확정)
+      사이: 회색. 부기: 라우팅 분기 수(G행/E행) 병기.
+
+사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABCDEGHR]
       (이어달리기: 출력 JSONL의 완료 문항은 건너뛴다)
 """
 from __future__ import annotations
@@ -280,7 +290,7 @@ def main() -> None:
                 row["A_tok"] = token_est(ctx)
                 row["A_hyp"] = hyp[:200]
 
-            if any(a in args.arms for a in "BCDEGH"):
+            if any(a in args.arms for a in "BCDEGHR"):
                 def assembled(query: str):
                     r = assemble_context({"query": query, "filters": {"user_id": scope},
                                           "top_k": int(os.environ.get("LME_B_TOPK", "10")),
@@ -356,6 +366,23 @@ def main() -> None:
                 row["G_srch"] = nsrch
                 row["G_ctx"] = gctx
                 row["G_hyp"] = hyp[:200]
+
+            if "R" in args.arms:
+                ctx0, searcher = make_groper()
+                route_g = bool(MULTI_EVIDENCE_RE.search(question))
+                if route_g:
+                    hyp, rtok, nsrch, rctx = read_groping(question, qdate, ctx0, searcher,
+                                                          external_gates=True)
+                else:
+                    chk = evidence_checklist(question, qdate)
+                    hyp, rtok, nsrch, rctx = read_groping(question, qdate, ctx0, searcher,
+                                                          checklist=chk)
+                    rtok += token_est(chk)
+                row["R"] = judge(inst["question_type"], question, str(inst["answer"]), hyp)
+                row["R_tok"] = rtok
+                row["R_srch"] = nsrch
+                row["R_route"] = "G" if route_g else "E"
+                row["R_hyp"] = hyp[:200]
 
             if "H" in args.arms:
                 ctx0, searcher = make_groper()
