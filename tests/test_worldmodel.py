@@ -235,3 +235,51 @@ def test_stale_entities_threshold_inclusive_and_ranked(tmp_path):
     assert names == ["alpha", "beta"]      # 25일 > 21일(경계 포함) · gamma 신선 · tiny 저빈도 제외
     assert out[0]["days_quiet"] == 25
     assert "무소식" in out[0]["expectation"]
+
+
+# ---- 루틴 기관 v0 (주기 검출 + 부재 기대) ----
+
+from forget.worldmodel import detect_routines, routine_expectations
+
+
+def _daily_ledger(tmp_path, n_days, start_hour=22, skip_last=0, jitter_min=(0, 5, -3, 8, 2)):
+    rows = []
+    for i in range(n_days - skip_last):
+        t = (NOW - _td(days=(n_days - 1 - i), hours=NOW.hour - start_hour,
+                       minutes=NOW.minute - jitter_min[i % len(jitter_min)]))
+        ts = t.strftime("%Y-%m-%dT%H:%M:%SZ")
+        rows.append((f"hb{i}", f"심장박동 갱신 ({ts[:10]})", "{}", ts, ts, 0))
+    rows.append(("noise1", "일회성 사건 하나", "{}", "2026-08-20T03:00:00Z", "2026-08-20T03:00:00Z", 0))
+    return _ledger(tmp_path, rows)
+
+
+def test_daily_routine_detected_with_kst_hour(tmp_path):
+    world = str(tmp_path / "world.sqlite3")
+    rebuild(world, _daily_ledger(tmp_path, 8), now=NOW)
+    routines = detect_routines(world)
+    assert len(routines) == 1
+    r = routines[0]
+    assert r["period"] == "daily" and r["n"] == 8
+    assert r["typical_hour_kst"] == (22 + 9) % 24      # UTC 22시 = KST 7시
+    assert "심장박동" in r["key"]
+
+
+def test_routine_absence_becomes_expectation(tmp_path):
+    world = str(tmp_path / "world.sqlite3")
+    # 마지막 2일 결측(최종 회차 22시Z → 경과 1.58일) → 주기+유예(1.5일) 초과 → 부재 기대
+    rebuild(world, _daily_ledger(tmp_path, 9, skip_last=2), now=NOW)
+    exps = routine_expectations(world, now=NOW)
+    assert len(exps) == 1
+    assert exps[0]["missed_cycles"] >= 1
+    assert "부재" in exps[0]["expectation"]
+
+
+def test_irregular_and_sparse_series_are_not_routines(tmp_path):
+    rows = []
+    for i, days in enumerate([0, 1, 5, 6, 20, 21]):    # 불규칙 간격
+        ts = (NOW - _td(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        rows.append((f"x{i}", "불규칙 회의 기록", "{}", ts, ts, 0))
+    rows.append(("s1", "희소 패턴", "{}", "2026-08-01T00:00:00Z", "2026-08-01T00:00:00Z", 0))
+    world = str(tmp_path / "world.sqlite3")
+    rebuild(world, _ledger(tmp_path, rows), now=NOW)
+    assert detect_routines(world) == []

@@ -372,6 +372,81 @@ def add_order_edge(world_db: str, before_id: str, after_id: str, source: str) ->
 
 DEFAULT_SUBSTRATE_DB = str(Path.home() / ".forget" / "graph_substrate.sqlite3")
 
+ROUTINE_MIN_N = 5
+ROUTINE_PERIODS = {"daily": 86400.0, "weekly": 7 * 86400.0}
+ROUTINE_TOL = 0.2      # 주기 허용 오차 (중앙값이 주기의 ±20% 안)
+ROUTINE_GRACE = 0.5    # 이탈 판정 유예 (주기의 +50% 지나면 부재)
+
+
+def _routine_key(title: str) -> str:
+    """반복 구조의 키 — 앵커 머리(괄호·대시 앞)를 정규화. 회차는 내용, 머리가 구조."""
+    head = re.split(r"[(—\-—]", str(title or ""), maxsplit=1)[0]
+    head = re.sub(r"\d+", "", head)          # 회차 번호는 구조가 아니다
+    return re.sub(r"\s+", " ", head).strip().lower()[:40]
+
+
+def detect_routines(world_db: str = DEFAULT_WORLD_DB,
+                    min_n: int = ROUTINE_MIN_N) -> list[dict[str, Any]]:
+    """루틴 기관 v0 — 사건 시간축에서 주기 구조를 검출한다 (수요 3.6%).
+
+    기전: 같은 머리의 사건들 사이 간격 중앙값이 일/주 주기의 ±20% 안이고
+    산포(IQR/중앙값 ≤ 0.5)가 낮으면 루틴. 고전 기법(모티프 검출)의 최소형 —
+    LLM 불요. 시각 규율: 계산은 UTC, 전형 시각은 KST 병기(+09).
+    """
+    conn = _open_world(world_db)
+    try:
+        rows = conn.execute("SELECT title, t FROM events WHERE t != ''").fetchall()
+    finally:
+        conn.close()
+    groups: dict[str, list[datetime]] = {}
+    for title, t in rows:
+        parsed = _parse_ts(t)
+        key = _routine_key(title)
+        if parsed and len(key) >= 4:
+            groups.setdefault(key, []).append(parsed)
+    out = []
+    for key, times in groups.items():
+        if len(times) < min_n:
+            continue
+        times.sort()
+        gaps = sorted((b - a).total_seconds() for a, b in zip(times, times[1:]) if b > a)
+        if not gaps:
+            continue
+        med = gaps[len(gaps) // 2]
+        q1, q3 = gaps[len(gaps) // 4], gaps[(3 * len(gaps)) // 4]
+        if med <= 0 or (q3 - q1) / med > 0.5:
+            continue
+        for period_name, period_s in ROUTINE_PERIODS.items():
+            if abs(med - period_s) / period_s <= ROUTINE_TOL:
+                hours_kst = sorted(((t.hour + 9) % 24) for t in times)
+                out.append({"key": key, "period": period_name, "n": len(times),
+                            "median_gap_s": int(med),
+                            "typical_hour_kst": hours_kst[len(hours_kst) // 2],
+                            "last_seen": _iso(times[-1])})
+                break
+    out.sort(key=lambda r: r["n"], reverse=True)
+    return out
+
+
+def routine_expectations(world_db: str = DEFAULT_WORLD_DB,
+                         now: datetime | None = None) -> list[dict[str, Any]]:
+    """루틴 기대 — 부재가 정보다: 주기+유예가 지나도록 다음 회차가 없으면
+    이탈을 기대로 승격 (헌장 빈칸 ②, grid cell의 공학 번역)."""
+    now = now or _utcnow()
+    out = []
+    for routine in detect_routines(world_db):
+        period_s = ROUTINE_PERIODS[routine["period"]]
+        last = _parse_ts(routine["last_seen"]) or now
+        overdue_s = (now - last).total_seconds() - period_s * (1 + ROUTINE_GRACE)
+        if overdue_s >= 0:
+            missed = int((now - last).total_seconds() // period_s)
+            out.append({**routine, "missed_cycles": missed,
+                        "expectation": f"루틴 '{routine['key']}' ({routine['period']}, "
+                                       f"보통 {routine['typical_hour_kst']}시 KST) — "
+                                       f"{missed}주기째 부재: 확인 후보"})
+    out.sort(key=lambda r: r["missed_cycles"], reverse=True)
+    return out
+
 
 def entity_card(name: str, substrate_db: str = DEFAULT_SUBSTRATE_DB,
                 ledger_db: str = DEFAULT_LEDGER_DB, top_facts: int = 5) -> dict[str, Any] | None:
