@@ -45,7 +45,24 @@ JUDGE_TEMPLATES 문면 그대로 — 판정자 편향은 팔 간 상쇄된다 (�
       부분 지지: D ≥ B+10pp → 더듬기 유효, 상한은 리더 역량.
       기각: D < B+5pp → 이 리더에서 더듬기 무효 (도구 규약·리더 교체로 이월).
 
-사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABCD]
+## 추기 2 (2026-08-24 오후 — D2 절제 등록, 정훈 발의 "메타인지를 단순히
+   명시화한다고 해결이 될까?" — 그 회의 자체를 절제 실험으로)
+
+  팔 E (D2a, 언어화 단독): 더듬기 앞에 리더가 증거 체크리스트를 먼저 쓰고
+      (계획 호출 1회) 그 목록을 시스템에 얹은 뒤 D와 동일 루프.
+  팔 G (D2b, 외부화 게이트): 체크리스트 없음. 발판이 잰 신호를 주입 —
+      ①증거 스팬 계수(컨텍스트의 서로 다른 날짜 수) ②직전 회수 강도
+      (검색 최고 점수, 약함 표시) ③다중증거 휴리스틱(how many/compare/
+      total/order 등 — gold 유형 아님, 질문 문면만) 해당 시 0라운드
+      즉답을 1회 반려하고 최소 1회 탐침 강제.
+  판정 (숫자 보기 전 고정, D0=0.660 · n=100 동일 표본):
+      E − D < +3pp 그리고 G − E ≥ +5pp → "메타인지는 언어화가 아니라
+      외부화" 테제 채택 (정훈 회의의 실증).
+      E − D ≥ +5pp → 언어화도 유효 — 테제 기각, 회의가 틀림으로 판정.
+      G − D < +3pp → 외부화도 무효 — 0층 신호로는 부족, 1층(세계모델
+      기대)으로 병소 이월.
+
+사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABCDEG]
       (이어달리기: 출력 JSONL의 완료 문항은 건너뛴다)
 """
 from __future__ import annotations
@@ -110,16 +127,37 @@ def judge(qtype: str, question: str, answer: str, hyp: str) -> bool:
     return out.strip().lower().startswith("yes")
 
 
-def read_groping(question: str, qdate: str, context: str, searcher, max_rounds: int = 5):
-    """팔 D — 더듬기(strategic recall). 사람의 인출은 한 턴이 아니다: 단서를
+MULTI_EVIDENCE_RE = re.compile(
+    r"how many|how much (more|less)|total|compare|first|last|order|difference|"
+    r"between|each time|every time|all the|몇 |비교|순서|총 |차이", re.I)
+
+
+def evidence_checklist(question: str, qdate: str) -> str:
+    """팔 E(D2a)의 계획 호출 — 언어화 메타인지 단독의 효과를 절제한다."""
+    return llm("You plan evidence retrieval for a memory system. List the distinct "
+               "pieces of evidence (facts, dates, sessions) needed to answer the "
+               "question. 3-6 short bullet lines. Do NOT answer the question.",
+               f"Question (asked on {qdate}): {question}", max_tokens=180).strip()[:600]
+
+
+def read_groping(question: str, qdate: str, context: str, searcher, max_rounds: int = 5,
+                 checklist: str | None = None, external_gates: bool = False):
+    """팔 D/E/G — 더듬기(strategic recall). 사람의 인출은 한 턴이 아니다: 단서를
     만들고(생성), 맞는지 보고(재인), 다시 더듬는다. 그 최소 기계화 — 도구 호출
     규약이 없는 로컬 리더로도 돌게, SEARCH: 한 줄 규약으로 루프를 돈다.
 
-    반환 (답, 누적 컨텍스트 토큰 — 라운드마다 리더에게 보인 프롬프트의 합, 검색 횟수).
+    checklist(팔 E): 리더가 스스로 쓴 증거 목록을 시스템에 얹음 — 언어화 단독.
+    external_gates(팔 G): 발판이 잰 신호를 주입 — 증거 스팬 계수·직전 회수
+    강도, 그리고 다중증거 휴리스틱 문항의 0-탐침 즉답을 1회 반려(강제 최소
+    탐침 — 외과 체크리스트 원리: 내성이 아니라 의무라서 작동한다).
+
+    반환 (답, 누적 컨텍스트 토큰, 검색 횟수, 최종 컨텍스트 토큰).
     """
     shown = context
     total_tok = 0
     n_search = 0
+    last_strength: float | None = None
+    forced_used = False
     for round_i in range(max_rounds + 1):
         last = round_i == max_rounds
         system = ("You answer questions about the user based ONLY on the provided memory excerpts. "
@@ -131,16 +169,32 @@ def read_groping(question: str, qdate: str, context: str, searcher, max_rounds: 
                      "If the excerpts fully answer the question, answer concisely. If anything "
                      "needed is missing, do NOT guess: reply with exactly one line in the form\n"
                      "SEARCH: <3-8 search keywords, include absolute dates if relevant>"))
-        user = f"<memories>\n{shown}\n</memories>\n\nQuestion: {question}\nAnswer concisely."
+        if checklist:
+            system += "\n\nEvidence you determined you need:\n" + checklist
+        instrument = ""
+        if external_gates:
+            dates = set(re.findall(r"\[(\d{4}-\d{2}-\d{2})\]", shown))
+            instrument = f"\n[instrument] evidence span in context: {len(dates)} distinct dates"
+            if last_strength is not None:
+                instrument += (f"\n[instrument] last retrieval strength: {last_strength:.2f}"
+                               + (" (weak — evidence may be missing)" if last_strength < 0.5 else ""))
+        user = f"<memories>\n{shown}\n</memories>{instrument}\n\nQuestion: {question}\nAnswer concisely."
         total_tok += token_est(user)
         out = llm(system, user)
         m = re.match(r"^\s*SEARCH:\s*(.+)$", out, re.IGNORECASE)
+        if (m is None and external_gates and not forced_used and n_search == 0
+                and not last and MULTI_EVIDENCE_RE.search(question)):
+            forced_used = True
+            shown += ("\n[instrument] This question likely needs multiple evidence pieces "
+                      "(comparison/counting/ordering). You must SEARCH at least once before answering.")
+            continue
         if not m or last:
             # 누적(스테이트리스 지불)과 최종 컨텍스트(캐시 리더 지불) 둘 다 —
             # 프리픽스 캐시가 있으면 재독 라운드는 거의 공짜라 후자가 실효 비용.
             return out, total_tok, n_search, token_est(shown)
         n_search += 1
-        extra = searcher(m.group(1).strip()[:300])
+        extra, strength = searcher(m.group(1).strip()[:300])
+        last_strength = strength
         shown = shown + "\n" + (extra or "(추가 회수 결과 없음 — 같은 검색을 반복하지 말 것)")
     return out, total_tok, n_search, token_est(shown)
 
@@ -215,7 +269,7 @@ def main() -> None:
                 row["A_tok"] = token_est(ctx)
                 row["A_hyp"] = hyp[:200]
 
-            if any(a in args.arms for a in "BCD"):
+            if any(a in args.arms for a in "BCDEG"):
                 def assembled(query: str):
                     r = assemble_context({"query": query, "filters": {"user_id": scope},
                                           "top_k": int(os.environ.get("LME_B_TOPK", "10")),
@@ -245,24 +299,52 @@ def main() -> None:
                 row["C_exp"] = expansion[:150]
                 row["C_hyp"] = hyp[:200]
 
-            if "D" in args.arms:
-                ctx0, seen_d = assembled(question)
-                def searcher(q: str) -> str:
+            def make_groper():
+                ctx0, seen = assembled(question)
+                def searcher(q: str):
                     res = search_memories({"query": q, "filters": {"user_id": scope}, "top_k": 10})
+                    results = res.get("results") or []
+                    top = max((float(m.get("score") or 0) for m in results), default=0.0)
                     lines = []
-                    for m in res.get("results") or []:
+                    for m in results:
                         mid = str(m.get("id"))
-                        if mid in seen_d:
+                        if mid in seen:
                             continue
-                        seen_d.add(mid)
+                        seen.add(mid)
                         lines.append(f"- [{str(m.get('created_at'))[:10]}] {str(m.get('memory'))}")
-                    return "\n".join(lines)
+                    return "\n".join(lines), top
+                return ctx0, searcher
+
+            if "D" in args.arms:
+                ctx0, searcher = make_groper()
                 hyp, dtok, nsrch, dctx = read_groping(question, qdate, ctx0, searcher)
                 row["D"] = judge(inst["question_type"], question, str(inst["answer"]), hyp)
                 row["D_tok"] = dtok
                 row["D_srch"] = nsrch
                 row["D_ctx"] = dctx
                 row["D_hyp"] = hyp[:200]
+
+            if "E" in args.arms:
+                ctx0, searcher = make_groper()
+                chk = evidence_checklist(question, qdate)
+                hyp, etok, nsrch, ectx = read_groping(question, qdate, ctx0, searcher,
+                                                      checklist=chk)
+                row["E"] = judge(inst["question_type"], question, str(inst["answer"]), hyp)
+                row["E_tok"] = etok + token_est(chk)
+                row["E_srch"] = nsrch
+                row["E_ctx"] = ectx
+                row["E_chk"] = chk[:200]
+                row["E_hyp"] = hyp[:200]
+
+            if "G" in args.arms:
+                ctx0, searcher = make_groper()
+                hyp, gtok, nsrch, gctx = read_groping(question, qdate, ctx0, searcher,
+                                                      external_gates=True)
+                row["G"] = judge(inst["question_type"], question, str(inst["answer"]), hyp)
+                row["G_tok"] = gtok
+                row["G_srch"] = nsrch
+                row["G_ctx"] = gctx
+                row["G_hyp"] = hyp[:200]
 
             fout.write(json.dumps(row, ensure_ascii=False) + "\n")
             fout.flush()
