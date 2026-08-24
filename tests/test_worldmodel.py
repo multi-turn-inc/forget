@@ -168,3 +168,70 @@ def test_partial_order_edges_beat_missing_dates(tmp_path):
     assert order_of(world, "ev-e3", "ev-e1") == "before"   # 명시 간선이 1순위
     assert order_of(world, "ev-e1", "ev-e3") == "after"
     assert order_of(world, "ev-없음1", "ev-없음2") is None    # 모르는 순서는 지어내지 않음
+
+
+# ---- 엔티티 기관 v0 (현황 카드 + 무소식 기대) ----
+
+from datetime import timedelta as _td
+
+from forget.worldmodel import entity_card, stale_entities
+
+
+def _substrate(tmp_path, entities, mentions):
+    path = str(tmp_path / "substrate.sqlite3")
+    conn = sqlite3.connect(path)
+    conn.execute("CREATE TABLE entities (name TEXT, type_id INTEGER, freq INTEGER)")
+    conn.execute("CREATE TABLE mentions (memory_id TEXT, entity TEXT)")
+    conn.execute("CREATE TABLE edges (src TEXT, relation TEXT, dst TEXT, fact TEXT,"
+                 " valid_at TEXT, episode_key TEXT)")
+    conn.executemany("INSERT INTO entities VALUES (?,?,?)", entities)
+    conn.executemany("INSERT INTO mentions VALUES (?,?)", mentions)
+    conn.execute("INSERT INTO edges VALUES ('forget','FUNDED_BY','yc','forget는 yc에 지원했다',"
+                 " '2026-07-23', 'ep1')")
+    conn.commit()
+    conn.close()
+    return path
+
+
+def test_entity_card_latest_facts_exclude_superseded(tmp_path):
+    sub = _substrate(tmp_path, [("forget", 2, 3)],
+                     [("m1", "forget"), ("m2", "forget"), ("m3", "forget")])
+    ledger = _ledger(tmp_path, [
+        ("m1", "forget 피봇 확정", "{}", "2026-07-13T00:00:00Z", "2026-07-13T00:00:00Z", 0),
+        ("m2", "구판 전략(폐기됨)", json.dumps({"superseded_by": "x"}),
+         "2026-07-20T00:00:00Z", "2026-07-20T00:00:00Z", 0),
+        ("m3", "세계모델 방향 확정", "{}", "2026-08-24T00:00:00Z", "2026-08-24T00:00:00Z", 0),
+    ])
+    card = entity_card("forget", substrate_db=sub, ledger_db=ledger)
+    assert card["entity"] == "forget"
+    facts = [f["fact"] for f in card["current_facts"]]
+    assert facts[0] == "세계모델 방향 확정"          # 최신 우선
+    assert all("구판" not in f for f in facts)        # superseded 제외
+    assert card["relations"][0]["other"] == "yc"      # 간선 카드 병기
+    assert card["last_seen"] == "2026-08-24T00:00:00Z"
+
+
+def test_entity_card_unknown_returns_none(tmp_path):
+    sub = _substrate(tmp_path, [("forget", 2, 3)], [])
+    ledger = _ledger(tmp_path, [])
+    assert entity_card("없는것", substrate_db=sub, ledger_db=ledger) is None
+
+
+def test_stale_entities_threshold_inclusive_and_ranked(tmp_path):
+    quiet_25 = (NOW - _td(days=25)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    quiet_21 = (NOW - _td(days=21)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    fresh = (NOW - _td(days=3)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    sub = _substrate(tmp_path, [("alpha", 1, 30), ("beta", 1, 20), ("gamma", 1, 15), ("tiny", 1, 2)],
+                     [("a1", "alpha"), ("b1", "beta"), ("g1", "gamma"), ("t1", "tiny")])
+    ledger = _ledger(tmp_path, [
+        ("a1", "alpha 소식", "{}", quiet_25, quiet_25, 0),
+        ("b1", "beta 소식", "{}", quiet_21, quiet_21, 0),
+        ("g1", "gamma 소식", "{}", fresh, fresh, 0),
+        ("t1", "tiny 소식", "{}", quiet_25, quiet_25, 0),
+    ])
+    out = stale_entities(min_freq=10, stale_days=21, substrate_db=sub,
+                         ledger_db=ledger, now=NOW)
+    names = [e["entity"] for e in out]
+    assert names == ["alpha", "beta"]      # 25일 > 21일(경계 포함) · gamma 신선 · tiny 저빈도 제외
+    assert out[0]["days_quiet"] == 25
+    assert "무소식" in out[0]["expectation"]

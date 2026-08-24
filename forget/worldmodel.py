@@ -370,6 +370,108 @@ def add_order_edge(world_db: str, before_id: str, after_id: str, source: str) ->
         conn.close()
 
 
+DEFAULT_SUBSTRATE_DB = str(Path.home() / ".forget" / "graph_substrate.sqlite3")
+
+
+def entity_card(name: str, substrate_db: str = DEFAULT_SUBSTRATE_DB,
+                ledger_db: str = DEFAULT_LEDGER_DB, top_facts: int = 5) -> dict[str, Any] | None:
+    """엔티티 기관 v0 질의 ① — 현황 카드 (수요 29%의 "X가 지금 어떤 상태지").
+
+    기반은 정제 기질(Graphiti-방식 재구축)이다 — 실원장 memory_entities는
+    구식 추출기의 정크 허브('users'=person 2,986)라 쓰지 않는다(공시).
+    카드 = 최신 비-superseded 사실 + 관계 간선(valid_at 병기) + 시간 창.
+    """
+    sub = sqlite3.connect(f"file:{substrate_db}?mode=ro", uri=True)
+    try:
+        row = sub.execute("SELECT name, freq FROM entities WHERE name = ? "
+                          "OR name LIKE ? ORDER BY freq DESC LIMIT 1",
+                          (name.lower().strip(), f"%{name.lower().strip()}%")).fetchone()
+        if not row:
+            return None
+        ent, freq = row
+        memory_ids = [r[0] for r in sub.execute(
+            "SELECT DISTINCT memory_id FROM mentions WHERE entity = ?", (ent,))]
+        relations = [{"relation": r[0], "other": (r[2] if r[1] == ent else r[1]),
+                      "fact": r[3], "valid_at": r[4]}
+                     for r in sub.execute(
+                         "SELECT relation, src, dst, fact, valid_at FROM edges "
+                         "WHERE src = ? OR dst = ? ORDER BY valid_at DESC LIMIT 8",
+                         (ent, ent))]
+    finally:
+        sub.close()
+    facts: list[dict[str, Any]] = []
+    first_seen = last_seen = None
+    if memory_ids:
+        led = sqlite3.connect(f"file:{ledger_db}?mode=ro", uri=True)
+        try:
+            marks = ",".join("?" * len(memory_ids))
+            rows = led.execute(
+                f"SELECT id, memory, metadata, created_at FROM memories "
+                f"WHERE id IN ({marks}) AND deleted = 0 ORDER BY created_at", memory_ids
+            ).fetchall()
+        finally:
+            led.close()
+        for mid, memory, metadata, created in rows:
+            try:
+                meta = json.loads(metadata or "{}")
+            except ValueError:
+                meta = {}
+            trust = meta.get("trust") or {}
+            superseded = bool(meta.get("superseded_by") or trust.get("light") == "red")
+            first_seen = first_seen or created
+            last_seen = created
+            if not superseded:
+                facts.append({"memory_id": mid, "at": str(created or "")[:10],
+                              "fact": re.sub(r"\s+", " ", str(memory or "")).strip()[:200]})
+    return {"entity": ent, "freq": freq, "live_memories": len(facts),
+            "first_seen": first_seen, "last_seen": last_seen,
+            "current_facts": facts[-top_facts:][::-1], "relations": relations}
+
+
+def stale_entities(min_freq: int = 10, stale_days: int = 21,
+                   substrate_db: str = DEFAULT_SUBSTRATE_DB,
+                   ledger_db: str = DEFAULT_LEDGER_DB,
+                   now: datetime | None = None, limit: int = 10) -> list[dict[str, Any]]:
+    """엔티티 기관 v0 질의 ② — 무소식 기대 (시간 구동, 분리 원칙 A).
+
+    자주 언급되던 엔티티가 stale_days 이상 조용하면 "무소식이 정보다"를
+    기대로 승격: 후속 확인 후보. 문턱은 이상(≥), 경과일은 내림.
+    """
+    now = now or _utcnow()
+    sub = sqlite3.connect(f"file:{substrate_db}?mode=ro", uri=True)
+    try:
+        ents = [r[0] for r in sub.execute(
+            "SELECT name FROM entities WHERE freq >= ? ORDER BY freq DESC", (min_freq,))]
+        mention_map: dict[str, list[str]] = {}
+        for ent in ents:
+            mention_map[ent] = [r[0] for r in sub.execute(
+                "SELECT DISTINCT memory_id FROM mentions WHERE entity = ?", (ent,))]
+    finally:
+        sub.close()
+    led = sqlite3.connect(f"file:{ledger_db}?mode=ro", uri=True)
+    out = []
+    try:
+        for ent, mids in mention_map.items():
+            if not mids:
+                continue
+            marks = ",".join("?" * len(mids))
+            row = led.execute(
+                f"SELECT max(created_at) FROM memories WHERE id IN ({marks}) AND deleted = 0",
+                mids).fetchone()
+            last = _parse_ts(row[0]) if row and row[0] else None
+            if last is None:
+                continue
+            days_quiet = int((now - last).total_seconds() // 86400)
+            if days_quiet >= stale_days:
+                out.append({"entity": ent, "days_quiet": days_quiet,
+                            "last_seen": _iso(last),
+                            "expectation": f"'{ent}' — {days_quiet}일째 무소식: 상태 변화 확인 후보"})
+    finally:
+        led.close()
+    out.sort(key=lambda e: e["days_quiet"], reverse=True)
+    return out[:limit]
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="텍스트 세계모델 v0 상태 코어")
     ap.add_argument("command", choices=["rebuild", "tick", "snapshot"])
