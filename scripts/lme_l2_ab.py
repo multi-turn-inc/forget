@@ -108,8 +108,32 @@ JUDGE_TEMPLATES 문면 그대로 — 판정자 편향은 팔 간 상쇄된다 (�
       부기 의무: 키워드 색인 주입률·부분집합 n 병기. 색인 0건 문항은 실효
       대조가 아니므로 색인 주입 문항만의 W−G도 병기한다.
 
-사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABCDEGHRW]
-      (이어달리기: 출력 JSONL의 완료 문항은 건너뛴다. W: LME_WM_DIR로 파생 DB 위치 지정 가능)
+## 추기 6 (2026-08-25 — P-WM-2b: W 기각 부검의 수리 재등록. W 판정 실측:
+   event-군 W−G = −11.3pp(n=53) → **기각**. 병소 3(모두 실측): M1 빈곤 전이 —
+   붕괴 스코프(고유 1일, 18/100 전부 event-군)에서 지평 1줄이 세계의 빈곤으로
+   오독돼 텍스트 내 상대날짜 증거를 두고도 후퇴(붕괴군 Δ−16.7pp). M2 앵커
+   치환 — 색인 날짜가 질문일 산술을 대체(b46e15ee: 3/19 정답 대신 색인의
+   2/14 선택). M3 조기 종결 — 색인 권위가 더듬기를 생략시킴: 검색 0회 전락
+   11문항 Δ−36.4pp(0.909→0.545), 평균 검색 3.12→2.78회. 공통 뿌리: 리더가
+   상태 계층을 **지도가 아니라 증거로** 취급.)
+
+  팔 V = W의 단일 재규정 "지도이지 증거가 아니다" (한 원리의 세 발현 수리):
+    ① 붕괴 게이트(M1): 지평 고유 날짜 < 3이면 아무것도 주입 않음 — 파생
+       무신호는 침묵이 거짓 빈곤보다 낫다. 그 문항은 V ≡ G.
+    ② 인식 재프레임(M2): 색인 문구를 힌트로 강등 — mention-index이며 ground
+       truth가 아님, 계수는 턴 앞 90자의 어휘 언급일 뿐, 검색 조준에만 쓰라.
+    ③ 검증 의무(M3): 색인이 주입됐는데 검색 0회면 즉답을 1회 반려 (G의
+       강제 최소 탐침을 색인 존재로 일반화).
+  판정 (숫자 보기 전 고정, 동일 n=100 표본·G행 qid 짝):
+      채택: event-군 V − G ≥ +5pp (1층 색인 조준 유효)
+      기각·종결: V − G < +3pp → 1층 색인 접근 종결, 병소를 리더 상향(L3)과
+                파생 v1(사건 추출 상향)로 이월
+      사이(+3~+5): 회색 — 붕괴 게이트(①)만 분리 재론 후보
+      가드: 타유형 합산 V − G ≤ −3pp면 결과 불문 채택 불가
+      부기 의무: 검색 0회 문항 수(M3 지표)·주입률 병기.
+
+사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABCDEGHRWV]
+      (이어달리기: 출력 JSONL의 완료 문항은 건너뛴다. W/V: LME_WM_DIR로 파생 DB 위치 지정 가능)
 """
 from __future__ import annotations
 
@@ -234,10 +258,15 @@ def read_groping(question: str, qdate: str, context: str, searcher, max_rounds: 
         out = llm(system, user)
         m = re.match(r"^\s*SEARCH:\s*(.+)$", out, re.IGNORECASE)
         if (m is None and external_gates and not forced_used and n_search == 0
-                and not last and MULTI_EVIDENCE_RE.search(question)):
+                and not last and (MULTI_EVIDENCE_RE.search(question) or world_block)):
             forced_used = True
+            # 팔 V ③ 검증 의무: 색인이 있으면 무검증 즉답을 1회 반려한다 —
+            # W 부검의 M3(색인 권위로 검색 0회 전락 11문항, Δ−36.4pp) 수리.
             shown += ("\n[instrument] This question likely needs multiple evidence pieces "
-                      "(comparison/counting/ordering). You must SEARCH at least once before answering.")
+                      "(comparison/counting/ordering). You must SEARCH at least once before answering."
+                      if MULTI_EVIDENCE_RE.search(question) else
+                      "\n[instrument] A world index is present but nothing has been verified "
+                      "by search. You must SEARCH at least once before answering.")
             continue
         if not m or last:
             # 누적(스테이트리스 지불)과 최종 컨텍스트(캐시 리더 지불) 둘 다 —
@@ -317,6 +346,33 @@ def world_block_for(question: str, world_db: str) -> tuple[str, int]:
     return "\n".join(lines), kw_lines
 
 
+def world_block_v2(question: str, world_db: str) -> tuple[str, int]:
+    """팔 V (추기 6): '지도이지 증거가 아니다' — ①붕괴 게이트 ②인식 재프레임.
+    (③검증 의무는 read_groping의 강제 탐침 일반화가 맡는다.)"""
+    from forget.worldmodel import timeline
+    evs = timeline(world_db, limit=10**6)
+    all_dates = sorted({e["t"][:10] for e in evs if e["t"]})
+    if len(all_dates) < 3:      # ① 파생 무신호는 침묵 — 거짓 빈곤보다 낫다
+        return "", 0
+    lines = [f"[world-hint] sessions span {all_dates[0]} → {all_dates[-1]} "
+             f"({len(all_dates)} distinct days). This index counts keyword MENTIONS "
+             "in the first 90 chars of each turn — it is NOT ground truth. Use it "
+             "ONLY to aim your searches; never answer from these counts."]
+    kw_lines = 0
+    for kw in world_keywords(question):
+        dates = sorted({e["t"][:10] for e in timeline(world_db, like=kw, limit=10**6)
+                        if e["t"]})
+        if not 1 <= len(dates) <= 15:
+            continue
+        shown = ", ".join(dates[:12]) + (f", …+{len(dates) - 12}" if len(dates) > 12 else "")
+        lines.append(f"[world-hint] '{kw}' mentioned on {len(dates)} date(s): {shown} "
+                     "(mentions ≠ occurrences — verify by searching)")
+        kw_lines += 1
+        if kw_lines >= 2:
+            break
+    return "\n".join(lines), kw_lines
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=100)
@@ -378,7 +434,7 @@ def main() -> None:
                 row["A_tok"] = token_est(ctx)
                 row["A_hyp"] = hyp[:200]
 
-            if any(a in args.arms for a in "BCDEGHRW"):
+            if any(a in args.arms for a in "BCDEGHRWV"):
                 def assembled(query: str):
                     r = assemble_context({"query": query, "filters": {"user_id": scope},
                                           "top_k": int(os.environ.get("LME_B_TOPK", "10")),
@@ -505,6 +561,29 @@ def main() -> None:
                 row["W_world"] = wblock[:300]
                 row["W_hyp"] = hyp[:200]
 
+            if "V" in args.arms:
+                from forget.worldmodel import rebuild as wm_rebuild
+                bench_db = os.environ.get("MEM1_DB_PATH", "")
+                wm_dir = Path(os.environ.get("LME_WM_DIR",
+                                             str(Path(bench_db).parent / "lme_wm")))
+                wm_dir.mkdir(parents=True, exist_ok=True)
+                wm_path = wm_dir / f"{scope}.sqlite3"
+                if not wm_path.exists():
+                    wm_rebuild(str(wm_path), bench_db, user_id=scope)
+                vblock, v_kw = world_block_v2(question, str(wm_path))
+                ctx0, searcher = make_groper()
+                hyp, vtok, nsrch, vctx = read_groping(question, qdate, ctx0, searcher,
+                                                      external_gates=True,
+                                                      world_block=vblock or None)
+                row["V"] = judge(inst["question_type"], question, str(inst["answer"]), hyp)
+                row["V_tok"] = vtok
+                row["V_srch"] = nsrch
+                row["V_ctx"] = vctx
+                row["V_kw"] = v_kw
+                row["V_inj"] = bool(vblock)
+                row["V_world"] = vblock[:300]
+                row["V_hyp"] = hyp[:200]
+
             fout.write(json.dumps(row, ensure_ascii=False) + "\n")
             fout.flush()
             marks = " ".join(f"{a}={'O' if row.get(a) else 'X'}" for a in args.arms if a in row)
@@ -555,6 +634,14 @@ def main() -> None:
             print(f"P-WM-2 부기: 키워드 색인 주입 {inj}/{len(wrows)}문항 · "
                   f"평균 색인 줄 {sum(r.get('W_kw', 0) for r in wrows)/len(wrows):.2f} "
                   f"(판정 W−G는 lme_L2_G_rows.jsonl과 qid 짝지어 원장에서)")
+    if "V" in args.arms:
+        vrows = [r for r in rows if "V" in r]
+        if vrows:
+            inj = sum(1 for r in vrows if r.get("V_inj"))
+            zero = sum(1 for r in vrows if r.get("V_srch", 0) == 0)
+            print(f"P-WM-2b 부기: 주입 {inj}/{len(vrows)}문항(붕괴 게이트로 침묵 "
+                  f"{len(vrows) - inj}) · 검색 0회 {zero}건[M3 지표] "
+                  f"(판정 V−G는 lme_L2_G_rows.jsonl과 qid 짝지어 원장에서)")
     for qtype in sorted({r['type'] for r in rows}):
         line = f"  {qtype:26s}"
         for arm in args.arms:
