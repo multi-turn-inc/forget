@@ -5022,6 +5022,30 @@ _GATE_WIDE_K = int(os.getenv("MEM1_GATE_WIDE_K", "16"))
 _GATE_SNIPPET_CHARS = int(os.getenv("MEM1_GATE_SNIPPET_CHARS", "160"))
 
 
+def _attach_search_instrument(
+    response: dict[str, Any], *, pool_size: int | None, top_k: int
+) -> dict[str, Any]:
+    # B-② G-신호 (2026-08-25): 더듬기 절제 최강(G 0.730)의 외부 신호를 검색
+    # 응답에 상시 노출 — 소비자는 에이전트의 반복 인출(자기사용 규약 3항).
+    # 추가 질의 0, 손에 있는 결과에서 계산. 강도 밴드는 신공간 실측(관련
+    # 0.40~0.46, 턴리콜 문턱 0.33) 유도. 모든 기어가 이 헬퍼를 지나야 한다 —
+    # 첫 배선은 v1 반환에만 붙어 기본 기어(gate-v2)의 조기 반환이 통째로
+    # 우회했다 (자기사용 마찰 #3, 라이브 검증이 적발). pool_size=None이면
+    # 소진 신호는 호출자가 아는 값으로 덮거나 None(미상)으로 남긴다.
+    results = list(response.get("results") or [])
+    top_score = max((float(m.get("score") or 0.0) for m in results), default=0.0)
+    strength = "strong" if top_score >= 0.45 else ("moderate" if top_score >= 0.33 else "weak")
+    span_days = len({str(m.get("created_at") or "")[:10] for m in results if m.get("created_at")})
+    response["instrument"] = {
+        "top_score": round(top_score, 4),
+        "strength": strength,
+        "evidence_span_days": span_days,
+        "result_count": len(results),
+        "pool_exhausted": (pool_size < top_k) if pool_size is not None else None,
+    }
+    return response
+
+
 def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_k: int = _GATE_WIDE_K, snippet_chars: int = _GATE_SNIPPET_CHARS, layer: str = "gate-v2") -> dict[str, Any]:
     # 게이트 다이어트 (2026-08-12 실측): 40×280 프로필은 로컬 9B 프리필만
     # ~9.5s — 훅 예산(≤7s) 밖이라 high 기어가 구조적으로 죽는다. 16×160이면
@@ -5039,11 +5063,20 @@ def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_
     base = {key: value for key, value in payload.items() if key != "recall"}
     wide = search_memories({**base, "top_k": wide_k, "recall": "v1"}, project_id)
     candidates = list(wide.get("results") or [])
+    wide_exhausted = (wide.get("instrument") or {}).get("pool_exhausted")
+
+    def _finish(out: dict[str, Any]) -> dict[str, Any]:
+        # 소진 신호는 광폭 인출의 것 — 선별기가 적게 남긴 것(선별성)과 풀
+        # 바닥(소진)을 섞으면 더듬는 소비자가 조기 중단한다.
+        _attach_search_instrument(out, pool_size=None, top_k=top_k)
+        out["instrument"]["pool_exhausted"] = wide_exhausted
+        return out
+
     if len(candidates) <= top_k:
-        return {"results": candidates, "recall_layer": f"{layer}(passthrough)"}
+        return _finish({"results": candidates, "recall_layer": f"{layer}(passthrough)"})
     llm = _resolve_recall_llm()
     if not llm:
-        return {"results": candidates[:top_k], "recall_layer": f"{layer}(unconfigured→v1)"}
+        return _finish({"results": candidates[:top_k], "recall_layer": f"{layer}(unconfigured→v1)"})
     base_url, model, api_key = llm["base_url"], llm["model"], llm["api_key"]
     context_window = int(llm.get("context_window") or 131072)
     # Fit the candidate list to the model's window (chars ≈ tokens × ~3.4,
@@ -5109,7 +5142,7 @@ def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_
     finally:
         _RECALL_ACTIVITY["active"] = max(0, int(_RECALL_ACTIVITY["active"]) - 1)
     if not indices:
-        return {"results": candidates[:top_k], "recall_layer": f"{layer}(fallback→v1)"}
+        return _finish({"results": candidates[:top_k], "recall_layer": f"{layer}(fallback→v1)"})
     seen: set[int] = set()
     ordered = [i for i in indices if not (i in seen or seen.add(i))][:top_k]
     for i in range(len(candidates)):
@@ -5118,7 +5151,7 @@ def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_
         if i not in seen:
             ordered.append(i)
             seen.add(i)
-    return {"results": [candidates[i] for i in ordered], "recall_layer": layer}
+    return _finish({"results": [candidates[i] for i in ordered], "recall_layer": layer})
 
 
 def _expand_temporal_neighbors(
@@ -5409,24 +5442,11 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
         event_id=event_id,
         metadata={"top_k": top_k, "result_count": len(scored[:top_k])},
     )
-    response: dict[str, Any] = {"results": scored[:top_k]}
-    # B-② G-신호 (2026-08-25): 더듬기 절제에서 최강이었던 외부 신호 게이트
-    # (G 0.730)의 계기들을 검색 응답에 상시 노출한다 — 소비자는 에이전트의
-    # 반복 인출(자기사용 규약 3항). 사람의 FOK가 내성이 아니라 인출 유창성
-    # 계측이듯, 기계의 "충분한가"도 물어보지 않고 잰다. 추가 질의 0 — 이미
-    # 손에 있는 결과에서 계산. 강도 밴드는 신공간 실측(관련 0.40~0.46,
-    # 턴리콜 문턱 0.33)에서 유도.
-    top_results = response["results"]
-    top_score = max((float(m.get("score") or 0.0) for m in top_results), default=0.0)
-    strength = "strong" if top_score >= 0.45 else ("moderate" if top_score >= 0.33 else "weak")
-    span_days = len({str(m.get("created_at") or "")[:10] for m in top_results if m.get("created_at")})
-    response["instrument"] = {
-        "top_score": round(top_score, 4),
-        "strength": strength,
-        "evidence_span_days": span_days,
-        "result_count": len(top_results),
-        "pool_exhausted": len(scored) < top_k,
-    }
+    # B-② G-신호: 계기 계산은 _attach_search_instrument에 통일 — v1은 풀
+    # 전체(scored)를 알므로 소진 신호를 직접 잰다.
+    response: dict[str, Any] = _attach_search_instrument(
+        {"results": scored[:top_k]}, pool_size=len(scored), top_k=top_k
+    )
     if payload.get("trace"):
         # body A1 (one-person RFC): 턴 회상에도 피드백 주소를 준다.
         # 지금까지 search 경로는 트레이스를 안 남겨서, 주입된 기억이
@@ -5500,6 +5520,10 @@ def _layered_recall_result(
     project_id: str,
 ) -> dict[str, Any]:
     """Give a layered gear's result the feedback address of its own selection."""
+    if "instrument" not in result:
+        # 안전망: 어떤 기어(reflex-v2 포함)도 계기 없이 나가지 않는다 —
+        # 풀 크기를 모르는 경로라 소진 신호만 None(미상)으로 남는다.
+        _attach_search_instrument(result, pool_size=None, top_k=int(payload.get("top_k") or 10))
     if not payload.get("trace"):
         return result
     try:

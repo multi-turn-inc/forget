@@ -60,3 +60,34 @@ def test_empty_results_safe(tmp_path):
     assert inst["top_score"] == 0.0
     assert inst["strength"] == "weak"
     assert inst["pool_exhausted"] is True
+
+
+def test_gate_gear_carries_instrument(tmp_path, monkeypatch):
+    # 마찰 #3 회귀 계약 (2026-08-25): 라이브 기본 기어(recall high → gate-v2)는
+    # search_memories 초입에서 조기 반환한다 — 첫 배선(v1 반환 전용)이 통째로
+    # 우회됐다. 기어의 모든 반환 경로에 계기가 실려야 한다.
+    for i in range(6):
+        _add("u3", f"세계모델 상태 유형 메모 {chr(0xAC00 + i)}",
+             f"2026-08-{10 + i:02d}T10:00:00Z")
+    # ① passthrough: 광폭 후보(≤6) ≤ top_k 10
+    res = store.search_memories({"query": "세계모델", "filters": {"user_id": "u3"},
+                                 "top_k": 10, "recall": "high", "threshold": 0.0})
+    assert str(res["recall_layer"]).startswith("gate-v2")
+    inst = res["instrument"]
+    assert inst["result_count"] == len(res["results"]) >= 1
+    assert inst["pool_exhausted"] is True  # 광폭 16을 못 채움 — 풀 바닥이 광폭 신호로 전달
+    # ② unconfigured→v1: 후보 > top_k, 선별 LLM 미구성
+    monkeypatch.setattr(store, "_resolve_recall_llm", lambda: None)
+    res2 = store.search_memories({"query": "세계모델", "filters": {"user_id": "u3"},
+                                  "top_k": 2, "recall": "high", "threshold": 0.0})
+    assert "unconfigured" in str(res2["recall_layer"])
+    inst2 = res2["instrument"]
+    assert inst2["result_count"] == len(res2["results"]) == 2
+    assert inst2["pool_exhausted"] is True  # 소진은 선별이 아니라 광폭 풀의 사실
+
+
+def test_layered_funnel_attaches_when_missing():
+    # 안전망 계약: 미래의 어떤 기어가 와도 깔때기가 계기를 보증한다.
+    out = store._layered_recall_result({"results": []}, payload={}, project_id="p")
+    assert out["instrument"]["result_count"] == 0
+    assert out["instrument"]["pool_exhausted"] is None  # 풀 미상은 미상으로 정직하게
