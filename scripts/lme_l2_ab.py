@@ -83,8 +83,33 @@ JUDGE_TEMPLATES 문면 그대로 — 판정자 편향은 팔 간 상쇄된다 (�
       기각: R ≤ 0.730 (라우팅 무익 — 단일 최강 팔 G로 확정)
       사이: 회색. 부기: 라우팅 분기 수(G행/E행) 병기.
 
-사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABCDEGHR]
-      (이어달리기: 출력 JSONL의 완료 문항은 건너뛴다)
+## 추기 5 (2026-08-25 — P-WM-2: 1층 조준. L2 종결 판정의 이월["0층 프롬프트 수확
+   종료, 다음 레버는 1층(세계모델 기대 조준)"]을 실행한다. 정훈 "착수". 타산지석
+   #9(구조 먼저, RL 마지막)·#16(빌린 세계모델은 1-2스텝 조준만 — 다단 시뮬 주장
+   없음) 준수 확인 완료.)
+
+  팔 W = G(외부 게이트 전 계기 동일) + 세계모델 시간 색인 주입: 문항 스코프
+  원장에서 사건 기관을 파생(worldmodel.rebuild + user_id 필터. 벤치 파생 공시:
+  사건 1건 = 대화 턴 1건, 제목 = 턴 문면[:90], t = 세션 날짜 — 키워드 매치는
+  그 90자 창 안에서만 되므로 과소계수 경향이 있고, 조직 v0을 지어진 그대로
+  잰다)하고, 매 라운드 다음을 주입한다:
+    ① 지평 1줄 — [world] memory spans <min> → <max> (<N> distinct days)
+    ② 질문 내용어(불용어 제거 · 3자 이상 · 긴 것 우선 ≤6개 시도) 중 고유
+       날짜 수 1~15에 드는 상위 2개의 날짜 색인 — [world] '<kw>' appears
+       on N date(s): d1, …
+  구조(날짜·계수)만 주입하고 제목은 주입하지 않는다 — 내용 누수 차단이
+  "조준" 주장의 전제다. 색인 0건이면 W = G + 지평 1줄.
+  판정 (숫자 보기 전 고정, 참조 G 0.730 · 동일 n=100 표본·리더·판정.
+  G행은 lme_L2_G_rows.jsonl과 qid로 짝지어 계산):
+      채택: event-군(감사 event 유형의 LME 대응 = temporal-reasoning +
+            multi-session)에서 W − G ≥ +8pp
+      기각: 동 부분집합에서 W − G < +3pp (사이 회색)
+      부작용 가드: 타 유형 합산 W − G ≤ −3pp면 결과 불문 채택 불가 (P-L2-B 준용)
+      부기 의무: 키워드 색인 주입률·부분집합 n 병기. 색인 0건 문항은 실효
+      대조가 아니므로 색인 주입 문항만의 W−G도 병기한다.
+
+사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABCDEGHRW]
+      (이어달리기: 출력 JSONL의 완료 문항은 건너뛴다. W: LME_WM_DIR로 파생 DB 위치 지정 가능)
 """
 from __future__ import annotations
 
@@ -162,7 +187,8 @@ def evidence_checklist(question: str, qdate: str) -> str:
 
 
 def read_groping(question: str, qdate: str, context: str, searcher, max_rounds: int = 5,
-                 checklist: str | None = None, external_gates: bool = False):
+                 checklist: str | None = None, external_gates: bool = False,
+                 world_block: str | None = None):
     """팔 D/E/G — 더듬기(strategic recall). 사람의 인출은 한 턴이 아니다: 단서를
     만들고(생성), 맞는지 보고(재인), 다시 더듬는다. 그 최소 기계화 — 도구 호출
     규약이 없는 로컬 리더로도 돌게, SEARCH: 한 줄 규약으로 루프를 돈다.
@@ -199,6 +225,10 @@ def read_groping(question: str, qdate: str, context: str, searcher, max_rounds: 
             if last_strength is not None:
                 instrument += (f"\n[instrument] last retrieval strength: {last_strength:.2f}"
                                + (" (weak — evidence may be missing)" if last_strength < 0.5 else ""))
+        if world_block:
+            # 팔 W(추기 5): 세계모델 시간 색인 — 라운드 불변인 세계 상태라 매
+            # 라운드 같은 자리에 얹는다. 색인과 컨텍스트의 격차가 곧 조준 신호.
+            instrument += "\n" + world_block
         user = f"<memories>\n{shown}\n</memories>{instrument}\n\nQuestion: {question}\nAnswer concisely."
         total_tok += token_est(user)
         out = llm(system, user)
@@ -227,6 +257,64 @@ def expand_query(question: str, qdate: str) -> str:
               "phrases and absolute dates. No explanations.",
               question, max_tokens=80)
     return re.sub(r"\s+", " ", out)[:300]
+
+
+# ── 팔 W (추기 5): 세계모델 시간 색인 ────────────────────────────────────
+WM_STOP = set("""the and you your for with that this what when where why how many much did
+does was were have has had are is not but about from they them their there which who whom
+while will would could should than then into over under out off after before between during
+within last first next previous ago today yesterday tomorrow now time times day days week
+weeks month months year years date dates mention mentioned mentioning tell told say said
+saying talk talked talking ask asked user assistant what's i've i'm don't didn't doesn't
+it's that's most more less least very really just also ever never always usually often once
+twice any some all every each other another same different new old recent recently earlier
+later still going gone went come came take took taken get got getting make made give gave
+know knew think thought want wanted like liked use used long often since until because
+january february march april may june july august september october november december""".split())
+
+
+def world_keywords(question: str) -> list[str]:
+    words = re.findall(r"[a-z가-힣][a-z가-힣'-]{2,}", question.lower())
+    seen: set[str] = set()
+    out = []
+    for w in words:
+        if w in WM_STOP:
+            continue
+        # 복수형 s-절단 (스모크 발견: 'appointments'가 단수 본문을 놓침).
+        # 부분문자열 매치라 절단형은 항상 원형에도 매치 — 순수 재현율 확장.
+        if w.endswith("'s"):
+            w = w[:-2]
+        elif w.endswith("s") and len(w) > 4:
+            w = w[:-1]
+        if w in seen:
+            continue
+        seen.add(w)
+        out.append(w)
+    return sorted(out, key=len, reverse=True)[:6]
+
+
+def world_block_for(question: str, world_db: str) -> tuple[str, int]:
+    """세계 블록 — 지평 1줄 + 질문 키워드 날짜 색인 ≤2줄. 구조(날짜·계수)만,
+    제목 미주입(내용 누수 차단). 반환 (블록, 색인 줄 수)."""
+    from forget.worldmodel import timeline
+    evs = timeline(world_db, limit=10**6)
+    all_dates = sorted({e["t"][:10] for e in evs if e["t"]})
+    if not all_dates:
+        return "", 0
+    lines = [f"[world] memory spans {all_dates[0]} → {all_dates[-1]} "
+             f"({len(all_dates)} distinct days)"]
+    kw_lines = 0
+    for kw in world_keywords(question):
+        dates = sorted({e["t"][:10] for e in timeline(world_db, like=kw, limit=10**6)
+                        if e["t"]})
+        if not 1 <= len(dates) <= 15:
+            continue
+        shown = ", ".join(dates[:12]) + (f", …+{len(dates) - 12}" if len(dates) > 12 else "")
+        lines.append(f"[world] '{kw}' appears on {len(dates)} date(s): {shown}")
+        kw_lines += 1
+        if kw_lines >= 2:
+            break
+    return "\n".join(lines), kw_lines
 
 
 def main() -> None:
@@ -290,7 +378,7 @@ def main() -> None:
                 row["A_tok"] = token_est(ctx)
                 row["A_hyp"] = hyp[:200]
 
-            if any(a in args.arms for a in "BCDEGHR"):
+            if any(a in args.arms for a in "BCDEGHRW"):
                 def assembled(query: str):
                     r = assemble_context({"query": query, "filters": {"user_id": scope},
                                           "top_k": int(os.environ.get("LME_B_TOPK", "10")),
@@ -395,6 +483,28 @@ def main() -> None:
                 row["H_ctx"] = hctx
                 row["H_hyp"] = hyp[:200]
 
+            if "W" in args.arms:
+                from forget.worldmodel import rebuild as wm_rebuild
+                bench_db = os.environ.get("MEM1_DB_PATH", "")
+                wm_dir = Path(os.environ.get("LME_WM_DIR",
+                                             str(Path(bench_db).parent / "lme_wm")))
+                wm_dir.mkdir(parents=True, exist_ok=True)
+                wm_path = wm_dir / f"{scope}.sqlite3"
+                if not wm_path.exists():
+                    wm_rebuild(str(wm_path), bench_db, user_id=scope)
+                wblock, n_kw = world_block_for(question, str(wm_path))
+                ctx0, searcher = make_groper()
+                hyp, wtok, nsrch, wctx = read_groping(question, qdate, ctx0, searcher,
+                                                      external_gates=True,
+                                                      world_block=wblock or None)
+                row["W"] = judge(inst["question_type"], question, str(inst["answer"]), hyp)
+                row["W_tok"] = wtok
+                row["W_srch"] = nsrch
+                row["W_ctx"] = wctx
+                row["W_kw"] = n_kw
+                row["W_world"] = wblock[:300]
+                row["W_hyp"] = hyp[:200]
+
             fout.write(json.dumps(row, ensure_ascii=False) + "\n")
             fout.flush()
             marks = " ".join(f"{a}={'O' if row.get(a) else 'X'}" for a in args.arms if a in row)
@@ -438,6 +548,13 @@ def main() -> None:
             print(f"P-L2-D 부기: 평균 검색 {sum(srch)/len(srch):.1f}회 · "
                   f"검색 0회 {sum(1 for s in srch if s == 0)}건 · "
                   f"5회 소진 {sum(1 for s in srch if s >= 5)}건 (판정은 A·B 참조점 대조로 원장에서)")
+    if "W" in args.arms:
+        wrows = [r for r in rows if "W" in r]
+        if wrows:
+            inj = sum(1 for r in wrows if r.get("W_kw", 0) > 0)
+            print(f"P-WM-2 부기: 키워드 색인 주입 {inj}/{len(wrows)}문항 · "
+                  f"평균 색인 줄 {sum(r.get('W_kw', 0) for r in wrows)/len(wrows):.2f} "
+                  f"(판정 W−G는 lme_L2_G_rows.jsonl과 qid 짝지어 원장에서)")
     for qtype in sorted({r['type'] for r in rows}):
         line = f"  {qtype:26s}"
         for arm in args.arms:

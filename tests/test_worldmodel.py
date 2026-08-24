@@ -152,6 +152,32 @@ def test_timeline_window_is_half_open(tmp_path):
     assert count_events(world, like="우쿨렐레") == 2
 
 
+def test_rebuild_user_scope_isolation(tmp_path):
+    # P-WM-2 파생 계약: 다중 스코프 원장(벤치)에서 user_id를 주면 그 스코프의
+    # 세계만 파생된다 — 문항 간 사건 누수는 곧 오염된 기대다.
+    path = str(tmp_path / "multi.sqlite3")
+    conn = sqlite3.connect(path)
+    conn.execute(
+        "CREATE TABLE memories (id TEXT, memory TEXT, metadata TEXT,"
+        " created_at TEXT, updated_at TEXT, deleted INTEGER DEFAULT 0, user_id TEXT)"
+    )
+    conn.executemany(
+        "INSERT INTO memories VALUES (?,?,?,?,?,?,?)",
+        [("a1", "user: went hiking at dawn", "{}", "2023-05-01", "2023-05-01", 0, "lme-A"),
+         ("a2", "user: hiking again with Sam", "{}", "2023-05-08", "2023-05-08", 0, "lme-A"),
+         ("b1", "user: hiking in another world", "{}", "2023-06-01", "2023-06-01", 0, "lme-B")],
+    )
+    conn.commit()
+    conn.close()
+    world = str(tmp_path / "world_scoped.sqlite3")
+    stats = rebuild(world, path, now=NOW, user_id="lme-A")
+    assert stats["events"] == 2
+    assert count_events(world, like="hiking") == 2  # lme-B의 사건이 새면 3
+    # 무필터는 종전 동작(전체) 유지
+    world_all = str(tmp_path / "world_all.sqlite3")
+    assert rebuild(world_all, path, now=NOW)["events"] == 3
+
+
 def test_interval_days_signed_floor(tmp_path):
     world = str(tmp_path / "world.sqlite3")
     rebuild(world, _event_ledger(tmp_path), now=NOW)

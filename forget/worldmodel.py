@@ -104,18 +104,23 @@ def _open_world(world_db: str) -> sqlite3.Connection:
     return conn
 
 
-def _ledger_loop_rows(ledger_db: str) -> list[dict[str, Any]]:
+def _ledger_loop_rows(ledger_db: str, user_id: str | None = None) -> list[dict[str, Any]]:
     """원장에서 열린-고리 후보를 읽는다 (SELECT만). v0 원천: action_report 기억.
 
     trust.kind == action_report 인 기억이 곧 '미검증 완료 주장' 고리다:
     yellow = 열림(증거 대기) · green = 확정 종결 · red/superseded = 철회 종결.
+    user_id: 다중 스코프 원장(벤치·멀티유저)에서 한 사용자의 세계만 파생 —
+    None이면 종전대로 전체 (실DB는 단일 사용자라 동작 불변).
     """
     conn = sqlite3.connect(f"file:{ledger_db}?mode=ro", uri=True)
     try:
-        rows = conn.execute(
-            "SELECT id, memory, metadata, created_at, updated_at FROM memories "
-            "WHERE deleted = 0 AND metadata LIKE '%action_report%'"
-        ).fetchall()
+        sql = ("SELECT id, memory, metadata, created_at, updated_at FROM memories "
+               "WHERE deleted = 0 AND metadata LIKE '%action_report%'")
+        args: list[Any] = []
+        if user_id:
+            sql += " AND user_id = ?"
+            args.append(user_id)
+        rows = conn.execute(sql, args).fetchall()
     finally:
         conn.close()
     out = []
@@ -149,18 +154,22 @@ def _record(conn: sqlite3.Connection, loop_id: str, frm: str, to: str, cause: st
     )
 
 
-def _ledger_event_rows(ledger_db: str) -> list[dict[str, Any]]:
+def _ledger_event_rows(ledger_db: str, user_id: str | None = None) -> list[dict[str, Any]]:
     """원장 → 사건 기록 v0. 기억 한 건 = 발생 기록 한 건 (제목 = 일화 앵커).
 
     상태 유형 감사(P-WM-1b)가 밝힌 최대 수요(56%)는 세기·정렬·간격 —
     v0는 그 시간 축 절반(t·정밀도·부분순서)을 구현한다. SPO 구조 절반은
     그래프 기질(엔티티 언급) 연결로 후속 계단에서 잇는다.
+    user_id: 다중 스코프 원장에서 한 사용자의 세계만 (None = 전체, 동작 불변).
     """
     conn = sqlite3.connect(f"file:{ledger_db}?mode=ro", uri=True)
     try:
-        rows = conn.execute(
-            "SELECT id, memory, metadata, created_at FROM memories WHERE deleted = 0"
-        ).fetchall()
+        sql = "SELECT id, memory, metadata, created_at FROM memories WHERE deleted = 0"
+        args: list[Any] = []
+        if user_id:
+            sql += " AND user_id = ?"
+            args.append(user_id)
+        rows = conn.execute(sql, args).fetchall()
     finally:
         conn.close()
     out = []
@@ -188,14 +197,17 @@ def _ledger_event_rows(ledger_db: str) -> list[dict[str, Any]]:
 
 
 def rebuild(world_db: str = DEFAULT_WORLD_DB, ledger_db: str = DEFAULT_LEDGER_DB,
-            now: datetime | None = None) -> dict[str, int]:
-    """원장 → 상태 코어 재구축. 기존 고리의 opened_at은 보존하고 상태만 재판정."""
+            now: datetime | None = None, user_id: str | None = None) -> dict[str, int]:
+    """원장 → 상태 코어 재구축. 기존 고리의 opened_at은 보존하고 상태만 재판정.
+
+    user_id를 주면 그 스코프의 세계만 파생한다 (P-WM-2 벤치 파생 경로).
+    """
     now = now or _utcnow()
     conn = _open_world(world_db)
     stats = {"seen": 0, "opened": 0, "closed": 0, "transitions": 0}
     try:
         existing = {r[0]: r[1] for r in conn.execute("SELECT id, status FROM loops")}
-        for cand in _ledger_loop_rows(ledger_db):
+        for cand in _ledger_loop_rows(ledger_db, user_id=user_id):
             stats["seen"] += 1
             opened = _parse_ts(cand["opened_at"]) or now
             evidence = _parse_ts(cand["evidence_at"]) or opened
@@ -222,7 +234,7 @@ def rebuild(world_db: str = DEFAULT_WORLD_DB, ledger_db: str = DEFAULT_LEDGER_DB
                 stats["transitions"] += 1
             if status.startswith("closed"):
                 stats["closed"] += 1
-        for ev in _ledger_event_rows(ledger_db):
+        for ev in _ledger_event_rows(ledger_db, user_id=user_id):
             conn.execute(
                 "INSERT INTO events (id, title, t, t_precision, source_ref) VALUES (?,?,?,?,?) "
                 "ON CONFLICT(id) DO UPDATE SET title=excluded.title, t=excluded.t,"
