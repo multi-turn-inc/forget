@@ -62,7 +62,18 @@ JUDGE_TEMPLATES 문면 그대로 — 판정자 편향은 팔 간 상쇄된다 (�
       G − D < +3pp → 외부화도 무효 — 0층 신호로는 부족, 1층(세계모델
       기대)으로 병소 이월.
 
-사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABCDEG]
+## 추기 3 (2026-08-24 저녁 — E∧G 결합, P-D2 완결이 발견한 상보성의 검증)
+
+  팔 H = 체크리스트(E) ∧ 외부 게이트(G) 동시. 유형별 최강이 갈렸으므로
+  (체크리스트=knowledge-update 0.87 · 게이트=multi-session 0.65) 결합이
+  양쪽 최선을 합성하는지 검증한다.
+  판정 (숫자 보기 전 고정, 참조 D 0.660 · E 0.720 · G 0.730):
+      채택: H ≥ 0.75 (G+2pp — 상보 조합 실재)
+      기각: H ≤ 0.730 (겹침 상쇄 — 결합 무익)
+      사이: 회색 — 중복 우세, 유형별 스위칭(질문 유형에 따라 E/G 선택)을
+      차기 등록 후보로 이월.
+
+사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABCDEGH]
       (이어달리기: 출력 JSONL의 완료 문항은 건너뛴다)
 """
 from __future__ import annotations
@@ -269,7 +280,7 @@ def main() -> None:
                 row["A_tok"] = token_est(ctx)
                 row["A_hyp"] = hyp[:200]
 
-            if any(a in args.arms for a in "BCDEG"):
+            if any(a in args.arms for a in "BCDEGH"):
                 def assembled(query: str):
                     r = assemble_context({"query": query, "filters": {"user_id": scope},
                                           "top_k": int(os.environ.get("LME_B_TOPK", "10")),
@@ -345,6 +356,17 @@ def main() -> None:
                 row["G_srch"] = nsrch
                 row["G_ctx"] = gctx
                 row["G_hyp"] = hyp[:200]
+
+            if "H" in args.arms:
+                ctx0, searcher = make_groper()
+                chk = evidence_checklist(question, qdate)
+                hyp, htok, nsrch, hctx = read_groping(question, qdate, ctx0, searcher,
+                                                      checklist=chk, external_gates=True)
+                row["H"] = judge(inst["question_type"], question, str(inst["answer"]), hyp)
+                row["H_tok"] = htok + token_est(chk)
+                row["H_srch"] = nsrch
+                row["H_ctx"] = hctx
+                row["H_hyp"] = hyp[:200]
 
             fout.write(json.dumps(row, ensure_ascii=False) + "\n")
             fout.flush()
