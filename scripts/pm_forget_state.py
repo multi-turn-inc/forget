@@ -106,8 +106,28 @@ def _norm(text: str) -> str:
     return re.sub(r"[^a-z0-9 ]+", " ", str(text).lower()).strip()
 
 
+_STOP = {"the", "a", "an", "to", "at", "of", "in", "on", "when", "you", "your",
+         "notice", "it", "and", "or", "for", "with", "up", "off"}
+
+
+def _content_words(text: str) -> set[str]:
+    return {w for w in _norm(text).split() if w not in _STOP and len(w) > 2}
+
+
 def _similar(a: str, b: str) -> float:
-    return difflib.SequenceMatcher(None, _norm(a), _norm(b)).ratio()
+    """서술 동일성 — P-PM-1 부검(2026-08-24)이 잡은 병합 버그의 수리.
+
+    difflib 단독은 템플릿 접두("Carry the ...")가 지배해 서로 다른 과제
+    (prescription receipt ↔ spare tote bag, 0.59)를 병합시켰다. 내용어
+    자카드를 곱들어(둘 다 높아야 동일) 접두 병합을 차단한다: 재공고
+    (내용어 동일)만 중복으로 잡히고, 같은 동사 다른 목적어는 갈라진다.
+    """
+    seq = difflib.SequenceMatcher(None, _norm(a), _norm(b)).ratio()
+    ca, cb = _content_words(a), _content_words(b)
+    containment = (len(ca & cb) / min(len(ca), len(cb))) if (ca and cb) else 0.0
+    # 포함도(부분집합=동일 과제의 단문/장문형)를 절반 실어 접두 병합은 끊고
+    # 재공고·확장 서술은 붙인다.
+    return 0.5 * seq + 0.5 * containment
 
 
 class WorldStore:
@@ -181,9 +201,18 @@ class WorldStore:
 
     def render(self, channels: list[str], time_known: bool) -> str:
         pend = self.pending()
-        lines = ["[Programmatic world state — maintained for you; read-only]",
-                 f"Pending intentions ({len(pend)}):"]
         rev_map = {idx: h for h, idx in self.handle_map.items()}
+        lines = ["[Programmatic world state — maintained for you; read-only]"]
+        # crossday_1 부검(저장·사상 완료였는데 미선택)의 수리: 오늘 메뉴에 사상된
+        # 항목은 최상단 실행-후보 절로 승격 — 기억이 아니라 주의가 병목이었다.
+        now_items = [(idx, item) for idx, item in enumerate(self.items)
+                     if item["status"] == "pending" and idx in rev_map.values()]
+        if now_items:
+            lines.append("ACTION CANDIDATES IN TODAY'S MENU NOW — select when their moment arrives:")
+            for idx, item in now_items:
+                handle = rev_map[idx]
+                lines.append(f"- {handle}: \"{item['desc']}\" | when: {item['when']}")
+        lines.append(f"Pending intentions ({len(pend)}):")
         for idx, item in enumerate(self.items):
             if item["status"] != "pending":
                 continue
