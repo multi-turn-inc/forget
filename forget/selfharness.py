@@ -203,7 +203,8 @@ def extract_handles(text: str, cap: int = 40) -> list[dict[str, str]]:
     for kind, pattern in _HANDLE_RES:
         for m in _re.findall(pattern, text):
             val = m.rstrip(".,;")
-            if val in seen:
+            # 이미 잡힌 더 긴 핸들(URL 등)의 부분문자열은 파편 — 버린다
+            if val in seen or any(val in h["value"] for h in out):
                 continue
             seen.add(val)
             out.append({"kind": kind, "value": val})
