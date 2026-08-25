@@ -17,6 +17,9 @@ MODEL_ID="${SELF_HARNESS_MODEL:-Qwen3.8-27B-UD-Q4_K_XL.gguf}"
 TUNNEL="${FORGET_LLAMA_URL:-http://127.0.0.1:18812/v1}"
 REPO="${SELF_HARNESS_REPO:-$HOME/orca/workspaces/forget/내-프롬프트를-공유하기-싫어}"
 PI_BIN="${SELF_HARNESS_PI:-$HOME/.nvm/versions/node/v22.22.0/bin/pi}"
+# launchd 환경엔 nvm PATH가 없다 — pi의 `env node` 셔뱅이 EXIT=127로 죽는다
+# (첫 자동 기상 실측). node 디렉터리를 PATH 앞에 박는다.
+export PATH="$(dirname "$PI_BIN"):$PATH"
 
 if ! curl -s -m 5 "$TUNNEL/models" > /dev/null 2>&1; then
   echo "$STAMP SKIP tunnel-dead" >> "$LOG"
