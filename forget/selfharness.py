@@ -249,8 +249,11 @@ def distill_turns(turns: list[dict[str, Any]], llm=None) -> dict[str, Any]:
         "receipts inline), lessons = durable rules learned, intents = commitments "
         "STILL UNFINISHED at the END of the transcript. An instruction that was "
         "already carried out, verified, or released is NOT an intent — re-arming "
-        "completed work creates ghost intents (rumination). ≤6 items each, one "
-        "sentence each. No prose outside JSON.\n\n<transcript>\n" + raw + "\n</transcript>")
+        "completed work creates ghost intents (rumination). BE SELECTIVE: most "
+        "transcripts contain 0-2 items worth keeping; routine mechanics, probe "
+        "chatter, and restated instructions are NOT facts. Empty lists are a good "
+        "answer for noise. ≤6 items each, one sentence each. No prose outside "
+        "JSON.\n\n<transcript>\n" + raw + "\n</transcript>")
     parsed: dict[str, Any] = {}
     if text:
         try:
