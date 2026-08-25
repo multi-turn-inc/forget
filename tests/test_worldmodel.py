@@ -199,6 +199,40 @@ def test_rebuild_preserves_dismissal_until_real_evidence(tmp_path):
     conn.close()
 
 
+def test_standing_hands_lifecycle_and_expiry_visible(tmp_path):
+    # 유언장 계약 (자기 하네스 헌장 L3): 등기(왜 의무)→기상 목록→해제(사유 의무).
+    # 만료는 조용히 사라지지 않고 expired로 표시된다 — 만료도 정보다.
+    from forget.worldmodel import arm_hand, release_hand, standing_hands
+    import pytest
+    world = str(tmp_path / "world.sqlite3")
+    with pytest.raises(ValueError):
+        arm_hand(world, "h1", "watch", "감시한다", "", "ref")      # why 없는 손 거부
+    with pytest.raises(ValueError):
+        arm_hand(world, "h1", "poke", "x", "y", "ref")             # 미정의 kind 거부
+    arm_hand(world, "h1", "watch", "llama-server 재기동 억제", "GRPO 훈련이 VRAM 점유 중",
+             "run_w2b.sh", expires_at="2026-08-25T06:00:00Z", now=NOW)
+    arm_hand(world, "h2", "intent", "판정 후 llama-server 재개", "L2 트랙이 추론 서버 필요",
+             "self-harness charter", now=NOW)
+    hands = standing_hands(world, now=NOW)
+    assert [h["id"] for h in hands] == ["h1", "h2"]
+    assert hands[0]["expired"] is False
+    late = datetime(2026, 8, 25, 7, 0, tzinfo=timezone.utc)
+    assert standing_hands(world, now=late)[0]["expired"] is True   # 만료 표시, 잔존
+    with pytest.raises(ValueError):
+        release_hand(world, "h1", "  ")                            # 빈 사유 거부
+    out = release_hand(world, "h1", "훈련 완주 — 가드 소멸 확인", now=late)
+    assert out["changed"] is True
+    assert [h["id"] for h in standing_hands(world, now=late)] == ["h2"]
+    # 재등기 = 새 생애 (해제 이력 소거)
+    arm_hand(world, "h1", "watch", "다시 감시", "새 훈련 시작", "run3", now=late)
+    assert "h1" in [h["id"] for h in standing_hands(world, now=late)]
+    # DB 없는 읽기 경로는 빈 목록·파일 생성 금지
+    ghost = str(tmp_path / "no-world.sqlite3")
+    assert standing_hands(ghost) == []
+    import os
+    assert not os.path.exists(ghost)
+
+
 def test_rebuild_user_scope_isolation(tmp_path):
     # P-WM-2 파생 계약: 다중 스코프 원장(벤치)에서 user_id를 주면 그 스코프의
     # 세계만 파생된다 — 문항 간 사건 누수는 곧 오염된 기대다.

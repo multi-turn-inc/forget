@@ -76,6 +76,17 @@ CREATE TABLE IF NOT EXISTS dismissals (
     source_ref TEXT NOT NULL,     -- 근거 포인터 (기억 id·문서·결정 기록)
     at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS standing_hands (
+    id TEXT PRIMARY KEY,          -- 유언장 (자기 하네스 헌장 L3): 떠 있는 손의 등기부.
+    kind TEXT NOT NULL,           -- 'watch'(감시) | 'intent'(미완 의도) | 'resume'(재개 조건)
+    what TEXT NOT NULL,           -- 무엇이 떠 있는가 (다음 기상이 읽고 행동할 문장)
+    why TEXT NOT NULL,            -- 왜 — 의도 없는 손이 유령이 된다 (표본 2호의 교훈)
+    armed_at TEXT NOT NULL,
+    expires_at TEXT,              -- 없으면 무기한 — 단 기상마다 재심사 대상
+    released_at TEXT,             -- 해제 시각 (NULL = 아직 떠 있음)
+    release_reason TEXT,          -- 해제 사유 (dismiss 규율: 빈 해소는 없다)
+    source_ref TEXT NOT NULL      -- 등기 근거 (작업·커밋·대화 포인터)
+);
 """
 
 
@@ -305,6 +316,85 @@ def _dismissed_entities(world_db: str) -> set[str]:
     finally:
         conn.close()
     return {r[0][len("entity:"):] for r in rows}
+
+
+def arm_hand(world_db: str, hand_id: str, kind: str, what: str, why: str,
+             source_ref: str, expires_at: str | None = None,
+             now: datetime | None = None) -> dict[str, Any]:
+    """유언장 등기 — 떠 있는 손(감시·의도·재개 조건)을 다음 기상이 상속하게.
+
+    표본 2호(유령 감시의 llama-server 재기동 시도)의 답: 손은 왜(why) 없이
+    떠 있을 수 없다 — 다음 기상은 why가 현재도 참인지부터 재심사한다.
+    같은 id 재등기는 갱신 (armed_at 갱신, 해제 이력 소거 — 새 생애).
+    """
+    if kind not in {"watch", "intent", "resume"}:
+        raise ValueError(f"kind는 watch|intent|resume 중 하나: {kind}")
+    for name, val in [("what", what), ("why", why), ("source_ref", source_ref)]:
+        if not (val or "").strip():
+            raise ValueError(f"유언장에는 {name}이(가) 필요하다 — 의도 없는 손이 유령이 된다")
+    now = now or _utcnow()
+    conn = _open_world(world_db)
+    try:
+        conn.execute(
+            "INSERT INTO standing_hands (id, kind, what, why, armed_at, expires_at,"
+            " released_at, release_reason, source_ref) VALUES (?,?,?,?,?,?,NULL,NULL,?) "
+            "ON CONFLICT(id) DO UPDATE SET kind=excluded.kind, what=excluded.what,"
+            " why=excluded.why, armed_at=excluded.armed_at, expires_at=excluded.expires_at,"
+            " released_at=NULL, release_reason=NULL, source_ref=excluded.source_ref",
+            (hand_id, kind, what.strip(), why.strip(), _iso(now), expires_at, source_ref.strip()),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return {"id": hand_id, "kind": kind, "armed": True}
+
+
+def release_hand(world_db: str, hand_id: str, reason: str,
+                 now: datetime | None = None) -> dict[str, Any]:
+    """유언장 해제 — 사유 의무 (dismiss 규율 재사용). 이미 해제면 무변화."""
+    if not (reason or "").strip():
+        raise ValueError("해제에는 사유가 필요하다 — 빈 해소는 없다")
+    now = now or _utcnow()
+    conn = _open_world(world_db)
+    try:
+        row = conn.execute("SELECT released_at FROM standing_hands WHERE id=?",
+                           (hand_id,)).fetchone()
+        if row is None:
+            raise KeyError(f"유언장 없음: {hand_id}")
+        if row[0]:
+            return {"id": hand_id, "released": True, "changed": False}
+        conn.execute("UPDATE standing_hands SET released_at=?, release_reason=? WHERE id=?",
+                     (_iso(now), reason.strip(), hand_id))
+        conn.commit()
+    finally:
+        conn.close()
+    return {"id": hand_id, "released": True, "changed": True}
+
+
+def standing_hands(world_db: str = DEFAULT_WORLD_DB,
+                   now: datetime | None = None) -> list[dict[str, Any]]:
+    """떠 있는 손 목록 — 기상 재수화가 읽는 유언장. 만료된 손은 'expired'로
+    표시하되 목록에 남긴다 (조용한 소멸 금지 — 만료도 정보다)."""
+    now = now or _utcnow()
+    try:
+        conn = sqlite3.connect(f"file:{world_db}?mode=ro", uri=True)
+    except sqlite3.OperationalError:
+        return []
+    try:
+        rows = conn.execute(
+            "SELECT id, kind, what, why, armed_at, expires_at, source_ref "
+            "FROM standing_hands WHERE released_at IS NULL ORDER BY armed_at").fetchall()
+    except sqlite3.OperationalError:
+        return []
+    finally:
+        conn.close()
+    out = []
+    for hid, kind, what, why, armed_at, expires_at, source_ref in rows:
+        exp = _parse_ts(expires_at)
+        out.append({"id": hid, "kind": kind, "what": what, "why": why,
+                    "armed_at": armed_at, "source_ref": source_ref,
+                    "expired": bool(exp and now >= exp)})
+    return out
 
 
 def dismiss(world_db: str, loop_id: str, reason: str, source_ref: str,
