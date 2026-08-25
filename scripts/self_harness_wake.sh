@@ -58,17 +58,13 @@ run_wake() {
   perl -e 'alarm 480; exec @ARGV' "$PI_BIN" -p --approve --session-id "$1" \
     --provider local-qwen --model "$MODEL_ID" "$WAKE_PROMPT" 2>&1
 }
-OUT="$(run_wake self-harness)"
+# 매 기상 = 새 세션 (관찰 4 수리: 15분 박동 가속 후 고정 세션이 비대해져
+# "Context size exceeded" 3연속 자가 복구 불능 — 구 폴백은 "Cannot continue"
+# 만 매치해 병든 세션을 계속 물었다). 연속성의 정본은 세션 파일이 아니라
+# forget 캡슐·유언장이며 직전 처분 회수는 이미 실증(관찰 3) — 세션 이력
+# 의존을 제거하면 컨텍스트 초과가 구조적으로 불가능하다 (헌장 L1-②의 순수형).
+OUT="$(run_wake "self-harness-$(date '+%Y%m%d%H%M%S')")"
 CODE=$?
-if [ $CODE -ne 0 ] && printf '%s' "$OUT" | grep -q "Cannot continue from message role"; then
-  # 세션이 미완 toolCall 상태로 잘림(기상 소멸 잔해) — 캐시 손상은 캐시를
-  # 버리고 상태 계층(캡슐·유언장)에서 재수화한다 (헌장 L1-②). 새 세션 id로
-  # 1회 폴백; 연속성의 정본은 세션 파일이 아니다.
-  FALLBACK_ID="self-harness-$(date '+%Y%m%d%H%M')"
-  echo "$STAMP FALLBACK corrupt-session → $FALLBACK_ID" >> "$LOG"
-  OUT="$(run_wake "$FALLBACK_ID")"
-  CODE=$?
-fi
 TAIL="$(printf '%s' "$OUT" | tail -c 400 | tr '\n' ' ')"
 echo "$STAMP EXIT=$CODE ${TAIL}" >> "$LOG"
 exit 0
