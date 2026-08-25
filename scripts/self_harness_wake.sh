@@ -48,7 +48,10 @@ Read your state capsule and standing hands. Re-judge each standing hand (release
 reason if its 'why' no longer holds). Check [전망] expectations. If real work is \
 warranted, do ONE small concrete step and record it (arm_hand for anything left \
 running). If nothing warrants action, say IDLE and stop — idling honestly beats \
-inventing work."
+inventing work. Discipline: when comparing timestamps, always compare FULL dates \
+(YYYY-MM-DD HH:MM), never clock-time alone — a same-clock different-day file is \
+not an anomaly. (This rule exists because a wake once reported a 22h-old file as \
+2.6h in the future.)"
 
 # 8분 상한 — 주석이 아니라 명령으로 (관찰 2: 상한 부재로 소멸 시 무기록)
 run_wake() {

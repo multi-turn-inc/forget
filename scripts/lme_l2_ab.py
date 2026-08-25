@@ -203,6 +203,18 @@ JUDGE_TEMPLATES 문면 그대로 — 판정자 편향은 팔 간 상쇄된다 (�
       부기 의무: 검색 횟수 분포(4o 과신 기제[0회 55%]가 프론티어에서
       재현되는가 — 팔 F 사유의 독립 검증) · 추론 토큰 비용 실병기.
 
+## 추기 12 (2026-08-26 새벽 — 팔 F: 강제 최소 탐침 일반화. 3자 비교가 만든
+   등록 사유: 리더 불문 검색 0회 55%[Sol=4o 동일 분포]가 기본 성향이고
+   multi-session 손실의 뿌리. 숫자 보기 전 고정)
+
+  팔 F = P + 전 문항 최소 1탐침 의무(0-탐침 즉답 무조건 1회 반려 — 기존
+  조건부[다중증거·추천·색인]의 무조건화).
+  1차 실행 = 로컬(무료). 정직 공시: 로컬은 0회가 20%뿐이라 검증력 낮음 —
+  본검증은 Sol+F(~$10, 게이트 대기: 게으른 천재에게 성실을 강제하면
+  0.820 우위선을 넘는가).
+  판정 (로컬 F vs 로컬 P 0.770): 채택 F ≥ 0.790 / 기각 F ≤ 0.775 (로컬엔
+  무익 — Sol 전용 가설로 이월) / 사이 회색. 부작용 가드: 토큰 증가 병기.
+
 사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABCDEGHRWVPQ]
       (이어달리기: 출력 JSONL의 완료 문항은 건너뛴다. W/V: LME_WM_DIR로 파생 DB 위치 지정 가능)
 """
@@ -331,7 +343,8 @@ def evidence_checklist(question: str, qdate: str) -> str:
 
 def read_groping(question: str, qdate: str, context: str, searcher, max_rounds: int = 5,
                  checklist: str | None = None, external_gates: bool = False,
-                 world_block: str | None = None, preference_probe: bool = False):
+                 world_block: str | None = None, preference_probe: bool = False,
+                 force_first_probe: bool = False):
     """팔 D/E/G — 더듬기(strategic recall). 사람의 인출은 한 턴이 아니다: 단서를
     만들고(생성), 맞는지 보고(재인), 다시 더듬는다. 그 최소 기계화 — 도구 호출
     규약이 없는 로컬 리더로도 돌게, SEARCH: 한 줄 규약으로 루프를 돈다.
@@ -377,7 +390,8 @@ def read_groping(question: str, qdate: str, context: str, searcher, max_rounds: 
         out = llm(system, user)
         m = re.match(r"^\s*SEARCH:\s*(.+)$", out, re.IGNORECASE)
         if (m is None and external_gates and not forced_used and n_search == 0
-                and not last and (MULTI_EVIDENCE_RE.search(question) or world_block
+                and not last and (force_first_probe
+                                  or MULTI_EVIDENCE_RE.search(question) or world_block
                                   or (preference_probe and RECOMMEND_RE.search(question)))):
             forced_used = True
             # 팔 V ③ 검증 의무: 색인이 있으면 무검증 즉답을 1회 반려한다 —
@@ -392,9 +406,14 @@ def read_groping(question: str, qdate: str, context: str, searcher, max_rounds: 
             elif MULTI_EVIDENCE_RE.search(question):
                 shown += ("\n[instrument] This question likely needs multiple evidence pieces "
                           "(comparison/counting/ordering). You must SEARCH at least once before answering.")
-            else:
+            elif world_block:
                 shown += ("\n[instrument] A world index is present but nothing has been verified "
                           "by search. You must SEARCH at least once before answering.")
+            else:
+                # 팔 F (추기 12): 무조건 최소 1탐침 — 즉답 성향은 리더 불문 보편
+                shown += ("\n[instrument] Nothing has been verified by search yet. You must "
+                          "SEARCH at least once before answering — your first recall is a "
+                          "hypothesis, not evidence.")
             continue
         if not m or last:
             # 누적(스테이트리스 지불)과 최종 컨텍스트(캐시 리더 지불) 둘 다 —
@@ -562,7 +581,7 @@ def main() -> None:
                 row["A_tok"] = token_est(ctx)
                 row["A_hyp"] = hyp[:200]
 
-            if any(a in args.arms for a in "BCDEGHRWVPQ"):
+            if any(a in args.arms for a in "BCDEGHRWVPQF"):
                 def assembled(query: str):
                     r = assemble_context({"query": query, "filters": {"user_id": scope},
                                           "top_k": int(os.environ.get("LME_B_TOPK", "10")),
@@ -698,6 +717,17 @@ def main() -> None:
                 row["P_tok"] = ptok
                 row["P_srch"] = nsrch
                 row["P_hyp"] = hyp[:200]
+
+            if "F" in args.arms:
+                ctx0, searcher = make_groper()
+                hyp, ftok, nsrch, fctx = read_groping(question, qdate, ctx0, searcher,
+                                                      external_gates=True,
+                                                      preference_probe=True,
+                                                      force_first_probe=True)
+                row["F"] = judge(inst["question_type"], question, str(inst["answer"]), hyp)
+                row["F_tok"] = ftok
+                row["F_srch"] = nsrch
+                row["F_hyp"] = hyp[:200]
 
             if "V" in args.arms:
                 from forget.worldmodel import rebuild as wm_rebuild
