@@ -132,7 +132,23 @@ JUDGE_TEMPLATES 문면 그대로 — 판정자 편향은 팔 간 상쇄된다 (�
       가드: 타유형 합산 V − G ≤ −3pp면 결과 불문 채택 불가
       부기 의무: 검색 0회 문항 수(M3 지표)·주입률 병기.
 
-사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABCDEGHRWV]
+## 추기 7 (2026-08-25 오후 — P-PF-1: 추천 탐침. preference 부검의 집행)
+
+  부검(G팔 preference 6문항, 3승 3패): 패배 2/3의 공통 병소 = **검색 0회
+  조기 종결** — "추천해줘/제안해줘" 질문에서 리더가 '추천 대상 정보가
+  기억에 없다'로 판단, 사용자 선호 탐색을 아예 안 함 (35a27287·8a2466db).
+  G의 강제 탐침은 세기·비교·순서 어휘만 커버 — 추천성 질문은 구멍.
+  진단: 선호 질문의 절반은 성향 기관 없이도 "선호를 검색하라"는 의무
+  하나로 풀린다 (외과 체크리스트 원리의 확장).
+
+  팔 P = G + RECOMMEND_RE 매치 시 0-탐침 즉답 1회 반려 (선호·취향 검색
+  의무 문구). 판정 (숫자 보기 전 고정, n=6이라 통계 불가 — 기전 검증):
+      채택: preference 문항의 검색 0회 조기 종결 0건 그리고 정답 ≥ G+1건
+      기각: 검색은 강제됐는데 정답 불변 → 병소는 회수 밖(성향 기관 필요
+            근거 강화, P-PF-2로 이월)
+      부기: 타 유형 부작용은 P 팔이 preference 전용 조건이라 구조적 0.
+
+사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABCDEGHRWVP]
       (이어달리기: 출력 JSONL의 완료 문항은 건너뛴다. W/V: LME_WM_DIR로 파생 DB 위치 지정 가능)
 """
 from __future__ import annotations
@@ -201,6 +217,10 @@ MULTI_EVIDENCE_RE = re.compile(
     r"how many|how much (more|less)|total|compare|first|last|order|difference|"
     r"between|each time|every time|all the|몇 |비교|순서|총 |차이", re.I)
 
+RECOMMEND_RE = re.compile(
+    r"recommend|suggest|any (good |interesting |new )?(idea|tip|resource|show|"
+    r"movie|event|recipe|book|documentar)|what should i|추천|제안", re.I)
+
 
 def evidence_checklist(question: str, qdate: str) -> str:
     """팔 E(D2a)의 계획 호출 — 언어화 메타인지 단독의 효과를 절제한다."""
@@ -212,7 +232,7 @@ def evidence_checklist(question: str, qdate: str) -> str:
 
 def read_groping(question: str, qdate: str, context: str, searcher, max_rounds: int = 5,
                  checklist: str | None = None, external_gates: bool = False,
-                 world_block: str | None = None):
+                 world_block: str | None = None, preference_probe: bool = False):
     """팔 D/E/G — 더듬기(strategic recall). 사람의 인출은 한 턴이 아니다: 단서를
     만들고(생성), 맞는지 보고(재인), 다시 더듬는다. 그 최소 기계화 — 도구 호출
     규약이 없는 로컬 리더로도 돌게, SEARCH: 한 줄 규약으로 루프를 돈다.
@@ -258,15 +278,24 @@ def read_groping(question: str, qdate: str, context: str, searcher, max_rounds: 
         out = llm(system, user)
         m = re.match(r"^\s*SEARCH:\s*(.+)$", out, re.IGNORECASE)
         if (m is None and external_gates and not forced_used and n_search == 0
-                and not last and (MULTI_EVIDENCE_RE.search(question) or world_block)):
+                and not last and (MULTI_EVIDENCE_RE.search(question) or world_block
+                                  or (preference_probe and RECOMMEND_RE.search(question)))):
             forced_used = True
             # 팔 V ③ 검증 의무: 색인이 있으면 무검증 즉답을 1회 반려한다 —
             # W 부검의 M3(색인 권위로 검색 0회 전락 11문항, Δ−36.4pp) 수리.
-            shown += ("\n[instrument] This question likely needs multiple evidence pieces "
-                      "(comparison/counting/ordering). You must SEARCH at least once before answering."
-                      if MULTI_EVIDENCE_RE.search(question) else
-                      "\n[instrument] A world index is present but nothing has been verified "
-                      "by search. You must SEARCH at least once before answering.")
+            # 팔 P (추기 7): 추천성 질문의 0-탐침 즉답도 반려 — "추천 대상
+            # 정보가 없다"가 아니라 "이 사람의 취향"이 회수 대상이다.
+            if preference_probe and RECOMMEND_RE.search(question) and not MULTI_EVIDENCE_RE.search(question):
+                shown += ("\n[instrument] This is a recommendation/personalization question. "
+                          "Before answering (and before concluding anything is missing), you must "
+                          "SEARCH for this user's tastes, preferences, and past interests related "
+                          "to the topic.")
+            elif MULTI_EVIDENCE_RE.search(question):
+                shown += ("\n[instrument] This question likely needs multiple evidence pieces "
+                          "(comparison/counting/ordering). You must SEARCH at least once before answering.")
+            else:
+                shown += ("\n[instrument] A world index is present but nothing has been verified "
+                          "by search. You must SEARCH at least once before answering.")
             continue
         if not m or last:
             # 누적(스테이트리스 지불)과 최종 컨텍스트(캐시 리더 지불) 둘 다 —
@@ -560,6 +589,16 @@ def main() -> None:
                 row["W_kw"] = n_kw
                 row["W_world"] = wblock[:300]
                 row["W_hyp"] = hyp[:200]
+
+            if "P" in args.arms:
+                ctx0, searcher = make_groper()
+                hyp, ptok, nsrch, pctx = read_groping(question, qdate, ctx0, searcher,
+                                                      external_gates=True,
+                                                      preference_probe=True)
+                row["P"] = judge(inst["question_type"], question, str(inst["answer"]), hyp)
+                row["P_tok"] = ptok
+                row["P_srch"] = nsrch
+                row["P_hyp"] = hyp[:200]
 
             if "V" in args.arms:
                 from forget.worldmodel import rebuild as wm_rebuild
