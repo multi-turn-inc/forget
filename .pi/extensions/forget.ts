@@ -10,8 +10,9 @@
  */
 import { Type } from "typebox";
 
-const FORGET = process.env.FORGET_URL ?? "http://localhost:8000";
-const USER = process.env.FORGET_USER ?? "junghunkim";
+const ENV: Record<string, string | undefined> = (globalThis as any).process?.env ?? {};
+const FORGET = ENV.FORGET_URL ?? "http://localhost:8000";
+const USER = ENV.FORGET_USER ?? "junghunkim";
 
 async function forgetPost(path: string, body: unknown, timeoutMs = 20000): Promise<any> {
   const ctl = new AbortController();
@@ -52,7 +53,7 @@ function toTurns(messages: any[]): { role: string; content: string }[] {
 
 export default async function forgetExtension(pi: any) {
   // ── 0) 로컬 프로바이더: 터널 27B (E2EE 정공로 — $0, 데이터 불출) ──────
-  const LLAMA = process.env.FORGET_LLAMA_URL ?? "http://127.0.0.1:18812/v1";
+  const LLAMA = ENV.FORGET_LLAMA_URL ?? "http://127.0.0.1:18812/v1";
   try {
     const res = await fetch(`${LLAMA}/models`, { signal: AbortSignal.timeout(4000) });
     const payload: any = await res.json();
