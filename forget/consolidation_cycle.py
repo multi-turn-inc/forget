@@ -74,6 +74,9 @@ def sink_candidates(db: str) -> dict[str, list[tuple[str, str, dict]]]:
     return {d: items for d, items in by_day.items() if len(items) >= MIN_BATCH}
 
 
+HANDLE_KEEP_MIN = 0.7    # 침강 품질 문턱 — 이 미만이면 그날 침강 보류
+
+
 def consolidate_day(db: str, day: str, items: list[tuple[str, str, dict]],
                     user_id: str) -> dict[str, Any]:
     corpus = "\n".join(f"- {t[:200]}" for _, t, _ in items)[:16000]
@@ -87,11 +90,21 @@ def consolidate_day(db: str, day: str, items: list[tuple[str, str, dict]],
     body = f"[일일 응고 {day}] {summary[:800]}"
     if handles:
         body += "\n핸들: " + ", ".join(h["value"] for h in handles[:12])
+        # 침강 품질 계기 (대장 #20 자동화): 요약+핸들 블록이 원본 핸들을
+        # 얼마나 보존하는가 — 손실 응고는 집계가 멀쩡해 보여도 행동 핸들을
+        # 죽인다. 문턱 미달이면 그날은 침강하지 않는다 (보류가 손실보다 낫다).
+        kept = sum(1 for h in handles if h["value"] in body)
+        keep_rate = kept / len(handles)
+        if keep_rate < HANDLE_KEEP_MIN:
+            return {"day": day, "skipped": "handle_loss",
+                    "handle_keep_rate": round(keep_rate, 3)}
+    keep_rate = (sum(1 for h in handles if h["value"] in body) / len(handles)) if handles else 1.0
     from .store import add_memories
     add_memories({"messages": [{"role": "assistant", "content": body}],
                   "user_id": user_id, "infer": False, "hebbian": False,
                   "metadata": {"source": "consolidation_daily", "day": day,
                                "sank_count": len(items),
+                               "handle_keep_rate": round(keep_rate, 3),
                                "trust": {"kind": "summary", "light": "yellow",
                                          "source": "assistant"}}})
     conn = sqlite3.connect(db)
