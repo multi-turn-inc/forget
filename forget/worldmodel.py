@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS events (
     title TEXT NOT NULL,          -- 일화 앵커 또는 본문 머리
     t TEXT NOT NULL,              -- 발생 시각 (UTC ISO)
     t_precision TEXT NOT NULL,    -- 'second' | 'day' | 'unknown'
+    t_source TEXT NOT NULL DEFAULT 'ingest',  -- 'ingest'(저장 시각) | 'body'(본문 발생일, v1)
     source_ref TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS event_order (
@@ -119,6 +120,10 @@ def _iso(dt: datetime) -> str:
 def _open_world(world_db: str) -> sqlite3.Connection:
     conn = sqlite3.connect(world_db)
     conn.executescript(_SCHEMA)
+    # v1 마이그레이션: 구 스키마 DB에 t_source 열 소급 (기본 'ingest')
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(events)")}
+    if "t_source" not in cols:
+        conn.execute("ALTER TABLE events ADD COLUMN t_source TEXT NOT NULL DEFAULT 'ingest'")
     return conn
 
 
@@ -172,8 +177,39 @@ def _record(conn: sqlite3.Connection, loop_id: str, frm: str, to: str, cause: st
     )
 
 
-def _ledger_event_rows(ledger_db: str, user_id: str | None = None) -> list[dict[str, Any]]:
-    """원장 → 사건 기록 v0. 기억 한 건 = 발생 기록 한 건 (제목 = 일화 앵커).
+_EVENT_VERB_RE = re.compile(
+    r"했다|됐다|완료|판정|기각|채택|결정|시작|종료|출시|제출|발표|만났|도착|"
+    r"발사|커밋|수리|적발|실측|확정|등재|제정|배포|전환|승인|합격|탈락|이사|"
+    r"계약|출발|귀국|입원|퇴원|졸업|입학|"
+    # 1차 감사 위음성 3건의 공통 패턴 — 명사형 사건 술어 ("버그 수정:",
+    # "셀링포인트 철회", "계급 승급"). 동사 활용 없이도 발생을 서술한다.
+    r"수정|철회|승급|재개|해소|해제|개시|출간|합의|이관")
+_BODY_DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
+
+
+def _classify_event(text: str, anchor: str) -> tuple[bool, str | None]:
+    """파생 v1 (P-WM-3 등록): (사건인가, 본문 발생일 or None).
+
+    ## P-WM-3 등록 (2026-08-25, 숫자 보기 전 고정. P-WM-2b 이월의 집행)
+    실원장 감사(6,444건): 사건 술어 24.8% · 본문 날짜 93.2% · 앵커 99.5%.
+    v0 병소: 전 기억을 사건 취급(75% 잡음) + t=저장 시각(회고 기록의 발생일
+    무시). v1: ①사건성 게이트(발생 술어 어휘 — LLM 불요 결정론) ②t 재사상
+    (본문·앵커의 첫 ISO 날짜 > 저장 시각; t_source로 구분).
+    판정: 게이트 통과분에서 무작위 30건 수동 감사 — 위음성(진짜 사건인데
+    탈락) ≤ 10% 채택 / >20% 기각(게이트 어휘 확장으로 재등록) / 사이 회색.
+    부기 의무: v0→v1 사건 수·t 재사상 비율·재사상 격차 분포 공시.
+    세션 캡처(hook 메타)는 사건 불가 — 포인터이지 발생이 아니다.
+    """
+    if _EVENT_VERB_RE.search(text) is None:
+        return False, None
+    m = _BODY_DATE_RE.search(anchor) or _BODY_DATE_RE.search(text)
+    return True, (f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else None)
+
+
+def _ledger_event_rows(ledger_db: str, user_id: str | None = None,
+                       strict_events: bool = False) -> list[dict[str, Any]]:
+    """원장 → 사건 기록. v0(기본): 기억 한 건 = 발생 기록 한 건 (제목 = 앵커).
+    v1(strict_events=True): 사건성 게이트 + 본문 날짜 t 재사상 (P-WM-3).
 
     상태 유형 감사(P-WM-1b)가 밝힌 최대 수요(56%)는 세기·정렬·간격 —
     v0는 그 시간 축 절반(t·정밀도·부분순서)을 구현한다. SPO 구조 절반은
@@ -197,7 +233,8 @@ def _ledger_event_rows(ledger_db: str, user_id: str | None = None) -> list[dict[
         except ValueError:
             meta = {}
         anchor = ((meta.get("episode") or {}).get("anchor") or "").strip()
-        title = anchor or re.sub(r"\s+", " ", str(memory or "")).strip()[:90]
+        text = str(memory or "")
+        title = anchor or re.sub(r"\s+", " ", text).strip()[:90]
         if not title:
             continue
         ts = str(created_at or "")
@@ -208,17 +245,35 @@ def _ledger_event_rows(ledger_db: str, user_id: str | None = None) -> list[dict[
             precision = "second"
         else:
             precision = "day"
+        t_source = "ingest"
+        if strict_events:
+            if meta.get("hook"):        # 세션 캡처는 포인터 — 발생이 아니다
+                continue
+            is_event, body_date = _classify_event(text, anchor)
+            if not is_event:
+                continue
+            if body_date:
+                body_parsed = _parse_ts(body_date)
+                if body_parsed is not None:
+                    # 본문 발생일 > 저장 시각 — 회고 기록의 t를 사건 시점으로.
+                    # 같은 날이면 저장 시각(초 정밀)을 유지한다.
+                    if parsed is None or _iso(parsed)[:10] != body_date:
+                        parsed, precision, t_source = body_parsed, "day", "body"
         out.append({"id": f"ev-{mid}", "title": title,
                     "t": _iso(parsed) if parsed else "", "t_precision": precision,
-                    "source_ref": f"memories:{mid}"})
+                    "t_source": t_source, "source_ref": f"memories:{mid}"})
     return out
 
 
 def rebuild(world_db: str = DEFAULT_WORLD_DB, ledger_db: str = DEFAULT_LEDGER_DB,
-            now: datetime | None = None, user_id: str | None = None) -> dict[str, int]:
+            now: datetime | None = None, user_id: str | None = None,
+            strict_events: bool = False) -> dict[str, int]:
     """원장 → 상태 코어 재구축. 기존 고리의 opened_at은 보존하고 상태만 재판정.
 
     user_id를 주면 그 스코프의 세계만 파생한다 (P-WM-2 벤치 파생 경로).
+    strict_events=True면 사건 기관을 v1(게이트+t 재사상, P-WM-3)로 파생하고
+    게이트 탈락분의 잔존 행을 지운다 — 파생 DB는 재생성 가능하므로 삭제
+    전파(대장 #19)가 여기선 재파생으로 성립한다.
     """
     now = now or _utcnow()
     conn = _open_world(world_db)
@@ -257,14 +312,28 @@ def rebuild(world_db: str = DEFAULT_WORLD_DB, ledger_db: str = DEFAULT_LEDGER_DB
                 stats["transitions"] += 1
             if status.startswith("closed"):
                 stats["closed"] += 1
-        for ev in _ledger_event_rows(ledger_db, user_id=user_id):
+        evs = _ledger_event_rows(ledger_db, user_id=user_id, strict_events=strict_events)
+        if strict_events:
+            # v1 게이트 탈락분 청소 — 재파생이 곧 삭제 전파 (대장 #19).
+            keep = {e["id"] for e in evs}
+            existing_ids = [r[0] for r in conn.execute("SELECT id FROM events")]
+            stale = [i for i in existing_ids if i not in keep]
+            for i in stale:
+                conn.execute("DELETE FROM events WHERE id = ?", (i,))
+            if stale:
+                stats["events_removed"] = len(stale)
+        for ev in evs:
             conn.execute(
-                "INSERT INTO events (id, title, t, t_precision, source_ref) VALUES (?,?,?,?,?) "
+                "INSERT INTO events (id, title, t, t_precision, t_source, source_ref)"
+                " VALUES (?,?,?,?,?,?) "
                 "ON CONFLICT(id) DO UPDATE SET title=excluded.title, t=excluded.t,"
-                " t_precision=excluded.t_precision",
-                (ev["id"], ev["title"], ev["t"], ev["t_precision"], ev["source_ref"]),
+                " t_precision=excluded.t_precision, t_source=excluded.t_source",
+                (ev["id"], ev["title"], ev["t"], ev["t_precision"],
+                 ev.get("t_source", "ingest"), ev["source_ref"]),
             )
             stats["events"] = stats.get("events", 0) + 1
+            if ev.get("t_source") == "body":
+                stats["t_rebased"] = stats.get("t_rebased", 0) + 1
         conn.commit()
     finally:
         conn.close()
@@ -529,7 +598,7 @@ def timeline(world_db: str = DEFAULT_WORLD_DB, like: str | None = None,
     """사건 질의 ① 정렬 — 시간 오름차순 사건 목록. 창은 반열림 [since, until)."""
     conn = _open_world(world_db)
     try:
-        sql = "SELECT id, title, t, t_precision FROM events WHERE t != ''"
+        sql = "SELECT id, title, t, t_precision, t_source FROM events WHERE t != ''"
         args: list[Any] = []
         if like:
             sql += " AND title LIKE ?"
@@ -545,7 +614,8 @@ def timeline(world_db: str = DEFAULT_WORLD_DB, like: str | None = None,
         rows = conn.execute(sql, args).fetchall()
     finally:
         conn.close()
-    return [{"id": r[0], "title": r[1], "t": r[2], "t_precision": r[3]} for r in rows]
+    return [{"id": r[0], "title": r[1], "t": r[2], "t_precision": r[3],
+             "t_source": r[4]} for r in rows]
 
 
 def count_events(world_db: str = DEFAULT_WORLD_DB, like: str | None = None,

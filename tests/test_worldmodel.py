@@ -233,6 +233,31 @@ def test_standing_hands_lifecycle_and_expiry_visible(tmp_path):
     assert not os.path.exists(ghost)
 
 
+def test_strict_events_gate_and_t_rebase(tmp_path):
+    # P-WM-3 계약: v1은 ①사건 술어 게이트(선호·프레임 탈락) ②세션 캡처 제외
+    # ③본문 발생일로 t 재사상(t_source='body') ④재파생이 탈락분을 지운다.
+    ledger = _ledger(tmp_path, [
+        ("e1", "P-X 판정을 기각했다 (2026-07-01에 실측)", "{}",
+         "2026-08-20T10:00:00Z", "2026-08-20T10:00:00Z", 0),
+        ("e2", "정훈은 커피를 좋아한다", "{}",
+         "2026-08-21T10:00:00Z", "2026-08-21T10:00:00Z", 0),
+        ("e3", "세션 캡처 요약: 서버를 재기동했다",
+         json.dumps({"hook": "PreCompact"}),
+         "2026-08-22T10:00:00Z", "2026-08-22T10:00:00Z", 0),
+    ])
+    world = str(tmp_path / "world.sqlite3")
+    stats0 = rebuild(world, ledger, now=NOW)               # v0: 전부 사건
+    assert stats0["events"] == 3
+    stats1 = rebuild(world, ledger, now=NOW, strict_events=True)
+    assert stats1["events"] == 1                           # 게이트: e1만
+    assert stats1["events_removed"] == 2                   # v0 잔존분 청소
+    assert stats1["t_rebased"] == 1
+    from forget.worldmodel import timeline
+    evs = timeline(world)
+    assert [e["id"] for e in evs] == ["ev-e1"]
+    assert evs[0]["t"][:10] == "2026-07-01"                # 저장 8/20 → 발생 7/1
+
+
 def test_rumination_guard_blocks_echo_of_released_hand(tmp_path):
     # 되새김 가드 계약 (실측 2026-08-25: 해제 13초 뒤 같은 의도 부활):
     # 시간창 안의 유사 재등기는 새 증거가 아니라 메아리 — 차단된다.
