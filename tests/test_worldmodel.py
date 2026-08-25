@@ -258,6 +258,30 @@ def test_strict_events_gate_and_t_rebase(tmp_path):
     assert evs[0]["t"][:10] == "2026-07-01"                # 저장 8/20 → 발생 7/1
 
 
+def test_dispositions_gate_and_llm_failopen(tmp_path, monkeypatch):
+    # P-PF-2 계약: ①결정론 후보 = 선호 어휘 AND (source=user 또는 사용자 주어)
+    # ②hook·superseded 제외 ③LLM 게이트 실패 시 후보 그대로(fail-open).
+    from forget import worldmodel as wm
+    ledger = _ledger(tmp_path, [
+        ("d1", "사용자는 아침에 간결한 요약을 선호한다", "{}",
+         "2026-08-01T00:00:00Z", "2026-08-01T00:00:00Z", 0),
+        ("d2", "파서 어휘 재사용 금지 — 위양성 상속 방지", "{}",     # 주어 없음 → 탈락
+         "2026-08-02T00:00:00Z", "2026-08-02T00:00:00Z", 0),
+        ("d3", "커피 얘기",
+         json.dumps({"trust": {"source": "user"}}),                  # source=user지만 선호 어휘 없음
+         "2026-08-03T00:00:00Z", "2026-08-03T00:00:00Z", 0),
+        ("d4", "사용자는 팝업을 싫어한다", json.dumps({"hook": "x"}),  # hook → 제외
+         "2026-08-04T00:00:00Z", "2026-08-04T00:00:00Z", 0),
+    ])
+    cards = wm.dispositions(ledger_db=ledger)
+    assert [c["stance"] for c in cards] == ["likes"]
+    assert "간결한 요약" in cards[0]["text"]
+    # LLM 죽음 = fail-open (후보 그대로)
+    monkeypatch.setenv("MEM1_HARNESS_DISTILL_URL", "http://127.0.0.1:1/x")
+    gated = wm.dispositions(ledger_db=ledger, llm_gate=True)
+    assert len(gated) == 1
+
+
 def test_rumination_guard_blocks_echo_of_released_hand(tmp_path):
     # 되새김 가드 계약 (실측 2026-08-25: 해제 13초 뒤 같은 의도 부활):
     # 시간창 안의 유사 재등기는 새 증거가 아니라 메아리 — 차단된다.

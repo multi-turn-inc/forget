@@ -758,6 +758,116 @@ def routine_expectations(world_db: str = DEFAULT_WORLD_DB,
     return out
 
 
+# ── 성향 기관 v0 (상태 유형 5호, P-PF-2) ──────────────────────────────────
+
+_PREF_POS_RE = re.compile(r"좋아한|선호|즐긴|원한다|원함|중요하게|우선한|기본값|맘에 들")
+_PREF_NEG_RE = re.compile(r"싫어|피한다|원하지 않|원치 않|금지|하지 마|말 것|말라|거슬")
+_PREF_STYLE_RE = re.compile(r"말투|어조|스타일|방식으로|프레임|형식으로|톤")
+_PREF_EXCLUDE_RE = re.compile(r"세션 캡처|\[devloop\]|사이클 \d|계기 큐|amendment|"
+                              r"restore_turns|워크트리|커밋 [0-9a-f]{7}")
+
+
+_PREF_SUBJECT_RE = re.compile(r"사용자[는가]|정훈[은이]|the user (prefers|likes|wants|avoids)")
+
+
+def _classify_disposition(text: str, source: str | None = None) -> str | None:
+    """파생 게이트: 사용자 성향 발화만. 반환: 'likes' | 'avoids' | 'style' | None.
+
+    ## P-PF-2 등록 (2026-08-25 오후, 숫자 보기 전 고정. preference 부검의
+    ## 잔여 병소[검색해도 못 푸는 2/6]의 집행. HumanLM 6차원의 첫 실물)
+    실원장 선호 발화 밀도 5.7%(369건, 오탐 포함 — 그래서 제외 게이트 병설).
+    v0 구조: (stance, 원문 스니펫, evidence ref) — object 추출은 LLM 몫이라
+    v1로 미룸(결정론 우선, 대장 #18 검증기 자작 원칙).
+    판정: 파생 카드 무작위 30건 수동 감사 — 위양성(사용자 성향이 아닌 것)
+    ≤ 15% 채택 / > 30% 기각(게이트 재설계) / 사이 회색.
+    소비 배선(질의 감지→카드 주입)은 기관 감사 통과 후 별도 등록.
+
+    ## P-PF-2b 재설계 (같은 날 — 1차 기각 위양성 ~85%의 집행)
+    1차 병소: 원장 대다수가 devloop·실험 산문이고 '금지·말 것·스타일'은
+    거기서 도구적 어휘다 — 어휘만으론 시스템 규칙과 사용자 성향을 못 가른다.
+    재설계: **성향의 정본은 사용자의 입** — (trust.source == 'user') 또는
+    (사용자 주어 명시 문장)을 필수 조건으로 AND 결합. 판정선 동일 재감사.
+
+    ## P-PF-2c 국소성 (같은 날 — 2b 회색[명확 위양성 24.1%]의 집행) — **실패 공시**
+    주어·stance 동일 문장 요건은 위양성 24%→20% 미미 개선에 재현율을 16건→
+    5건으로 붕괴시켰다(온톨로지 기피·시간 금지·GTM 취향 소실). 결정론 어휘
+    게이트 3반복(85%→24%→재현 붕괴)의 결론: **성향 판별은 의미 판단** —
+    후보 수집은 결정론(2b, 재현 우선), 선별은 로컬 LLM(dispositions의
+    llm_gate). 회상 게이트·증류와 동일 패턴, 대장 #18(도메인 맞춤 검증기)
+    정합. 판정선 동일 재감사.
+    """
+    if _PREF_EXCLUDE_RE.search(text):
+        return None
+    if source != "user" and not _PREF_SUBJECT_RE.search(text):
+        return None
+    if _PREF_STYLE_RE.search(text):
+        return "style"
+    if _PREF_NEG_RE.search(text):
+        return "avoids"
+    if _PREF_POS_RE.search(text):
+        return "likes"
+    return None
+
+
+def _llm_disposition_filter(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """LLM 선별 (P-PF-2c 후속): 후보 중 '사용자의 지속 성향'만 남긴다.
+    로컬 27B 1패스 — 실패 시 후보 그대로(fail-open, 결정론이 바닥)."""
+    if not cards:
+        return cards
+    from .selfharness import _local_distill_llm   # 지역 임포트 — 순환 회피
+    numbered = "\n".join(f"[{i}] {c['text'][:150]}" for i, c in enumerate(cards))
+    out = _local_distill_llm(
+        "Below are candidate memory snippets. Keep ONLY those stating the USER's "
+        "durable taste, preference, or style for how things should be done for "
+        "them (likes/dislikes/wants/style). DROP system facts, experiment logs, "
+        "one-off decisions, project status, todo items. Return ONLY a JSON array "
+        "of indices to KEEP, e.g. [0,3,7].\n\n" + numbered)
+    m = re.search(r"\[[\d,\s]*\]", out or "")
+    if not m:
+        return cards
+    try:
+        keep = {i for i in json.loads(m.group(0)) if isinstance(i, int)}
+    except ValueError:
+        return cards
+    return [c for i, c in enumerate(cards) if i in keep]
+
+
+def dispositions(ledger_db: str = DEFAULT_LEDGER_DB, user_id: str | None = None,
+                 limit: int = 200, llm_gate: bool = False) -> list[dict[str, Any]]:
+    """성향 카드 목록 — 원장에서 읽기 전용 파생 (파생 DB 없음: 소수라 즉석).
+
+    최신 우선. superseded(red)는 제외 — 성향도 대체된다.
+    llm_gate=True: 결정론 후보(재현 우선) 위에 로컬 LLM 의미 선별 (정밀).
+    """
+    conn = sqlite3.connect(f"file:{ledger_db}?mode=ro", uri=True)
+    try:
+        sql = ("SELECT id, memory, metadata, created_at FROM memories "
+               "WHERE deleted = 0 ORDER BY created_at DESC")
+        rows = conn.execute(sql).fetchall()
+    finally:
+        conn.close()
+    out = []
+    for mid, memory, metadata, created_at in rows:
+        text = str(memory or "")
+        try:
+            meta = json.loads(metadata or "{}")
+        except ValueError:
+            meta = {}
+        if meta.get("hook") or meta.get("superseded_at"):
+            continue
+        trust_source = str(((meta.get("trust") or {}).get("source")) or "")
+        stance = _classify_disposition(text, source=trust_source or None)
+        if stance is None:
+            continue
+        out.append({"stance": stance,
+                    "text": re.sub(r"\s+", " ", text).strip()[:160],
+                    "at": str(created_at or "")[:10],
+                    "source_ref": f"memories:{mid}"})
+        if len(out) >= limit:
+            break
+    return _llm_disposition_filter(out) if llm_gate else out
+
+
 def entity_card(name: str, substrate_db: str = DEFAULT_SUBSTRATE_DB,
                 ledger_db: str = DEFAULT_LEDGER_DB, top_facts: int = 5) -> dict[str, Any] | None:
     """엔티티 기관 v0 질의 ① — 현황 카드 (수요 29%의 "X가 지금 어떤 상태지").
