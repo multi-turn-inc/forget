@@ -258,6 +258,29 @@ def test_strict_events_gate_and_t_rebase(tmp_path):
     assert evs[0]["t"][:10] == "2026-07-01"                # 저장 8/20 → 발생 7/1
 
 
+def test_substrate_deletion_propagates_at_read_time(tmp_path):
+    # 대장 #19 미검증 칸의 계약: 기질(파생)은 낡아도, 소비자가 읽기 시점에
+    # 원장 deleted=0 대조를 하므로 — 지운 기억만 언급하는 엔티티는
+    # entity_card 사실과 stale_entities에서 사라진다 ("삭제는 검색 편집이
+    # 아니라 소거"가 파생 계층에서 성립하는 우리 방식).
+    from forget.worldmodel import entity_card, stale_entities
+    quiet = (NOW - _td(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    sub = _substrate(tmp_path, [("ghost", 1, 30), ("alive", 1, 30)],
+                     [("g1", "ghost"), ("a1", "alive")])
+    ledger = _ledger(tmp_path, [
+        ("g1", "ghost 관련 사실", "{}", quiet, quiet, 1),   # deleted=1
+        ("a1", "alive 관련 사실", "{}", quiet, quiet, 0),
+    ])
+    # 무소식: ghost는 산 기억 0 → 자연 탈락, alive만
+    names = [e["entity"] for e in stale_entities(
+        min_freq=10, stale_days=21, substrate_db=sub, ledger_db=ledger,
+        now=NOW, world_db=str(tmp_path / "w.sqlite3"))]
+    assert names == ["alive"]
+    # 카드: ghost의 사실 목록은 비어 있다 (기질 언급은 남아도 원장 대조가 소거)
+    card = entity_card("ghost", substrate_db=sub, ledger_db=ledger)
+    assert card is None or not card.get("facts")
+
+
 def test_dispositions_gate_and_llm_failopen(tmp_path, monkeypatch):
     # P-PF-2 계약: ①결정론 후보 = 선호 어휘 AND (source=user 또는 사용자 주어)
     # ②hook·superseded 제외 ③LLM 게이트 실패 시 후보 그대로(fail-open).
