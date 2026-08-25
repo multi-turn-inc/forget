@@ -254,11 +254,37 @@ def read_answer(question: str, qdate: str, context: str) -> str:
     return llm(system, user)
 
 
+JUDGE_URL = os.environ.get("LME_JUDGE_URL", "")
+JUDGE_MODEL = os.environ.get("LME_JUDGE_MODEL", "")
+JUDGE_KEY = os.environ.get("LME_JUDGE_API_KEY", "")
+
+
 def judge(qtype: str, question: str, answer: str, hyp: str) -> bool:
+    # L3 후속 (저지 오염 공시): 리더와 저지를 env로 분리 — LME_JUDGE_URL/
+    # MODEL/API_KEY 지정 시 저지만 그 모델로 (미지정 = 리더와 동일, 종전).
+    # 발단: L3 1차 비교에서 리더와 함께 저지도 바뀌어 효과가 섞였다.
     template = JUDGE.get(qtype, JUDGE["default"])
-    out = llm("You are a strict grader.",
-              template.format(q=question, a=answer, r=hyp), max_tokens=8)
-    return out.strip().lower().startswith("yes")
+    prompt_body = template.format(q=question, a=answer, r=hyp)
+    if not JUDGE_URL:
+        out = llm("You are a strict grader.", prompt_body, max_tokens=8)
+        return out.strip().lower().startswith("yes")
+    body = {"model": JUDGE_MODEL or "gpt-4o", "temperature": 0.0, "max_tokens": 8,
+            "messages": [{"role": "system", "content": "You are a strict grader."},
+                         {"role": "user", "content": prompt_body}]}
+    headers = {"Content-Type": "application/json"}
+    if JUDGE_KEY:
+        headers["Authorization"] = f"Bearer {JUDGE_KEY}"
+    req = urllib.request.Request(JUDGE_URL, data=json.dumps(body).encode(), headers=headers)
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                out = json.loads(resp.read())["choices"][0]["message"]["content"]
+                return str(out).strip().lower().startswith("yes")
+        except Exception:
+            if attempt == 2:
+                raise
+            time.sleep(4 * (attempt + 1))
+    return False
 
 
 MULTI_EVIDENCE_RE = re.compile(
