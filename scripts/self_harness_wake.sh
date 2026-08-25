@@ -65,6 +65,13 @@ run_wake() {
 # 의존을 제거하면 컨텍스트 초과가 구조적으로 불가능하다 (헌장 L1-②의 순수형).
 OUT="$(run_wake "self-harness-$(date '+%Y%m%d%H%M%S')")"
 CODE=$?
+if [ $CODE -ne 0 ] && printf '%s' "$OUT" | grep -q "Cannot continue from message role"; then
+  # pi 신규 세션 초기화 경합(간헐, ~9%) — 새 id로 1회 즉시 재시도.
+  # (매 기상 새 세션 전환 때 이 폴백이 유실됐었다 — 07:08 실측으로 복원.)
+  sleep 3
+  OUT="$(run_wake "self-harness-$(date '+%Y%m%d%H%M%S')-r")"
+  CODE=$?
+fi
 TAIL="$(printf '%s' "$OUT" | tail -c 400 | tr '\n' ' ')"
 echo "$STAMP EXIT=$CODE ${TAIL}" >> "$LOG"
 exit 0
