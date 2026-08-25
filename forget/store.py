@@ -1904,6 +1904,22 @@ def _float_or(value: Any, default: float) -> float:
         return default
 
 
+def _memory_age_days(created_at: Any, now: datetime) -> float:
+    """P-F-1 감쇠용 나이 — 파싱 불가면 0(감쇠 없음, fail-open)."""
+    text = str(created_at or "").strip()
+    if not text:
+        return 0.0
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return 0.0
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return max(0.0, (now - parsed).total_seconds() / 86400.0)
+
+
 def _bool_or(value: Any, default: bool = False) -> bool:
     if value is None:
         return default
@@ -5271,6 +5287,9 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
     show_expired = bool(payload.get("show_expired", False))
     keyword_search = bool(payload.get("keyword_search", False))
     filter_memories_enabled = bool(payload.get("filter_memories", False))
+    time_decay_enabled = _bool_or(payload.get("time_decay"),
+                                  os.environ.get("MEM1_TIME_DECAY") == "1")
+    decay_now = datetime.now(timezone.utc)
     retrieval_criteria = _project_retrieval_criteria(project_id)
     expose_breakdown = bool(keyword_search or filter_memories_enabled or retrieval_criteria or payload.get("score_breakdown"))
     memory_as_of = str(
@@ -5386,6 +5405,14 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
             # Shared-scope knowledge blends in slightly discounted, so a
             # strong primary-scope hit always outranks an equal fallback one.
             score = round(score * 0.88, 4)
+        if time_decay_enabled:
+            # P-F-1 감쇠 v0 (망각 헌장 L2-1: 침강이지 삭제 아님) — 반감기
+            # 90일, 바닥 0.7 (최대 30% 페널티). opt-in: MEM1_TIME_DECAY=1.
+            age_days = _memory_age_days(memory.get("created_at"), decay_now)
+            if age_days > 0:
+                decay = 0.7 + 0.3 * (0.5 ** (age_days / 90.0))
+                score = round(score * decay, 4)
+                score_breakdown["time_decay"] = round(decay, 3)
         if filter_memories_enabled and rule_score < 0.18 and keyword_score_value < 0.34 and not entity_overlap:
             continue
         if score >= threshold:
