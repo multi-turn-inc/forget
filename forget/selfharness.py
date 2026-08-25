@@ -26,7 +26,8 @@ HARNESS_DB = os.environ.get(
     "MEM1_HARNESS_DB", str(Path.home() / ".forget" / "selfharness.sqlite3"))
 FORGET_URL = os.environ.get("MEM1_HARNESS_FORGET_URL", "http://localhost:8000")
 MODEL = os.environ.get("MEM1_HARNESS_MODEL", "claude-sonnet-5")
-USER_ID = os.environ.get("MEM1_HARNESS_USER", "junghunkim")
+# 사용자화 수리 (P-U-0): 기본 정체는 OS 사용자명 — 특정인 하드코딩 금지
+USER_ID = os.environ.get("MEM1_HARNESS_USER") or os.environ.get("USER") or "default"
 COST_CAP_USD = float(os.environ.get("MEM1_HARNESS_COST_CAP", "2.0"))
 
 _SCHEMA = """

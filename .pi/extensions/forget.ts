@@ -12,7 +12,9 @@ import { Type } from "typebox";
 
 const ENV: Record<string, string | undefined> = (globalThis as any).process?.env ?? {};
 const FORGET = ENV.FORGET_URL ?? "http://localhost:8000";
-const USER = ENV.FORGET_USER ?? "junghunkim";
+// 사용자화 수리 (P-U-0): 기본 정체는 OS 사용자명 — 특정인 하드코딩은
+// 새 사용자의 기억을 남의 이름으로 조용히 오염시킨다.
+const USER = ENV.FORGET_USER ?? ENV.USER ?? ENV.USERNAME ?? "default";
 
 async function forgetPost(path: string, body: unknown, timeoutMs = 20000): Promise<any> {
   const ctl = new AbortController();
