@@ -127,6 +127,37 @@ AdaCoM arXiv 2605.30785 · Always-On Agents 서베이 arXiv 2606.30306(정독 �
 P-H-1 이후 판정에 AOEP의 의무 시나리오(재시작·충돌·삭제·적대 기록·스코프
 변경·지연 결과) 중 재시작 외 항목을 단계 편입.
 
+### 개정 3 — 루프 기반을 pi로 (정훈 지시, 2026-08-25 낮 + 실사)
+
+정훈: **"https://github.com/earendil-works/pi 이걸 기반으로 구성하자."**
+실사 평결(pi.dev/docs 정독): **적합 — 헌장이 요구한 제어면 전부 1급.**
+
+| 헌장 요구 | pi 제공 (정확한 이름) |
+|---|---|
+| 응고화가 압축을 대체 | `session_before_compact` — 거부(cancel) 또는 **요약 전체 교체**(`{compaction:{summary,...}}`) |
+| 선별 축출 (호출 단위) | `context` 이벤트 — 매 LLM 호출 전 `{messages}` 교체 가능 (Tool Runner의 서버측 휴리스틱보다 세밀) |
+| 기상 재수화 주입 | `before_agent_start` — `{systemPrompt}` 반환 · `session_start`(reason: `resume`) |
+| 이력 소유·재개 | JSONL 세션 + `SessionManager` API + `/resume` |
+| 우리 도구 | `pi.registerTool` (typebox 스키마) |
+| 로컬 우선 E2EE | llama.cpp **1급**(`/llama`) — 터널 27B로 $0 실행 경로 · 커스텀 프로바이더 |
+| 인증 | `/login` 구독 + `ANTHROPIC_API_KEY` — 구독 OAuth가 pi에 열려 있는지는 H-0에서 실측 (2026-01 서드파티 차단 조사 있음; 폴백 = 로컬 27B) |
+
+구도 확정: **pi = 껍질(루프·TUI·세션·프로바이더, TS) · forget = 기관(Python
+정본) · 접착 = 확장 1파일**(`.pi/extensions/forget.ts`, 프로젝트 자동 로드).
+기관 표면 HTTP 노출 완료(94b5d09): 유언장 arm/release/목록 ·
+`/v1/harness/consolidate/`(요약 대체 캡슐 — 순수 변환).
+
+승계·은퇴: Tool Runner는 탈출로 2순위로 강등. Python 러너
+(selfharness_run.py)는 은퇴 — 단 그 계약(기상 재수화·이력 소유·비용 가드·
+인계 판정)은 검증된 채 기관·확장으로 이식되고, runs/turns 테이블 역할은
+pi JSONL 세션이 대체한다. wake_reports·standing_hands·distill은 정본 유지.
+
+**P-H-0′ 재등록 (pi 기반, 숫자 보기 전)**: pi 설치 → forget 확장 자동 로드
+→ 첫 노동(파생 v1 정찰) 완주(done 인계 노트) → 세션 강제 종료 → `/resume`
+기상 → **인계 오류 0** (핸들 오류 별도 계수) + 실행당 비용 병기(로컬 27B면
+$0). 위험 등기: pi 급속 진화(5.8k 커밋) — 확장은 최소 표면(이벤트 3 + 도구
+3)만 사용해 표류 노출을 줄인다.
+
 ## L5 — MVP 계단과 판정 사슬 (숫자 보기 전 등록)
 
 - **H-0 골격** (개정 1: Tool Runner 기반): 자작 루프 소유 + 기상 재수화
