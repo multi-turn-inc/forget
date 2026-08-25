@@ -339,6 +339,67 @@ def submit_feedback(payload: dict[str, Any]) -> dict[str, Any]:
     return submit_memory_feedback(payload)
 
 
+# --- 자기 하네스 기관 표면 (헌장 개정 3: pi 루프가 HTTP로 소비) ----------------
+# 기관(유언장·증류)은 Python 정본에 산다 — TS 확장은 얇은 접착제만.
+
+
+@app.get("/v1/worldmodel/hands/", dependencies=[Depends(auth)])
+def worldmodel_hands() -> dict[str, Any]:
+    from . import worldmodel
+    return {"hands": worldmodel.standing_hands(worldmodel.DEFAULT_WORLD_DB)}
+
+
+@app.post("/v1/worldmodel/hands/", dependencies=[Depends(auth)])
+def worldmodel_arm_hand(payload: dict[str, Any]) -> dict[str, Any]:
+    from . import worldmodel
+    try:
+        return worldmodel.arm_hand(
+            worldmodel.DEFAULT_WORLD_DB, str(payload.get("id") or ""),
+            str(payload.get("kind") or ""), str(payload.get("what") or ""),
+            str(payload.get("why") or ""), str(payload.get("source_ref") or ""),
+            expires_at=payload.get("expires_at"))
+    except (ValueError, KeyError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@app.post("/v1/worldmodel/hands/release/", dependencies=[Depends(auth)])
+def worldmodel_release_hand(payload: dict[str, Any]) -> dict[str, Any]:
+    from . import worldmodel
+    try:
+        return worldmodel.release_hand(
+            worldmodel.DEFAULT_WORLD_DB, str(payload.get("id") or ""),
+            str(payload.get("reason") or ""))
+    except (ValueError, KeyError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@app.post("/v1/harness/consolidate/", dependencies=[Depends(auth)])
+def harness_consolidate(payload: dict[str, Any]) -> dict[str, Any]:
+    """응고화 v0 — pi의 session_before_compact가 이 요약으로 압축을 대체한다.
+
+    turns[{role, content}] → 증류(핸들=코드·내용=로컬 LLM, fail-open) →
+    캡슐 텍스트(요약 대체용) + 구조 레코드. persist는 아직 호출자 몫 (H-1
+    잔여) — 쓰기 부작용 없는 순수 변환이라 실험이 안전하다.
+    """
+    from .selfharness import distill_turns
+    turns = payload.get("turns") or []
+    if not isinstance(turns, list) or not turns:
+        return JSONResponse({"error": "turns[] 필요"}, status_code=400)
+    distilled = distill_turns(turns[:400])
+    lines = ["## State capsule (consolidated by forget — not a lossy summary)"]
+    for key, title in [("facts", "Facts (with receipts)"), ("lessons", "Lessons"),
+                       ("intents", "Standing intents (inherit or release)")]:
+        items = distilled.get(key) or []
+        if items:
+            lines.append(f"### {title}")
+            lines.extend(f"- {item}" for item in items)
+    handles = distilled.get("handles") or []
+    if handles:
+        lines.append("### Handles (exact — do not paraphrase)")
+        lines.extend(f"- {h['kind']}: {h['value']}" for h in handles)
+    return {"summary": "\n".join(lines), "distilled": distilled}
+
+
 # --- mem0-compatible v3 surface ----------------------------------------------
 # Response shaping matches the mem0 platform contract so existing mem0 and
 # OpenMemory clients can point at Forget unchanged.
