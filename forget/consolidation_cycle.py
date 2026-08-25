@@ -129,6 +129,60 @@ def consolidate_day(db: str, day: str, items: list[tuple[str, str, dict]],
     return {"day": day, "summary_id": sid, "sank": len(items)}
 
 
+def restore_day(db: str, day: str) -> dict[str, Any]:
+    """침강 복원 — 가역성의 실물 (L2-1 "침강이지 삭제 아님"의 증명).
+
+    그날 요약으로 침강된 원본들의 마킹을 벗기고, 요약 자체를 superseded
+    처리(요약이 이제 구본). 회수 질서가 원상 복귀한다.
+    """
+    conn = sqlite3.connect(db)
+    try:
+        rows = conn.execute(
+            "SELECT id, metadata FROM memories WHERE deleted=0 AND metadata LIKE ?",
+            (f'%"sank_by": "consolidation_daily"%',)).fetchall()
+        restored = 0
+        summary_ids = set()
+        for mid, meta_s in rows:
+            try:
+                meta = json.loads(meta_s or "{}")
+            except ValueError:
+                continue
+            if str(meta.get("superseded_at") or "")[:10] and meta.get("sank_by") == "consolidation_daily":
+                # 날짜 매칭: 요약 id 경유 — 요약의 day 메타가 정본
+                sid = str(meta.get("superseded_by") or "")
+                srow = conn.execute("SELECT metadata FROM memories WHERE id=?", (sid,)).fetchone()
+                if not srow:
+                    continue
+                try:
+                    sday = str((json.loads(srow[0] or "{}")).get("day") or "")
+                except ValueError:
+                    continue
+                if sday != day:
+                    continue
+                for key in ("superseded_by", "superseded_at", "sank_by"):
+                    meta.pop(key, None)
+                conn.execute("UPDATE memories SET metadata=? WHERE id=?",
+                             (json.dumps(meta, ensure_ascii=False), mid))
+                restored += 1
+                summary_ids.add(sid)
+        stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        for sid in summary_ids:
+            srow = conn.execute("SELECT metadata FROM memories WHERE id=?", (sid,)).fetchone()
+            if srow:
+                try:
+                    smeta = json.loads(srow[0] or "{}")
+                except ValueError:
+                    smeta = {}
+                smeta["superseded_at"] = stamp
+                smeta["superseded_reason"] = "restored — 침강 복원으로 요약 은퇴"
+                conn.execute("UPDATE memories SET metadata=? WHERE id=?",
+                             (json.dumps(smeta, ensure_ascii=False), sid))
+        conn.commit()
+    finally:
+        conn.close()
+    return {"day": day, "restored": restored, "summaries_retired": len(summary_ids)}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--db", help="대상 DB (사본 검증용)")
@@ -137,6 +191,7 @@ def main() -> None:
     ap.add_argument("--yes", action="store_true", help="--live --apply 확인")
     ap.add_argument("--user", default="junghunkim")
     ap.add_argument("--max-days", type=int, default=3, help="한 번에 응고할 날짜 수")
+    ap.add_argument("--restore", metavar="DAY", help="그날 침강을 복원 (YYYY-MM-DD)")
     args = ap.parse_args()
     if args.live:
         if not (args.apply and args.yes):
@@ -149,6 +204,11 @@ def main() -> None:
         raise SystemExit("--db <사본> 또는 --live 필요")
     import os
     os.environ["MEM1_DB_PATH"] = db
+    if args.restore:
+        if args.live and not args.yes:
+            raise SystemExit("실DB 복원은 --yes 필요")
+        print(json.dumps(restore_day(db, args.restore), ensure_ascii=False))
+        return
     days = sink_candidates(db)
     total = sum(len(v) for v in days.values())
     print(f"침강 후보: {len(days)}일 · {total}건 (일 {MIN_BATCH}건 이상만)")
