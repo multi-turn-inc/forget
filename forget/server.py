@@ -343,6 +343,43 @@ def submit_feedback(payload: dict[str, Any]) -> dict[str, Any]:
 # 기관(유언장·증류)은 Python 정본에 산다 — TS 확장은 얇은 접착제만.
 
 
+def _persist_consolidation(distilled: dict[str, Any], *, user_id: str | None,
+                           session_ref: str) -> dict[str, Any]:
+    """잠들기 전 소화 — 증류물을 상태 계층에 내린다. 실패는 항목별로 삼키고
+    계수만 정직하게 반환한다 (응고화 실패가 압축을 죽이면 안 된다)."""
+    import hashlib
+
+    from . import worldmodel
+    from .store import add_memories
+    out = {"facts": 0, "lessons": 0, "intents": 0, "errors": 0}
+    uid = user_id or "junghunkim"
+    for kind in ("facts", "lessons"):
+        for item in distilled.get(kind) or []:
+            try:
+                add_memories({
+                    "messages": [{"role": "assistant", "content": str(item)}],
+                    "user_id": uid, "infer": False, "hebbian": False,
+                    "metadata": {"source": "consolidation", "session_ref": session_ref,
+                                 "consolidation_kind": kind,
+                                 "trust": {"kind": "fact" if kind == "facts" else "lesson",
+                                           "light": "yellow", "source": "assistant",
+                                           "note": "sleep-time consolidation — verify before acting"}},
+                })
+                out[kind] += 1
+            except Exception:
+                out["errors"] += 1
+    for item in distilled.get("intents") or []:
+        try:
+            hand_id = "cons-" + hashlib.sha256(str(item).encode()).hexdigest()[:10]
+            worldmodel.arm_hand(
+                worldmodel.DEFAULT_WORLD_DB, hand_id, "intent", str(item),
+                "응고화가 채집한 미완 의도 — 다음 기상이 재심사", session_ref)
+            out["intents"] += 1
+        except Exception:
+            out["errors"] += 1
+    return out
+
+
 @app.get("/v1/worldmodel/hands/", dependencies=[Depends(auth)])
 def worldmodel_hands() -> dict[str, Any]:
     from . import worldmodel
@@ -378,14 +415,19 @@ def harness_consolidate(payload: dict[str, Any]) -> dict[str, Any]:
     """응고화 v0 — pi의 session_before_compact가 이 요약으로 압축을 대체한다.
 
     turns[{role, content}] → 증류(핸들=코드·내용=로컬 LLM, fail-open) →
-    캡슐 텍스트(요약 대체용) + 구조 레코드. persist는 아직 호출자 몫 (H-1
-    잔여) — 쓰기 부작용 없는 순수 변환이라 실험이 안전하다.
+    캡슐 텍스트(요약 대체용) + 구조 레코드. persist=true면 잠들기 전 소화까지:
+    사실·교훈→원장(add, 출처 태그 consolidation — 게이트·중복 제거는 원장
+    몫), 의도→유언장(arm, kind=intent). 기본 false — 순수 변환 유지.
     """
     from .selfharness import distill_turns
     turns = payload.get("turns") or []
     if not isinstance(turns, list) or not turns:
         return JSONResponse({"error": "turns[] 필요"}, status_code=400)
     distilled = distill_turns(turns[:400])
+    if payload.get("persist"):
+        distilled["persisted"] = _persist_consolidation(
+            distilled, user_id=str(payload.get("user_id") or "") or None,
+            session_ref=str(payload.get("session_ref") or "pi-session"))
     lines = ["## State capsule (consolidated by forget — not a lossy summary)"]
     for key, title in [("facts", "Facts (with receipts)"), ("lessons", "Lessons"),
                        ("intents", "Standing intents (inherit or release)")]:

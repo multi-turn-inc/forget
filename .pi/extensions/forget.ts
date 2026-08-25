@@ -105,9 +105,17 @@ export default async function forgetExtension(pi: any) {
   pi.on("session_before_compact", async (event: any, _ctx: any) => {
     try {
       const prep = event.preparation;
-      const turns = toTurns(prep?.messagesToSummarize ?? []);
-      if (!turns.length) return; // 요약할 것 없음 — pi 기본에 맡긴다
-      const res = await forgetPost("/v1/harness/consolidate/", { turns }, 120000);
+      // split turn 함정 (H-1 1차 발동 실측): 한 턴이 keepRecentTokens를
+      // 넘으면 내용이 turnPrefixMessages에 살고 messagesToSummarize는 빈다 —
+      // 앞엣것만 보던 1차 배선은 조용히 물러나 pi 기본이 돌았다 (fromHook
+      // false). 마찰 #3(다중 경로 단일 배선)과 동종. 둘을 합쳐 본다.
+      const turns = [
+        ...toTurns(prep?.messagesToSummarize ?? []),
+        ...toTurns(prep?.turnPrefixMessages ?? []),
+      ];
+      if (!turns.length) return; // 정말 요약할 것 없음 — pi 기본에 맡긴다
+      const res = await forgetPost("/v1/harness/consolidate/",
+        { turns, persist: true, user_id: USER, session_ref: "pi-compaction" }, 120000);
       if (!res?.summary) return;
       const prior = prep?.previousSummary ? `${prep.previousSummary}\n\n---\n\n` : "";
       return {
@@ -118,8 +126,11 @@ export default async function forgetExtension(pi: any) {
           details: { distilled: res.distilled, by: "forget-consolidate-v0" },
         },
       };
-    } catch {
-      return; // fail-open: 기관이 죽으면 pi의 전량 요약이 그대로 — 압축 실패보다 낫다
+    } catch (err) {
+      // fail-open은 유지하되 침묵은 금지 — 관측 없는 폴백이 1차 우회를
+      // 숨겼다. stderr 한 줄은 남긴다 (계기 규율).
+      console.error(`[forget] consolidate 폴백 → pi 기본 압축: ${String(err).slice(0, 200)}`);
+      return;
     }
   });
 

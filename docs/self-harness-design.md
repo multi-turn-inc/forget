@@ -172,6 +172,17 @@ pi JSONL 세션이 대체한다. wake_reports·standing_hands·distill은 정본
 $0). 위험 등기: pi 급속 진화(5.8k 커밋) — 확장은 최소 표면(이벤트 3 + 도구
 3)만 사용해 표류 노출을 줄인다.
 
+**H-1 발동 실측 (2026-08-25 오후 — 응고화가 압축을 대체, 3발동 사슬)**:
+①1차 — **우회** (fromHook false): split turn 경로에서 turnPrefixMessages를
+안 봐 조용히 물러남 — 마찰 #3 동종(다중 경로 단일 배선). 부기: 침묵 폴백이
+우회를 숨겼다 → stderr 관측 의무화. ②2차 — **404**: 엔드포인트 커밋 후
+재기동 누락(마찰 #2 재림 — 배포 절차는 체크리스트가 아니라 반사가 돼야).
+③3차 — **성공**: fromHook true · by forget-consolidate-v0 · 캡슐 형식
+요약 · 핸들 2종(커밋·MAGIC) 보존 · 로컬 27B 증류(handles 7) · 폴백 0.
+부기: pi -p 모드는 압축 후 재개에서 "Cannot continue from message role:
+assistant"로 죽을 수 있음(2차 관찰) — 장수명 실행은 RPC/TUI 모드가 정도,
+H-2 설계 입력. 남은 H-1: persist(사실→원장·의도→유언장) + P-H-1 정량 대조.
+
 **P-H-0′ 판정 (2026-08-25 낮 — 채택)**: pi 0.84.3 + 확장 자동 로드 실증.
 ①기상 재수화 주입 확인("State capsule" 시스템 블록, 모델 자가보고) ·
 forget_search 계기 실소비(top_score 0.7749/strong — B-② 소비자 완결) ②3

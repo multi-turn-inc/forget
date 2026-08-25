@@ -13,6 +13,7 @@ os.environ.setdefault("MEM1_DB_PATH", "/tmp/forget-test-harness-ep.sqlite3")
 
 from forget import selfharness as sh  # noqa: E402
 from forget import worldmodel  # noqa: E402
+from forget.db import init_db  # noqa: E402
 from forget.server import app  # noqa: E402
 
 
@@ -22,6 +23,7 @@ def _isolate(tmp_path, monkeypatch):
     monkeypatch.setattr(worldmodel, "DEFAULT_WORLD_DB", str(tmp_path / "world.sqlite3"))
     # 증류 LLM은 죽은 주소로 — fail-open 경로가 계약이다
     monkeypatch.setenv("MEM1_HARNESS_DISTILL_URL", "http://127.0.0.1:1/v1/chat/completions")
+    init_db()   # persist 계약이 원장 테이블을 실제로 쓴다
     yield
 
 
@@ -41,6 +43,32 @@ def test_hands_http_lifecycle_and_discipline():
     rel = client.post("/v1/worldmodel/hands/release/", json={"id": "h1", "reason": "런 종료"})
     assert rel.status_code == 200 and rel.json()["changed"] is True
     assert client.get("/v1/worldmodel/hands/").json()["hands"] == []
+
+
+def test_consolidate_persist_writes_ledger_and_hands(monkeypatch):
+    # 잠들기 전 소화 계약: persist=true면 사실→원장(출처 태그·yellow), 의도→
+    # 유언장(kind=intent). LLM이 죽어 증류가 비면 persist 계수도 0 — 무해.
+    from forget import selfharness as shmod
+    monkeypatch.setattr(shmod, "distill_turns", lambda turns, llm=None: {
+        "facts": ["P-X 판정 기각 — 영수증 abc1234"], "lessons": [],
+        "intents": ["다음 기상은 서버 재개 확인"],
+        "handles": [{"kind": "commit", "value": "abc1234"}], "distilled_by": "llm"})
+    # server.py는 selfharness에서 distill_turns를 지연 임포트하므로 모듈 속성 패치로 충분
+    client = TestClient(app)
+    res = client.post("/v1/harness/consolidate/", json={
+        "turns": [{"role": "user", "content": "x"}],
+        "persist": True, "user_id": "u-cons", "session_ref": "test-sess"})
+    assert res.status_code == 200
+    p = res.json()["distilled"]["persisted"]
+    assert p == {"facts": 1, "lessons": 0, "intents": 1, "errors": 0}
+    from forget.store import search_memories
+    found = search_memories({"query": "P-X 판정", "filters": {"user_id": "u-cons"},
+                             "top_k": 3, "threshold": 0.0})
+    assert any("abc1234" in str(m.get("memory")) for m in found["results"])
+    meta = (found["results"][0].get("metadata") or {})
+    assert meta.get("source") == "consolidation"
+    hands = worldmodel.standing_hands(worldmodel.DEFAULT_WORLD_DB)
+    assert any(h["kind"] == "intent" and "서버 재개" in h["what"] for h in hands)
 
 
 def test_consolidate_pure_and_handles_survive_dead_llm():
