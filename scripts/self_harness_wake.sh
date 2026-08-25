@@ -13,6 +13,21 @@ mkdir -p "$LOG_DIR"
 STAMP="$(date '+%Y-%m-%dT%H:%M:%S%z')"
 LOG="$LOG_DIR/wake-$(date '+%Y%m%d').log"
 
+# 동시 실행 잠금 (관찰 2 수리: kickstart 연타가 인스턴스 경합 → 작업하던
+# 기상이 완료 기록 없이 소멸). mkdir 원자성 — macOS에 flock 없음.
+LOCK="$LOG_DIR/wake.lock"
+if ! mkdir "$LOCK" 2>/dev/null; then
+  # 잠금 보유자가 30분 넘게 살아 있으면 고아로 보고 회수
+  if [ -n "$(find "$LOCK" -maxdepth 0 -mmin +30 2>/dev/null)" ]; then
+    rmdir "$LOCK" 2>/dev/null || true
+    mkdir "$LOCK" 2>/dev/null || { echo "$STAMP SKIP lock-held" >> "$LOG"; exit 0; }
+  else
+    echo "$STAMP SKIP lock-held" >> "$LOG"
+    exit 0
+  fi
+fi
+trap 'rmdir "$LOCK" 2>/dev/null' EXIT INT TERM
+
 MODEL_ID="${SELF_HARNESS_MODEL:-Qwen3.8-27B-UD-Q4_K_XL.gguf}"
 TUNNEL="${FORGET_LLAMA_URL:-http://127.0.0.1:18812/v1}"
 REPO="${SELF_HARNESS_REPO:-$HOME/orca/workspaces/forget/내-프롬프트를-공유하기-싫어}"
@@ -35,7 +50,8 @@ warranted, do ONE small concrete step and record it (arm_hand for anything left 
 running). If nothing warrants action, say IDLE and stop — idling honestly beats \
 inventing work."
 
-OUT="$("$PI_BIN" -p --approve --session-id self-harness \
+# 8분 상한 — 주석이 아니라 명령으로 (관찰 2: 상한 부재로 소멸 시 무기록)
+OUT="$(perl -e 'alarm 480; exec @ARGV' "$PI_BIN" -p --approve --session-id self-harness \
   --provider local-qwen --model "$MODEL_ID" \
   "$WAKE_PROMPT" 2>&1)"
 CODE=$?
