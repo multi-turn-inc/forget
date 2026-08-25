@@ -200,13 +200,22 @@ JUDGE = {
 }
 
 
+LLM_MODEL = os.environ.get("LME_LLM_MODEL", "qwen")
+LLM_KEY = os.environ.get("LME_LLM_API_KEY", "")
+
+
 def llm(system: str, user: str, max_tokens: int = 256) -> str:
-    body = {"model": "qwen", "temperature": 0.0, "max_tokens": max_tokens,
-            "chat_template_kwargs": {"enable_thinking": False},
+    # L3 준비 (2026-08-25): 리더 상향은 env 3개로 — LME_LLM_URL(OpenAI 호환
+    # /chat/completions), LME_LLM_MODEL, LME_LLM_API_KEY. 로컬 27B 기본 불변.
+    body = {"model": LLM_MODEL, "temperature": 0.0, "max_tokens": max_tokens,
             "messages": [{"role": "system", "content": system},
                          {"role": "user", "content": user}]}
-    req = urllib.request.Request(LLM, data=json.dumps(body).encode(),
-                                 headers={"Content-Type": "application/json"})
+    if not LLM_KEY:
+        body["chat_template_kwargs"] = {"enable_thinking": False}   # llama.cpp 전용 노브
+    headers = {"Content-Type": "application/json"}
+    if LLM_KEY:
+        headers["Authorization"] = f"Bearer {LLM_KEY}"
+    req = urllib.request.Request(LLM, data=json.dumps(body).encode(), headers=headers)
     for attempt in range(3):
         try:
             with urllib.request.urlopen(req, timeout=600) as resp:
