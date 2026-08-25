@@ -124,7 +124,9 @@ export default async function forgetExtension(pi: any) {
 
   // ── 3) 연속성 계기의 원자료: 기상 보고 ───────────────────────────────
   pi.on("session_start", async (event: any, _ctx: any) => {
-    if (event.reason !== "resume") return;
+    // 모든 기상을 기록한다 — P-H-0′ 실측에서 print 모드의 세션 재진입이
+    // reason "resume"이 아니어서 보고 0건이 됐다 (조건 과소의 교훈:
+    // 계기는 좁게 달지 말 것). reason은 필드로 남겨 스펙트럼을 배운다.
     try {
       const hands = (await forgetGet("/v1/worldmodel/hands/"))?.hands ?? [];
       pi.appendEntry("forget_wake_report", {

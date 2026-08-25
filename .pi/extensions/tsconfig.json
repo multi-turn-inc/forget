@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "types": ["node"],
+    "moduleResolution": "bundler",
+    "target": "es2022",
+    "module": "es2022",
+    "strict": false,
+    "paths": {
+      "typebox": ["/Users/junghunkim/.nvm/versions/node/v22.22.0/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/typebox"],
+      "@earendil-works/*": ["/Users/junghunkim/.nvm/versions/node/v22.22.0/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/*"]
+    }
+  }
+}
