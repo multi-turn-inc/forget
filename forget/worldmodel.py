@@ -371,6 +371,50 @@ def release_hand(world_db: str, hand_id: str, reason: str,
     return {"id": hand_id, "released": True, "changed": True}
 
 
+def _hand_tokens(text: str) -> set[str]:
+    return {w for w in re.findall(r"[0-9a-z가-힣]{3,}", str(text).lower())}
+
+
+def recently_released_similar(world_db: str, what: str, within_s: int = 6 * 3600,
+                              threshold: float = 0.5,
+                              now: datetime | None = None) -> str | None:
+    """되새김 가드 — 방금 해제된 손과 유사한 what이면 그 손의 id를 반환.
+
+    실측 계기(2026-08-25): 기상 세션이 유언을 검증·해제한 13초 뒤, 그 세션의
+    압축 증류가 '받은 지시'를 미완 의도로 재등기했다 — 완료로 권한이 실효된
+    의도의 부활(권한 단조성 위반의 온건형). 해제는 결정이고 재등기는 관측이
+    아니므로, 결정을 이기려면 새 증거가 필요하다 — 시간창 안의 유사 재등기는
+    새 증거가 아니라 메아리다.
+    """
+    now = now or _utcnow()
+    try:
+        conn = sqlite3.connect(f"file:{world_db}?mode=ro", uri=True)
+    except sqlite3.OperationalError:
+        return None
+    try:
+        rows = conn.execute(
+            "SELECT id, what, released_at FROM standing_hands "
+            "WHERE released_at IS NOT NULL").fetchall()
+    except sqlite3.OperationalError:
+        return None
+    finally:
+        conn.close()
+    new_toks = _hand_tokens(what)
+    if not new_toks:
+        return None
+    for hid, old_what, released_at in rows:
+        released = _parse_ts(released_at)
+        if released is None or (now - released).total_seconds() > within_s:
+            continue
+        old_toks = _hand_tokens(old_what)
+        if not old_toks:
+            continue
+        jaccard = len(new_toks & old_toks) / len(new_toks | old_toks)
+        if jaccard >= threshold:
+            return str(hid)
+    return None
+
+
 def standing_hands(world_db: str = DEFAULT_WORLD_DB,
                    now: datetime | None = None) -> list[dict[str, Any]]:
     """떠 있는 손 목록 — 기상 재수화가 읽는 유언장. 만료된 손은 'expired'로

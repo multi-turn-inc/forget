@@ -370,6 +370,13 @@ def _persist_consolidation(distilled: dict[str, Any], *, user_id: str | None,
                 out["errors"] += 1
     for item in distilled.get("intents") or []:
         try:
+            echo_of = worldmodel.recently_released_similar(
+                worldmodel.DEFAULT_WORLD_DB, str(item))
+            if echo_of:
+                # 되새김 가드: 방금 해제된 손의 메아리 — 재등기 금지 (실측
+                # 2026-08-25: 해제 13초 뒤 같은 의도 부활). 계수는 정직하게.
+                out["skipped_rumination"] = out.get("skipped_rumination", 0) + 1
+                continue
             hand_id = "cons-" + hashlib.sha256(str(item).encode()).hexdigest()[:10]
             worldmodel.arm_hand(
                 worldmodel.DEFAULT_WORLD_DB, hand_id, "intent", str(item),

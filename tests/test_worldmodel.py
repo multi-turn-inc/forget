@@ -233,6 +233,25 @@ def test_standing_hands_lifecycle_and_expiry_visible(tmp_path):
     assert not os.path.exists(ghost)
 
 
+def test_rumination_guard_blocks_echo_of_released_hand(tmp_path):
+    # 되새김 가드 계약 (실측 2026-08-25: 해제 13초 뒤 같은 의도 부활):
+    # 시간창 안의 유사 재등기는 새 증거가 아니라 메아리 — 차단된다.
+    from forget.worldmodel import arm_hand, recently_released_similar, release_hand
+    world = str(tmp_path / "world.sqlite3")
+    arm_hand(world, "h1", "intent", "Verify commit 131deb1 exists in the git log",
+             "persist 확인", "sess", now=NOW)
+    release_hand(world, "h1", "verified — commit exists", now=NOW)
+    echo = "Verify the existence of commit 131deb1 using git log"
+    assert recently_released_similar(world, echo, now=NOW) == "h1"
+    # 무관한 의도는 통과
+    assert recently_released_similar(world, "내일 llama-server 온도 로그 수집", now=NOW) is None
+    # 시간창(6h) 밖이면 메아리가 아니다 — 재등기 허용
+    later = NOW + timedelta(hours=7)
+    assert recently_released_similar(world, echo, now=later) is None
+    # DB 없음 = 조용히 None (읽기 경로 파일 생성 금지)
+    assert recently_released_similar(str(tmp_path / "no.sqlite3"), echo) is None
+
+
 def test_rebuild_user_scope_isolation(tmp_path):
     # P-WM-2 파생 계약: 다중 스코프 원장(벤치)에서 user_id를 주면 그 스코프의
     # 세계만 파생된다 — 문항 간 사건 누수는 곧 오염된 기대다.
