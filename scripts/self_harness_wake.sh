@@ -51,10 +51,21 @@ running). If nothing warrants action, say IDLE and stop — idling honestly beat
 inventing work."
 
 # 8분 상한 — 주석이 아니라 명령으로 (관찰 2: 상한 부재로 소멸 시 무기록)
-OUT="$(perl -e 'alarm 480; exec @ARGV' "$PI_BIN" -p --approve --session-id self-harness \
-  --provider local-qwen --model "$MODEL_ID" \
-  "$WAKE_PROMPT" 2>&1)"
+run_wake() {
+  perl -e 'alarm 480; exec @ARGV' "$PI_BIN" -p --approve --session-id "$1" \
+    --provider local-qwen --model "$MODEL_ID" "$WAKE_PROMPT" 2>&1
+}
+OUT="$(run_wake self-harness)"
 CODE=$?
+if [ $CODE -ne 0 ] && printf '%s' "$OUT" | grep -q "Cannot continue from message role"; then
+  # 세션이 미완 toolCall 상태로 잘림(기상 소멸 잔해) — 캐시 손상은 캐시를
+  # 버리고 상태 계층(캡슐·유언장)에서 재수화한다 (헌장 L1-②). 새 세션 id로
+  # 1회 폴백; 연속성의 정본은 세션 파일이 아니다.
+  FALLBACK_ID="self-harness-$(date '+%Y%m%d%H%M')"
+  echo "$STAMP FALLBACK corrupt-session → $FALLBACK_ID" >> "$LOG"
+  OUT="$(run_wake "$FALLBACK_ID")"
+  CODE=$?
+fi
 TAIL="$(printf '%s' "$OUT" | tail -c 400 | tr '\n' ' ')"
 echo "$STAMP EXIT=$CODE ${TAIL}" >> "$LOG"
 exit 0
