@@ -172,6 +172,21 @@ JUDGE_TEMPLATES 문면 그대로 — 판정자 편향은 팔 간 상쇄된다 (�
   기존 정답 4건 무손실 (S ≥ 5/6). 기각 = 32260d93 불변. 채택 불가 = 기존
   정답 손실 (지시 과적 — 대장 #13 재확인으로 기록).
 
+## 추기 10 (2026-08-25 저녁 — L3: 리더 상향 런. 정훈 "L3 발사" 게이트 개방.
+   숫자 보기 전 고정)
+
+  구성: 팔 P(= G + 추천 탐침 — 94문항은 G와 동일 로직, preference 6문항만
+  탐침 추가) · 리더+저지 GPT-4o · n=100 정본 표본 · 하네스·컨텍스트 로컬
+  27B 런과 완전 동일 (다른 것은 리더뿐 — 리더 기여분의 순수 실측).
+  판정:
+      리더 상향 채택 (제품 권장 구성 갱신): P_L3 ≥ G_local(0.730) + 5pp
+      로컬 충분 판정: P_L3 < 0.730 + 3pp — "로컬 27B가 GPT-4o에 근접"도
+        그 자체로 공표 각도 (E2EE 로컬 서사 강화)
+      부기 의무: 유형별 분해(특히 preference·temporal — 리더 병소 가설
+        검증) · 문항당 비용 · 저지 동일성 공시(저지도 GPT-4o — 저지 편향은
+        팔 간 상쇄 불가하므로 절대 비교 주장 금지, 공표 시 각주)
+      공표 여부·문구는 숫자 후 정훈 몫 (GTM: 이긴 숫자만).
+
 사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABCDEGHRWVPQ]
       (이어달리기: 출력 JSONL의 완료 문항은 건너뛴다. W/V: LME_WM_DIR로 파생 DB 위치 지정 가능)
 """
@@ -496,7 +511,7 @@ def main() -> None:
                 row["A_tok"] = token_est(ctx)
                 row["A_hyp"] = hyp[:200]
 
-            if any(a in args.arms for a in "BCDEGHRWV"):
+            if any(a in args.arms for a in "BCDEGHRWVPQ"):
                 def assembled(query: str):
                     r = assemble_context({"query": query, "filters": {"user_id": scope},
                                           "top_k": int(os.environ.get("LME_B_TOPK", "10")),
