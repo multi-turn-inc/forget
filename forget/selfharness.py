@@ -181,6 +181,89 @@ def last_unfinished_run() -> int | None:
 
 # ── 비용 가드 ──────────────────────────────────────────────────────────────
 
+# ── H-1 응고화: 증류 (헌장 개정 2, 대장 #20 구속) ─────────────────────────
+
+# 경계는 ASCII 한정 — 유니코드 \b는 한글 조사에 붙은 핸들("4ba6a6f로",
+# "2026-08-25에")을 놓친다. 핸들은 한국어 산문 속에 산다.
+_HANDLE_RES = [
+    ("url", r"https?://[^\s\"'\)\]]+"),
+    ("path", r"(?:~|/|[A-Za-z_][\w.-]*/)[\w./\-]+\.\w{1,6}"),
+    ("commit", r"(?<![0-9A-Za-z/])[0-9a-f]{7,10}(?![0-9A-Za-z/])"),
+    ("date", r"(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)"),
+    ("port_or_id", r"(?<![0-9A-Za-z])(?:run|task|loop|port)[- _:=]?[A-Za-z0-9]{2,12}"),
+]
+
+
+def extract_handles(text: str, cap: int = 40) -> list[dict[str, str]]:
+    """행동 핸들 추출 — 결정론(정규식). 손실 응고는 집계 회상이 멀쩡한 채
+    핸들을 지운다(대장 #20, 표본 1호=404 오염). 그래서 핸들은 LLM 요약이
+    아니라 코드가 지킨다 — 구조는 코드, 내용은 LLM."""
+    import re as _re
+    out, seen = [], set()
+    for kind, pattern in _HANDLE_RES:
+        for m in _re.findall(pattern, text):
+            val = m.rstrip(".,;")
+            if val in seen:
+                continue
+            seen.add(val)
+            out.append({"kind": kind, "value": val})
+            if len(out) >= cap:
+                return out
+    return out
+
+
+def _local_distill_llm(prompt: str) -> str:
+    """로컬 터널의 추론 서버로 증류 — E2EE 원칙(응고화도 로컬). 실패 시 빈 문자열."""
+    url = os.environ.get("MEM1_HARNESS_DISTILL_URL",
+                         "http://127.0.0.1:18812/v1/chat/completions")
+    try:
+        req = urllib.request.Request(url, data=json.dumps({
+            "model": "qwen", "temperature": 0.0, "max_tokens": 700,
+            "chat_template_kwargs": {"enable_thinking": False},
+            "messages": [{"role": "user", "content": prompt}],
+        }).encode(), headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            return str(json.loads(resp.read())["choices"][0]["message"]["content"] or "")
+    except Exception:
+        return ""
+
+
+def distill_turns(turns: list[dict[str, Any]], llm=None) -> dict[str, Any]:
+    """응고화 증류 v0 — 턴 묶음을 상태 레코드로 (잠들기 전의 소화).
+
+    반환 스키마(헌장 개정 2): facts(판정·결정) · lessons(교훈) · intents
+    (미완 의도 — 유언장 후보) · handles(결정론 추출, LLM 무관 항상 존재).
+    LLM이 죽어도 핸들은 산다 — 그 역은 성립하지 않아도 된다.
+    """
+    raw = "\n".join(
+        f"[{t.get('role')}] " + (t["content"] if isinstance(t.get("content"), str)
+                                 else json.dumps(t.get("content"), ensure_ascii=False))
+        for t in turns)[:24000]
+    handles = extract_handles(raw)
+    call = llm or _local_distill_llm
+    text = call(
+        "You are the consolidation organ of an agent's memory. From the transcript "
+        "below, output ONLY a JSON object {\"facts\": [..], \"lessons\": [..], "
+        "\"intents\": [..]} — facts = verdicts/decisions worth keeping (with their "
+        "receipts inline), lessons = durable rules learned, intents = unfinished "
+        "commitments the next wake must inherit. ≤6 items each, one sentence each. "
+        "No prose outside JSON.\n\n<transcript>\n" + raw + "\n</transcript>")
+    parsed: dict[str, Any] = {}
+    if text:
+        try:
+            start, end = text.index("{"), text.rindex("}") + 1
+            parsed = json.loads(text[start:end])
+        except (ValueError, json.JSONDecodeError):
+            parsed = {}
+    return {
+        "facts": [str(x) for x in (parsed.get("facts") or [])][:6],
+        "lessons": [str(x) for x in (parsed.get("lessons") or [])][:6],
+        "intents": [str(x) for x in (parsed.get("intents") or [])][:6],
+        "handles": handles,
+        "distilled_by": "llm" if parsed else ("none" if not text else "unparsed"),
+    }
+
+
 @dataclass
 class CostGuard:
     """실행당 상한 — 초과 순간 루프를 정중히 끊는다 (상시 금지: 사이클 $2)."""

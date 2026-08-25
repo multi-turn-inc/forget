@@ -62,6 +62,28 @@ def test_cost_guard_caps():
     assert guard.exceeded
 
 
+def test_distill_preserves_handles_even_when_llm_dead(monkeypatch):
+    # 대장 #20 계약: LLM이 죽어도(빈 응답) 핸들은 결정론으로 산다.
+    turns = [{"role": "assistant", "content":
+              "커밋 4ba6a6f로 배선. 검증은 http://localhost:8000/v1/memories/search/ "
+              "에서 2026-08-25에 수행. 파일 forget/store.py 수정."}]
+    out = sh.distill_turns(turns, llm=lambda p: "")
+    kinds = {h["kind"] for h in out["handles"]}
+    values = " ".join(h["value"] for h in out["handles"])
+    assert {"url", "commit", "date", "path"} <= kinds
+    assert "4ba6a6f" in values and "/v1/memories/search/" in values
+    assert out["facts"] == [] and out["distilled_by"] == "none"
+
+
+def test_distill_parses_llm_json_and_caps(monkeypatch):
+    fake = lambda p: 'noise {"facts": ["A했다 — 영수증 x"], "lessons": ["규칙 L"],' \
+                     ' "intents": ["다음 기상은 Y"]} tail'
+    out = sh.distill_turns([{"role": "user", "content": "작업"}], llm=fake)
+    assert out["facts"] == ["A했다 — 영수증 x"]
+    assert out["intents"] == ["다음 기상은 Y"]
+    assert out["distilled_by"] == "llm"
+
+
 def test_finish_run_records_reason(tmp_path):
     run = sh.wake("한 건")
     sh.finish_run(run["run_id"], "done", 0.1234)
