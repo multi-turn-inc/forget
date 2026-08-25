@@ -104,7 +104,28 @@ receipt). dismiss 규율 재사용(사유·영수증 의무, 관측>결정).
 
 선행연구 각주: Letta sleep-time·Context Repositories(2026-02) — letta.com ·
 Externalization 리뷰 arXiv 2604.08224 · Persistent Identity arXiv 2604.09588 ·
-AdaCoM arXiv 2605.30785 · Always-On Agents 서베이 arXiv 2606.30306(정독 대기).
+AdaCoM arXiv 2605.30785 · Always-On Agents 서베이 arXiv 2606.30306(정독 완료 —
+아래 개정 2).
+
+### 개정 2 — AOEP-v0 불변식 사상 (Always-On 서베이 정독, 2026-08-25)
+
+서베이의 핵심 발견 "문헌은 상태를 쌓는 데 몰리고 다스리기·회수하기·놓기는
+공백"(rollback 27/435·권한 축 72/435 최소)이 이 헌장의 존재 이유를 외부에서
+확인한다. AOEP-v0의 다섯 수명 불변식 ↔ 우리 기관 사상:
+
+| AOEP 불변식 | 우리 기관 | 상태 |
+|---|---|---|
+| 권한 단조성 (실효 권한의 상태는 행동에 영향 금지) | 유언장 만료 재심사(why 재확인) · superseded 강등 · dismiss | 가동 — 표본 2호(유령 손)가 이 실패의 실물이었음 |
+| 스코프 비확장 | user_id 파생 격리(테스트) · fallback 스코프 할인 | 가동 |
+| 삭제 전파 (파생 계층까지) | worldmodel rebuild가 deleted·supersede 반영 | 부분 — 기질(substrate) 전파 미검증 (대장 #19) |
+| 출처 보존 (응고를 견뎌야) | trust·source_ref·영수증 규율 전면 | 가동 |
+| 롤백 추적성 | transitions(cause)·dismissals·wake_reports | 가동 (행동 롤백은 미래) |
+
+**H-1 설계 구속 (대장 #20)**: 응고화 증류 스키마에 `handles[]`(식별자·날짜·
+경로·URL) 필수 — 손실 응고는 집계 회상이 멀쩡한 채 행동 핸들을 지운다
+(우리 표본 1호[404 오염]의 학계 대응). 연속성 계기는 핸들 오류를 별도 계수.
+P-H-1 이후 판정에 AOEP의 의무 시나리오(재시작·충돌·삭제·적대 기록·스코프
+변경·지연 결과) 중 재시작 외 항목을 단계 편입.
 
 ## L5 — MVP 계단과 판정 사슬 (숫자 보기 전 등록)
 
