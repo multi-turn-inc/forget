@@ -187,6 +187,22 @@ JUDGE_TEMPLATES 문면 그대로 — 판정자 편향은 팔 간 상쇄된다 (�
         팔 간 상쇄 불가하므로 절대 비교 주장 금지, 공표 시 각주)
       공표 여부·문구는 숫자 후 정훈 몫 (GTM: 이긴 숫자만).
 
+## 추기 11 (2026-08-26 자정 — L3′: 프론티어 재런. 정훈 지적 "GPT-4o는 멍청한
+   모델. AAII를 봐라 — GPT-5.6-Sol이 똑똑한 모델"의 집행. 숫자 보기 전 고정)
+
+  정당성: "로컬이 이긴다" 서사는 상대가 프론티어일 때만 성립 — 4o는 2024년
+  모델(AAII 실사: 5.6-Sol 61점, Fable 5와 최상위 다툼·Coding Agent Index
+  1위). 구성: 팔 P · 리더 gpt-5.6-sol · 저지 GPT-4o 유지(로컬 0.770과 저지
+  통일 비교) · 동일 n=100.
+  판정:
+      Sol ≥ 0.820 (로컬+5pp) → 프론티어 우위 실증 — 리더 상향 갈래 부활
+        (단 가격 $5/$30 병기 — 로컬 $0과의 비용 축 공시)
+      0.740 ≤ Sol < 0.820 → 동급 밴드 — "프론티어와 동급, 비용 0, 데이터
+        불출"이 공표 서사
+      Sol < 0.740 → 로컬 우위가 프론티어에도 성립 — 최강 서사
+      부기 의무: 검색 횟수 분포(4o 과신 기제[0회 55%]가 프론티어에서
+      재현되는가 — 팔 F 사유의 독립 검증) · 추론 토큰 비용 실병기.
+
 사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABCDEGHRWVPQ]
       (이어달리기: 출력 JSONL의 완료 문항은 건너뛴다. W/V: LME_WM_DIR로 파생 DB 위치 지정 가능)
 """
@@ -217,14 +233,23 @@ JUDGE = {
 
 LLM_MODEL = os.environ.get("LME_LLM_MODEL", "qwen")
 LLM_KEY = os.environ.get("LME_LLM_API_KEY", "")
+LLM_REASONING = os.environ.get("LME_LLM_REASONING", "") == "1"
 
 
 def llm(system: str, user: str, max_tokens: int = 256) -> str:
     # L3 준비 (2026-08-25): 리더 상향은 env 3개로 — LME_LLM_URL(OpenAI 호환
     # /chat/completions), LME_LLM_MODEL, LME_LLM_API_KEY. 로컬 27B 기본 불변.
-    body = {"model": LLM_MODEL, "temperature": 0.0, "max_tokens": max_tokens,
-            "messages": [{"role": "system", "content": system},
-                         {"role": "user", "content": user}]}
+    # L3′ (2026-08-26): 추론 모델(gpt-5.6 계열)은 LME_LLM_REASONING=1 —
+    # max_completion_tokens 사용·temperature 생략·추론 토큰 몫 확보(실측:
+    # max_tokens는 unsupported_parameter 400).
+    body: dict = {"model": LLM_MODEL,
+                  "messages": [{"role": "system", "content": system},
+                               {"role": "user", "content": user}]}
+    if LLM_REASONING:
+        body["max_completion_tokens"] = max(2048, max_tokens)
+    else:
+        body["temperature"] = 0.0
+        body["max_tokens"] = max_tokens
     if not LLM_KEY:
         body["chat_template_kwargs"] = {"enable_thinking": False}   # llama.cpp 전용 노브
     headers = {"Content-Type": "application/json"}
