@@ -148,7 +148,20 @@ JUDGE_TEMPLATES 문면 그대로 — 판정자 편향은 팔 간 상쇄된다 (�
             근거 강화, P-PF-2로 이월)
       부기: 타 유형 부작용은 P 팔이 preference 전용 조건이라 구조적 0.
 
-사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABCDEGHRWVP]
+## 추기 8 (2026-08-25 오후 — P-PF-3: 성향 카드 소비. P-PF-1 잔여 실패 2건
+   [검색해도 못 푸는 회수/활용 병소]의 집행. 카드는 문항 스코프 벤치 원장에서
+   파생 — 실원장 카드 아님)
+
+  팔 Q = P(추천 탐침) + 성향 카드 블록: dispositions(벤치DB, user_id=스코프,
+  llm_gate)로 파생한 카드 ≤8을 [user-tastes] 블록으로 매 라운드 주입
+  (world_block 주입구 재사용 — 더듬기 코드 무변경).
+  판정 (숫자 보기 전 고정, n=6 기전 검증):
+      채택: Q ≥ P+1건 (5/6) — 성향 카드가 회수 병소를 실제로 메움
+      기각: Q = P (카드 무익 — 병소는 활용/리더 쪽으로 이월)
+      채택 불가: Q < P (카드가 오히려 간섭 — 힌트도 예산의 재확인)
+      부기: 문항별 카드 수·잔여 실패 2건(35a27287·32260d93)의 개별 서사 의무.
+
+사용: MEM1_DB_PATH=<벤치DB> .venv/bin/python scripts/lme_l2_ab.py [--n 100] [--arms ABCDEGHRWVPQ]
       (이어달리기: 출력 JSONL의 완료 문항은 건너뛴다. W/V: LME_WM_DIR로 파생 DB 위치 지정 가능)
 """
 from __future__ import annotations

@@ -767,7 +767,14 @@ _PREF_EXCLUDE_RE = re.compile(r"세션 캡처|\[devloop\]|사이클 \d|계기 �
                               r"restore_turns|워크트리|커밋 [0-9a-f]{7}")
 
 
-_PREF_SUBJECT_RE = re.compile(r"사용자[는가]|정훈[은이]|the user (prefers|likes|wants|avoids)")
+_PREF_SUBJECT_RE = re.compile(
+    r"사용자[는가]|정훈[은이]|the user (prefers|likes|wants|avoids)|"
+    # 영어 1인칭 (P-PF-3: 벤치·영어 원장은 대화 턴이라 1인칭이 정본.
+    # 실원장은 한국어라 이 갈래의 오탐 유입 없음)
+    r"\bI (love|like|prefer|enjoy|hate|dislike|avoid|don't like|really enjoy)\b", )
+_PREF_EN_STANCE = {"love": "likes", "like": "likes", "prefer": "likes", "enjoy": "likes",
+                   "really enjoy": "likes", "hate": "avoids", "dislike": "avoids",
+                   "avoid": "avoids", "don't like": "avoids"}
 
 
 def _classify_disposition(text: str, source: str | None = None) -> str | None:
@@ -798,7 +805,8 @@ def _classify_disposition(text: str, source: str | None = None) -> str | None:
     """
     if _PREF_EXCLUDE_RE.search(text):
         return None
-    if source != "user" and not _PREF_SUBJECT_RE.search(text):
+    subject_match = _PREF_SUBJECT_RE.search(text)
+    if source != "user" and not subject_match:
         return None
     if _PREF_STYLE_RE.search(text):
         return "style"
@@ -806,6 +814,9 @@ def _classify_disposition(text: str, source: str | None = None) -> str | None:
         return "avoids"
     if _PREF_POS_RE.search(text):
         return "likes"
+    if subject_match:   # 영어 1인칭 — 매치된 동사가 곧 stance (P-PF-3)
+        verb = re.sub(r"^I ", "", subject_match.group(0)).strip().lower()
+        return _PREF_EN_STANCE.get(verb)
     return None
 
 
@@ -842,8 +853,13 @@ def dispositions(ledger_db: str = DEFAULT_LEDGER_DB, user_id: str | None = None,
     conn = sqlite3.connect(f"file:{ledger_db}?mode=ro", uri=True)
     try:
         sql = ("SELECT id, memory, metadata, created_at FROM memories "
-               "WHERE deleted = 0 ORDER BY created_at DESC")
-        rows = conn.execute(sql).fetchall()
+               "WHERE deleted = 0")
+        args: list[Any] = []
+        if user_id:
+            sql += " AND user_id = ?"
+            args.append(user_id)
+        sql += " ORDER BY created_at DESC"
+        rows = conn.execute(sql, args).fetchall()
     finally:
         conn.close()
     out = []
