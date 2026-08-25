@@ -843,6 +843,59 @@ def _llm_disposition_filter(cards: list[dict[str, Any]]) -> list[dict[str, Any]]
     return [c for i, c in enumerate(cards) if i in keep]
 
 
+def infer_dispositions(ledger_db: str = DEFAULT_LEDGER_DB, user_id: str | None = None,
+                       sample: int = 120) -> list[dict[str, Any]]:
+    """추론적 선호 파생 (P-PF-5 등록) — 명시 발화 너머: 활동·화제 패턴에서
+    LLM이 선호를 추론한다 (LifeSim "보존이 아니라 선호 추론" — 대장 #7).
+
+    ## P-PF-5 등록 (2026-08-25 오후, 숫자 보기 전 고정. P-PF-3 병소 ①의 집행)
+    표적: LME 35a27287류 — 선호가 "I like X" 문형이 아니라 활동 이력(언어
+    교환 자원봉사 등)에만 있는 경우. 방법: 스코프 최신 sample건 스니펫을
+    로컬 27B 1패스 — "이 사람의 지속 취향·선호를 증거와 함께 추론" JSON.
+    판정 (팔 T = P + 추론 카드 주입, n=6 기전 검증): 채택 = 35a27287 정답
+    전환 그리고 무손실 (T ≥ 5/6) / 기각 = 표적 불변 / 채택 불가 = 손실
+    (P-PF-4의 지시 과적 전례 — 카드도 예산이다).
+    실패 시 빈 목록 (fail-open — 추론 없이도 세계는 돈다).
+    """
+    conn = sqlite3.connect(f"file:{ledger_db}?mode=ro", uri=True)
+    try:
+        sql = "SELECT memory FROM memories WHERE deleted = 0"
+        args: list[Any] = []
+        if user_id:
+            sql += " AND user_id = ?"
+            args.append(user_id)
+        sql += " ORDER BY created_at DESC LIMIT ?"
+        args.append(sample)
+        rows = conn.execute(sql, args).fetchall()
+    finally:
+        conn.close()
+    if not rows:
+        return []
+    corpus = "\n".join(f"- {str(r[0])[:180]}" for r in rows)[:20000]
+    from .selfharness import _local_distill_llm
+    out = _local_distill_llm(
+        "From these memory snippets of one user's life, INFER their durable tastes "
+        "and preferences — including ones never stated as 'I like X' but visible "
+        "from repeated activities, choices, and topics. Output ONLY a JSON array of "
+        "objects {\"stance\": \"likes|avoids|style\", \"text\": \"<one-sentence "
+        "preference with its evidence>\"}. ≤8 items, most confident first. If "
+        "nothing is inferable, output [].\n\n" + corpus)
+    m = re.search(r"\[.*\]", out or "", re.S)
+    if not m:
+        return []
+    try:
+        parsed = json.loads(m.group(0))
+    except ValueError:
+        return []
+    result = []
+    for item in parsed[:8]:
+        if isinstance(item, dict) and item.get("text"):
+            stance = str(item.get("stance") or "likes")
+            result.append({"stance": stance if stance in {"likes", "avoids", "style"} else "likes",
+                           "text": str(item["text"])[:200], "inferred": True})
+    return result
+
+
 def dispositions(ledger_db: str = DEFAULT_LEDGER_DB, user_id: str | None = None,
                  limit: int = 200, llm_gate: bool = False) -> list[dict[str, Any]]:
     """성향 카드 목록 — 원장에서 읽기 전용 파생 (파생 DB 없음: 소수라 즉석).
