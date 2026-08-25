@@ -187,8 +187,19 @@ _EVENT_VERB_RE = re.compile(
 _BODY_DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
 
 
+_PLAN_ONLY_RE = re.compile(r"예정[,.\s]|하기로 했|계획:|하겠다[.\s]|후보로만|해야 한다")
+
+
 def _classify_event(text: str, anchor: str) -> tuple[bool, str | None]:
     """파생 v1 (P-WM-3 등록): (사건인가, 본문 발생일 or None).
+
+    ## P-WM-3b 재등록 (2026-08-25 오후 — t 재사상 감사의 위양성 후보 3건
+    ## [계획성 문장: "커밋 예정, push 예정" 류]의 집행. 숫자 보기 전 고정)
+    수리: 사건 술어가 있어도 **텍스트가 짧고(≤40자) 계획 표지가 있으면**
+    비사건 — "예정"이 지배하는 짧은 메모가 표적이고, 발생+계획 혼재 장문
+    ("X를 기각했다. 다음은 Y 예정")은 보존한다 (길이 조건이 위음성 방벽).
+    판정: 게이트 통과분 무작위 30건 재감사(새 시드) — 계획문 위양성 0건
+    그리고 위음성(명확) ≤ 10% 유지 → 채택 / 위음성 악화 → 되돌림.
 
     ## P-WM-3 등록 (2026-08-25, 숫자 보기 전 고정. P-WM-2b 이월의 집행)
     실원장 감사(6,444건): 사건 술어 24.8% · 본문 날짜 93.2% · 앵커 99.5%.
@@ -202,6 +213,8 @@ def _classify_event(text: str, anchor: str) -> tuple[bool, str | None]:
     """
     if _EVENT_VERB_RE.search(text) is None:
         return False, None
+    if len(text.strip()) <= 40 and _PLAN_ONLY_RE.search(text):
+        return False, None      # P-WM-3b: 계획 지배 단문 — 발생이 아니다
     m = _BODY_DATE_RE.search(anchor) or _BODY_DATE_RE.search(text)
     return True, (f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else None)
 
@@ -481,6 +494,22 @@ def recently_released_similar(world_db: str, what: str, within_s: int = 6 * 3600
         jaccard = len(new_toks & old_toks) / len(new_toks | old_toks)
         if jaccard >= threshold:
             return str(hid)
+    return None
+
+
+def active_similar_hand(world_db: str, what: str,
+                        threshold: float = 0.5) -> str | None:
+    """미해제 유언과의 중복 대조 — 같은 의도가 문면만 바꿔 두 번 등기되는
+    것을 막는다 (H-1 E2E 실측: 'Verify commit 131deb1'이 두 변형으로 2건).
+    되새김 가드(recently_released_similar)의 자매 — 그쪽은 죽은 유언의
+    메아리, 이쪽은 산 유언의 복제."""
+    new_toks = _hand_tokens(what)
+    if not new_toks:
+        return None
+    for hand in standing_hands(world_db):
+        old_toks = _hand_tokens(hand["what"])
+        if old_toks and len(new_toks & old_toks) / len(new_toks | old_toks) >= threshold:
+            return str(hand["id"])
     return None
 
 

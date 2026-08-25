@@ -377,6 +377,13 @@ def _persist_consolidation(distilled: dict[str, Any], *, user_id: str | None,
                 # 2026-08-25: 해제 13초 뒤 같은 의도 부활). 계수는 정직하게.
                 out["skipped_rumination"] = out.get("skipped_rumination", 0) + 1
                 continue
+            dup_of = worldmodel.active_similar_hand(
+                worldmodel.DEFAULT_WORLD_DB, str(item))
+            if dup_of:
+                # 복제 가드: 산 유언의 문면 변형 재등기 금지 (H-1 실측:
+                # 같은 의도 2건). 기존 유언이 정본 — 갱신도 하지 않는다.
+                out["skipped_duplicate"] = out.get("skipped_duplicate", 0) + 1
+                continue
             hand_id = "cons-" + hashlib.sha256(str(item).encode()).hexdigest()[:10]
             worldmodel.arm_hand(
                 worldmodel.DEFAULT_WORLD_DB, hand_id, "intent", str(item),

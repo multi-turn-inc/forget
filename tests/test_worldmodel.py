@@ -258,6 +258,19 @@ def test_strict_events_gate_and_t_rebase(tmp_path):
     assert evs[0]["t"][:10] == "2026-07-01"                # 저장 8/20 → 발생 7/1
 
 
+def test_active_similar_hand_blocks_живое_duplicate(tmp_path):
+    # 복제 가드 계약: 산 유언의 문면 변형은 중복으로 감지, 해제되면 비감지
+    # (그때부터는 되새김 가드의 시간창 소관).
+    from forget.worldmodel import active_similar_hand, arm_hand, release_hand
+    world = str(tmp_path / "world.sqlite3")
+    arm_hand(world, "h1", "intent", "Verify commit 131deb1 persisted across the wake boundary",
+             "persist 확인", "sess", now=NOW)
+    assert active_similar_hand(world, "Verify that commit 131deb1 persisted (wake boundary check)") == "h1"
+    assert active_similar_hand(world, "내일 터널 상태를 점검한다") is None
+    release_hand(world, "h1", "확인 완료", now=NOW)
+    assert active_similar_hand(world, "Verify commit 131deb1 persisted across the wake boundary") is None
+
+
 def test_substrate_deletion_propagates_at_read_time(tmp_path):
     # 대장 #19 미검증 칸의 계약: 기질(파생)은 낡아도, 소비자가 읽기 시점에
     # 원장 deleted=0 대조를 하므로 — 지운 기억만 언급하는 엔티티는
