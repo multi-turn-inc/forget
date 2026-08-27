@@ -136,11 +136,19 @@ def test_real_ledger_report_satisfies_its_own_predicate():
 
 
 def test_real_ledger_rt_streak_is_frame_dependent_and_printed_not_asserted():
-    """`rt` 연속값은 프레임에 따라 변한다 — 상수로 박으면 다음 사이클이 붉어진다."""
+    """`rt` 연속값은 프레임에 따라 변한다 — 상수로 박으면 다음 사이클이 붉어진다.
+
+    c232 실측: «streak >= 1»이 바로 그 상수였다 — 최신 행의 rt가 영원히 2라는
+    가정이 숨어 있었고, 정직한 rt=3(하네스 제3형)이 append되자 이 회귀가 수확을
+    붉혔다(관측 106 계열 — 깨진 것은 원장이 아니라 계약이다). 연속 0은 합법
+    상태이며, 그때의 프레임 독립 항등식은 «중단 행 = 최종 행»이다(관행 ⑯).
+    """
     rows = _ledger()
     st = c48.field_streak(rows, "restore_turns", 2)
     assert st["frame_last"] == max(int(r["cycle"]) for r in rows)
-    assert st["streak"] >= 1 and st["streak"] <= st["domain"]
+    assert 0 <= st["streak"] <= st["domain"]
+    if st["streak"] == 0:
+        assert st["break"][0] == st["frame_last"], st
     print(f"\n[c191 실측] rt 불변 2 연속 = {st['streak']} "
           f"(프레임 = 원장 최종 c{st['frame_last']} · 정의역 {st['domain']}행 · "
           f"중단 {st['break']})")
