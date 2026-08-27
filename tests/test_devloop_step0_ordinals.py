@@ -177,22 +177,37 @@ def test_real_ledger_capsule_streak_is_not_the_domain_size():
     절차 5(수확)보다 먼저이므로, 구본은 c168이 초록으로 잰 직후 c168의 수확에 붉어졌고
     한 사이클을 잠복하다 c169에 실측됐다. 값이 아니라 원장에서 **다시 센다.**
 
-    앵커(`off_value`·`break`·`span` 시작)는 과거 행이라 프레임과 무관하게 안정하다.
-    같아지는 날(정의역 안의 `partial` 5건이 사라지는 날)이 오면 앵커 assert가 먼저
-    깨진다 — 그때는 계약이 아니라 데이터가 바뀐 것이다.
+    ★★ c234 개정 (관측 106 계열 — c171 `fixed`·c232 `rt`에 이은 3호). c169 개정도
+    상수 셋을 남겼다: `off_value == [91,92,93,94,119]` · `break == (119,'partial')` ·
+    `streak == (c119 이후 행 수)`. 셋 다 **«c119 이후 전부 miss»라는 미래 가정**이고,
+    캡슐이 실제로 devloop 정본을 렌더한 사이클(c234 — 114연속 단절)이 정직하게
+    `partial`을 적는 순간 셋이 동시에 붉어진다 — 계약이 데이터를 벌한다. 수리는
+    형제 절(`fixed`)과 같다: 상수를 남기지 않고 `field_streak`와 **다른 알고리즘**
+    (뒤에서부터 훑기)으로 재계산해 관계만 고정한다.
     """
     rows = c48._ledger_rows()
     st = c48.field_streak(rows, "restore_grade_capsule", "miss")
-    assert st["off_value"] == [91, 92, 93, 94, 119]
-    assert st["break"] == (119, "partial")
-    assert st["span"][0] == 91
-    # 기계 재계산 — 계기의 반환값이 아니라 원장 행에서 독립으로 센다.
-    present = sorted(int(r["cycle"]) for r in rows if "restore_grade_capsule" in r)
+    present = [(int(r["cycle"]), r["restore_grade_capsule"])
+               for r in rows if "restore_grade_capsule" in r]
+    assert present, "정의역이 비었다 — 이 절의 전제가 깨졌다"
+
+    # 독립 재계산: 최신 행부터 거꾸로 훑어 miss가 이어지는 구간과 첫 비-miss 행을 찾는다.
+    tail, break_at = 0, None
+    for cycle, value in sorted(present, reverse=True):
+        if value != "miss":
+            break_at = (cycle, value)
+            break
+        tail += 1
+
+    assert st["streak"] == tail, f"연속이 독립 재계산과 갈렸다: {st['streak']} vs {tail}"
+    assert st["break"] == break_at, f"중단점이 독립 재계산과 갈렸다: {st['break']} vs {break_at}"
     assert st["domain"] == len(present), f"정의역이 재계산과 갈렸다: {st['domain']}"
-    assert st["streak"] == sum(1 for c in present if c > 119), (
-        f"연속이 재계산과 갈렸다: {st['streak']}")
-    # ★ 이 절의 존재 이유 — 연속과 정의역은 다른 수다(관측 96).
-    assert st["streak"] != st["domain"]
+    assert st["off_value"] == [c for c, v in sorted(present) if v != "miss"]
+    assert st["span"][0] == min(c for c, _ in present)
+    # ★ 관측 96 — 연속과 정의역은 다른 수다. 비-miss가 정의역 안에 있는 한 둘은 갈린다.
+    assert st["streak"] <= st["domain"]
+    if any(v != "miss" for _, v in present):
+        assert st["streak"] != st["domain"]
 
 
 def test_real_ledger_fixed_streak_matches_machine_recount():
