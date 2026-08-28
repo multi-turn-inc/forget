@@ -24,6 +24,9 @@ drift apart.
 from __future__ import annotations
 
 import os
+from contextlib import contextmanager
+from contextvars import ContextVar
+from typing import Iterator
 
 MODES = ("off", "warn", "enforce")
 
@@ -48,6 +51,25 @@ def default_owner() -> str:
 
 
 CANONICAL_APP_ID = "forget"
+# 합의 원장 (docs/team-memory-protocol.md): 무소유 + 이 앱 = 정식 풀.
+# 소유자가 붙은 같은 앱 기입은 규약 위반이므로 일부러 계속 foreign 경고를 받는다
+# (gpt-live challenge 2026-08-28 대응 — allowlist의 코드 승격).
+TEAM_LEDGER_APP = (os.getenv("MEM1_TEAM_LEDGER_APP") or "forget-dev").strip()
+_TEAM_LEDGER_WRITER: ContextVar[str] = ContextVar("forget_team_ledger_writer", default="")
+
+
+@contextmanager
+def authorize_team_ledger_write(principal: str) -> Iterator[None]:
+    """Grant one call-chain permission to create an ownerless team item."""
+    token = _TEAM_LEDGER_WRITER.set(str(principal or "").strip())
+    try:
+        yield
+    finally:
+        _TEAM_LEDGER_WRITER.reset(token)
+
+
+def team_ledger_write_principal() -> str:
+    return _TEAM_LEDGER_WRITER.get()
 
 
 def allowed_scopes() -> list[tuple[str, str]]:
@@ -68,6 +90,8 @@ def is_allowed_pool(user_id: str | None, app_id: str | None, owner: str | None =
     user = (user_id or "").strip()
     app = (app_id or "").strip()
     if user == owner and app == CANONICAL_APP_ID:
+        return True
+    if not user and app == TEAM_LEDGER_APP:
         return True
     for allowed_user, allowed_app in allowed_scopes():
         if allowed_user in ("*", user) and allowed_app in ("*", app):

@@ -177,6 +177,7 @@ def require_auth(request: Request) -> str:
         "actor_type": "anonymous",
         "project_id": project_id,
         "org_id": requested_org_id or "org_local",
+        "scopes": [],
         "is_operator": False,
     }
     if header.startswith("Token ") or header.startswith("Bearer "):
@@ -188,17 +189,21 @@ def require_auth(request: Request) -> str:
                 "project_id": project_id,
                 "org_id": requested_org_id or project_org_id(project_id) or "org_local",
                 "role": "operator",
+                "scopes": ["*"],
                 "is_operator": True,
             }
         else:
             with get_db() as conn:
                 row = conn.execute(
                     """
-                    SELECT p.project_id, p.org_id, '' AS owner_user_id, 'project' AS credential_type
+                    SELECT p.project_id, p.org_id, '' AS owner_user_id,
+                           '' AS agent_principal, '["*"]' AS scopes,
+                           'project' AS credential_type
                       FROM projects p
                      WHERE p.api_key = ?
                     UNION ALL
-                    SELECT ak.project_id, p.org_id, ak.owner_user_id, 'api_key' AS credential_type
+                    SELECT ak.project_id, p.org_id, ak.owner_user_id,
+                           ak.agent_principal, ak.scopes, 'api_key' AS credential_type
                       FROM api_keys ak
                       JOIN projects p ON p.project_id = ak.project_id
                      WHERE ak.api_key = ?
@@ -219,7 +224,9 @@ def require_auth(request: Request) -> str:
                     "project_id": project_id,
                     "org_id": org_id,
                     "user_id": row["owner_user_id"] or None,
+                    "agent_principal": row["agent_principal"] or None,
                     "role": "api_key",
+                    "scopes": json_loads(row["scopes"], []),
                     "is_operator": False,
                 }
             else:
@@ -250,8 +257,10 @@ def require_auth(request: Request) -> str:
                 "actor_type": "anonymous",
                 "project_id": project_id,
                 "org_id": requested_org_id or project_org_id(project_id) or "org_local",
+                "scopes": [],
                 "is_operator": False,
             }
+    context.setdefault("scopes", [])
     set_current_project_id(project_id)
     set_current_auth_context(context)
     request.state.auth_context = context
@@ -267,6 +276,7 @@ def api_key_payload(row: Any, include_key: bool = False) -> dict[str, Any]:
         "id": row["id"],
         "project_id": row["project_id"],
         "owner_user_id": row["owner_user_id"] if "owner_user_id" in row.keys() else "",
+        "agent_principal": row["agent_principal"] if "agent_principal" in row.keys() else "",
         "name": row["name"],
         "label": row["name"],
         "key_prefix": row["key_prefix"],
@@ -306,10 +316,17 @@ def create_api_key(
     project_id = payload.get("project_id") or project_id or current_project_id()
     key = f"m0sk_{str(new_id()).replace('-', '')}"
     scopes = payload.get("scopes") if isinstance(payload.get("scopes"), list) else ["project:read", "memory:read", "memory:write"]
+    agent_principal = str(payload.get("agent_principal") or "").strip()
+    if agent_principal and (
+        len(agent_principal) > 64
+        or re.fullmatch(r"[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?", agent_principal) is None
+    ):
+        raise HTTPException(status_code=400, detail="agent_principal has an invalid format")
     item = {
         "id": str(new_id("key")),
         "project_id": project_id,
         "owner_user_id": owner_user_id or str(payload.get("owner_user_id") or ""),
+        "agent_principal": agent_principal,
         "name": str(payload.get("name") or payload.get("label") or "API key"),
         "api_key": key,
         "key_prefix": key[:12],
@@ -323,14 +340,15 @@ def create_api_key(
         conn.execute(
             """
             INSERT INTO api_keys (
-                id, project_id, owner_user_id, name, api_key, key_prefix, scopes,
-                created_by_role, is_active, created_at, revoked_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                id, project_id, owner_user_id, agent_principal, name, api_key,
+                key_prefix, scopes, created_by_role, is_active, created_at, revoked_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 item["id"],
                 item["project_id"],
                 item["owner_user_id"],
+                item["agent_principal"],
                 item["name"],
                 item["api_key"],
                 item["key_prefix"],
@@ -3857,6 +3875,15 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
         raise HTTPException(status_code=400, detail="messages is required")
     if not any(payload.get(field) for field in ENTITY_FIELDS):
         raise HTTPException(status_code=400, detail="At least one entity ID is required")
+    if (
+        str(payload.get("app_id") or "").strip() == scope_guard.TEAM_LEDGER_APP
+        and not payload.get("user_id")
+        and not scope_guard.team_ledger_write_principal()
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="ownerless team-ledger writes must use the authenticated team_note tool",
+        )
     # Every write path (MCP tools, REST /v1/memories) converges here — the one
     # place a foreign (user_id, app_id) pool cannot slip past (F4 class).
     scope_guard_warning = scope_guard.evaluate_write_scope(
@@ -3897,7 +3924,12 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
     _record_gate_drops(gate_drops, payload, project_id=project_id, event_id=event_id)
     created: list[dict[str, Any]] = []
     vector_upserts: list[tuple[dict[str, Any], list[float]]] = []
-    hebbian = _hebbian_enabled(payload)
+    # Consensus items are append-only protocol records, not beliefs to merge.
+    # Even near-identical notes can carry distinct reply/idempotency links.
+    hebbian = (
+        _hebbian_enabled(payload)
+        and str(payload.get("app_id") or "").strip() != scope_guard.TEAM_LEDGER_APP
+    )
     hebbian_merges: list[dict[str, Any]] = []
     gate_merges: list[dict[str, Any]] = []
     # Normalize client-supplied timestamps (mem0 v3 clients send unix ints) to
@@ -13478,6 +13510,17 @@ def get_memory(memory_id: str, project_id: str | None = None, include_expired: b
     return strip_internal(memory)
 
 
+def _reject_team_ledger_mutation(memory: dict[str, Any]) -> None:
+    if (
+        str(memory.get("app_id") or "").strip() == scope_guard.TEAM_LEDGER_APP
+        and not memory.get("user_id")
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="team-ledger items are append-only; use team_note links instead",
+        )
+
+
 def update_memory(memory_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     project_id = payload.get("project_id") or current_project_id()
     text = payload.get("text") or payload.get("memory") or payload.get("data")
@@ -13486,6 +13529,7 @@ def update_memory(memory_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     if text is None and metadata is None and expiration is None:
         raise HTTPException(status_code=400, detail="text, metadata, or expiration_date is required")
     current = get_memory(memory_id, project_id=project_id)
+    _reject_team_ledger_mutation(current)
     if isinstance(current.get("metadata"), dict) and current["metadata"].get("immutable") is True:
         raise HTTPException(status_code=409, detail="Memory is immutable and cannot be updated")
     new_text = str(text) if text is not None else current["memory"]
@@ -13556,12 +13600,15 @@ def supersede_memory(memory_id: str, payload: dict[str, Any] | None = None, proj
     successor_id = str(payload.get("superseded_by") or payload.get("new_memory_id") or "").strip() or None
     reason = str(payload.get("reason") or "").strip()
     current = get_memory(memory_id, project_id=project_id, include_expired=True)
+    _reject_team_ledger_mutation(current)
     metadata = dict(current.get("metadata") or {})
     if metadata.get("immutable") is True:
         raise HTTPException(status_code=409, detail="Memory is immutable and cannot be superseded")
     if successor_id == memory_id:
         raise HTTPException(status_code=400, detail="A memory cannot supersede itself")
     successor = get_memory(successor_id, project_id=project_id, include_expired=True) if successor_id else None
+    if successor is not None:
+        _reject_team_ledger_mutation(successor)
 
     now = utc_now()
     metadata["superseded_at"] = now
@@ -13645,6 +13692,7 @@ def confirm_memory(memory_id: str, payload: dict[str, Any] | None = None, projec
     if not evidence:
         raise HTTPException(status_code=400, detail="evidence is required — no receipt, no confirmation")
     current = get_memory(memory_id, project_id=project_id, include_expired=True)
+    _reject_team_ledger_mutation(current)
     metadata = dict(current.get("metadata") or {})
     if metadata.get("superseded_at"):
         raise HTTPException(status_code=409, detail="Memory is superseded — confirm its successor instead")
@@ -13712,6 +13760,7 @@ def confirm_memory(memory_id: str, payload: dict[str, Any] | None = None, projec
 def delete_memory(memory_id: str, project_id: str | None = None) -> dict[str, str]:
     project_id = project_id or current_project_id()
     current = get_memory(memory_id, project_id=project_id, include_expired=True)
+    _reject_team_ledger_mutation(current)
     now = utc_now()
     with get_db() as conn:
         conn.execute("UPDATE memories SET deleted = 1, updated_at = ? WHERE id = ? AND project_id = ?", (now, memory_id, project_id))
@@ -13752,6 +13801,15 @@ def delete_memories(filters: dict[str, Any], project_id: str | None = None) -> d
     if not has_entity_filter(filters):
         raise HTTPException(status_code=400, detail="filters must include at least one entity ID")
     memories = [m for m in list_memory_dicts(project_id=project_id, include_expired=True) if matches_filters(m, filters)]
+    if any(
+        str(memory.get("app_id") or "").strip() == scope_guard.TEAM_LEDGER_APP
+        and not memory.get("user_id")
+        for memory in memories
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="bulk mutation includes append-only team-ledger items",
+        )
     for memory in memories:
         delete_memory(memory["id"], project_id=project_id)
     return {"message": "Memories deleted successfully!"}
@@ -13792,7 +13850,8 @@ def submit_memory_feedback(payload: dict[str, Any], project_id: str | None = Non
     if not memory_id:
         raise HTTPException(status_code=400, detail="memory_id is required")
     memory_id = str(memory_id)
-    get_memory(memory_id, project_id=project_id)
+    memory = get_memory(memory_id, project_id=project_id)
+    _reject_team_ledger_mutation(memory)
 
     feedback_keys = ("feedback", "rating", "value")
     feedback_present = any(key in payload for key in feedback_keys)

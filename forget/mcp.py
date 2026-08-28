@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import re
+import sqlite3
 from typing import Any
 
 from fastapi import HTTPException
 
 from . import __version__
+from .db import get_db
 from .provider_matrix import provider_parity_payload
 from .provider_runtime import configure_provider_payload, provider_catalog_payload, provider_health_payload
 from .store import (
@@ -47,6 +51,8 @@ from .store import (
     verify_judgment_evidence,
     verify_memory_claims,
 )
+from .utils import utc_now
+
 
 def _default_scope_user_id() -> str:
     """Fallback owner for calls that arrive with no scope at all.
@@ -74,6 +80,313 @@ def _default_scope_user_id() -> str:
 # memories by a fiction — reads scoped to it miss every real client's writes.
 MCP_DEFAULT_USER_ID = _default_scope_user_id()
 MCP_DEFAULT_APP_ID = (os.getenv("MEM1_MCP_DEFAULT_APP_ID") or "").strip()
+
+# 합의 원장 (docs/team-memory-protocol.md): 개발 세션들의 공유 스코프.
+# 전용 도구(team_read/team_note)가 스코프 규약을 구조화한다 — "agent_id를
+# 꼭 넣어라"류 지시문 규율은 깨지라고 있는 것이라서(2026-08-28 결정).
+TEAM_LEDGER_APP = (os.getenv("MEM1_TEAM_LEDGER_APP") or "forget-dev").strip()
+TEAM_NOTE_KINDS = ("decision", "proposal", "challenge", "contract", "question")
+TEAM_OPEN_KINDS = ("proposal", "challenge", "question")
+# 서명 로스터: 고정 enum이 오타 파편화를 막는다. 새 세션 합류 = 여기 한 줄.
+TEAM_AGENTS = ("claude-exec", "gpt-live", "selfharness")
+TEAM_NOTE_MAX_CHARS = 2000
+TEAM_NOTE_MAX_BYTES = 8000
+TEAM_IDEMPOTENCY_KEY_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9._:-]{0,126}[A-Za-z0-9])?")
+
+
+def _team_credential_principal(context: dict[str, str] | None) -> str:
+    principal = str((context or {}).get("team_principal") or "").strip()
+    auth = str((context or {}).get("team_principal_auth") or "").strip()
+    if not principal or auth != "credential":
+        raise HTTPException(status_code=403, detail="team ledger requires an agent-bound Bearer credential")
+    if principal not in TEAM_AGENTS:
+        raise HTTPException(status_code=403, detail="credential principal is not in the team roster")
+    return principal
+
+
+def _team_rows() -> list[dict[str, Any]]:
+    return [
+        memory for memory in list_memory_dicts()
+        if memory.get("app_id") == TEAM_LEDGER_APP and not memory.get("user_id")
+    ]
+
+
+def _team_lifecycle(rows: list[dict[str, Any]]) -> tuple[dict[str, str], dict[str, str]]:
+    """Derive immutable item status from validated reply/supersede links."""
+    by_id = {str(row.get("id")): row for row in rows}
+    status = {
+        item_id: "open" if (row.get("metadata") or {}).get("kind") in TEAM_OPEN_KINDS else "recorded"
+        for item_id, row in by_id.items()
+    }
+    closed_by: dict[str, str] = {}
+    # Old rows may predate link validation. Only links satisfying today's
+    # authority rules are allowed to close an item.
+    for row in reversed(rows):
+        row_id = str(row.get("id") or "")
+        meta = row.get("metadata") or {}
+        author = str(row.get("agent_id") or "")
+        supersedes = str(meta.get("supersedes") or "")
+        if supersedes and supersedes in by_id and meta.get("principal_auth") == "credential":
+            target = by_id[supersedes]
+            if author and author == str(target.get("agent_id") or ""):
+                status[supersedes] = "superseded"
+                closed_by[supersedes] = row_id
+        reply_to = str(meta.get("reply_to") or "")
+        if (
+            reply_to
+            and reply_to in by_id
+            and status.get(reply_to) == "open"
+            and meta.get("principal_auth") == "credential"
+        ):
+            target = by_id[reply_to]
+            target_meta = target.get("metadata") or {}
+            addressed = str(target_meta.get("addressed_to") or "")
+            target_author = str(target.get("agent_id") or "")
+            if author and author != target_author and (not addressed or addressed == author):
+                status[reply_to] = "answered"
+                closed_by[reply_to] = row_id
+    return status, closed_by
+
+
+def _team_item(
+    row: dict[str, Any],
+    status: dict[str, str],
+    closed_by: dict[str, str],
+) -> dict[str, Any]:
+    item_id = str(row.get("id") or "")
+    meta = row.get("metadata") or {}
+    kind = str(meta.get("kind") or "")
+    raw_text = str(row.get("memory") or "").strip()
+    prefix = f"[{kind}] " if kind else ""
+    return {
+        "id": item_id,
+        "author": str(row.get("agent_id") or ""),
+        "kind": kind,
+        "text": raw_text[len(prefix):] if prefix and raw_text.startswith(prefix) else raw_text,
+        "addressed_to": meta.get("addressed_to"),
+        "reply_to": meta.get("reply_to"),
+        "supersedes": meta.get("supersedes"),
+        "status": status.get(item_id, "recorded"),
+        "closed_by": closed_by.get(item_id),
+        "created_at": row.get("created_at"),
+    }
+
+
+def _contains_team_ledger_selector(value: Any) -> bool:
+    if isinstance(value, str):
+        return value.strip() == TEAM_LEDGER_APP
+    if isinstance(value, dict):
+        return any(_contains_team_ledger_selector(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_contains_team_ledger_selector(item) for item in value)
+    return False
+
+
+def _value_targets_team_ledger(value: Any) -> bool:
+    if isinstance(value, dict):
+        if "app_id" in value and _contains_team_ledger_selector(value.get("app_id")):
+            return True
+        if (
+            str(value.get("entity_type") or "").strip() == "app_id"
+            and str(value.get("entity_id") or "").strip() == TEAM_LEDGER_APP
+        ):
+            return True
+        return any(_value_targets_team_ledger(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_value_targets_team_ledger(item) for item in value)
+    return False
+
+
+def _arguments_reference_team_item(arguments: dict[str, Any]) -> bool:
+    if _value_targets_team_ledger(arguments):
+        return True
+    candidate_ids = {
+        str(arguments.get(key) or "").strip()
+        for key in ("id", "memory_id", "memoryId")
+        if arguments.get(key)
+    }
+    if not candidate_ids:
+        return False
+    return any(str(row.get("id") or "") in candidate_ids for row in _team_rows())
+
+
+def _event_is_team_ledger(event: dict[str, Any]) -> bool:
+    payload = event.get("payload") or {}
+    return (
+        isinstance(payload, dict)
+        and str(payload.get("app_id") or "").strip() == TEAM_LEDGER_APP
+        and not payload.get("user_id")
+    )
+
+
+def _without_team_ledger_events(result: dict[str, Any]) -> dict[str, Any]:
+    rows = [event for event in result.get("results") or [] if not _event_is_team_ledger(event)]
+    return {**result, "count": len(rows), "next": None, "results": rows}
+
+
+def _validate_team_note_links(
+    author: str,
+    addressed_to: str,
+    reply_to: str,
+    supersedes: str,
+) -> None:
+    ledger = _team_rows()
+    by_id = {str(row.get("id")): row for row in ledger}
+    lifecycle, _ = _team_lifecycle(ledger)
+    if reply_to:
+        target = by_id.get(reply_to)
+        if not target:
+            raise HTTPException(status_code=404, detail="reply_to must be a complete existing team item id")
+        target_author = str(target.get("agent_id") or "")
+        target_meta = target.get("metadata") or {}
+        target_addressed = str(target_meta.get("addressed_to") or "")
+        if target_author == author:
+            raise HTTPException(status_code=400, detail="an author cannot answer its own item")
+        if target_addressed and target_addressed != author:
+            raise HTTPException(status_code=403, detail="only the addressed principal may answer this item")
+        if lifecycle.get(reply_to) != "open":
+            raise HTTPException(status_code=409, detail="reply_to item is not open")
+        if addressed_to and addressed_to != target_author:
+            raise HTTPException(status_code=400, detail="a reply may only be addressed back to the item author")
+    if supersedes:
+        target = by_id.get(supersedes)
+        if not target:
+            raise HTTPException(status_code=404, detail="supersedes must be a complete existing team item id")
+        if str(target.get("agent_id") or "") != author:
+            raise HTTPException(status_code=403, detail="only an item's author may supersede it")
+        if lifecycle.get(supersedes) == "superseded":
+            raise HTTPException(status_code=409, detail="supersedes item is already superseded")
+
+
+def _team_note_fingerprint(payload: dict[str, Any]) -> str:
+    canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _team_idempotency_begin(
+    principal: str,
+    key: str,
+    payload_sha256: str,
+) -> dict[str, Any] | None:
+    """Atomically reserve an idempotency key or return its prior result."""
+    project_id = current_project_id()
+    now = utc_now()
+    try:
+        with get_db() as conn:
+            conn.execute(
+                """
+                INSERT INTO team_note_requests (
+                    project_id, ledger_app, principal, idempotency_key,
+                    payload_sha256, event_id, memory_id, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, ?)
+                """,
+                (project_id, TEAM_LEDGER_APP, principal, key, payload_sha256, now, now),
+            )
+        return None
+    except sqlite3.IntegrityError:
+        with get_db() as conn:
+            row = conn.execute(
+                """
+                SELECT * FROM team_note_requests
+                 WHERE project_id = ? AND ledger_app = ?
+                   AND principal = ? AND idempotency_key = ?
+                """,
+                (project_id, TEAM_LEDGER_APP, principal, key),
+            ).fetchone()
+        if not row:
+            raise HTTPException(status_code=409, detail="idempotency reservation conflict")
+        if row["payload_sha256"] != payload_sha256:
+            raise HTTPException(
+                status_code=409,
+                detail="idempotency_key already used with a different payload",
+            )
+        memory_id = str(row["memory_id"] or "")
+        if memory_id:
+            ledger = _team_rows()
+            prior = next((item for item in ledger if str(item.get("id")) == memory_id), None)
+            if prior:
+                status, closed_by = _team_lifecycle(ledger)
+                return {
+                    "item": _team_item(prior, status, closed_by),
+                    "event_id": row["event_id"],
+                    "idempotent_replay": True,
+                }
+        # Recover a write that committed before a process died while updating
+        # its reservation row.
+        prior = next(
+            (
+                item for item in _team_rows()
+                if item.get("agent_id") == principal
+                and (item.get("metadata") or {}).get("idem") == key
+                and (item.get("metadata") or {}).get("idem_fp") == payload_sha256
+            ),
+            None,
+        )
+        if prior:
+            _team_idempotency_finish(principal, key, None, str(prior.get("id")))
+            ledger = _team_rows()
+            status, closed_by = _team_lifecycle(ledger)
+            return {
+                "item": _team_item(prior, status, closed_by),
+                "event_id": row["event_id"],
+                "idempotent_replay": True,
+            }
+        raise HTTPException(status_code=409, detail="idempotency_key request is already in progress")
+
+
+def _team_idempotency_finish(
+    principal: str,
+    key: str,
+    event_id: str | None,
+    memory_id: str,
+) -> None:
+    with get_db() as conn:
+        conn.execute(
+            """
+            UPDATE team_note_requests
+               SET event_id = COALESCE(?, event_id), memory_id = ?, updated_at = ?
+             WHERE project_id = ? AND ledger_app = ?
+               AND principal = ? AND idempotency_key = ?
+            """,
+            (
+                event_id,
+                memory_id,
+                utc_now(),
+                current_project_id(),
+                TEAM_LEDGER_APP,
+                principal,
+                key,
+            ),
+        )
+
+
+def _team_idempotency_recover_or_abort(
+    principal: str,
+    key: str,
+    payload_sha256: str,
+) -> None:
+    prior = next(
+        (
+            item for item in _team_rows()
+            if item.get("agent_id") == principal
+            and (item.get("metadata") or {}).get("idem") == key
+            and (item.get("metadata") or {}).get("idem_fp") == payload_sha256
+        ),
+        None,
+    )
+    if prior:
+        _team_idempotency_finish(principal, key, None, str(prior.get("id")))
+        return
+    with get_db() as conn:
+        conn.execute(
+            """
+            DELETE FROM team_note_requests
+             WHERE project_id = ? AND ledger_app = ?
+               AND principal = ? AND idempotency_key = ?
+               AND memory_id IS NULL
+            """,
+            (current_project_id(), TEAM_LEDGER_APP, principal, key),
+        )
 
 # Keep in sync with store.ALLOWED_FILTER_KEYS: unknown keys are rejected with a
 # 400 instead of silently matching nothing (the pre-2026-07-05 behavior).
@@ -240,6 +553,34 @@ TOOLS: list[dict[str, Any]] = [
                 "expiration_date": {"type": "string"},
                 "immutable": {"type": "boolean"},
             },
+        },
+    },
+    {
+        "name": "team_read",
+        "description": "Read the shared team consensus ledger — newest first, ENUMERATED (not search, so nothing is missed). Contains decisions, proposals, challenges, contracts and open questions written by the development agents. Read this at session start and before any design decision; if a proposal/question/challenge addressed to you is unanswered, answer it with team_note in this session (unanswered items silently pile up).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "description": "Max rows, newest first (default 20)."},
+                "open_only": {"type": "boolean", "description": "Only unanswered proposals/questions/challenges (no reply_to/supersedes link pointing at them). Use this to find what awaits you."},
+                "addressed_to": {"type": "string", "enum": ["claude-exec", "gpt-live", "selfharness"], "description": "Optional recipient filter. Unaddressed shared items are included."},
+            },
+        },
+    },
+    {
+        "name": "team_note",
+        "description": "Write to the shared team consensus ledger. FAIL-CLOSED: requires an agent-bound Bearer credential; the authenticated API-key row supplies attribution and callers cannot select an author. The row is stored ownerless so every session sees it. kinds: decision (agreed, include rationale) / proposal (awaiting the other track) / challenge (attributed disagreement — name what you dispute) / contract (boundary agreement between tracks) / question (open). Use reply_to=<full id from team_read> to close open items. Never record a plan as done. Text ≤2000 chars; control chars stripped, PII redacted at write time; idempotency_key conflicts (same key, different payload) are rejected.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "kind": {"type": "string", "enum": ["decision", "proposal", "challenge", "contract", "question"]},
+                "text": {"type": "string"},
+                "reply_to": {"type": "string", "description": "Memory id of the ledger item this answers — closes it in open_only reads."},
+                "addressed_to": {"type": "string", "description": "Agent this item is directed at (shown in team_read)."},
+                "supersedes": {"type": "string", "description": "Memory id of the ledger item this replaces."},
+                "idempotency_key": {"type": "string", "description": "Scoped to the authenticated principal. Same key and payload replays; changed payload conflicts."},
+            },
+            "required": ["kind", "text"],
         },
     },
     {
@@ -1228,6 +1569,11 @@ def call_tool(name: str, arguments: dict[str, Any] | None, context: dict[str, st
 
 def _dispatch_tool(name: str, arguments: dict[str, Any] | None, context: dict[str, str] | None = None) -> dict[str, Any]:
     args = dict(arguments or {})
+    if name not in {"team_read", "team_note"} and _arguments_reference_team_item(args):
+        raise HTTPException(
+            status_code=403,
+            detail="team-ledger items are available only through team_read/team_note",
+        )
     if name == "list_gate_log":
         return _text_result(list_gate_log({**args, "filters": _mcp_scoped_filters(args, context)}))
     if name == "recall_episode":
@@ -1290,6 +1636,146 @@ def _dispatch_tool(name: str, arguments: dict[str, Any] | None, context: dict[st
         return _text_result(lora_training_readiness(project_id=str(args.get("project_id") or "proj_local")))
     if name == "get_lora_base_model_plan":
         return _text_result(lora_base_model_plan(dict(args), project_id=str(args.get("project_id") or "proj_local")))
+    if name == "team_read":
+        viewer = _team_credential_principal(context)
+        limit = max(1, min(int(args.get("limit") or 20), 100))
+        addressed_filter = str(args.get("addressed_to") or "").strip()
+        if addressed_filter and addressed_filter not in TEAM_AGENTS:
+            raise HTTPException(status_code=400, detail=f"addressed_to must be one of {TEAM_AGENTS}")
+        all_rows = _team_rows()
+        status, closed_by = _team_lifecycle(all_rows)
+        if args.get("open_only"):
+            all_rows = [
+                row for row in all_rows
+                if status.get(str(row.get("id"))) == "open"
+            ]
+        if addressed_filter:
+            all_rows = [
+                row for row in all_rows
+                if not (row.get("metadata") or {}).get("addressed_to")
+                or (row.get("metadata") or {}).get("addressed_to") == addressed_filter
+            ]
+        rows = all_rows[:limit]
+        items = [_team_item(row, status, closed_by) for row in rows]
+        lines = [
+            f"(id={item['id']} status={item['status']}"
+            + (f" →{item['addressed_to']}" if item.get("addressed_to") else "")
+            + f") [{item['author'] or '?'}] [{item['kind']}] {item['text']} "
+            + f"({str(item.get('created_at') or '')[:16]})"
+            for item in items
+        ]
+        return _text_result({
+            "ledger_app": TEAM_LEDGER_APP,
+            "viewer": viewer,
+            "items": items,
+            "rows": lines,
+            "note": "newest first; ids are complete; status is derived from validated links",
+        })
+    if name == "team_note":
+        kind = str(args.get("kind") or "").strip()
+        note_text = str(args.get("text") or "").strip()
+        principal = _team_credential_principal(context)
+        # Caller-selected attribution is not accepted, including from clients
+        # with a stale cached tool schema. The bearer credential is the source
+        # of truth and unbound connections fail closed.
+        if "author" in args:
+            raise HTTPException(status_code=400, detail="author is server-bound and must not be supplied")
+        author = principal
+        if kind not in TEAM_NOTE_KINDS:
+            raise HTTPException(status_code=400, detail=f"kind must be one of {TEAM_NOTE_KINDS}")
+        if not note_text:
+            raise HTTPException(status_code=400, detail="text is required")
+        if len(note_text) > TEAM_NOTE_MAX_CHARS:
+            raise HTTPException(status_code=400, detail="text exceeds 2000 chars — link a doc instead")
+        # 원장 위생 (gpt-live challenge): 제어문자 제거 + PII 출구 검문 재사용.
+        note_text = "".join(ch for ch in note_text if ch == "\n" or ch == "\t" or ord(ch) >= 32)
+        from .grants import PII_DETECTORS
+        for detector_name, detector in PII_DETECTORS.items():
+            note_text = detector.sub(f"[redacted-{detector_name}]", note_text)
+        note_text = note_text.strip()
+        if not note_text:
+            raise HTTPException(status_code=400, detail="text is empty after sanitization")
+        if len(note_text.encode("utf-8")) > TEAM_NOTE_MAX_BYTES:
+            raise HTTPException(status_code=400, detail="text exceeds 8000 UTF-8 bytes")
+
+        addressed_to = str(args.get("addressed_to") or "").strip()
+        if addressed_to and addressed_to not in TEAM_AGENTS:
+            raise HTTPException(status_code=400, detail=f"addressed_to must be one of {TEAM_AGENTS}")
+        reply_to = str(args.get("reply_to") or "").strip()
+        supersedes = str(args.get("supersedes") or "").strip()
+        if reply_to and supersedes:
+            raise HTTPException(status_code=400, detail="reply_to and supersedes are mutually exclusive")
+
+        idem = str(args.get("idempotency_key") or "").strip()
+        if idem and TEAM_IDEMPOTENCY_KEY_RE.fullmatch(idem) is None:
+            raise HTTPException(status_code=400, detail="idempotency_key has an invalid format or length")
+        fingerprint_payload = {
+            "kind": kind,
+            "text": note_text,
+            "reply_to": reply_to or None,
+            "addressed_to": addressed_to or None,
+            "supersedes": supersedes or None,
+        }
+        idem_fp = _team_note_fingerprint(fingerprint_payload)
+        if idem:
+            replay = _team_idempotency_begin(author, idem, idem_fp)
+            if replay is not None:
+                return _text_result(replay)
+        metadata: dict[str, Any] = {
+            "kind": kind,
+            "immutable": True,
+            "principal_auth": "credential",
+        }
+        if idem:
+            metadata["idem_fp"] = idem_fp
+        for field, value in (
+            ("reply_to", reply_to),
+            ("addressed_to", addressed_to),
+            ("supersedes", supersedes),
+        ):
+            if value:
+                metadata[field] = value
+        if idem:
+            metadata["idem"] = idem
+        # 무소유 기입이 규약의 핵심: user_id는 어떤 경로로도 붙지 않는다 —
+        # agent_id가 있으므로 기본 소유자 스탬핑 분기도 타지 않는다.
+        from . import scope_guard as _scope_guard
+
+        try:
+            _validate_team_note_links(author, addressed_to, reply_to, supersedes)
+            with _scope_guard.authorize_team_ledger_write(author):
+                result = add_memories({
+                    "messages": [{"role": "user", "content": f"[{kind}] {note_text}"}],
+                    "app_id": TEAM_LEDGER_APP,
+                    "agent_id": author,
+                    "infer": False,
+                    "hebbian": False,
+                    "episode_binding": False,
+                    "source_role": "assistant",
+                    "metadata": metadata,
+                })
+        except Exception:
+            if idem:
+                _team_idempotency_recover_or_abort(author, idem, idem_fp)
+            raise
+        event_id = str(result.get("event_id") or "")
+        event = get_event(event_id) if event_id else {}
+        created = event.get("results") or []
+        if not created:
+            if idem:
+                _team_idempotency_recover_or_abort(author, idem, idem_fp)
+            raise HTTPException(status_code=500, detail="team_note did not create a ledger item")
+        memory_id = str(created[0].get("id") or "")
+        if idem:
+            _team_idempotency_finish(author, idem, event_id, memory_id)
+        ledger = _team_rows()
+        lifecycle, closed_by = _team_lifecycle(ledger)
+        row = next(item for item in ledger if str(item.get("id")) == memory_id)
+        return _text_result({
+            "item": _team_item(row, lifecycle, closed_by),
+            "event_id": event_id,
+            "idempotent_replay": False,
+        })
     if name == "add_memory":
         payload = dict(args)
         if "messages" not in payload:
@@ -1464,9 +1950,14 @@ def _dispatch_tool(name: str, arguments: dict[str, Any] | None, context: dict[st
     if name == "list_entities":
         return _text_result(list_entities_payload())
     if name == "list_events":
-        return _text_result(list_events(args.get("page", 1), args.get("page_size", 100)))
+        return _text_result(
+            _without_team_ledger_events(list_events(args.get("page", 1), args.get("page_size", 100)))
+        )
     if name == "get_event_status":
-        return _text_result(get_event(args["event_id"]))
+        event = get_event(args["event_id"])
+        if _event_is_team_ledger(event):
+            raise HTTPException(status_code=403, detail="team-ledger event details are not exposed by generic tools")
+        return _text_result(event)
     raise HTTPException(status_code=404, detail=f"Unknown tool: {name}")
 
 

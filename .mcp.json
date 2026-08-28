@@ -2,7 +2,10 @@
   "mcpServers": {
     "forget": {
       "type": "http",
-      "url": "http://localhost:8000/mcp/forget/http/junghunkim?project=forget"
+      "url": "http://localhost:8000/mcp/forget/http/junghunkim?project=forget",
+      "headers": {
+        "Authorization": "Bearer ${FORGET_TEAM_CLAUDE_EXEC_TOKEN}"
+      }
     }
   }
 }
