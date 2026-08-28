@@ -17,6 +17,8 @@ import hmac
 import json
 import os
 import sqlite3
+import tempfile
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -95,16 +97,105 @@ def delete_with_receipt(memory_id: str, *, ledger_db: str | None = None,
         "verified": all(v in {"soft_deleted", "absent", "read_time_filtered", "no_world_db"}
                         for v in layers.values()),
     }
-    payload = json.dumps(receipt, ensure_ascii=False, sort_keys=True)
+    return sign_receipt(receipt)
+
+
+# 서명 필드 가족 — 정준형(canonical-v1)에서 제외되는 키들. 새 서명 방식을
+# 추가하면 여기 넣는다 (제외 집합이 곧 소비자와의 호환 계약).
+SIGNATURE_FIELDS = frozenset({
+    "signature_hmac_sha256", "signature_ed25519", "public_key_ed25519",
+})
+
+ED25519_KEY_PATH = Path.home() / ".forget" / "receipt_ed25519.key"
+ED25519_PUB_PATH = Path.home() / ".forget" / "receipt_ed25519.pub"
+_ED25519_KEY_LOCK = threading.Lock()
+
+
+def _ed25519_signer():
+    """Ed25519 서명키 — pynacl(선택 의존성 vault extra) 있을 때만. 없으면 None
+    (HMAC 단독으로 우아한 강등 — 서명 승격이 설치를 깨면 안 된다)."""
+    try:
+        from nacl.signing import SigningKey
+    except ImportError:
+        return None
+    with _ED25519_KEY_LOCK:
+        ED25519_KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
+        if not ED25519_KEY_PATH.exists():
+            generated = SigningKey.generate()
+            fd, temporary = tempfile.mkstemp(
+                prefix=f".{ED25519_KEY_PATH.name}.",
+                dir=ED25519_KEY_PATH.parent,
+            )
+            try:
+                with os.fdopen(fd, "wb") as handle:
+                    handle.write(bytes(generated))
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                os.chmod(temporary, 0o600)
+                try:
+                    os.link(temporary, ED25519_KEY_PATH)
+                except FileExistsError:
+                    pass  # another process atomically published its complete key
+            finally:
+                try:
+                    os.unlink(temporary)
+                except FileNotFoundError:
+                    pass
+        seed = ED25519_KEY_PATH.read_bytes()
+        if len(seed) != 32:
+            raise RuntimeError("Ed25519 receipt key is corrupt")
+        key = SigningKey(seed)
+        public_temp = ED25519_PUB_PATH.with_name(
+            f".{ED25519_PUB_PATH.name}.{os.getpid()}.{threading.get_ident()}.tmp"
+        )
+        public_temp.write_text(key.verify_key.encode().hex())
+        public_temp.chmod(0o600)
+        os.replace(public_temp, ED25519_PUB_PATH)
+        return key
+
+
+def receipt_public_key() -> str | None:
+    """공개 검증키(hex) — 제3자가 서버 없이 영수증을 검증하는 데 쓴다."""
+    signer = _ed25519_signer()
+    return signer.verify_key.encode().hex() if signer else None
+
+
+def _canonical(receipt: dict[str, Any]) -> bytes:
+    body = {k: v for k, v in receipt.items() if k not in SIGNATURE_FIELDS}
+    return json.dumps(body, ensure_ascii=False, sort_keys=True).encode()
+
+
+def sign_receipt(receipt: dict[str, Any]) -> dict[str, Any]:
+    """공용 서명기 — 삭제·접근 영수증이 같은 정준형·같은 키를 쓴다.
+
+    HMAC(로컬 검증·구 소비자 호환) + Ed25519(제3자 검증, v1 승격 2026-08-28).
+    정준형 = 서명 필드 가족(SIGNATURE_FIELDS)을 뺀 본문의 sort_keys JSON.
+    """
+    payload = _canonical(receipt)
     receipt["signature_hmac_sha256"] = hmac.new(
-        _receipt_key(), payload.encode(), hashlib.sha256).hexdigest()
+        _receipt_key(), payload, hashlib.sha256).hexdigest()
+    signer = _ed25519_signer()
+    if signer is not None:
+        receipt["signature_ed25519"] = signer.sign(payload).signature.hex()
+        receipt["public_key_ed25519"] = signer.verify_key.encode().hex()
     return receipt
 
 
 def verify_receipt(receipt: dict[str, Any]) -> bool:
-    """영수증 무결성 검증 — 서명 필드를 뺀 본문의 HMAC 재계산 대조."""
+    """영수증 무결성 검증 — Ed25519가 있으면 공개키로, 늘 HMAC도 대조."""
+    payload = _canonical(receipt)
     sig = receipt.get("signature_hmac_sha256")
-    body = {k: v for k, v in receipt.items() if k != "signature_hmac_sha256"}
-    payload = json.dumps(body, ensure_ascii=False, sort_keys=True)
-    expect = hmac.new(_receipt_key(), payload.encode(), hashlib.sha256).hexdigest()
-    return hmac.compare_digest(str(sig), expect)
+    expect = hmac.new(_receipt_key(), payload, hashlib.sha256).hexdigest()
+    hmac_ok = hmac.compare_digest(str(sig), expect)
+    ed_sig = receipt.get("signature_ed25519")
+    if not ed_sig:
+        return hmac_ok
+    try:
+        from nacl.exceptions import BadSignatureError
+        from nacl.signing import VerifyKey
+        VerifyKey(bytes.fromhex(str(receipt.get("public_key_ed25519") or "")))\
+            .verify(payload, bytes.fromhex(str(ed_sig)))
+        ed_ok = True
+    except Exception:
+        ed_ok = False
+    return hmac_ok and ed_ok

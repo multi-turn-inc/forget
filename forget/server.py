@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import threading
 from pathlib import Path
@@ -22,7 +23,7 @@ from fastapi import Body, Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from .db import init_db
-from .mcp import TOOLS, handle_mcp_rpc, mem1_capabilities_payload
+from .mcp import TEAM_AGENTS, TEAM_LEDGER_APP, TOOLS, handle_mcp_rpc, mem1_capabilities_payload
 from .store import (
     add_memories,
     assemble_context,
@@ -144,18 +145,130 @@ def _mcp_dispatch(payload: Any, context: dict[str, str] | None) -> JSONResponse:
     return JSONResponse(response)
 
 
+def _credential_bound_team_principal(request: Request, claimed: str | None = None) -> str:
+    """Resolve team attribution from the authenticated API-key row.
+
+    Query parameters are never credentials. ``principal`` is retained only as
+    a migration assertion and must match the principal bound to the bearer
+    credential. This makes old connector URLs fail closed instead of silently
+    selecting an author.
+    """
+    auth_context = getattr(request.state, "auth_context", None) or {}
+    bound = str(auth_context.get("agent_principal") or "").strip()
+    asserted = str(claimed or "").strip()
+    if asserted and asserted != bound:
+        raise HTTPException(
+            status_code=403,
+            detail="principal query does not match the authenticated credential",
+        )
+    return bound
+
+
+def _request_auth_context(request: Request) -> dict[str, Any]:
+    return getattr(request.state, "auth_context", None) or {}
+
+
+def _has_auth_scope(context: dict[str, Any], scope: str) -> bool:
+    scopes = context.get("scopes") or []
+    return isinstance(scopes, list) and ("*" in scopes or scope in scopes)
+
+
+def _require_grant_owner(request: Request) -> dict[str, Any]:
+    context = _request_auth_context(request)
+    role = str(context.get("role") or context.get("project_role") or "").lower()
+    if context.get("is_operator") is True or role in {"owner", "admin", "operator"} \
+            or _has_auth_scope(context, "grants:admin"):
+        return context
+    raise HTTPException(status_code=403, detail="grant administration requires owner authority")
+
+
+def _require_agent_principal(request: Request) -> str:
+    principal = str(_request_auth_context(request).get("agent_principal") or "").strip()
+    if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}", principal) is None:
+        raise HTTPException(status_code=403, detail="an agent-bound credential is required")
+    return principal
+
+
+def _has_team_reader_credential(request: Request) -> bool:
+    return _credential_bound_team_principal(request) in TEAM_AGENTS
+
+
+def _contains_team_ledger_selector(value: Any) -> bool:
+    if isinstance(value, str):
+        return value.strip() == TEAM_LEDGER_APP
+    if isinstance(value, dict):
+        return any(_contains_team_ledger_selector(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_contains_team_ledger_selector(item) for item in value)
+    return False
+
+
+def _filters_target_team_ledger(value: Any) -> bool:
+    if isinstance(value, dict):
+        if "app_id" in value and _contains_team_ledger_selector(value.get("app_id")):
+            return True
+        return any(_filters_target_team_ledger(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_filters_target_team_ledger(item) for item in value)
+    return False
+
+
+def _require_team_reader_for_filters(request: Request, filters: Any) -> bool:
+    authorized = _has_team_reader_credential(request)
+    if _filters_target_team_ledger(filters) and not authorized:
+        raise HTTPException(status_code=403, detail="team-ledger reads require an agent-bound Bearer credential")
+    return authorized
+
+
+def _without_team_rows(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        item for item in items
+        if not (
+            str(item.get("app_id") or "").strip() == TEAM_LEDGER_APP
+            and not item.get("user_id")
+        )
+    ]
+
+
 @app.post("/mcp", dependencies=[Depends(auth)])
-def mcp_rpc(payload: Any = Body(...), profile: str | None = None) -> JSONResponse:
-    return _mcp_dispatch(payload, {"tool_profile": profile} if profile else None)
+def mcp_rpc(
+    request: Request,
+    payload: Any = Body(...),
+    profile: str | None = None,
+    principal: str | None = None,
+    ptoken: str | None = None,
+) -> JSONResponse:
+    if ptoken:
+        raise HTTPException(status_code=400, detail="query-string team tokens are not accepted")
+    context: dict[str, str] = {}
+    if profile:
+        context["tool_profile"] = profile
+    bound_principal = _credential_bound_team_principal(request, principal)
+    if bound_principal:
+        context["team_principal"] = bound_principal
+        context["team_principal_auth"] = "credential"
+    return _mcp_dispatch(payload, context or None)
 
 
 @app.get("/mcp/{app_id}/http/{user_id}", dependencies=[Depends(auth)])
-def mcp_scope_info(app_id: str, user_id: str, project: str | None = None) -> dict[str, Any]:
+def mcp_scope_info(
+    app_id: str,
+    user_id: str,
+    request: Request,
+    project: str | None = None,
+    principal: str | None = None,
+    ptoken: str | None = None,
+) -> dict[str, Any]:
     # Identity echo for connection doctors: confirms which scope this
     # endpoint pins before any tool call is made (forget-connect probes it).
     info = {"name": "forget-mcp", "user_id": user_id, "client_name": app_id}
     if project:
         info["project"] = project
+    if ptoken:
+        raise HTTPException(status_code=400, detail="query-string team tokens are not accepted")
+    bound_principal = _credential_bound_team_principal(request, principal)
+    if bound_principal:
+        info["team_principal"] = bound_principal
     return info
 
 
@@ -163,9 +276,12 @@ def mcp_scope_info(app_id: str, user_id: str, project: str | None = None) -> dic
 def mcp_rpc_scoped(
     app_id: str,
     user_id: str,
+    request: Request,
     payload: Any = Body(...),
     profile: str | None = None,
     project: str | None = None,
+    principal: str | None = None,
+    ptoken: str | None = None,
 ) -> JSONResponse:
     # Scoped MCP endpoint (same path shape as the hosted gateway): every
     # tool call inherits this user/app scope unless the caller names an
@@ -179,6 +295,12 @@ def mcp_rpc_scoped(
         context["tool_profile"] = profile
     if project:
         context["project_key"] = project
+    if ptoken:
+        raise HTTPException(status_code=400, detail="query-string team tokens are not accepted")
+    bound_principal = _credential_bound_team_principal(request, principal)
+    if bound_principal:
+        context["team_principal"] = bound_principal
+        context["team_principal_auth"] = "credential"
     return _mcp_dispatch(payload, context)
 
 
@@ -192,18 +314,33 @@ def capabilities() -> dict[str, Any]:
 
 @app.get("/v1/memories/", dependencies=[Depends(auth)])
 def memories_list(
+    request: Request,
     user_id: str | None = None,
     agent_id: str | None = None,
     app_id: str | None = None,
     run_id: str | None = None,
 ) -> list[dict[str, Any]]:
     filters = {k: v for k, v in {"user_id": user_id, "agent_id": agent_id, "app_id": app_id, "run_id": run_id}.items() if v}
+    authorized = _require_team_reader_for_filters(request, filters)
     # 공개 경계: 내부 표현(_embedding, hash, project_id)은 여기서 끝난다 (#7)
-    return [strip_internal(m) for m in list_memory_dicts() if not filters or all(m.get(k) == v for k, v in filters.items())]
+    rows = [m for m in list_memory_dicts() if not filters or all(m.get(k) == v for k, v in filters.items())]
+    if not authorized:
+        rows = _without_team_rows(rows)
+    return [strip_internal(m) for m in rows]
 
 
 @app.post("/v1/memories/", dependencies=[Depends(auth)])
 def memories_create(payload: dict[str, Any]) -> dict[str, Any]:
+    # The team ledger has one write entrance. A bearer credential proves who
+    # is calling but does not replace team_note's PII, link, lifecycle, and
+    # idempotency checks; raw memory writes therefore cannot target its
+    # ownerless app pool.
+    from .scope_guard import TEAM_LEDGER_APP as _team_app
+    if str(payload.get("app_id") or "").strip() == _team_app:
+        raise HTTPException(
+            status_code=403,
+            detail="team ledger writes must use the authenticated team_note tool",
+        )
     if "messages" not in payload:
         text = payload.get("text") or payload.get("memory") or payload.get("data")
         if not text:
@@ -224,12 +361,123 @@ def memories_create(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 @app.post("/v1/memories/search/", dependencies=[Depends(auth)])
-def memories_search(payload: dict[str, Any]) -> dict[str, Any]:
+def memories_search(payload: dict[str, Any], request: Request) -> dict[str, Any]:
     filters = payload.get("filters") or {field: payload[field] for field in ENTITY_FIELDS if field in payload}
+    authorized = _require_team_reader_for_filters(request, filters)
     result = search_memories({**payload, "filters": filters})
+    if not authorized:
+        result = {**result, "results": _without_team_rows(list(result.get("results") or []))}
     if payload.get("enable_graph"):
         result["relations"] = memory_relations(result.get("results", []))
     return result
+
+
+# --- 기억 경제: 그랜트 + 검문 서빙 + 접근 영수증 (MEMORY_ECONOMY.md) --------
+
+
+@app.post("/v1/grants/", dependencies=[Depends(auth)])
+def grants_create(payload: dict[str, Any], request: Request) -> dict[str, Any]:
+    from . import grants
+    _require_grant_owner(request)
+    try:
+        return grants.create_grant(payload)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@app.get("/v1/grants/", dependencies=[Depends(auth)])
+def grants_list(request: Request, include_revoked: bool = False) -> list[dict[str, Any]]:
+    from . import grants
+    _require_grant_owner(request)
+    return grants.list_grants(include_revoked=include_revoked)
+
+
+@app.post("/v1/grants/{grant_id}/revoke", dependencies=[Depends(auth)])
+def grants_revoke(grant_id: str, request: Request) -> dict[str, Any]:
+    from . import grants
+    _require_grant_owner(request)
+    try:
+        return grants.revoke_grant(grant_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+
+
+@app.post("/v1/memories/serve/", dependencies=[Depends(auth)])
+def memories_serve(payload: dict[str, Any], request: Request) -> dict[str, Any]:
+    """그랜트 검사 하의 공유 원장 서빙 — 영수증 선기록, 거부도 영수증."""
+    from . import grants
+    principal = _require_agent_principal(request)
+    claimed = str(payload.get("grantee") or "").strip()
+    if claimed and claimed != principal:
+        raise HTTPException(status_code=403, detail="grantee does not match the authenticated principal")
+    payload = {**payload, "grantee": principal}
+    try:
+        return grants.serve(payload)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@app.get("/v1/receipts/access/", dependencies=[Depends(auth)])
+def access_receipts_list(request: Request, grantee: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+    from . import grants
+    _require_grant_owner(request)
+    return grants.list_access_receipts(grantee=grantee, limit=limit)
+
+
+@app.get("/v1/receipts/public_key/", dependencies=[Depends(auth)])
+def receipts_public_key() -> dict[str, Any]:
+    """영수증 검증 공개키(Ed25519) — 제3자가 서버 신뢰 없이 검증할 때 쓴다."""
+    from .receipts import receipt_public_key
+    return {"algo": "ed25519", "public_key": receipt_public_key(),
+            "canonical": "sort_keys JSON minus signature fields (canonical-v1)"}
+
+
+@app.post("/v1/receipts/verify/", dependencies=[Depends(auth)])
+def receipts_verify(payload: dict[str, Any], request: Request) -> dict[str, Any]:
+    """Verify signature plus exact access-receipt request bindings."""
+    from .receipts import verify_receipt
+    if set(payload) - {"receipt", "expected"}:
+        raise HTTPException(status_code=400, detail="unknown receipt verification fields")
+    receipt = payload.get("receipt")
+    if not isinstance(receipt, dict) or "signature_hmac_sha256" not in receipt:
+        raise HTTPException(status_code=400, detail="receipt with signature_hmac_sha256 is required")
+    if receipt.get("kind") == "access_receipt":
+        from . import grants
+        principal = _require_agent_principal(request)
+        expected = payload.get("expected")
+        if not isinstance(expected, dict) or set(expected) != {"query", "grantee", "scope_app"}:
+            raise HTTPException(
+                status_code=400,
+                detail="access receipt verification requires exact query, grantee and scope_app expectations",
+            )
+        query = str(expected.get("query") or "")
+        grantee = str(expected.get("grantee") or "")
+        scope_app = str(expected.get("scope_app") or "")
+        if grantee != principal:
+            raise HTTPException(status_code=403, detail="expected grantee does not match the authenticated principal")
+        if (
+            not query or query.strip() != query or len(query.encode("utf-8")) > 8 * 1024
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}", grantee)
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}", scope_app)
+        ):
+            raise HTTPException(status_code=400, detail="invalid access receipt expectations")
+        checks = grants.verify_access_receipt(
+            receipt,
+            expected_query=query,
+            expected_grantee=grantee,
+            expected_scope_app=scope_app,
+        )
+    else:
+        if _request_auth_context(request).get("actor_type") == "anonymous":
+            raise HTTPException(status_code=403, detail="authenticated receipt verification is required")
+        signature_valid = bool(verify_receipt(receipt))
+        checks = {
+            "valid": signature_valid,
+            "signature_valid": signature_valid,
+            "persistence_valid": True,
+            "binding_valid": True,
+        }
+    return {"schema_version": "forget-receipt-verification-v1", **checks}
 
 
 @app.post("/v1/similarity/", dependencies=[Depends(auth)])
@@ -261,7 +509,7 @@ def texts_similarity(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 @app.post("/v1/context/assemble/", dependencies=[Depends(auth)])
-def context_assemble(payload: dict[str, Any]) -> dict[str, Any]:
+def context_assemble(payload: dict[str, Any], request: Request) -> dict[str, Any]:
     """Assemble one turn's context capsule.
 
     Search returns candidates; assembly decides what the model reads — that is the
@@ -270,6 +518,7 @@ def context_assemble(payload: dict[str, Any]) -> dict[str, Any]:
     budgeting for itself, and drift from this one. Same assembler, every transport.
     """
     filters = payload.get("filters") or {field: payload[field] for field in ENTITY_FIELDS if field in payload}
+    _require_team_reader_for_filters(request, filters)
     return assemble_context({**payload, "filters": filters})
 
 
@@ -281,20 +530,29 @@ def memories_list_filtered(payload: dict[str, Any], request: Request, page: int 
         envelope_keys = {"org_id", "project_id", "source", "page", "page_size", "show_expired"}
         filters = {key: value for key, value in payload.items() if key not in envelope_keys and value not in (None, "")}
     selected_project = str(payload.get("project_id") or getattr(request.state, "project_id", "proj_local"))
+    authorized = _require_team_reader_for_filters(request, filters)
     normalized_page = max(int(page or payload.get("page") or 1), 1)
     normalized_page_size = min(max(int(page_size or payload.get("page_size") or 100), 1), 200)
-    return get_memories(
+    result = get_memories(
         filters,
         page=normalized_page,
         page_size=normalized_page_size,
         project_id=selected_project,
         show_expired=bool(payload.get("show_expired", False)),
     )
+    if not authorized:
+        result = {**result, "results": _without_team_rows(list(result.get("results") or []))}
+    return result
 
 
 @app.get("/v1/memories/events/", dependencies=[Depends(auth)])
 def memories_events(page: int = 1, page_size: int = 100) -> dict[str, Any]:
-    return list_events(page=page, page_size=page_size)
+    result = list_events(page=page, page_size=page_size)
+    rows = [
+        event for event in result.get("results") or []
+        if not _filters_target_team_ledger(event.get("payload") or {})
+    ]
+    return {**result, "count": len(rows), "next": None, "results": rows}
 
 
 @app.post("/v1/memories/stale-candidates/", dependencies=[Depends(auth)])
@@ -303,8 +561,11 @@ def memories_stale_candidates(payload: dict[str, Any] | None = None) -> dict[str
 
 
 @app.get("/v1/memories/{memory_id}/", dependencies=[Depends(auth)])
-def memories_read(memory_id: str) -> dict[str, Any]:
-    return get_memory(memory_id)
+def memories_read(memory_id: str, request: Request) -> dict[str, Any]:
+    memory = get_memory(memory_id)
+    if not _has_team_reader_credential(request) and not _without_team_rows([memory]):
+        raise HTTPException(status_code=403, detail="team-ledger reads require an agent-bound Bearer credential")
+    return memory
 
 
 @app.put("/v1/memories/{memory_id}/", dependencies=[Depends(auth)])
@@ -323,7 +584,10 @@ def memories_delete(memory_id: str) -> JSONResponse:
 
 
 @app.get("/v1/memories/{memory_id}/history/", dependencies=[Depends(auth)])
-def memories_history(memory_id: str) -> list[dict[str, Any]]:
+def memories_history(memory_id: str, request: Request) -> list[dict[str, Any]]:
+    memory = get_memory(memory_id, include_expired=True)
+    if not _has_team_reader_credential(request) and not _without_team_rows([memory]):
+        raise HTTPException(status_code=403, detail="team-ledger reads require an agent-bound Bearer credential")
     return list(reversed(memory_history(memory_id)))
 
 
@@ -540,7 +804,7 @@ def memories_add_v3(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 @app.post("/v3/memories/", dependencies=[Depends(auth)])
-def memories_list_v3(payload: dict[str, Any], page: int = 1, page_size: int = 100) -> Any:
+def memories_list_v3(payload: dict[str, Any], request: Request, page: int = 1, page_size: int = 100) -> Any:
     # mem0 platform v3 contract: POST /v3/memories/ with `messages` is an add.
     if isinstance(payload.get("messages"), list):
         result = add_memories(payload)
@@ -551,7 +815,10 @@ def memories_list_v3(payload: dict[str, Any], page: int = 1, page_size: int = 10
     filters = payload.get("filters")
     if not isinstance(filters, dict):
         return JSONResponse({"error": "filters is required"}, status_code=400)
+    authorized = _require_team_reader_for_filters(request, filters)
     result = get_memories(filters, page=page, page_size=page_size, show_expired=bool(payload.get("show_expired", False)))
+    if not authorized:
+        result = {**result, "results": _without_team_rows(list(result.get("results") or []))}
     return {**result, "results": [_public_memory(item) for item in result.get("results", [])]}
 
 
@@ -563,14 +830,18 @@ def recall_activity_view() -> dict[str, Any]:
 
 
 @app.post("/v3/memories/search/", dependencies=[Depends(auth)])
-def memories_search_v3(payload: dict[str, Any]) -> Any:
+def memories_search_v3(payload: dict[str, Any], request: Request) -> Any:
     top_level_entities = [field for field in ENTITY_FIELDS if field in payload]
     if top_level_entities:
         return JSONResponse({"error": "Entity IDs must be passed inside filters"}, status_code=400)
     if not payload.get("query"):
         return JSONResponse({"error": "query is required"}, status_code=400)
+    authorized = _require_team_reader_for_filters(request, payload.get("filters") or {})
     result = search_memories(payload)
-    response: dict[str, Any] = {"results": [_public_search_result(item) for item in result.get("results", [])]}
+    rows = list(result.get("results") or [])
+    if not authorized:
+        rows = _without_team_rows(rows)
+    response: dict[str, Any] = {"results": [_public_search_result(item) for item in rows]}
     if result.get("recall_layer"):
         response["recall_layer"] = result["recall_layer"]
     return response
