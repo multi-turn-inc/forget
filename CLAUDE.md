@@ -20,8 +20,17 @@
   `mcp__forget__record_task_state,mcp__forget__add_memory,mcp__forget__search_memories,`
   `mcp__forget__record_context_outcome`) / **턴2** = `get_task_state` + `c48_step0_check.py` +
   `git status` **병렬** / **턴3** = (비감사면 `LOOP.md` Read +) 첫 유효 행동 → `restore_turns` **3**.
+- **C. 제3형 하네스 (`mcp__forget__*` 미적재 **그리고** `ToolSearch` 부재 — c232~c235 실측)** —
+  MCP 경로가 없으므로 `get_task_state`는 지시서 절차 0의 **curl 폴백**
+  (`POST localhost:8000/mcp/forget/http/junghunkim` tools/call)으로 조회한다.
+  **턴1** = `cycle-prompt.md` Read + `c48_step0_check.py` + `git status` **3중 병렬** /
+  **턴2** = (비감사면 `LOOP.md` Read +) curl `get_task_state` + **모드가 여는 소스 정독을
+  같은 턴에 묶는다** — 모드는 턴1의 c48 첫 줄로 이미 판명돼 있다. **회고·감사**는 작업
+  소스(감사 소스·추세·정산 정본)가 task_state에 비종속이므로 턴2 정독이 첫 유효 행동 →
+  `restore_turns` **2**. **일반 사이클**은 선택(절차 2)이 task_state `next_actions`에
+  종속이라 첫 유효 행동이 턴3 → `restore_turns` **3**.
 
-**어느 쪽이든 `restore_note`에 하네스 종류(A/B)를 병기한다** — 병기하지 않으면 두 계열이
+**어느 쪽이든 `restore_note`에 하네스 종류(A/B/C)를 병기한다** — 병기하지 않으면 세 계열이
 한 분모에 섞여 지표가 판정 불가가 된다.
 
 **`research/devloop/metrics.jsonl`을 `tail`/`cat`/`head`로 열지 않는다.**
@@ -49,6 +58,15 @@ c124가 그 사실을 실측하고(2턴, `restore_turns` 2) 조건부 문면을 
 **이 파일**에 있다. 효능 판정은 **P38**(표본 c126~c130, 판정 c130): 기적재 사이클이
 전부 2면 지지, **1건이라도 3이면 반증**. 대조군은 c112~c123 12연속 3 · c125 = 3.
 → **P38 판정 = 지지 5/5** (audit-130 §1).
+
+**하네스 C는 왜 c235에 추가됐는가.** c232가 제3형(`mcp__forget__*`·ToolSearch 동시 부재)을
+처음 실측했고 c232~c234가 curl 폴백으로 rt 3을 3연속 냈다 — 구 문면은 A/B 이분법이라 C형
+세션은 자기 규약 없이 «B의 유사물»로 임기 배치됐다(c232 발안). c235(회고·C형 4회째)가
+«모드는 턴1에 판명되므로 비-일반 모드는 소스 정독을 턴2에 curl과 병렬 배치 가능»을
+실측(rt 2 — C형 첫 비-3)하고 두 채널(여기 + 파트 T)에 동시 성문화했다. 골자는 **모드
+조건부 턴 수** — C형 rt는 하나의 수가 아니라 {일반 3 · 회고/감사 2}이며, restore_note의
+A/B/C 병기가 그 분모를 가른다. 효능 판정 = **P70**(predictions.md · 표본 c236~c245의
+C형 사이클, 판정 c245). 회귀 = tests/test_devloop_step0_turn_protocol.py 계약 ④.
 
 **LOOP.md는 왜 c135에 턴1에서 빠졌는가.** 적대 감사는 LOOP.md(헌장·백로그) 금독인데
 (지시서 절차 1), 구 문면은 모드를 알기 전인 턴1에 LOOP.md Read를 지시해 **감사가 노출된

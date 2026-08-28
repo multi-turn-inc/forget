@@ -106,3 +106,27 @@ def test_part_t_still_declares_its_own_reach_limit():
     """관측 47은 살아 있다 — 이 인쇄는 턴1을 집행할 수 없고, 그 사실을 계속 적어야 한다."""
     t = part_t_text()
     assert "집행할 수 없다" in t and "관측 47" in t
+
+
+def _c_segment(text: str) -> str:
+    """C 블록 앞머리 — 두 채널이 같은 지문("C. 제3형")으로 열어야 이 계약이 잡는다."""
+    i = text.index("C. 제3형")
+    return text[i:i + 900]
+
+
+def test_both_channels_describe_harness_c_the_same_way():
+    """계약 ④ (c235 신설) — 제3형(C)이 두 채널에 같은 내용으로 산다.
+
+    c232~c234가 C형을 3연속 실측하는 동안 문면은 A/B 이분법이었다 — C형 세션은
+    자기 규약 없이 «B의 유사물»로 움직였다. c235가 두 채널에 동시 성문화했고,
+    이 계약은 관측 102(두 채널이 서로를 반박)의 C형 재발을 막는다. 판정 = P70.
+    """
+    segs = {}
+    for text, name in ((part_t_text(), "part_t"), (CLAUDE_MD, "CLAUDE.md")):
+        assert "C. 제3형" in text, f"{name}: C 블록이 없다"
+        segs[name] = _c_segment(text)
+        assert "curl" in segs[name], f"{name}: C 블록에 curl 폴백이 없다"
+    rts = {n: re.findall(r"restore_turns[^\d]{0,16}(\d)", s) for n, s in segs.items()}
+    assert rts["part_t"] == rts["CLAUDE.md"], f"두 채널의 C 블록 rt 주장이 갈린다: {rts}"
+    assert rts["part_t"] and set(rts["part_t"]) == {"2", "3"}, (
+        f"C 블록의 모드 조건부 rt(회고/감사 2 · 일반 3)가 사라졌다: {rts}")
