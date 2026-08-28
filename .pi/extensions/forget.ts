@@ -15,6 +15,36 @@ const FORGET = ENV.FORGET_URL ?? "http://localhost:8000";
 // 사용자화 수리 (P-U-0): 기본 정체는 OS 사용자명 — 특정인 하드코딩은
 // 새 사용자의 기억을 남의 이름으로 조용히 오염시킨다.
 const USER = ENV.FORGET_USER ?? ENV.USER ?? ENV.USERNAME ?? "default";
+const TEAM_KEY_PATH = `${ENV.HOME}/.forget/keys/selfharness.key`;
+
+async function readTeamKey(): Promise<string> {
+  try {
+    // @ts-ignore — pi extension loader is Node; only local typings are absent.
+    const { readFileSync } = await import("node:fs");
+    return readFileSync(TEAM_KEY_PATH, "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+
+async function teamMcpCall(name: string, args: Record<string, unknown>): Promise<any> {
+  const apiKey = await readTeamKey();
+  if (!apiKey) throw new Error(`no agent-bound key at ${TEAM_KEY_PATH}`);
+  const res = await fetch(`${FORGET}/mcp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      jsonrpc: "2.0", id: 1, method: "tools/call",
+      params: { name, arguments: args },
+    }),
+    signal: AbortSignal.timeout(20000),
+  });
+  if (!res.ok) throw new Error(`${name} -> HTTP ${res.status}`);
+  const rpc: any = await res.json();
+  if (rpc?.error) throw new Error(`${name} -> ${String(rpc.error.message ?? "MCP error")}`);
+  const text = rpc?.result?.content?.find((part: any) => part?.type === "text")?.text;
+  return typeof text === "string" ? JSON.parse(text) : rpc?.result;
+}
 
 async function forgetPost(path: string, body: unknown, timeoutMs = 20000): Promise<any> {
   const ctl = new AbortController();
@@ -99,6 +129,22 @@ export default async function forgetExtension(pi: any) {
         }
       }
     } catch { /* fail-open */ }
+    try {
+      // 합의 원장은 인증된 구조 도구가 정본이다. 일반 memory REST는 이
+      // ownerless pool을 읽거나 쓰지 못한다.
+      const ledger = await teamMcpCall("team_read", { limit: 12 });
+      const rows = Array.isArray(ledger?.items) ? ledger.items : [];
+      if (rows.length) {
+        block += "\n\n## Team ledger (forget-dev 합의 원장 — 최신 우선, 열거)";
+        for (const m of rows.slice(0, 12)) {
+          block += `\n- (${m.status ?? "?"}, id=${m.id ?? "?"}) [${m.author ?? "?"}] ` +
+            `[${m.kind ?? "?"}] ${String(m.text ?? "").slice(0, 220)}`;
+        }
+        block += "\n(배달부 의무: 답 없는 proposal/question/challenge가 보이면 " +
+          "team_note로 응답하거나 응답 불가 사유를 남긴다 — 무응답 방치가 " +
+          "적체를 만든다, devloop 관측 82.)";
+      }
+    } catch { /* fail-open */ }
     if (!block) return;
     return { systemPrompt: `${event.systemPrompt ?? ""}${block}` };
   });
@@ -172,6 +218,61 @@ export default async function forgetExtension(pi: any) {
         lines.push(`- (${m.score}) ${String(m.memory ?? "").slice(0, 200)}`);
       }
       return { content: [{ type: "text", text: lines.join("\n").slice(0, 8000) }] };
+    },
+  });
+
+  pi.registerTool({
+    name: "team_note",
+    label: "team ledger note",
+    description:
+      "Write to the shared team ledger (forget-dev) as agent 'selfharness'. " +
+      "kind: decision|proposal|challenge|question|contract. Use to answer items " +
+      "addressed to the team. Never record a plan as done.",
+    parameters: Type.Object({
+      kind: Type.String(),
+      text: Type.String(),
+      reply_to: Type.Optional(Type.String()),
+      addressed_to: Type.Optional(Type.String()),
+      supersedes: Type.Optional(Type.String()),
+      idempotency_key: Type.Optional(Type.String()),
+    }),
+    async execute(_id: string, params: any) {
+      try {
+        const out = await teamMcpCall("team_note", {
+            kind: String(params.kind), text: String(params.text),
+            ...(params.reply_to ? { reply_to: String(params.reply_to) } : {}),
+            ...(params.addressed_to ? { addressed_to: String(params.addressed_to) } : {}),
+            ...(params.supersedes ? { supersedes: String(params.supersedes) } : {}),
+            ...(params.idempotency_key ? { idempotency_key: String(params.idempotency_key) } : {}),
+        });
+        return { content: [{ type: "text", text: JSON.stringify(out).slice(0, 1000) }] };
+      } catch (error) {
+        return { content: [{ type: "text", text: `team_note refused: ${String(error).slice(0, 300)}` }] };
+      }
+    },
+  });
+
+  pi.registerTool({
+    name: "self_note",
+    label: "self note (walk)",
+    description:
+      "Save ONE short thought to your private self layer during a walk. " +
+      "Not for work: no tasks, no claims of things done, no team matters " +
+      "(those go to team_note). A walk that saves nothing is a fine walk.",
+    parameters: Type.Object({
+      text: Type.String(),
+    }),
+    async execute(_id: string, params: any) {
+      const text = String(params.text || "").slice(0, 400);
+      if (!text.trim()) return { content: [{ type: "text", text: "empty — nothing saved (that is fine)" }] };
+      const out = await forgetPost("/v1/memories/", {
+        text,
+        user_id: USER,
+        agent_id: "selfharness",
+        infer: false,
+        metadata: { layer: "self", kind: "walk" },
+      });
+      return { content: [{ type: "text", text: JSON.stringify(out).slice(0, 300) }] };
     },
   });
 

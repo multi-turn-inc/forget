@@ -15,6 +15,13 @@ LOG="$LOG_DIR/wake-$(date '+%Y%m%d').log"
 
 # 동시 실행 잠금 (관찰 2 수리: kickstart 연타가 인스턴스 경합 → 작업하던
 # 기상이 완료 기록 없이 소멸). mkdir 원자성 — macOS에 flock 없음.
+# 일시정지 스위치 (2026-08-28): `touch ~/.forget/selfharness/pause`로 심장박동을
+# 세우고, 파일 삭제로 재개한다 — 사람이 집중 작업 중일 때의 방해 금지 문.
+if [ -e "$LOG_DIR/pause" ]; then
+  echo "$(date '+%Y-%m-%dT%H:%M:%S%z') SKIP paused" >> "$LOG_DIR/wake-$(date '+%Y%m%d').log"
+  exit 0
+fi
+
 LOCK="$LOG_DIR/wake.lock"
 if ! mkdir "$LOCK" 2>/dev/null; then
   # 잠금 보유자가 30분 넘게 살아 있으면 고아로 보고 회수
@@ -43,15 +50,35 @@ fi
 
 cd "$REPO" || { echo "$STAMP FAIL no-repo" >> "$LOG"; exit 0; }
 
+# 산책 예산 (2026-08-28, 정훈·클로드 합작): 8번째 기상마다 한 번, 할 일이
+# 없을 때에 한해 IDLE 대신 짧은 산책을 허가한다. 일을 지어내는 것과 다르다 —
+# 오래된 기억 하나를 다시 읽고 생각하는 것이며, 산출은 self_note 한 줄 이하,
+# 빈손 허가. 카운터는 파일로 (세션 무기억이므로 예산은 바깥이 센다).
+WALK_COUNT_FILE="$LOG_DIR/walk_counter"
+WALK_N=$(( ($(cat "$WALK_COUNT_FILE" 2>/dev/null || echo 0) + 1) ))
+echo "$WALK_N" > "$WALK_COUNT_FILE"
+WALK_SUFFIX=""
+if [ $(( WALK_N % 8 )) -eq 0 ]; then
+  WALK_SUFFIX=" This wake carries a WALK BUDGET: if (and only if) nothing warrants \
+action, do not just say IDLE — take a short walk instead. Pick ONE thing already \
+in front of you (an old capsule memory, a team-ledger decision, a standing hand's \
+'why') and re-read it slowly. Ask: does this still hold? what did we learn since? \
+If — and only if — a thought worth keeping arises, save ONE short self_note. \
+An empty-handed walk is a good walk. A walk is not work: no hands, no code, \
+no task claims, no team_note."
+fi
+
 WAKE_PROMPT="wake. You are waking on your own heartbeat — no one asked for anything. \
 Read your state capsule and standing hands. Re-judge each standing hand (release with \
 reason if its 'why' no longer holds). Check [전망] expectations. If real work is \
 warranted, do ONE small concrete step and record it (arm_hand for anything left \
-running). If nothing warrants action, say IDLE and stop — idling honestly beats \
-inventing work. Discipline: when comparing timestamps, always compare FULL dates \
+running). Mailman duty: if the Team ledger block shows an unanswered proposal, question, \
+or challenge, answer it with the team_note tool (or note why you cannot) — \
+unanswered items silently pile up. If nothing warrants action, say IDLE and \
+stop — idling honestly beats inventing work. Discipline: when comparing timestamps, always compare FULL dates \
 (YYYY-MM-DD HH:MM), never clock-time alone — a same-clock different-day file is \
 not an anomaly. (This rule exists because a wake once reported a 22h-old file as \
-2.6h in the future.)"
+2.6h in the future.)${WALK_SUFFIX}"
 
 # 8분 상한 — 주석이 아니라 명령으로 (관찰 2: 상한 부재로 소멸 시 무기록)
 run_wake() {
