@@ -3870,6 +3870,38 @@ def _merge_event_metadata(event_id: str, extra: dict[str, Any]) -> None:
         pass  # accounting must never block the write path
 
 
+def _succeed_series(conn, project_id: str, record_metadata: dict[str, Any],
+                    new_memory_id: str, now: str) -> None:
+    """시계열 자동 승계 (2026-08-30 구조 수리) — metadata.series 보유 행의
+    신규 저장은 같은 series의 이전 현행 행을 supersede 링크로 침강시킨다.
+
+    실전 사고가 낳은 기관: LME-V2 LAFS 스냅샷(+2.211→+2.577→+3.732)이
+    승계 없이 공존해 낡은 수치(+2.577)가 현행으로 인용됐다 — 시변 계량의
+    정본은 하나여야 하고, 그 질서는 쓰기 시점에 세우는 게 회고 컴파일보다
+    싸다(컴파일러 stale-state는 다일 조건에 막혀 이 가족을 놓쳤다).
+    가역: superseded_by 링크만 — 삭제·텍스트 변형 없음, 억제 간선이 집행.
+    """
+    series = str((record_metadata or {}).get("series") or "").strip()
+    if not series:
+        return
+    try:
+        rows = conn.execute(
+            "SELECT id, metadata FROM memories WHERE project_id = ? AND deleted = 0"
+            " AND id != ? AND metadata LIKE ?",
+            (project_id, new_memory_id, f'%"series": "{series}"%'),
+        ).fetchall()
+        for row in rows:
+            meta = json_loads(row["metadata"] or "{}")
+            if meta.get("series") != series or meta.get("superseded_by"):
+                continue
+            meta.update(superseded_by=new_memory_id, superseded_at=now,
+                        sank_by=f"series:{series}")
+            conn.execute("UPDATE memories SET metadata = ?, updated_at = ? WHERE id = ?",
+                         (json_dumps(meta), now, row["id"]))
+    except sqlite3.Error:
+        pass  # 승계 실패가 저장을 막지 않는다 — 다음 쓰기가 다시 시도
+
+
 def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict[str, Any]:
     project_id = payload.get("project_id") or project_id or current_project_id()
     if not payload.get("messages") or not isinstance(payload["messages"], list):
@@ -4053,6 +4085,7 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
                         now,
                     ),
                 )
+                _succeed_series(conn, project_id, record_metadata, memory_id, now)
                 _write_observation_and_claim(
                     conn,
                     project_id=project_id,
