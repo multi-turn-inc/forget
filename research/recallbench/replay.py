@@ -43,9 +43,21 @@ def hook_replay(inc):
     state = _os.path.expanduser(f"~/.forget/hooks/state/{sid}.turns.json")
     if _os.path.exists(state):
         injected = json.load(open(state)).get("injected") or []
+    # 씨앗-제외 v2 (사이클 4): 씨앗과 재부상이 같은 id를 공유하므로 id 제외는
+    # 정당한 재제안까지 가린다 — 장부 값([턴, 재부상])이 씨앗([15,0])에서
+    # 움직였으면 이번 재생의 실제 제안이다.
     seeded = set(inc.get("gold_ids", [])) if inc.get("session_seen_gold") else set()
-    fresh = [m for m in injected if m not in seeded]
-    ok_gold = any(matches(m, inc.get("gold_ids", [])) for m in fresh)
+    ledger = {}
+    if _os.path.exists(state):
+        raw = json.load(open(state)).get("injected") or {}
+        if isinstance(raw, dict):
+            ledger = raw
+    def _fresh(mid):
+        if mid not in seeded:
+            return True
+        val = ledger.get(mid)
+        return isinstance(val, list) and val[:2] != [15, 0]   # 씨앗 원형에서 이동
+    ok_gold = any(matches(m, inc.get("gold_ids", [])) for m in injected if _fresh(m))
     return (ok_track or ok_gold), f"주입 {len(injected)}건 gold={'유' if ok_gold else '무'} 트랙적중={'유' if ok_track else '무'}"
 
 

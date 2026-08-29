@@ -73,7 +73,7 @@ def _llm_pick(query: str, shortlist: list[dict[str, Any]]) -> str | None:
         "messages": [{"role": "user", "content": _PROMPT.format(tracks=tracks, query=query[:250])}],
         # thinking 억제 필수 (2026-08-30 실측): 켜두면 27B가 상한을 사유로
         # 태우고 빈 발화로 종료 — 훅 지연 예산도 초과. 억제 시 ~1s.
-        "max_tokens": 300, "temperature": 0.0,
+        "max_tokens": 300, "temperature": 0.0, "seed": 7,
         "chat_template_kwargs": {"enable_thinking": False},
     }
     req = urllib.request.Request(
