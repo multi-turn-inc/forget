@@ -248,14 +248,22 @@ def serve(payload: dict[str, Any], project_id: str | None = None) -> dict[str, A
     results: list[dict[str, Any]] = []
     redactions = 0
     if grant is not None:
+        # scope_fallback 금지 (2026-08-29 데모 리허설 실측 누수): 폴백은
+        # 소유자 개인 회상의 편의지, 그랜트 서빙에선 타 앱 공유 행이
+        # 허락 범위 밖으로 새는 구멍이었다 — demo 스코프 1행 그랜트가
+        # forget-dev proposal을 서빙했다. 그랜트의 계약은 "scope_app
+        # 원장만"이며, 아래 app_id 재확인은 검색 내부가 어떤 이유로든
+        # 범위 밖 행을 돌려줘도 출구에서 막는 이중벽이다.
         raw = search_memories({
             "query": query,
             "filters": {"app_id": scope_app},
-            "scope_fallback": True,
+            "scope_fallback": False,
             "top_k": int(payload.get("top_k") or 8),
         }, project_id)
         pointer_mode = grant.get("answer_mode") == "pointer"
         for row in (raw.get("results") or []):
+            if str(row.get("app_id") or "") != scope_app:
+                continue
             # 그랜트가 여는 것은 공유 원장(무소유 행)뿐. 소유 user_id가 붙은
             # 행은 app 태그가 있어도 개인 기억이다 — 1차 매칭으로 새는 것을
             # 여기서 구조적으로 막는다 (계약 테스트 ⑥이 이 줄의 근거).

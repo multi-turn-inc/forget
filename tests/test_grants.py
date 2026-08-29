@@ -318,3 +318,17 @@ def test_pointer_mode_returns_refs_not_passages():
     for row in out["results"]:
         assert "memory" not in row and row.get("ref")  # 원문 0, 참조만
     assert out["receipt"]["answer_mode"] == "pointer"
+
+
+def test_serve_never_leaks_other_app_shared_rows():
+    """교차-앱 누수 회귀 (2026-08-29 데모 리허설 실측): scope_app 그랜트는
+    그 앱의 공유 원장만 연다 — 타 앱 공유 행은 폴백으로도 안 나온다."""
+    _grant()
+    add_memories({"messages": [{"role": "user", "content":
+                  "다른 앱의 내부 제안: 로드맵 수렴 회의 기록"}],
+                  "app_id": "other-app", "agent_id": "agent-z", "infer": False})
+    out = grants.serve({"grantee": "team-agent-1", "scope_app": APP,
+                        "query": "로드맵 수렴 회의"})
+    assert out["allowed"] is True
+    for row in out["results"]:
+        assert "로드맵 수렴" not in row["memory"]        # 타 앱 행 무누출
