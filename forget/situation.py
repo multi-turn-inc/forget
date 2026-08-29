@@ -36,6 +36,9 @@ _LOANWORDS = {
 
 _TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.\-]+|[가-힣]{2,}")
 
+# P-R-2 (recallbench inc-003): ETA·시간·안부류는 결정론 선차단 — 판독기까지 안 간다.
+_SMALLTALK_RE = re.compile(r"ETA|몇\s*시간|몇\s*분|얼마나\s*걸|언제\s*끝|안녕|고마워|잘\s*자")
+
 _PROMPT = """The user is working on a project with these active tracks (id: state):
 
 {tracks}
@@ -95,7 +98,7 @@ def situation_recall(query: str, project_id: str) -> dict[str, Any] | None:
     from .store import embed_text, get_task_state
 
     query = (query or "").strip()
-    if len(query) < 8:
+    if len(query) < 8 or _SMALLTALK_RE.search(query):
         return None
     try:
         tasks = (get_task_state({"limit": MAX_TRACKS}, project_id) or {}).get("results") or []

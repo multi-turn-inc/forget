@@ -31,7 +31,7 @@ def hook_replay(inc):
         state_dir = _os.path.expanduser("~/.forget/hooks/state")
         _os.makedirs(state_dir, exist_ok=True)
         with open(_os.path.join(state_dir, f"{sid}.turns.json"), "w") as fh:
-            json.dump({"injected": list(inc.get("gold_ids", []))}, fh)
+            json.dump({"turn": 120, "injected": {g: [15, 0] for g in inc.get("gold_ids", [])}}, fh)
     payload = json.dumps({"prompt": inc["query"], "session_id": sid,
                           "cwd": _os.path.expanduser("~/orca/workspaces/forget/내-프롬프트를-공유하기-싫어")})
     out = subprocess.run(["python3", _os.path.expanduser("~/.forget/hooks/forget_turnrecall.py")],

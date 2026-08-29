@@ -144,7 +144,7 @@ def test_task_state_claims_never_recalled(monkeypatch, tmp_path, capsys):
     assert "(green·" in out and "임베더는 e5로" in out
     # 장부에도 task 클레임은 오르지 않는다 — 억제 상태 오염 방지
     turns = json.loads((tmp_path / "s13.turns.json").read_text(encoding="utf-8"))
-    assert turns["injected"] == ["m-2"]
+    assert list(turns["injected"]) == ["m-2"]   # P-R-1: dict 장부 — 키가 id
 
 
 # 아래 두 테스트의 점수는 합성값이 아니라 도그푸드 서버 context_traces에서 꺼낸
@@ -184,7 +184,7 @@ def test_flatness_ignores_candidates_that_can_never_be_injected(monkeypatch, tmp
     assert "회상" in out, "자격 후보 분포엔 봉우리가 있으므로 침묵해선 안 된다"
     assert "claim:a6bb2d19" not in out and "상위 목표" not in out  # claim 자체는 여전히 미주입
     turns = json.loads((tmp_path / "s-c61.turns.json").read_text(encoding="utf-8"))
-    assert turns["injected"] == ["m-0", "m-1", "m-2"]  # MAX_RECALLS=3
+    assert list(turns["injected"]) == ["m-0", "m-1", "m-2"]  # MAX_RECALLS=3
 
 
 def test_fresh_claim_peak_does_not_change_injection_count(monkeypatch, tmp_path, capsys):
@@ -219,7 +219,7 @@ def test_deeper_fetch_leaves_the_measured_spread_unchanged(monkeypatch, tmp_path
         module = _recall_module(monkeypatch, tmp_path, results)
         _run_main(module, {"session_id": tag, "prompt": "devloop 사이클을 정확히 한 바퀴 실행하라"}, monkeypatch)
         capsys.readouterr()
-        injected.append(json.loads((tmp_path / f"{tag}.turns.json").read_text(encoding="utf-8"))["injected"])
+        injected.append(list(json.loads((tmp_path / f"{tag}.turns.json").read_text(encoding="utf-8"))["injected"]))
     assert injected[0] == injected[1] == ["m-0", "m-1", "m-2"], f"깊이가 판정을 바꿨다: {injected}"
 
 
@@ -256,7 +256,7 @@ def test_thin_eligible_pool_still_unmeasurable_but_now_leaves_a_row(monkeypatch,
     _run_main(module, {"session_id": "s-thin", "prompt": "프로토타입 어디까지 갔지?"}, monkeypatch)
     assert "회상" in capsys.readouterr().out, "자격 후보 3개 → 평탄도 게이트 미적용"
     turns = json.loads((tmp_path / "s-thin.turns.json").read_text(encoding="utf-8"))
-    assert turns["injected"] == ["m-0", "m-1", "m-2"]
+    assert list(turns["injected"]) == ["m-0", "m-1", "m-2"]
     rows = [json.loads(line) for line in
             (tmp_path / "flatness_unmeasured.jsonl").read_text(encoding="utf-8").splitlines()]
     assert len(rows) == 1
@@ -307,7 +307,7 @@ def test_deep_fetch_does_not_widen_the_injection_pool(monkeypatch, tmp_path, cap
     out = capsys.readouterr().out
     assert "상위 5위 안의 기억" in out and "6위 이하" not in out
     turns = json.loads((tmp_path / "s-pool.turns.json").read_text(encoding="utf-8"))
-    assert turns["injected"] == ["m-0"]
+    assert list(turns["injected"]) == ["m-0"]
     # 창은 깊은 자리로 채워져 **재였다** — 표본 부족 원장 행이 없다
     assert not (tmp_path / "flatness_unmeasured.jsonl").exists()
 

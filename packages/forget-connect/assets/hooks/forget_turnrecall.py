@@ -419,37 +419,74 @@ def _situation_seat(session_id: str, prompt: str) -> str | None:
             f"{str(hit.get('line') or '')[:150]} / 답하기 전 이 트랙의 최신 상태를 근거로 삼을 것]")
 
 
-def _seen_ids(session_id: str) -> tuple[set[str], str]:
-    seen: set[str] = set()
+SUPPRESS_TTL_TURNS = int(os.environ.get("FORGET_SUPPRESS_TTL_TURNS", "40"))
+REOFFER_SCORE_MARGIN = 0.05
+REOFFER_MAX = 1
+GREEN_REOFFER_MIN_TURNS = 10   # 직후 재부상은 메아리 — 레포 테스트가 잡은 소음 회귀의 수리
+
+
+def _seen_ids(session_id: str) -> tuple[dict, str]:
+    """반복 억제 장부 (P-R-1, 2026-08-30): id → [제안 턴, 재부상 횟수].
+
+    inc-004 부검: 무TTL 억제가 장수 세션(주입 179건) 후반의 회상을 질식 —
+    H100 결정 시점에 A100 정책 기억(green)이 차단됐다. TTL(40턴)과 green
+    고점수 재부상(1회)이 처방. 구판 장부(리스트)는 턴 0으로 승계 — 장수
+    세션일수록 즉시 TTL 만료로 숨통이 트인다(의도된 방향).
+    """
+    book: dict = {"turn": 0, "seen": {}}
     offer_path = os.path.join(STATE_DIR, f"{session_id}.json")
     for candidate in (offer_path, offer_path + ".done"):
         if os.path.exists(candidate):
             try:
                 with open(candidate, encoding="utf-8") as fh:
-                    seen.update(json.load(fh).get("memory_ids") or [])
+                    for mid in json.load(fh).get("memory_ids") or []:
+                        book["seen"].setdefault(mid, [0, 0])
             except Exception:
                 pass
     turns_path = os.path.join(STATE_DIR, f"{session_id}.turns.json")
     if os.path.exists(turns_path):
         try:
             with open(turns_path, encoding="utf-8") as fh:
-                seen.update(json.load(fh).get("injected") or [])
+                data = json.load(fh)
+            book["turn"] = int(data.get("turn") or 0)
+            injected = data.get("injected") or []
+            if isinstance(injected, dict):
+                for mid, val in injected.items():
+                    book["seen"][mid] = list(val)[:2] if isinstance(val, list) else [0, 0]
+            else:  # 구판 리스트 — 턴 0 승계
+                for mid in injected:
+                    book["seen"].setdefault(mid, [0, 0])
         except Exception:
             pass
-    return seen, turns_path
+    return book, turns_path
 
 
-def _remember_injected(turns_path: str, injected: list[str]) -> None:
-    existing: list[str] = []
-    if os.path.exists(turns_path):
-        try:
-            with open(turns_path, encoding="utf-8") as fh:
-                existing = json.load(fh).get("injected") or []
-        except Exception:
-            pass
+def _suppressed(book: dict, memory_id: str, light: str, score: float) -> bool:
+    """P-R-1 판정: TTL 안이면 억제 — 단 green이 고점수면 1회 재부상 허용."""
+    entry = book["seen"].get(memory_id)
+    if entry is None:
+        return False
+    offered_turn, reoffers = (entry + [0, 0])[:2]
+    if book["turn"] - int(offered_turn) >= SUPPRESS_TTL_TURNS:
+        return False
+    if (light == "green" and reoffers < REOFFER_MAX
+            and book["turn"] - int(offered_turn) >= GREEN_REOFFER_MIN_TURNS
+            and score >= SCORE_THRESHOLD + REOFFER_SCORE_MARGIN):
+        return False
+    return True
+
+
+def _remember_injected(turns_path: str, injected: list[str], book: dict) -> None:
+    seen = dict(book.get("seen") or {})
+    for mid in injected:
+        prev = seen.get(mid)
+        if prev is not None:
+            seen[mid] = [book["turn"], int((list(prev) + [0, 0])[1]) + 1]  # 재부상
+        else:
+            seen[mid] = [book["turn"], 0]
     os.makedirs(STATE_DIR, exist_ok=True)
     with open(turns_path, "w", encoding="utf-8") as fh:
-        json.dump({"injected": existing + injected}, fh, ensure_ascii=False)
+        json.dump({"turn": book["turn"], "injected": seen}, fh, ensure_ascii=False)
 
 
 def main() -> None:
@@ -458,7 +495,8 @@ def main() -> None:
     session_id = str(hook_input.get("session_id") or "").strip()
     if len(prompt) < MIN_PROMPT_LEN or prompt.startswith(("/", "!", "<", "#")):
         return
-    seen, turns_path = _seen_ids(session_id) if session_id else (set(), "")
+    seen_book, turns_path = _seen_ids(session_id) if session_id else ({"turn": 0, "seen": {}}, "")
+    seen_book["turn"] += 1   # 이 턴 번호 — 기록 시 함께 저장
     # Project boundary = privacy boundary: the other company's strategy must
     # not surface mid-session here just because the words rhyme. Crossing is
     # possible, but only when the user asks for it — and it says so when it does.
@@ -543,7 +581,8 @@ def main() -> None:
             continue  # 이웃은 별도 경로 — 정규 임계를 안 거친다
         score = float(item.get("score") or 0.0)
         memory_id = str(item.get("id") or "")
-        if not memory_id or memory_id in seen:
+        light_early = str((item.get("trust") or {}).get("light") or "yellow")
+        if not memory_id or _suppressed(seen_book, memory_id, light_early, score):
             continue
         metadata = item.get("metadata") or {}
         if metadata.get("hook"):
@@ -580,7 +619,7 @@ def main() -> None:
 
     conflicts = []
     for old_id, new_id in list(conflict_pairs)[:2]:
-        if old_id in seen and new_id in seen:
+        if old_id in seen_book["seen"] and new_id in seen_book["seen"]:
             continue
         try:
             old = _rpc("get_memory", {"memory_id": old_id})
@@ -630,7 +669,7 @@ def main() -> None:
             picked_ids = {memory_id for memory_id, _, _ in picks}
             nb = next((n for n in neighbor_pool
                        if str(n.get("temporal_neighbor_of")) in picked_ids
-                       and str(n.get("id") or "") and str(n.get("id")) not in seen), None)
+                       and str(n.get("id") or "") and str(n.get("id")) not in seen_book["seen"]), None)
             if nb is not None:
                 gap = (nb.get("score_breakdown") or {}).get("temporal_gap_minutes")
                 nb_text = str(nb.get("memory") or "")[:MEMORY_CHAR_LIMIT]
@@ -655,7 +694,7 @@ def main() -> None:
         for old_id, new_id, old_text, new_text in conflicts:
             injected += [old_id, new_id]
             ledger_picks.append((new_id, "green", new_text))  # 메아리 측정은 현재본 기준
-        _remember_injected(turns_path, injected)
+        _remember_injected(turns_path, injected, seen_book)
         _extend_offer_ledger(session_id, ledger_picks, trace_id)
 
 
