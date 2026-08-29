@@ -151,6 +151,23 @@ _STOPWORDS = {
 }
 
 
+_MACHINE_SPAN_RE = re.compile(
+    r"(?m)^\s*(?:ssh|scp|curl|wget|git|rsync)\b[^\n]*"      # 명령줄 행
+    r"|\bhttps?://\S+"                                        # URL
+    r"|\b\d{1,3}(?:\.\d{1,3}){3}\b"                        # IP
+    r"|\b[0-9a-f]{12,}\b"                                     # 긴 16진
+    r"|\s-p\s+\d+\b")                                       # 포트 플래그
+
+
+def _hygiene(prompt: str) -> str:
+    """P-R-3 질의 위생: 기계 스팬은 회상 질의를 희석한다 (inc-004 —
+    ssh 행이 점수를 문턱 가장자리로 끌어내려 런마다 0~4건 요동).
+    검색 질의에서만 벗긴다 — 게이트·coverage는 원문을 계속 본다."""
+    cleaned = _MACHINE_SPAN_RE.sub(" ", prompt)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
+    return cleaned if len(cleaned) >= MIN_PROMPT_LEN else prompt
+
+
 def _rpc(name: str, arguments: dict, timeout: int = 5) -> dict:
     payload = {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": name, "arguments": arguments}}
     request = urllib.request.Request(
@@ -403,7 +420,10 @@ def _situation_seat(session_id: str, prompt: str) -> str | None:
         except Exception:
             pass
     try:
-        hit = (_rpc("situation_recall", {"query": prompt[:300]}, timeout=9) or {}).get("situation")
+        sit_args = {"query": prompt[:300]}
+        if os.environ.get("FORGET_REPLAY_AS_OF"):
+            sit_args["as_of"] = os.environ["FORGET_REPLAY_AS_OF"]
+        hit = (_rpc("situation_recall", sit_args, timeout=9) or {}).get("situation")
     except Exception:
         return None
     if not hit or hit.get("task_id") in seen_tasks:
@@ -515,12 +535,17 @@ def main() -> None:
     # 단 턴이 스스로 기억-의존을 선언하면("지난번…", 세션에 없는 고유명) 그 턴에
     # 한해 high로 승격한다 — 적응형 기어 (2026-08-10 정훈 승인 방향).
     search_args: dict = {
-        "query": prompt[:300],
+        "query": _hygiene(prompt)[:300],
         "top_k": CANDIDATE_TOP_K,
         "recall": gear,
         "trace": "turn_recall",      # body A1: 피드백이 붙을 주소를 만든다
         "score_breakdown": True,     # body A2: 의미/어휘 성분 분리
     }
+    if os.environ.get("FORGET_REPLAY") == "1":
+        # RECALL-BENCH 원칙 6 (2026-08-30): 재생이 트레이스를 남기면 관성
+        # 상태가 오염돼 같은 표본이 런마다 다른 점수를 받는다 — 실측: inc-004
+        # 재생이 0~4건 요동. 재생 모드는 관측만 하고 흔적을 남기지 않는다.
+        search_args.pop("trace", None)
     if project and not crossed:
         search_args["filters"] = layered_filter(project)
     try:

@@ -92,7 +92,7 @@ def _llm_pick(query: str, shortlist: list[dict[str, Any]]) -> str | None:
     return None
 
 
-def situation_recall(query: str, project_id: str) -> dict[str, Any] | None:
+def situation_recall(query: str, project_id: str, as_of: str | None = None) -> dict[str, Any] | None:
     """질의가 가리키는 활성 트랙 1건 — {task_id, line, via} 또는 None."""
     from .memory_engine import cosine_similarity
     from .store import embed_text, get_task_state
@@ -101,7 +101,10 @@ def situation_recall(query: str, project_id: str) -> dict[str, Any] | None:
     if len(query) < 8 or _SMALLTALK_RE.search(query):
         return None
     try:
-        tasks = (get_task_state({"limit": MAX_TRACKS}, project_id) or {}).get("results") or []
+        payload = {"limit": MAX_TRACKS}
+        if as_of:
+            payload["as_of"] = as_of   # 재생 시점 고정 (RECALL-BENCH 원칙 4 — 트랙 지형도 세계 상태다)
+        tasks = (get_task_state(payload, project_id) or {}).get("results") or []
     except Exception:
         return None
     if not tasks:

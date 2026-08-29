@@ -2144,7 +2144,7 @@ def _dispatch_tool(name: str, arguments: dict[str, Any] | None, context: dict[st
     if name == "situation_recall":
         from .situation import situation_recall as _sitrec
         from .store import current_project_id as _cur_pid
-        hit = _sitrec(str(args.get("query") or ""), _cur_pid())
+        hit = _sitrec(str(args.get("query") or ""), _cur_pid(), as_of=str(args.get("as_of") or "") or None)
         return _text_result({"situation": hit})
     if name == "get_task_state":
         payload = {**args, "filters": _mcp_scoped_filters(args, context)}

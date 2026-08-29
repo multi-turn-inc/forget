@@ -36,7 +36,8 @@ def hook_replay(inc):
                           "cwd": _os.path.expanduser("~/orca/workspaces/forget/내-프롬프트를-공유하기-싫어")})
     out = subprocess.run(["python3", _os.path.expanduser("~/.forget/hooks/forget_turnrecall.py")],
                          input=payload, capture_output=True, text=True, timeout=40,
-                         env={**_os.environ, "FORGET_MCP_URL": URL}).stdout
+                         env={**_os.environ, "FORGET_MCP_URL": URL, "FORGET_REPLAY": "1",
+                              **({"FORGET_REPLAY_AS_OF": inc["as_of"]} if inc.get("as_of") else {})}).stdout
     ok_track = any(t in out for t in inc.get("accept_tracks", []))
     injected = []
     state = _os.path.expanduser(f"~/.forget/hooks/state/{sid}.turns.json")

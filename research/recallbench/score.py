@@ -26,13 +26,18 @@ def situation_rate():
     return (hit + (5 - fp)) / 10.0
 
 def outcome_rate():
+    """v0.1 (2026-08-30): turn_recall 채널 한정 + 기억-귀속 평결만 —
+    helped(none) / (none + selection_failure). reasoning_failure는 하류 몫."""
     conn = sqlite3.connect(os.path.expanduser("~/.forget/forget.sqlite3"))
     conn.row_factory = sqlite3.Row
-    rows = conn.execute("""SELECT failure_stage FROM context_outcomes
-        WHERE created_at > datetime('now', '-30 days')""").fetchall()
+    rows = conn.execute("""SELECT o.failure_stage FROM context_outcomes o
+        WHERE o.created_at > datetime('now', '-30 days')
+          AND o.failure_stage IN ('none', '', 'selection_failure')
+          AND o.trace_id IN (SELECT trace_id FROM context_traces
+                             WHERE payload LIKE '%turn_recall%')""").fetchall()
     if not rows:
         return None
-    helped = sum(1 for r in rows if not r["failure_stage"] or r["failure_stage"] == "none")
+    helped = sum(1 for r in rows if r["failure_stage"] in ("none", ""))
     return helped / len(rows)
 
 def main():
@@ -44,13 +49,13 @@ def main():
     used = [v for v in comps.values() if v is not None]
     mus = round(sum(used) / len(used), 3)
     print(f"MUS v0 = {mus}  {comps}")
-    text = (f"MUS v0 스냅샷: {mus} — bank {comps['bank']} · situation {comps['situation']}"
+    text = (f"MUS v0.1 스냅샷: {mus} — bank {comps['bank']} · situation {comps['situation']}"
             f" · outcome {comps['outcome']} (정의: docs/recallbench.md, 산출: score.py)")
     req = urllib.request.Request(URL, data=json.dumps({
         "jsonrpc": "2.0", "id": 1, "method": "tools/call",
         "params": {"name": "add_memory", "arguments": {
             "text": text, "user_id": "junghunkim",
-            "metadata": {"series": "recallbench.mus"}}}}).encode(),
+            "metadata": {"series": "recallbench.mus2"}}}}).encode(),
         headers={"Content-Type": "application/json"})
     urllib.request.urlopen(req, timeout=15).read()
     print("스냅샷 기록 (series=recallbench.mus — 시계열 승계 자동)")
