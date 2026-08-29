@@ -406,7 +406,10 @@ def _mark_threshold_advised(state: dict, path: str) -> None:
 # 데려옴 — 개방 원장 랭킹도, 전용 풀 코사인도 미스(임베딩 과신 4연속 실측).
 # 처방: 질문형 턴에서 서버 situation_recall(결정론 후보화+로컬 판독기)이
 # 활성 트랙 1줄을 고른다. 픽이 없어도(침묵 턴) 이 줄은 나간다 — 그게 요점.
-_SITUATION_Q_RE = re.compile(r"[??]\s*$|려나|을까\b|할까\b|되나\b|볼\s*수|을\s*수\s*있|어때|가능\s*(?:해|할|한)")
+_SITUATION_Q_RE = re.compile(
+    r"[??]\s*$|려나|을까\b|할까\b|되나\b|볼\s*수|을\s*수\s*있|어때|가능\s*(?:해|할|한)"
+    # P-R-4 (inc-005/006): 서술형 의도도 상황을 연다 — «하자»는 질문만큼 상태를 필요로 한다
+    r"|하자\b|해보자\b|보자\b|싶어|싶은데|얘기한\s*거|말한\s*거")
 
 
 def _situation_seat(session_id: str, prompt: str) -> str | None:

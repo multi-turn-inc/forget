@@ -6030,6 +6030,28 @@ def _apply_inhibition_edges(
     for old_index, successor_id in edges:
         old = scored[old_index]
         old_score = float(old.get("score") or 0.0)
+        # 추이 승계 (recallbench 사이클 5, inc-005): 1홉 상속은 깊은 사슬에서
+        # 낡은 중간본만 소환한다(v5→v6, 그런데 v6도 구본). 머리까지 걷는다 —
+        # 흔적의 현행 담지자는 사슬의 끝이다.
+        hops = 0
+        while hops < 12:
+            probe = obj_by_id.get(successor_id)
+            probe_meta = (probe.get("metadata") if probe else None) or {}
+            if probe is not None and not probe_meta.get("superseded_by"):
+                break
+            if probe is not None:
+                successor_id = str(probe_meta.get("superseded_by") or "")
+                hops += 1
+                continue
+            row_probe = _memory_row_for_inhibition(successor_id, project_id)
+            if row_probe is None:
+                break
+            nxt = ((row_probe.get("metadata") or {}).get("superseded_by")
+                   if isinstance(row_probe.get("metadata"), dict) else None)
+            if not nxt:
+                break
+            successor_id = str(nxt)
+            hops += 1
         successor = obj_by_id.get(successor_id)
         if successor is None:
             row = _memory_row_for_inhibition(successor_id, project_id)
