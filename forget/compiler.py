@@ -33,14 +33,15 @@ _GATE_PROMPT = """You classify a cluster of near-duplicate memory rows into ONE 
 Forms:
 - rule: a standing behavioral discipline/constraint the agent should always follow (e.g. "always compare full dates")
 - fact: a stable statement about the world/project that should exist once with an evidence count (e.g. "issue #22 is verified")
+- stale-state: repeated snapshots of a TIME-VARYING status — counts, sizes, "X is empty", "currently N rows", "server running (pid N)". Only the newest snapshot matters; older ones are stale. If the samples state the same kind of measurement with drifting numbers/dates, it is stale-state, not fact.
 - procedure: a repeated multi-step how-to that belongs in a script/checklist
 - journal: episodic work log entries that merely share structure; contents differ per day — must be preserved as-is
 - other: none of the above
 
-Cluster samples (repeated {n} times across {days} days):
+Cluster samples (repeated {n} times across {days} days, ordered by centrality — the first is the most representative):
 {samples}
 
-Reply with EXACTLY one word: rule, fact, procedure, journal, or other."""
+Reply with EXACTLY one word: rule, fact, stale-state, procedure, journal, or other."""
 
 
 def load_vectors(db_path: str, user_id: str) -> tuple[list[dict], Any]:
@@ -110,6 +111,9 @@ def _llm_gate(samples: list[str], n: int, days: int) -> str:
     try:
         out = json.loads(urllib.request.urlopen(req, timeout=LLM_TIMEOUT).read())
         text = out["choices"][0]["message"]["content"].strip().lower()
+        # "stale"을 먼저 본다 — "stale-state"/"stale_state"/"stale" 변주 흡수.
+        if "stale" in text:
+            return "stale-state"
         for form in ("rule", "fact", "procedure", "journal", "other"):
             if form in text:
                 return form
@@ -118,9 +122,16 @@ def _llm_gate(samples: list[str], n: int, days: int) -> str:
     return "other"  # 게이트 불가 시 보수적 — 컴파일 안 함
 
 
-def classify_cluster(items: list[dict], cluster: list[int]) -> dict[str, Any]:
-    texts = [items[j]["text"] for j in cluster]
+def classify_cluster(items: list[dict], cluster: list[int], X: Any = None) -> dict[str, Any]:
     days = sorted({items[j]["day"] for j in cluster})
+    # P-C-1b(①): 대표 표본 = 군집 중심성 순 — 혼합 군집의 변두리 표본이
+    # 게이트를 other로 도피시키던 과보수(P-C-1 감사: fact 놓침 전건)의 교정.
+    order = list(cluster)
+    if X is not None and len(cluster) >= 2:
+        sub = X[cluster] @ X[cluster].T
+        centrality = sub.mean(axis=1)
+        order = [cluster[k] for k in centrality.argsort()[::-1]]
+    texts = [items[j]["text"] for j in order]
     head = texts[0]
     if _CAPTURE_RE.search(head) or sum(bool(_CAPTURE_RE.search(t)) for t in texts[:5]) >= 3:
         form, via = "capture-pointer", "deterministic"
@@ -128,7 +139,7 @@ def classify_cluster(items: list[dict], cluster: list[int]) -> dict[str, Any]:
         form, via = "journal", "deterministic"
     else:
         form, via = _llm_gate(texts, len(cluster), len(days)), "llm-gate"
-    compilable = form in ("rule", "fact", "procedure")
+    compilable = form in ("rule", "fact", "procedure", "stale-state")
     return {
         "size": len(cluster),
         "days": len(days),
@@ -136,8 +147,9 @@ def classify_cluster(items: list[dict], cluster: list[int]) -> dict[str, Any]:
         "form": form,
         "via": via,
         "compilable": compilable,
-        # 강등 대상 = 정본 1행(최신)을 뺀 나머지 — rule/fact만
-        "demote_count": (len(cluster) - 1) if form in ("rule", "fact") else 0,
+        # 강등 대상 = 정본 1행(최신)을 뺀 나머지 — rule/fact/stale-state
+        # (stale-state는 정의상 최신만 정본 — §4.4 발견의 성문화)
+        "demote_count": (len(cluster) - 1) if form in ("rule", "fact", "stale-state") else 0,
         "canonical": max(cluster, key=lambda j: items[j]["day"]),
         "representative": head[:150],
         "member_ids": [items[j]["id"] for j in cluster],
@@ -147,7 +159,7 @@ def classify_cluster(items: list[dict], cluster: list[int]) -> dict[str, Any]:
 def dry_run(db_path: str, user_id: str) -> dict[str, Any]:
     items, X = load_vectors(db_path, user_id)
     clusters = detect_clusters(items, X)
-    report = [classify_cluster(items, c) for c in clusters]
+    report = [classify_cluster(items, c, X) for c in clusters]
     summary = Counter(r["form"] for r in report)
     return {
         "vectors": len(items),
