@@ -5289,13 +5289,15 @@ def _expand_temporal_neighbors(
     return result
 
 
-def _actr_inertia_scores(project_id: str, window: int = 50) -> dict[str, float]:
-    """작업 관성 점수 — 최근 트레이스의 selected 이력에 P-M-1 감쇠 산식.
+def _actr_replay(project_id: str, window: int = 50) -> dict[str, Any]:
+    """트레이스 재생 → 관성 상태 (actr 원값·최근 사용·공동선택·직전 선택).
 
     실측 근거(P-M-1/P-M-2, 2026-08-29): 질의 없이 사용 통계만으로 다음 서빙
     66% 예지, 유사도 풀 밖 관성 후보의 25.1%가 3턴 내 실사용 — 관성은
     유사도에 포섭되지 않는 독립 채널. 상태 없는 순수 계산(테이블 없음).
+    P-M-4(§13)의 학습 결합기가 같은 상태를 소비하므로 재생은 여기 한 번만.
     """
+    empty: dict[str, Any] = {"scores": {}, "last_used": {}, "co": {}, "current": set(), "steps": 0}
     try:
         with get_db() as conn:
             rows = conn.execute(
@@ -5304,9 +5306,13 @@ def _actr_inertia_scores(project_id: str, window: int = 50) -> dict[str, float]:
                 (project_id, window),
             ).fetchall()
     except sqlite3.Error:
-        return {}
+        return empty
     scores: dict[str, float] = {}
-    for row in reversed(rows):  # 오래된 것부터 — 감쇠가 시간 순서를 존중
+    last_used: dict[str, int] = {}
+    co: dict[str, dict[str, int]] = {}
+    chosen: set[str] = set()
+    step = -1
+    for step, row in enumerate(reversed(rows)):  # 오래된 것부터 — 감쇠가 시간 순서를 존중
         try:
             selected = json_loads(row["selected_ids"])
         except (ValueError, TypeError):
@@ -5316,13 +5322,92 @@ def _actr_inertia_scores(project_id: str, window: int = 50) -> dict[str, float]:
         chosen = {s for s in selected if isinstance(s, str)}
         for mid in chosen:
             scores[mid] = scores.get(mid, 0.0) * 0.9 + 1.0
+            last_used[mid] = step
+            bucket = co.setdefault(mid, {})
+            for other in chosen:
+                if other != mid:
+                    bucket[other] = bucket.get(other, 0) + 1
         for mid in list(scores):
             if mid not in chosen:
                 scores[mid] *= 0.97
+    return {"scores": scores, "last_used": last_used, "co": co,
+            "current": chosen, "steps": step + 1}
+
+
+def _actr_inertia_scores(project_id: str, window: int = 50) -> dict[str, float]:
+    """정규화 관성 점수 (P-M-2 계약 유지) — 재생 상태에서 유도."""
+    return _actr_scores_from_state(_actr_replay(project_id, window))
+
+
+def _actr_scores_from_state(state: dict[str, Any]) -> dict[str, float]:
+    scores = state.get("scores") or {}
     if not scores:
         return {}
     top = max(scores.values())
     return {mid: value / top for mid, value in scores.items() if value / top > 0.05}
+
+
+_learned_ranker_cache: dict[str, Any] = {"key": None, "weights": None}
+
+
+def _load_learned_ranker() -> dict[str, Any] | None:
+    """P-M-4 증류 가중치 로드 (mtime 캐시). 없으면 None → 손-공식 폴백."""
+    path = os.environ.get("FORGET_LEARNED_RANKER") or os.path.expanduser(
+        "~/.forget/learned_ranker_v1.json")
+    try:
+        mtime = os.stat(path).st_mtime
+    except OSError:
+        return None
+    key = (path, mtime)
+    if _learned_ranker_cache["key"] == key:
+        return _learned_ranker_cache["weights"]
+    try:
+        with open(path, encoding="utf-8") as fh:
+            weights = json_loads(fh.read())
+        assert all(k in weights for k in ("w1", "b1", "w2", "b2", "feature_mask"))
+    except (OSError, ValueError, TypeError, AssertionError):
+        return None
+    _learned_ranker_cache.update(key=key, weights=weights)
+    return weights
+
+
+def _learned_inertia_boosts(state: dict[str, Any]) -> dict[str, float]:
+    """P-M-4 증류 결합기 — 통계 4피처 MLP, 후보 집합 내 min-max 정규화.
+
+    절제 실측(§13): 이득의 출처는 통계 피처의 학습된 비선형 결합
+    (purestats 0.6872 vs actr 0.6605 = +2.7pp) — 질의·임베딩 불요라
+    서빙 비용 0. 피처 정의는 훈련(/tmp/pm4_train.py build_steps)과
+    자구 일치가 계약: actr/amax · min(1,gap/20) · min(1,co/10) · in_current.
+    """
+    weights = _load_learned_ranker()
+    scores = state.get("scores") or {}
+    if not weights or not scores:
+        return {}
+    amax = max(scores.values()) or 1.0
+    t_last = state["steps"] - 1
+    current = state["current"]
+    co = state["co"]
+    mask = weights["feature_mask"]
+    w1, b1, w2, b2 = weights["w1"], weights["b1"], weights["w2"], weights["b2"]
+    raw: dict[str, float] = {}
+    for mid, value in scores.items():
+        co_s = sum(co.get(c, {}).get(mid, 0) for c in current)
+        feats = [
+            value / amax,
+            min(1.0, (t_last - state["last_used"].get(mid, -20)) / 20.0),
+            min(1.0, co_s / 10.0),
+            0.0,  # cos(질의맥락) — purestats 절제로 무기여 확정, 미계산
+            0.0,  # cos(사용이력) — 상동
+            1.0 if mid in current else 0.0,
+        ]
+        feats = [f * m for f, m in zip(feats, mask)]
+        hidden = [max(0.0, sum(w * f for w, f in zip(row, feats)) + b)
+                  for row, b in zip(w1, b1)]
+        raw[mid] = sum(w * h for w, h in zip(w2[0], hidden)) + b2[0]
+    lo, hi = min(raw.values()), max(raw.values())
+    if hi - lo < 1e-9:
+        return {mid: 1.0 for mid in raw}
+    return {mid: (v - lo) / (hi - lo) for mid, v in raw.items()}
 
 
 def search_memories(payload: dict[str, Any], project_id: str | None = None) -> dict[str, Any]:
@@ -5397,11 +5482,16 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
     # 작업 관성 채널 (P-M-2): 유사도 prefilter가 못 데려온 관성 후보를 풀에
     # 추가한다 — 스코프·문턱 검사는 아래 공용 채점 루프가 그대로 집행하므로
     # 여기서는 풀 확장만 (누수 없음). 보너스는 채점부에서 가산.
-    actr_scores = _actr_inertia_scores(project_id)
+    actr_state = _actr_replay(project_id)
+    actr_scores = _actr_scores_from_state(actr_state)
+    learned_boosts = _learned_inertia_boosts(actr_state) if actr_scores else {}
     if actr_scores:
         have = {memory["id"] for memory in candidates}
-        missing = [mid for mid in sorted(actr_scores, key=actr_scores.get, reverse=True)[:10]
-                   if mid not in have]
+        # 확장 서열: 학습 결합기가 있으면 그 랭킹(P-M-4 +2.7pp의 자리),
+        # 없으면 종전 actr 순 — 두 원천 모두 관성 집합 안이라 스코프 불변.
+        ranking = learned_boosts or actr_scores
+        missing = [mid for mid in sorted(ranking, key=ranking.get, reverse=True)[:10]
+                   if mid not in have and mid in actr_scores]
         if missing:
             placeholders = ",".join("?" for _ in missing)
             with get_db() as conn:
@@ -5494,8 +5584,16 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
         if actr_value:
             # 관성 보너스 — 동률 재랭킹 수준(최대 +0.12). "힌트도 예산" 준수:
             # 신규 주입 강제가 아니라 문턱·랭킹 경쟁에 관성 축을 더하는 것.
-            score = round(score + 0.12 * actr_value, 4)
-            score_breakdown["actr_boost"] = round(0.12 * actr_value, 4)
+            # 가중치 파일이 있으면 P-M-4 증류 결합기(+2.7pp)가 관성 집합 내
+            # 서열을 정하고, 없으면 종전 손-공식 — 캡 0.12는 동일.
+            learned_value = learned_boosts.get(memory["id"])
+            if learned_value is not None:
+                boost = round(0.12 * learned_value, 4)
+                score_breakdown["actr_learned"] = True
+            else:
+                boost = round(0.12 * actr_value, 4)
+            score = round(score + boost, 4)
+            score_breakdown["actr_boost"] = boost
         if (memory.get("metadata") or {}).get("hook"):
             # Session-capture entries are pointers for rehydration, not facts.
             # They quote user utterances verbatim (green/tool), so left at full
