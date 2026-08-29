@@ -5450,6 +5450,7 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
     threshold = _validated_search_threshold(payload)
     rerank = bool(payload.get("rerank", False))
     show_expired = bool(payload.get("show_expired", False))
+    include_session_captures = bool(payload.get("include_session_captures", False))
     keyword_search = bool(payload.get("keyword_search", False))
     filter_memories_enabled = bool(payload.get("filter_memories", False))
     time_decay_enabled = _bool_or(payload.get("time_decay"),
@@ -5598,8 +5599,15 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
             # Session-capture entries are pointers for rehydration, not facts.
             # They quote user utterances verbatim (green/tool), so left at full
             # weight they outrank real memories for the very queries those
-            # utterances asked about. Demote; lexical match still surfaces
-            # them when the session itself is what's being hunted.
+            # utterances asked about.
+            # P-C-2 위생 레인 (P-C-1 실측: 포인터 2,928행 = 회상 소음 최대
+            # 질량, "컴파일보다 급하다"): 어휘 증거 없이 벡터 유사도만으로는
+            # 후보 경쟁에 서지 못한다 — 구조적 제외. 세션 자체를 사냥하는
+            # 질의(토큰 겹침)는 종전대로 ×0.5 강등으로 생존, 재수화 흐름은
+            # include_session_captures로 전면 opt-in.
+            if not include_session_captures and \
+                    keyword_overlap_score(query, memory.get("memory", "")) <= 0:
+                continue
             score = round(score * 0.5, 4)
             score_breakdown["session_capture"] = True
         if not in_primary_scope:
