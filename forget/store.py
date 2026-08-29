@@ -5289,6 +5289,42 @@ def _expand_temporal_neighbors(
     return result
 
 
+def _actr_inertia_scores(project_id: str, window: int = 50) -> dict[str, float]:
+    """작업 관성 점수 — 최근 트레이스의 selected 이력에 P-M-1 감쇠 산식.
+
+    실측 근거(P-M-1/P-M-2, 2026-08-29): 질의 없이 사용 통계만으로 다음 서빙
+    66% 예지, 유사도 풀 밖 관성 후보의 25.1%가 3턴 내 실사용 — 관성은
+    유사도에 포섭되지 않는 독립 채널. 상태 없는 순수 계산(테이블 없음).
+    """
+    try:
+        with get_db() as conn:
+            rows = conn.execute(
+                "SELECT selected_ids FROM context_traces WHERE project_id = ?"
+                " AND selected_ids != '[]' ORDER BY created_at DESC LIMIT ?",
+                (project_id, window),
+            ).fetchall()
+    except sqlite3.Error:
+        return {}
+    scores: dict[str, float] = {}
+    for row in reversed(rows):  # 오래된 것부터 — 감쇠가 시간 순서를 존중
+        try:
+            selected = json_loads(row["selected_ids"])
+        except (ValueError, TypeError):
+            # 좁은 except — 광역 except가 NameError(json 미임포트)까지 삼켜
+            # 전 행이 조용히 증발했던 실측 사고(2026-08-29)의 재발 방지.
+            continue
+        chosen = {s for s in selected if isinstance(s, str)}
+        for mid in chosen:
+            scores[mid] = scores.get(mid, 0.0) * 0.9 + 1.0
+        for mid in list(scores):
+            if mid not in chosen:
+                scores[mid] *= 0.97
+    if not scores:
+        return {}
+    top = max(scores.values())
+    return {mid: value / top for mid, value in scores.items() if value / top > 0.05}
+
+
 def search_memories(payload: dict[str, Any], project_id: str | None = None) -> dict[str, Any]:
     project_id = payload.get("project_id") or project_id or current_project_id()
     recall_mode = str(payload.get("recall") or os.getenv("MEM1_RECALL_V2") or "").strip().lower()
@@ -5358,6 +5394,23 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
         include_expired=show_expired,
         entity_prefilter=_simple_entity_prefilter(filters),
     )
+    # 작업 관성 채널 (P-M-2): 유사도 prefilter가 못 데려온 관성 후보를 풀에
+    # 추가한다 — 스코프·문턱 검사는 아래 공용 채점 루프가 그대로 집행하므로
+    # 여기서는 풀 확장만 (누수 없음). 보너스는 채점부에서 가산.
+    actr_scores = _actr_inertia_scores(project_id)
+    if actr_scores:
+        have = {memory["id"] for memory in candidates}
+        missing = [mid for mid in sorted(actr_scores, key=actr_scores.get, reverse=True)[:10]
+                   if mid not in have]
+        if missing:
+            placeholders = ",".join("?" for _ in missing)
+            with get_db() as conn:
+                extra_rows = conn.execute(
+                    f"SELECT * FROM memories WHERE id IN ({placeholders})"
+                    " AND deleted = 0 AND project_id = ?",
+                    (*missing, project_id),
+                ).fetchall()
+            candidates.extend(row_to_memory(row) for row in extra_rows)
     batch_vector_scores = _batch_cosine_scores(query_embedding, candidates)
     temporal_rerank = _temporal_rerank_enabled(payload, project_id)
     scored_embeddings: dict[str, list[float] | None] = {}
@@ -5437,6 +5490,12 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
                 score = round(score * _superseded_score_multiplier(), 4)
                 score_breakdown["superseded"] = True
             superseded_ids.add(memory["id"])
+        actr_value = actr_scores.get(memory["id"]) if actr_scores else None
+        if actr_value:
+            # 관성 보너스 — 동률 재랭킹 수준(최대 +0.12). "힌트도 예산" 준수:
+            # 신규 주입 강제가 아니라 문턱·랭킹 경쟁에 관성 축을 더하는 것.
+            score = round(score + 0.12 * actr_value, 4)
+            score_breakdown["actr_boost"] = round(0.12 * actr_value, 4)
         if (memory.get("metadata") or {}).get("hook"):
             # Session-capture entries are pointers for rehydration, not facts.
             # They quote user utterances verbatim (green/tool), so left at full
