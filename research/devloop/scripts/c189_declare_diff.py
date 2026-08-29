@@ -32,6 +32,20 @@ gate-queue.md의 A-168.1 행은 43차에서 멈춰 있었다. 채널 수는 진�
      «표 부기 2»(44차 백필 + 45차)를 선언했고 정본의 실질 편집 행은 **1행**이었다 —
      둘 다 같은 A-168.1 행에 들어갔기 때문이다. 건수와 행 수는 1:1이 아니므로 건수를
      대조하면 정직한 사이클을 오고발한다(관측 118의 교훈을 이 계기에 적용한 자리).
+  ⑧ **동결 판정(㉵ⓐ)은 현재 워킹트리의 정본을 읽는다** — 과거 사이클 검산에서
+     시대착오가 원리상 가능하나, 해소 행은 지우지 않고 취소선+사유로 보존하는
+     규약(gate-queue c193 정산)상 동결→비동결 전이가 없어 실무 방향은 단조다.
+
+㉵ⓐ 규칙 — 취소선 동결 행 질의 제외 (c251 집행, audit-250 R2 소비 = «깨진 계기의
+자기 수리» 재분류 · 선례 c232 계약 수리·c241 이동기 ㉵ⓑ):
+  해소 행은 보존되고 이동기 ㉵ⓑ(c241)가 그 경과 칸을 동결하므로, 동결 행은 diff에
+  없는 것이 **정상**이다. 그런데 «행이 없다» 질의에는 그 구별이 없어 A-192.1 거짓
+  양성이 c237~c250 **14연속** 났다(기전 = 한계 ① 부기 창 과수집이 이동기 서술
+  «A-192.1 재증분 0»을 부기 대상으로 오독 → 동결 행이라 diff 부재 → 질의).
+  규칙: 부기 대상이 정본의 취소선 동결 행이면 «행이 없다» 축의 질의를 **제외**하고
+  노트만 남긴다. frame_only 질의(= 동결 행의 재증분 = ⓑ 승계 실패)는 **유지**한다 —
+  그 채널이 이동기 스킵 분기의 사망 검출기다. 판정 채널 = 집행 차기 ㉭ 런의
+  A-192.1 질의 소멸(질의가 계속 나오면 이 수리는 반증이다).
 
 대조군 실측 (c189 등록 시점, 원칙 1):
   c185 = **질의 1건**(A-168.1 부기 선언 · 정본은 프레임 이동뿐) ← **관측 116 독립 재검출**
@@ -116,6 +130,47 @@ def parse_declaration(text: str) -> dict:
     return {"counts": counts, "부기_대상": targets}
 
 
+def frozen_ids(canon_text: str) -> set[str]:
+    """정본의 취소선 동결 행 ID 집합 (㉵ⓐ). 술어는 이동기 ㉵ⓑ와 동일:
+    행의 마지막 AGE 적중 칸이 `~~`를 포함하면 동결. ID 귀속은 parse_diff와
+    같은 규칙(행 첫 CLAIM_ID)이다."""
+    out: set[str] = set()
+    for line in canon_text.splitlines():
+        if not line.lstrip().startswith("|"):
+            continue
+        m = CLAIM_ID.search(line)
+        if not m:
+            continue
+        cells = line.split("|")
+        idx = [j for j, c in enumerate(cells) if AGE.search(c)]
+        if idx and "~~" in cells[idx[-1]]:
+            out.add(m.group(0))
+    return out
+
+
+def build_queries(decl: dict, d: dict, frozen: set[str]) -> tuple[list[str], list[str]]:
+    """질의 목록과 ㉵ⓐ 동결-제외 노트. 판정하지 않는다 — 한계 ⑤."""
+    q: list[str] = []
+    notes: list[str] = []
+    c = decl["counts"]
+    if c["신규 상신"] is not None and c["신규 상신"] != len(d["added"]):
+        q.append(f"신규 상신 선언 {c['신규 상신']} vs 정본 신규 행 {len(d['added'])}")
+    if c["해소"] is not None and c["해소"] != len(d["removed"]):
+        q.append(f"해소 선언 {c['해소']} vs 정본 소멸 행 {len(d['removed'])}")
+    for t in decl["부기_대상"]:
+        if t in d["frame_only"]:
+            # ㉵ⓐ는 여기를 건드리지 않는다 — 동결 행의 재증분은 ⓑ 승계 실패라 질의 유지.
+            q.append(f"**{t} 부기 선언 — 그러나 정본에서 프레임 이동뿐**(관측 116 그 서식)")
+        elif t not in d["substantive"] and t not in d["added"]:
+            if t in frozen:
+                notes.append(f"{t} — 취소선 동결 행: diff 부재 정상(㉵ⓐ 질의 제외)")
+            else:
+                q.append(f"{t} 부기 선언 — 그러나 정본 diff에 그 행이 없다")
+    if c["표 부기"] is not None and c["표 부기"] > 0 and not decl["부기_대상"]:
+        q.append(f"표 부기 {c['표 부기']} 선언 — 산문에 대상 ID 표기 없음(한계 ①, 판정 불가)")
+    return q, notes
+
+
 def harvest_commit(cycle: int) -> str:
     out = subprocess.run(
         ["git", "log", "--format=%H", "-1", f"--grep=loop(cycle {cycle}):"],
@@ -139,6 +194,7 @@ def main() -> int:
     if row is None:
         raise SystemExit(f"원장에 c{n} 행이 없다 — 선언 없이 diff만 있는 사이클은 이 계기 밖")
     decl = parse_declaration(str(row.get("gate_pending", "")))
+    frozen = frozen_ids((ROOT / CANON).read_text(encoding="utf-8"))
 
     print(f"[계기 큐 ㉭ — 선언∖정본-diff 검산 (관측 116 수용 기준 ③)]  c{n} · {sha[:7]}")
     print(f"  선언(원장 gate_pending): {decl['counts']} · 부기 대상 {decl['부기_대상'] or '—'}")
@@ -149,19 +205,9 @@ def main() -> int:
     print(f"    **실질 편집** {len(d['substantive'])} {d['substantive'] or ''}")
     print()
 
-    q: list[str] = []
-    c = decl["counts"]
-    if c["신규 상신"] is not None and c["신규 상신"] != len(d["added"]):
-        q.append(f"신규 상신 선언 {c['신규 상신']} vs 정본 신규 행 {len(d['added'])}")
-    if c["해소"] is not None and c["해소"] != len(d["removed"]):
-        q.append(f"해소 선언 {c['해소']} vs 정본 소멸 행 {len(d['removed'])}")
-    for t in decl["부기_대상"]:
-        if t in d["frame_only"]:
-            q.append(f"**{t} 부기 선언 — 그러나 정본에서 프레임 이동뿐**(관측 116 그 서식)")
-        elif t not in d["substantive"] and t not in d["added"]:
-            q.append(f"{t} 부기 선언 — 그러나 정본 diff에 그 행이 없다")
-    if c["표 부기"] is not None and c["표 부기"] > 0 and not decl["부기_대상"]:
-        q.append(f"표 부기 {c['표 부기']} 선언 — 산문에 대상 ID 표기 없음(한계 ①, 판정 불가)")
+    q, notes = build_queries(decl, d, frozen)
+    for x in notes:
+        print(f"  ㉵ⓐ 제외: {x}")
 
     if q:
         print(f"  **질의 {len(q)}건** — 고발이 아니다. 손이 답하고 원장에 적는다(한계 ⑤).")
