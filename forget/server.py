@@ -255,6 +255,7 @@ def mcp_scope_info(
     app_id: str,
     user_id: str,
     request: Request,
+    profile: str | None = None,
     project: str | None = None,
     principal: str | None = None,
     ptoken: str | None = None,
@@ -262,6 +263,8 @@ def mcp_scope_info(
     # Identity echo for connection doctors: confirms which scope this
     # endpoint pins before any tool call is made (forget-connect probes it).
     info = {"name": "forget-mcp", "user_id": user_id, "client_name": app_id}
+    if profile:
+        info["tool_profile"] = profile
     if project:
         info["project"] = project
     if ptoken:
@@ -340,6 +343,16 @@ def memories_create(payload: dict[str, Any]) -> dict[str, Any]:
         raise HTTPException(
             status_code=403,
             detail="team ledger writes must use the authenticated team_note tool",
+        )
+    # B3O 제품 레인 이중 게이트 (승격 계약 §④, 경계 해제 2026-08-29 정훈):
+    # b3o.* 스코프 쓰기는 «자동 기억 생성 금지» 불변식을 서버가 공동 집행 —
+    # native 사람 승인 UI만이 human_approved를 공급한다. 에코 차단기는
+    # add 경로에 이미 상주(두 번째 벽).
+    if str(payload.get("app_id") or "").strip().startswith("b3o.") \
+            and payload.get("human_approved") is not True:
+        raise HTTPException(
+            status_code=403,
+            detail="b3o.* writes require human_approved=true (native approval gate)",
         )
     if "messages" not in payload:
         text = payload.get("text") or payload.get("memory") or payload.get("data")
@@ -422,6 +435,58 @@ def access_receipts_list(request: Request, grantee: str | None = None, limit: in
     from . import grants
     _require_grant_owner(request)
     return grants.list_access_receipts(grantee=grantee, limit=limit)
+
+
+@app.post("/v1/team/confirm/", dependencies=[Depends(auth)])
+def team_confirm(request: Request, payload: dict[str, Any]) -> dict[str, Any]:
+    """owner 확인 영수증 — owner_sourced(yellow)를 green으로 승격하는 유일한 문.
+
+    소유자 자격 전용(_require_grant_owner 재사용) — 에이전트 자격 403.
+    단방향: 취소 없음(잘못 확인했으면 결정 자체를 supersede). 영수증은 공용
+    서명기(canonical-v1)라 verify_receipt·공개키로 제3자 검증 가능.
+    """
+    _require_grant_owner(request)
+    from .mcp import TEAM_LEDGER_APP
+    from .receipts import sign_receipt
+    from .store import current_project_id, list_memory_dicts
+    from .utils import new_id, utc_now
+    item_id = str(payload.get("item_id") or "").strip()
+    if not item_id:
+        raise HTTPException(status_code=400, detail="item_id is required")
+    row = next((m for m in list_memory_dicts()
+                if str(m.get("id")) == item_id and m.get("app_id") == TEAM_LEDGER_APP
+                and not m.get("user_id")), None)
+    if row is None:
+        raise HTTPException(status_code=404, detail="item_id is not a team-ledger item")
+    meta = row.get("metadata") or {}
+    if not meta.get("owner_sourced") or meta.get("kind") != "decision":
+        raise HTTPException(status_code=400,
+                            detail="only owner_sourced decisions can be owner-confirmed")
+    context = _request_auth_context(request)
+    confirmed_by = str(context.get("agent_principal") or context.get("role") or "owner")
+    project_id = current_project_id()
+    receipt = sign_receipt({
+        "kind": "owner_confirmation",
+        "receipt_id": new_id("oconfirm"),
+        "item_id": item_id,
+        "confirmed_by": confirmed_by,
+        "at": utc_now(),
+    })
+    from .db import get_db
+    with get_db() as conn:
+        cursor = conn.execute(
+            "INSERT OR IGNORE INTO team_confirmations (item_id, project_id, confirmed_by,"
+            " receipt_json, created_at) VALUES (?, ?, ?, ?, ?)",
+            (item_id, project_id, confirmed_by,
+             json.dumps(receipt, ensure_ascii=False), receipt["at"]),
+        )
+        if cursor.rowcount == 0:
+            prior = conn.execute(
+                "SELECT receipt_json FROM team_confirmations WHERE project_id = ? AND item_id = ?",
+                (project_id, item_id)).fetchone()
+            return {"confirmed": True, "idempotent_replay": True,
+                    "receipt": json.loads(prior["receipt_json"])}
+    return {"confirmed": True, "receipt": receipt}
 
 
 @app.get("/v1/receipts/public_key/", dependencies=[Depends(auth)])

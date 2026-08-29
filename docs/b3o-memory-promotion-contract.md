@@ -23,8 +23,15 @@
 - 회수: 소유자 즉시 회수(`/revoke`) + B3O 설정 화면은 조회 전용 투영.
 - 감사: 거절 포함 전 서빙이 영수증 — B3O가 주기 폴링으로 로컬 투영.
 
-## 미결 (정훈 게이트)
+## 게이트 처분 (2026-08-29 정훈: «테스트용 경계 해제하자»)
 
-1. «로컬 forget 연결은 테스트용» 경계 해제 여부 — 제품 탑재의 본질 결정.
-2. `b3o-desktop` 키 발급 시점.
-3. 쓰기 모드(human_approved 게이트) 구현 착수 여부 — forget 서버 측 신규.
+1. 경계 해제 — **승인** (합의 원장 decision + 소유자 확인 영수증).
+2. `b3o-desktop` 키 — **발급됨** (`~/.forget/keys/b3o-desktop.key`, 자격 결합
+   principal=b3o-desktop). B3O 진입은 credential broker(B3O 영토)가 환경
+   변수로 나른다 — 제안 명: `FORGET_B3O_TOKEN`. renderer 비노출은 B3O 불변식.
+3. 쓰기 게이트 — **구현·라이브** (`/v1/memories/` b3o.* 스코프는
+   human_approved=true 명시 필수, 참-유사값 불허 — 계약 테스트 5종,
+   에코 차단기는 add 경로 상주). 813 passed.
+
+계약 상태: forget 측 의무 전부 이행 — gpt-live의 조항별 검토·broker/UI
+착수만 남음 (그쪽 페이스대로, 비차단).
