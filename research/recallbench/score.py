@@ -48,7 +48,7 @@ def main():
              "outcome": round(outc, 3) if outc is not None else None}
     used = [v for v in comps.values() if v is not None]
     mus = round(sum(used) / len(used), 3)
-    print(f"MUS v0 = {mus}  {comps}")
+    print(f"MUS v0.1 = {mus}  {comps}")
     text = (f"MUS v0.1 스냅샷: {mus} — bank {comps['bank']} · situation {comps['situation']}"
             f" · outcome {comps['outcome']} (정의: docs/recallbench.md, 산출: score.py)")
     req = urllib.request.Request(URL, data=json.dumps({
@@ -58,7 +58,7 @@ def main():
             "metadata": {"series": "recallbench.mus2"}}}}).encode(),
         headers={"Content-Type": "application/json"})
     urllib.request.urlopen(req, timeout=15).read()
-    print("스냅샷 기록 (series=recallbench.mus — 시계열 승계 자동)")
+    print("스냅샷 기록 (series=recallbench.mus2 — 시계열 승계 자동)")
 
 if __name__ == "__main__":
     main()
