@@ -43,7 +43,12 @@ from forget_project import layered_filter, project_key_for_path, scope_disabled,
 
 FORGET_URL = os.environ.get("FORGET_MCP_URL", "http://127.0.0.1:8000/mcp")
 STATE_DIR = os.path.expanduser("~/.forget/hooks/state")
-SCORE_THRESHOLD = float(os.environ.get("FORGET_TURNRECALL_THRESHOLD", "0.45"))
+# 0.45 → 0.33 (2026-08-23, 다국어 mpnet 전환 실측): 새 공간의 합성 점수 대역이
+# 내려앉았다 — 관련 질의 상위 0.40~0.46, 무관 바닥 0.28. 구 문턱 0.45는 구 공간
+# (무관조차 0.51 바닥)에선 전부 통과시키는 장식이었지만 새 공간에선 관련 픽을
+# 반쯤 자른다. 허브성 오탐(무관인데 벡터 0.8)은 이 문턱이 아니라 평탄도 게이트가
+# 잡는다 — 실측: 스포츠 무관 질의 프로필 간격 0.02 < MARGIN 0.03 → 침묵.
+SCORE_THRESHOLD = float(os.environ.get("FORGET_TURNRECALL_THRESHOLD", "0.33"))
 # 의미 바닥: 임베딩 성분의 절대 하한 (2차 가드 — 이 레짐에선 코사인이
 # 0.87~0.91 띠에 포화돼 판별력이 약함을 실측으로 확인).
 SEMANTIC_FLOOR = float(os.environ.get("FORGET_TURNRECALL_SEMANTIC_FLOOR", "0.30"))
@@ -376,6 +381,44 @@ def _mark_threshold_advised(state: dict, path: str) -> None:
         pass
 
 
+# ── 상황 좌석 (P-M-8, 2026-08-30) ──────────────────────────────────────────
+# 실전 사고: «벤치마크로 증명할 수 있으려나»가 LME-V2 제출-대기 상태를 못
+# 데려옴 — 개방 원장 랭킹도, 전용 풀 코사인도 미스(임베딩 과신 4연속 실측).
+# 처방: 질문형 턴에서 서버 situation_recall(결정론 후보화+로컬 판독기)이
+# 활성 트랙 1줄을 고른다. 픽이 없어도(침묵 턴) 이 줄은 나간다 — 그게 요점.
+_SITUATION_Q_RE = re.compile(r"[??]\s*$|려나|을까\b|할까\b|되나\b|볼\s*수|을\s*수\s*있|어때|가능\s*(?:해|할|한)")
+
+
+def _situation_seat(session_id: str, prompt: str) -> str | None:
+    if str(os.environ.get("FORGET_SITUATION_SEAT", "")).strip().lower() in {"0", "off", "false"}:
+        return None
+    if not _SITUATION_Q_RE.search(prompt):
+        return None
+    state_path = os.path.join(STATE_DIR, f"{session_id}.situation.json") if session_id else ""
+    seen_tasks: list[str] = []
+    if state_path and os.path.exists(state_path):
+        try:
+            with open(state_path, encoding="utf-8") as fh:
+                seen_tasks = json.load(fh).get("tasks") or []
+        except Exception:
+            pass
+    try:
+        hit = (_rpc("situation_recall", {"query": prompt[:300]}, timeout=9) or {}).get("situation")
+    except Exception:
+        return None
+    if not hit or hit.get("task_id") in seen_tasks:
+        return None
+    if state_path:
+        try:
+            os.makedirs(STATE_DIR, exist_ok=True)
+            with open(state_path, "w", encoding="utf-8") as fh:
+                json.dump({"tasks": seen_tasks + [hit["task_id"]]}, fh, ensure_ascii=False)
+        except Exception:
+            pass
+    return (f"[forget 상황 — 이 질문이 가리키는 활성 트랙 '{hit['task_id']}': "
+            f"{str(hit.get('line') or '')[:150]} / 답하기 전 이 트랙의 최신 상태를 근거로 삼을 것]")
+
+
 def _seen_ids(session_id: str) -> tuple[set[str], str]:
     seen: set[str] = set()
     offer_path = os.path.join(STATE_DIR, f"{session_id}.json")
@@ -553,10 +596,13 @@ def main() -> None:
         # 한 글자도 쓰지 않는다: 이 원장은 감사가 읽는 자리다.
         _note_unmeasured_flatness(prompt, len(results), len(scores_all), len(picks))
     notice = _threshold_notice(session_id)
-    if not picks and not conflicts and notice is None:
+    situation = _situation_seat(session_id, prompt)
+    if not picks and not conflicts and notice is None and situation is None:
         _note_gate(session_id, gate, gear, "silent_scores", 0, 0, prompt)
         return  # below threshold or nothing new → silence
     lines = []
+    if situation:
+        lines.append(situation)
     if conflicts:
         lines.append("[forget 충돌지대 — 이 주제엔 정정 이력이 있음. 현재본 기준으로 행동하고, 구본 위에서 행동하지 말 것]")
         for _, _, old_text, new_text in conflicts:
@@ -598,7 +644,8 @@ def main() -> None:
         )
     print("\n".join(lines))
     _note_gate(session_id, gate, gear,
-               "injected" if (picks or conflicts) else "notice_only",
+               "injected" if (picks or conflicts)
+               else ("situation_only" if situation else "notice_only"),
                len(picks), len(conflicts), prompt)
     if notice is not None:
         _mark_threshold_advised(notice[1], notice[2])
@@ -609,7 +656,7 @@ def main() -> None:
             injected += [old_id, new_id]
             ledger_picks.append((new_id, "green", new_text))  # 메아리 측정은 현재본 기준
         _remember_injected(turns_path, injected)
-        _extend_offer_ledger(session_id, ledger_picks)
+        _extend_offer_ledger(session_id, ledger_picks, trace_id)
 
 
 def _note_unmeasured_flatness(prompt: str, candidates: int, eligible: int, injected: int) -> None:
@@ -629,19 +676,58 @@ def _note_unmeasured_flatness(prompt: str, candidates: int, eligible: int, injec
         pass
 
 
-def _extend_offer_ledger(session_id: str, picks: list) -> None:
-    """Feed turn recalls into the outcome flywheel: append their probes and
-    ids to the session's offer ledger so the capture hook measures them too.
-    (Discovered gap 07-22: a session answered purely from a turn recall and
-    the capsule-only labeler scored it "not used".)"""
+def _extend_offer_ledger(session_id: str, picks: list, trace_id: str = "") -> None:
+    """Feed turn recalls into the outcome flywheel as *aligned* offers.
+
+    (Discovered gap 07-22: a session answered purely from a turn recall and the
+    capsule-only labeler scored it "not used".)
+
+    Rewritten 2026-08-23 after measuring what the old shape could express. It
+    appended ids into one set and probes into another list — two containers with
+    no correspondence — so the capture hook could only say "something echoed"
+    and then credit *every* offered memory (it labelled itself all-or-none).
+    Worse, the credit landed on the session capsule's trace_id, so a memory
+    pulled by a turn recall was recorded against the query
+    "session startup — active tasks, open loops". Measured consequence: 784
+    turn_recall traces, **zero** with used_memory_ids, while the 28 that had
+    gold all wore the session-startup query. The pairing was wrong, so the
+    mined training pairs were wrong too.
+
+    `offers` fixes both: each entry keeps its own probe next to its own id and
+    the trace that offered it, which is exactly what `picks` already held.
+    """
     ledger_path = os.path.join(STATE_DIR, f"{session_id}.json")
-    if not os.path.exists(ledger_path):
-        return  # no capsule trace this session — nothing to record against
     try:
-        with open(ledger_path, encoding="utf-8") as fh:
-            state = json.load(fh)
-        state["memory_ids"] = list({*(state.get("memory_ids") or []), *(memory_id for memory_id, _, _ in picks)})
-        state["capsule_lines"] = (state.get("capsule_lines") or []) + [memory[:80] for _, _, memory in picks]
+        state = {}
+        if os.path.exists(ledger_path):
+            with open(ledger_path, encoding="utf-8") as fh:
+                state = json.load(fh)
+        elif not trace_id:
+            return  # nothing to record against: no capsule trace, no turn trace
+        if not trace_id:
+            # 주소 없는 서버(배포 전 사본)에서는 정렬 제안을 만들 수 없다. 새 경로가
+            # 조용히 턴 픽을 버리면 측정이 구본보다 나빠지므로 레거시 병합으로 되돌린다:
+            # 거친 all-or-none이지만 0보다는 낫다. 서버가 trace_id를 돌려주기 시작하면
+            # 이 분기는 저절로 죽는다.
+            state["memory_ids"] = list({*(state.get("memory_ids") or []),
+                                        *(memory_id for memory_id, _, _ in picks)})
+            state["capsule_lines"] = (state.get("capsule_lines") or []) + [m[:80] for _, _, m in picks]
+            state["legacy_merge_reason"] = "no trace_id from server"
+            with open(ledger_path, "w", encoding="utf-8") as fh:
+                json.dump(state, fh, ensure_ascii=False)
+            return
+        offers = state.get("offers") or []
+        known = {(o.get("id"), o.get("trace")) for o in offers if isinstance(o, dict)}
+        for memory_id, _light, memory in picks:
+            key = (memory_id, trace_id)
+            if memory_id and key not in known:
+                # 320자: 의미 판정(v3)의 문턱이 전문(60~320자) 기억으로 보정됐다.
+                # 문면 판정(6그램)은 capture 쪽에서 여전히 앞 80자만 쓴다 — 의미 불변.
+                offers.append({"id": memory_id, "probe": memory[:320], "trace": trace_id})
+                known.add(key)
+        state["offers"] = offers
+        # 레거시 필드는 세션 캡슐(합성이라 줄↔기억 대응이 없다)의 몫으로 남긴다 —
+        # 여기에 턴 픽을 섞던 것이 위양성과 오귀속의 원천이었다.
         with open(ledger_path, "w", encoding="utf-8") as fh:
             json.dump(state, fh, ensure_ascii=False)
     except Exception:

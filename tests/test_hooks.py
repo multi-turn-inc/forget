@@ -51,12 +51,13 @@ def _recall_module(monkeypatch, tmp_path, results, memories_by_id=None, calls=No
 
 
 def test_conflict_pair_uses_looser_threshold(monkeypatch, tmp_path, capsys):
-    # 0.35 clears the conflict gate (0.32) but NOT the plain gate (0.45) —
-    # the exact shape of tonight's silent-alert bug.
+    # 0.325 clears the conflict gate (0.32) but NOT the plain gate (0.33) —
+    # the exact shape of the silent-alert bug. (문턱은 2026-08-23 mpnet 보정치 —
+    # repo/배포 훅 동본화(2026-08-30)로 수치 갱신)
     results = [
-        {"id": "new-1", "score": 0.35, "memory": "정정: 발송된 적 없음",
+        {"id": "new-1", "score": 0.325, "memory": "정정: 발송된 적 없음",
          "metadata": {"supersedes": ["old-1"]}, "trust": {"light": "yellow"}},
-        {"id": "plain-1", "score": 0.35, "memory": "평범한 기억", "metadata": {}},
+        {"id": "plain-1", "score": 0.325, "memory": "평범한 기억", "metadata": {}},
     ]
     memories = {
         "old-1": {"memory": "문의 발송했음", "metadata": {}},
