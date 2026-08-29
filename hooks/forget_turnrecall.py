@@ -151,12 +151,15 @@ _STOPWORDS = {
 }
 
 
+# 토큰 단위만 — 행 단위 명령 패턴은 한 줄 프롬프트의 자연어 꼬리까지 삼켜
+# 무동작 폴백을 유발했다 (사이클 3 실측: hygiene이 항등함수였음).
 _MACHINE_SPAN_RE = re.compile(
-    r"(?m)^\s*(?:ssh|scp|curl|wget|git|rsync)\b[^\n]*"      # 명령줄 행
-    r"|\bhttps?://\S+"                                        # URL
+    r"\bhttps?://\S+"                                         # URL
+    r"|\b\w+@\d{1,3}(?:\.\d{1,3}){3}\b"                   # user@IP
     r"|\b\d{1,3}(?:\.\d{1,3}){3}\b"                        # IP
     r"|\b[0-9a-f]{12,}\b"                                     # 긴 16진
-    r"|\s-p\s+\d+\b")                                       # 포트 플래그
+    r"|(?:^|\s)-\w\s+\d+\b"                                # 플래그+숫자 (-p 54985)
+    r"|(?:^|\s)(?:ssh|scp|curl|wget|rsync)(?=\s)")            # 명령어 토큰만
 
 
 def _hygiene(prompt: str) -> str:

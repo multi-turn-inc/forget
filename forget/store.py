@@ -5323,7 +5323,7 @@ def _expand_temporal_neighbors(
     return result
 
 
-def _actr_replay(project_id: str, window: int = 50) -> dict[str, Any]:
+def _actr_replay(project_id: str, window: int = 50, as_of: str | None = None) -> dict[str, Any]:
     """트레이스 재생 → 관성 상태 (actr 원값·최근 사용·공동선택·직전 선택).
 
     실측 근거(P-M-1/P-M-2, 2026-08-29): 질의 없이 사용 통계만으로 다음 서빙
@@ -5334,11 +5334,22 @@ def _actr_replay(project_id: str, window: int = 50) -> dict[str, Any]:
     empty: dict[str, Any] = {"scores": {}, "last_used": {}, "co": {}, "current": set(), "steps": 0}
     try:
         with get_db() as conn:
-            rows = conn.execute(
-                "SELECT selected_ids FROM context_traces WHERE project_id = ?"
-                " AND selected_ids != '[]' ORDER BY created_at DESC LIMIT ?",
-                (project_id, window),
-            ).fetchall()
+            # as_of 절단 (RECALL-BENCH 사이클 3 실측): 관성 창이 라이브로만
+            # 읽히면 시간여행 검색이 «미래의 사용 상태»로 부스트를 계산한다 —
+            # 문턱 가장자리 질의가 실세션 활동에 따라 뒤집히는 사인.
+            if as_of:
+                rows = conn.execute(
+                    "SELECT selected_ids FROM context_traces WHERE project_id = ?"
+                    " AND selected_ids != '[]' AND created_at <= ?"
+                    " ORDER BY created_at DESC LIMIT ?",
+                    (project_id, as_of, window),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT selected_ids FROM context_traces WHERE project_id = ?"
+                    " AND selected_ids != '[]' ORDER BY created_at DESC LIMIT ?",
+                    (project_id, window),
+                ).fetchall()
     except sqlite3.Error:
         return empty
     scores: dict[str, float] = {}
@@ -5578,7 +5589,7 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
     # 작업 관성 채널 (P-M-2): 유사도 prefilter가 못 데려온 관성 후보를 풀에
     # 추가한다 — 스코프·문턱 검사는 아래 공용 채점 루프가 그대로 집행하므로
     # 여기서는 풀 확장만 (누수 없음). 보너스는 채점부에서 가산.
-    actr_state = _actr_replay(project_id)
+    actr_state = _actr_replay(project_id, as_of=memory_as_of or None)
     actr_scores = _actr_scores_from_state(actr_state)
     learned_boosts = _learned_inertia_boosts(actr_state) if actr_scores else {}
     if actr_scores:

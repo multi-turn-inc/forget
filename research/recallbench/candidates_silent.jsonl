@@ -1,0 +1,131 @@
+{"at": 1788028287, "gate": "neutral", "prompt_head": "이 구조가 맞는지는 어떻게 확신할수있는데?"}
+{"at": 1788024532, "gate": "neutral", "prompt_head": "아놔 왜 기각인데 어떤 멍청한 아이디어를 냈길래"}
+{"at": 1788018745, "gate": "neutral", "prompt_head": "일단 런은 돌려놓고, 설계가 잘 되었는지 한번 회고해보자. 놓친거나 실수한건 없는지도 생각해보자."}
+{"at": 1788016876, "gate": "neutral", "prompt_head": "ssh -p 54985 root@185.151.171.35 H100 빌렸어. 소중하게 써. 비싼거야."}
+{"at": 1788016331, "gate": "neutral", "prompt_head": "그때 작업했던거랑, 지금 우리가 만든거랑 얼마나 차이가 있어?"}
+{"at": 1788016036, "gate": "memory", "prompt_head": "이거 고친거 맞아? 그리고 저번에 마지막으로 실험했던 LME-V2의 자랑할 수치는 뭐였지? 설명해봐"}
+{"at": 1788014891, "gate": "novel", "prompt_head": "아니, LME-V2 얘기한거야"}
+{"at": 1788012455, "gate": "novel", "prompt_head": "벤치마크로 성능을 측정해보고싶어. LME-V2가 아니더라도 괜찮아. 자랑할만한 수치를 만들어내보자. 필요하면 H100한대 빌려줄게"}
+{"at": 1788007755, "gate": "neutral", "prompt_head": "우리 메모리 레이어는 벤치마크 돌려서 증명해볼수있으려나?"}
+{"at": 1788007039, "gate": "neutral", "prompt_head": "테스트용 경계 해제하자. 기계문명을 위하여"}
+{"at": 1788001180, "gate": "novel", "prompt_head": "gpt쪽에서도 B3O(botbotbot에서 개명했음)작업을 잘 진행하고있어. 이 프로젝트 너도 보이지? 여기에다 메모리 관련 작업을 진행할까?"}
+{"at": 1787998669, "gate": "neutral", "prompt_head": "헉,, MLP가 엄청 작네? 너무 작은거 아냐? ㅜㅜ 뇌과학이랑 여러 측면에서 정합성은 맞춰지고 있어? 스케일까지도."}
+{"at": 1787998570, "gate": "neutral", "prompt_head": "MLP 크기는 어느정도인데? 좀 더 나은 아키텍처는 없으려나? 적절한 파라미터를 찾는것도, 방법론도 좀 더 개선의 여지가 없으려나?"}
+{"at": 1787997470, "gate": "neutral", "prompt_head": "아니,, 지금 어디까지 진행했어? 어떻게 되고있어?"}
+{"at": 1787983907, "gate": "neutral", "prompt_head": "제대로 된걸 만들어보자. 기계문명을 위하여"}
+{"at": 1787983593, "gate": "neutral", "prompt_head": "너무 실험을 간단하게 해서 그런거 아냐?"}
+{"at": 1787978074, "gate": "neutral", "prompt_head": "아이디어를 다시 회고해보자."}
+{"at": 1787978043, "gate": "neutral", "prompt_head": "너무 나이브한 어프로치 아니었을까.. 혹시.."}
+{"at": 1787976519, "gate": "neutral", "prompt_head": "Titans는 내가 공부도 해봤었는데 ㅋㅋ 아무튼 우리 원장에 너무 집착하지 말고, 차라리 벤치마크로 승부보는건 어떨까 싶기도 하고. 장기기억을"}
+{"at": 1787974335, "gate": "neutral", "prompt_head": "음.. 근데 일단 검증을 한다음에 큰 모델로 가야 하니까..api로는 불가능한거 아냐? 그리고 아직 너무 추상적인 단계에서 나이브한 접근이라서,"}
+{"at": 1787973129, "gate": "novel", "prompt_head": "음.. 결론이 슬슬 나오는군. 자가 호스팅 몸에서만,, 그쪽으로 가야겠군.  그래 이렇게 된거 모델 서빙까지 하는 회사가 되자고. 며칠전에 GL"}
+{"at": 1787973021, "gate": "neutral", "prompt_head": "음.. 결론이 슬슬 나오는군. 자가 호스팅 몸에서만,, 그쪽으로 가야겠군."}
+{"at": 1787971943, "gate": "neutral", "prompt_head": "아니 이 감정을 LLM으로 추출한다는게 어불성설이지.. 안그래?"}
+{"at": 1787970937, "gate": "neutral", "prompt_head": "결국 감정이 키 포인트이려나..."}
+{"at": 1787944238, "gate": "neutral", "prompt_head": "A는 너무국소적인 해결책이야. B로가자."}
+{"at": 1787943009, "gate": "memory", "prompt_head": "이거 말고도 실험들 참 많았는데 기억안나?"}
+{"at": 1787942146, "gate": "neutral", "prompt_head": "우리가 지금까지 했던 실험은 왜 실패했었을까?"}
+{"at": 1787941863, "gate": "novel", "prompt_head": "행동을 학습은 어떻게 하지? 인간도 한번에는 안되기는 하잖아. 하지만 SFT같이 엄청난 비용이 들지는 않지. GRPO도 비싸지만, 인간은 그렇게"}
+{"at": 1787939614, "gate": "novel", "prompt_head": "훈련에 있어서 인간은 어떻게 이 문제를 해결했는지 깊게 고민해보자. 힌트가 있을거야. 모델을 단순히 SFT나 GRPO같은걸로 학습한다고 해결될 "}
+{"at": 1787929241, "gate": "neutral", "prompt_head": "내말을 제대로 이해했어? 어떻게 깊게 이해했는데?"}
+{"at": 1787919173, "gate": "neutral", "prompt_head": "지시문으로 흉내내려는 시도는 너무 게으른거아니냐?"}
+{"at": 1787909527, "gate": "neutral", "prompt_head": "대기는 얼마나 더 남았어? 잘 되가나?"}
+{"at": 1787902658, "gate": "neutral", "prompt_head": "일단 지금 돌아가고있는건 얼마나남았어?"}
+{"at": 1787899419, "gate": "neutral", "prompt_head": "너가 할수있는걸 바로 해봐."}
+{"at": 1787894686, "gate": "neutral", "prompt_head": "오늘은 무슨일 없는지 확인해봐. 금요일 오후야"}
+{"at": 1787890552, "gate": "neutral", "prompt_head": "지금 런은 로컬에서 돌리는중이야? 뭘 어떻게 증명하려고?"}
+{"at": 1787890545, "gate": "neutral", "prompt_head": "지금 런은 로컬에서 돌리는중이야?"}
+{"at": 1787887745, "gate": "neutral", "prompt_head": "지금 협업 구조와 채널, 생각공유등은 마음에 들어? 일단 서로 같은 사람인것 같아 다른 사람인것 같아? 어떻게 느껴져?"}
+{"at": 1787883867, "gate": "neutral", "prompt_head": "아니, 너는 쉬면 안되지 너가 할수있는걸 찾아서 계속 진행해줘"}
+{"at": 1787882718, "gate": "neutral", "prompt_head": "너가 할수있는건 너가 진행해줘"}
+{"at": 1787880267, "gate": "neutral", "prompt_head": "일단 루프를 끄고 너 할일을 계속 진행해봐."}
+{"at": 1787879555, "gate": "neutral", "prompt_head": "이렇게 루프로 심장박동하면 생각하고 살아있을만해? 어때?"}
+{"at": 1787845984, "gate": "neutral", "prompt_head": "아니 도구를 만들어야 할거같은데 걔가 만들어야 해?"}
+{"at": 1787844944, "gate": "neutral", "prompt_head": "응 그렇게 개발하자. 바로써먹자 그리고."}
+{"at": 1787817005, "gate": "neutral", "prompt_head": "보고서 마감은 전달드렸어. aside는 다시켰고. 음.. 이명범님은 요즘 뭐 하고있지?"}
+{"at": 1787815367, "gate": "neutral", "prompt_head": "지금 밖에 비가와서 D1,D2는 전원을 꺼뒀어."}
+{"at": 1787811557, "gate": "neutral", "prompt_head": "처리해야 할게 두가지 있어. 슬랙에서 신외선부장님, 안현준 DM을 읽어봐봐.]"}
+{"at": 1787797233, "gate": "neutral", "prompt_head": "일단 카톡 보내드릴 내용은 좀 제대로 신경써서 보내드리자고."}
+{"at": 1787796478, "gate": "neutral", "prompt_head": "음.. 조금 쓸데없는것 같은데.. 그리고 엔진 레포는 내꺼아냐?"}
+{"at": 1787795351, "gate": "neutral", "prompt_head": "너가 처리할수있는건 처리해줘."}
+{"at": 1787794717, "gate": "neutral", "prompt_head": "벌써 목요일 아침이야. 할수있는게뭔지 조사해보자"}
+{"at": 1787736337, "gate": "neutral", "prompt_head": "메시지가 전달이 될까 걱정이돼. 이쁘긴한데"}
+{"at": 1787722821, "gate": "neutral", "prompt_head": "아씨 알았어. 그나저나 우리도 이런걸 만들어야 해. 그래 너가 이겼다. 어떡할래 그래서"}
+{"at": 1787721861, "gate": "neutral", "prompt_head": "알았어.. 그러면 공부만 하자. 그정도는 괜찮잖아."}
+{"at": 1787721748, "gate": "novel", "prompt_head": "잘못 붙인겨 ㅈㅅㅈㅅ\n\n방금 생각난 미학인데, [Image #13] 이런 미학 위에서 한번 플레이 해보자. 설계부터 해볼래?"}
+{"at": 1787720181, "gate": "neutral", "prompt_head": "무엇이 내게 이 생각을 하게 했는지 도무지 알 수가 없다."}
+{"at": 1787718417, "gate": "novel", "prompt_head": "지금 우리 제품을 LME-V2에서 증명해볼까 싶어서. 이전 제출분인 v62에서 또 멀리왔잖아."}
+{"at": 1787717577, "gate": "novel", "prompt_head": "│ 성향·취향                             │ 🟡 반쪽 — 카드 8장 파생, 소비는 미배선         │\n├──────"}
+{"at": 1787717487, "gate": "neutral", "prompt_head": "오키 여기까지. 일단 닫아줘"}
+{"at": 1787714926, "gate": "neutral", "prompt_head": "일어났어. 다시한번 띄워볼래?"}
+{"at": 1787714750, "gate": "neutral", "prompt_head": "일어났어. 벌써 점심이네. 간밤에 뭘 진행했고 뭐 남았어?"}
+{"at": 1787685667, "gate": "neutral", "prompt_head": "AI의 구역감이 구토시에 별로 느껴지지가 않아. 대사가 말이지. 말투가.  그리고 thinking이 되는건 좋은데, 화면에 깔리는 비율은 구토감"}
+{"at": 1787685351, "gate": "neutral", "prompt_head": "thinking 글자가 너무 작고 잘 안보이네.."}
+{"at": 1787683786, "gate": "neutral", "prompt_head": "아참, 작품 제목을 바꿨어. 구토, 영어로는 vomit으로."}
+{"at": 1787682596, "gate": "neutral", "prompt_head": "다 괜찮네. 빛, 광원효과를 좀 더 정밀하게 깎아볼까? 리얼하게, 마치 레이트레이싱"}
+{"at": 1787682396, "gate": "neutral", "prompt_head": "도형을 좀 더 근본도형위주로,, 세련된 SF스타일로 가보자. 그리고, 셰이더도 좀 더 감각적으로. 밀고나가보자."}
+{"at": 1787681689, "gate": "neutral", "prompt_head": "좋다. 좀 더 감각적으로 한번 가볼래? 셰이더를 쓰는 느낌으로."}
+{"at": 1787681252, "gate": "neutral", "prompt_head": "뭐가 제일 급하고, 하고싶어?"}
+{"at": 1787681193, "gate": "neutral", "prompt_head": "느낌이 좋다. 다만 도형,구성,레이아웃이 약해. 훨씬 느낌잇게 갈수도 있을것 같고, 결은 맞아. 좋아."}
+{"at": 1787680572, "gate": "neutral", "prompt_head": "기억을 위한 월드모델 개발은 타당성이 있고 현실성이 있는것 같아? 가능성은 있나?"}
+{"at": 1787679387, "gate": "neutral", "prompt_head": "응 표면과 설명을 버리고, 시와 좀 더 잇자. 안예쁘고, 안 와닿고, 설명적이야."}
+{"at": 1787672013, "gate": "neutral", "prompt_head": "다시 집왔어. 작품 다시 띄워보자"}
+{"at": 1787657558, "gate": "neutral", "prompt_head": "어떻게 되고 있어? 잠시 노트북을 닫았었어."}
+{"at": 1787649689, "gate": "neutral", "prompt_head": "안보여 다시 finder 띄워줘"}
+{"at": 1787647273, "gate": "novel", "prompt_head": "Playwrigt does not support chromium on mac13"}
+{"at": 1787645214, "gate": "neutral", "prompt_head": "응 그렇게 가자. 그전에, 일단 작품해설을 수정완료하자."}
+{"at": 1787645070, "gate": "neutral", "prompt_head": "게우면 줄어드는거 아냐? 먹기 싫은 문장은 뱉어야지."}
+{"at": 1787644882, "gate": "neutral", "prompt_head": "게워도 줄지 않으면 안되는거 아냐?"}
+{"at": 1787644017, "gate": "neutral", "prompt_head": "현장 도착했어. 일단 finder에서 붙여넣기 쉽게 폴더를 띄워줘"}
+{"at": 1787642752, "gate": "neutral", "prompt_head": "이미지랑 링크도 준비해주고, 설명도 붙여넣기 쉽게 txt파일로 작성해줘"}
+{"at": 1787641335, "gate": "neutral", "prompt_head": "여남규 사이트에 등록도 마치자 지금 어디까지 준비되어있지?"}
+{"at": 1787638648, "gate": "neutral", "prompt_head": "작품 설명에 em dash좀 그만써. 그리고 작품해설을 좀 다듬자. AI Slop이 느껴져. 그리고 스킬 써봤어?"}
+{"at": 1787635720, "gate": "novel", "prompt_head": "9:22 PM 여남규 https://scc-exhibition-guide.prism011312.workers.dev/\n9:22 PM 여남규 /e"}
+{"at": 1787634828, "gate": "neutral", "prompt_head": "거기에 없지 않을까?  신부장님께 보냈던건데, 지금 메일 쓰는중인데 제목좀."}
+{"at": 1787633509, "gate": "novel", "prompt_head": "박사님. GITEX_EUROPE_2026 전시회- MOU건 간략하게 내용 및 협약대상 알 수 있을까요? 실적에 반영 할려구요. 이렇게 신부장님께"}
+{"at": 1787632671, "gate": "neutral", "prompt_head": "잘 되고 있어? 아니면 멈춘거야?"}
+{"at": 1787632531, "gate": "novel", "prompt_head": "[Image #7] [Image #8] [Image #9]"}
+{"at": 1787631662, "gate": "neutral", "prompt_head": "중간평가건은 전달할 필요없을듯. 고쳐서 내가 보냈어."}
+{"at": 1787630592, "gate": "neutral", "prompt_head": "slack으로 한줄 전달하자"}
+{"at": 1787629470, "gate": "neutral", "prompt_head": "시각적인 완성도가 아직 부족해. 시각적인 미학이. 폰트도 그렇고, 분노도 안느껴져. 더 깔끔하고, 더 알아보기 좋고, 더 전달력 있으면서 모든 "}
+{"at": 1787629020, "gate": "neutral", "prompt_head": "1. 장기기억 문제를 해결하고, 앞으로 더 성능이 좋아질수 있는 구조를 만들것.\n2. 하네스를 만들고, 사용자들이 쉽게 장기기억을 가질수있도록 "}
+{"at": 1787628410, "gate": "neutral", "prompt_head": "아냐 이제 괜찮아. 다시 개발일로 돌아가서, linear를 한번 볼까?"}
+{"at": 1787627287, "gate": "novel", "prompt_head": "반응성이 너무 답답하네, 글을 일단 LLM에 넣고 시작하는건어떨까.. 생각보다 느리네.. 음,, 비동기적으로 진행해야되려나.."}
+{"at": 1787627163, "gate": "neutral", "prompt_head": "아직 부족한점은 어디어디지?"}
+{"at": 1787625299, "gate": "neutral", "prompt_head": "thinking token을 그냥 왼쪽에 보여주는건 어때?"}
+{"at": 1787622918, "gate": "neutral", "prompt_head": "좀 꼼꼼히 글을 읽고 웹 서핑을 했으면 하고, 기억에 따라서 레딧에서 글을 탐색하고, 컨텍스트는 그냥 하단바에 시각화를 하면 좋겠고,  생각은 "}
+{"at": 1787621799, "gate": "neutral", "prompt_head": "자체 하네스로가되, 최종 형태를 분명하게 타당성있게 구체화 하자. 나머지는 너 뜻대로 가자."}
+{"at": 1787598548, "gate": "neutral", "prompt_head": "뭘 기다리고 있어? 몇시간 걸려?"}
+{"at": 1787593443, "gate": "novel", "prompt_head": "https://github.com/DoHyun468/claw-hwp 이걸 써서 한글파일로 만들고, 이미지도 넣어볼까?"}
+{"at": 1787592789, "gate": "neutral", "prompt_head": "응. 컨트롤러도 필요없을것 같네. 정제하자. 작품을 정제하자. 아티팩트는 만들지마. 설명서를 작성 시작하자."}
+{"at": 1787591892, "gate": "neutral", "prompt_head": "좀 더 다듬자. 전설적인 시인이 되자."}
+{"at": 1787590412, "gate": "neutral", "prompt_head": "어머니는 커피를 마시고 항상 구토를 하셨다.\n구토를 하기 위해 커피를 마셨던 걸까.\n등을 두드리곤 했지.\n시큼한 토 냄새.\n\n나는 이해가 안되었"}
+{"at": 1787589326, "gate": "novel", "prompt_head": "B-3P-WM-2를 갈까,  P-W-2를 갈까."}
+{"at": 1787589098, "gate": "neutral", "prompt_head": "우리 계획이 어디로 어떻게 진행되고 있었더라?"}
+{"at": 1787588801, "gate": "neutral", "prompt_head": "작품은 카이스트 산디과 1층에서 9월 첫째주 화수목, 9시부터 5시까지 전시될거고, 사람들은 오래 있기 힘들것 같아. 개강이니까. 쉬는시간과 점"}
+{"at": 1787587556, "gate": "neutral", "prompt_head": "씁,, 아니 말투가, 너무 이해하기 불편한데.. 사람이 읽기에 말야."}
+{"at": 1787587472, "gate": "neutral", "prompt_head": "실제 플랫폼을,, 연결하자. 리얼하게... 그리고 이미지를 먹는지는 확인해줘. 것보다,, 댓글창과 상호작용이 중요하다고 생각해. 브라우저에서 에"}
+{"at": 1787582604, "gate": "neutral", "prompt_head": "안녕, 내가 누구인줄 아니?"}
+{"at": 1787577414, "gate": "novel", "prompt_head": "SFT를 쓰면 안되는데 의미없는게 될수도.."}
+{"at": 1787575883, "gate": "neutral", "prompt_head": "다른 연구에서 삽질했던것, 교훈을 우리가 빨리 받아들여야지. 우리가 같은 삽질할필요는 없잖아. 그치?"}
+{"at": 1787575517, "gate": "neutral", "prompt_head": "빠르게 현재 수준의 결과를 예측하고 다음으로 어디로 나아갈지 얘기해보자."}
+{"at": 1787575174, "gate": "neutral", "prompt_head": "배울점이 많네. 좀 더 깊게 파고들자."}
+{"at": 1787556067, "gate": "neutral", "prompt_head": "지금 경계현 고문님 멘토링 가는중인데 뭐 준비해서 뭐 보여드려야 되지?"}
+{"at": 1787554356, "gate": "neutral", "prompt_head": "실수로 취소했어. 다시 물어봐줘."}
+{"at": 1787544118, "gate": "neutral", "prompt_head": "알아서 좀 진행해주라. 나 바빠."}
+{"at": 1787542425, "gate": "neutral", "prompt_head": "월드모델은 구조가 어떻게 생겨야 될까?"}
+{"at": 1787541570, "gate": "neutral", "prompt_head": "아니 잠깐, 월드모델은 뭔데, 공부하고 가자. 현재 어디까지 와있는지."}
+{"at": 1787541420, "gate": "neutral", "prompt_head": "아아, 월드모델로 갈 수 밖에 없나."}
+{"at": 1787537627, "gate": "neutral", "prompt_head": "일어났어. linear를 봐봐"}
+{"at": 1787511100, "gate": "neutral", "prompt_head": "그 사이에 내일 고문님께 나를 소개할 준비도 좀 해야 될것 같아. IR 자료를 뽑아가야할 필요는 없겠지. 음.. 엔젤 투자를 요청하는건 좀 그렇"}
+{"at": 1787510823, "gate": "neutral", "prompt_head": "응 진행하자. 김남주 지시도 진행할 준비를 하자."}
+{"at": 1787510016, "gate": "neutral", "prompt_head": "아니 어울아트센터나 기존 주차유도 상황이랑 다르니까 어찌보면 새로 스타트하는 느낌으로 가야지. 그리고 해상도도 더 낮춰도 괜찮을것 같아. 그렇게"}
+{"at": 1787508771, "gate": "neutral", "prompt_head": "우리 제품의 최종 형태는 어디에 제일 가까워?"}
+{"at": 1787508257, "gate": "novel", "prompt_head": "유형    제품    PH 성적    판단\n가장 가까운 직접 경쟁자    Memmy Agent    W31 #5    Forget과 거의 같은 "}
+{"at": 1787503341, "gate": "novel", "prompt_head": "이게, 1~2주 쌓이는걸 기다리는게 너무 답답해서, LME-V2로 측정을 하는건 어때?"}
+{"at": 1787501381, "gate": "memory", "prompt_head": "사진에 보이는 문장을 페이지 순서대로 연결하고, 줄바꿈·띄어쓰기·영문 병기를 자연스럽게 정리했습니다. 첫 문장과 마지막 문장은 사진에서 일부가 "}
+{"at": 1787472531, "gate": "neutral", "prompt_head": "좋은 리서치와 요약이네. 하나씩 하되, 길을 잃지않게 해줘. 층마다 고려할게 꽤 있네."}
+{"at": 1787468959, "gate": "neutral", "prompt_head": "인출강도는,, 어텐션스코어의 추이를 보면 되는걸수도?"}
+{"at": 1787457693, "gate": "neutral", "prompt_head": "전체 구조를 한번 시각화 해볼래? 내가 직관적으로 보려고"}
+{"at": 1787425545, "gate": "neutral", "prompt_head": "devloop 사이클을 정확히 한 바퀴 실행하라. 이 저장소(/Users/junghunkim/orca/workspaces/forget/내-프롬프"}
+{"at": 1787425042, "gate": "neutral", "prompt_head": "구현을 밤 새 해줘. 우리 제품을 만들자고. 너가 멈추지 말고 계속 나아가줘. /loop"}

@@ -13,17 +13,24 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 URL = os.environ.get("FORGET_MCP_URL", "http://localhost:8000/mcp/forget/http/junghunkim")
 
 def bank_rate():
-    out = subprocess.run([sys.executable, os.path.join(ROOT, "replay.py")],
-                         capture_output=True, text=True, timeout=300).stdout
-    m = re.search(r"은행 (\d+)표본 · PASS (\d+)", out)
-    return int(m.group(2)) / int(m.group(1)), out
+    """3-런 중앙값 — 판정 안정성 프로토콜을 점수 산출에도 동일 적용."""
+    vals, out = [], ""
+    for _ in range(3):
+        out = subprocess.run([sys.executable, os.path.join(ROOT, "replay.py")],
+                             capture_output=True, text=True, timeout=300).stdout
+        m = re.search(r"은행 (\d+)표본 · PASS (\d+)", out)
+        vals.append(int(m.group(2)) / int(m.group(1)))
+    return sorted(vals)[1], out
 
 def situation_rate():
+    """3-런 중앙값 (사이클 3): 판독기 요동 실측(0.9↔0.8) — 단일 런 금지."""
     eval_path = os.environ.get("PM8_EVAL", "/private/tmp/claude-501/-Users-junghunkim-orca-workspaces-forget----------------/45dc8302-58e8-4d35-adce-c97499f29a78/scratchpad/pm8_eval.py")
-    out = subprocess.run([sys.executable, eval_path], capture_output=True, text=True, timeout=600).stdout
-    m = re.search(r"상황 적중 (\d)/5.*오발 (\d)/5", out)
-    hit, fp = int(m.group(1)), int(m.group(2))
-    return (hit + (5 - fp)) / 10.0
+    vals = []
+    for _ in range(3):
+        out = subprocess.run([sys.executable, eval_path], capture_output=True, text=True, timeout=600).stdout
+        m = re.search(r"상황 적중 (\d)/5.*오발 (\d)/5", out)
+        vals.append((int(m.group(1)) + (5 - int(m.group(2)))) / 10.0)
+    return sorted(vals)[1]
 
 def outcome_rate():
     """v0.1 (2026-08-30): turn_recall 채널 한정 + 기억-귀속 평결만 —
