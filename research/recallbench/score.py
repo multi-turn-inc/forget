@@ -41,24 +41,26 @@ def outcome_rate():
     return helped / len(rows)
 
 def main():
+    # v0.2 (2026-08-30, 정훈: «라벨은 쓰지마»): outcome 라벨 축 폐기 —
+    # context_outcomes는 라벨러의 성격을 재는 수치였다(정의 2회 요동이 자백).
+    # 점수는 행동-결합 축만: bank(세계가 채점한 실전 사고의 재생) +
+    # situation(고정 계약 세트). 실사용 앵커는 점수 밖 — P-V-1 정정 빈도(행동)
+    # 와 향후 ε-보류 개입(헌장이 승인한 유일한 인과 라벨).
     bank, bank_out = bank_rate()
     situ = situation_rate()
-    outc = outcome_rate()
-    comps = {"bank": round(bank, 3), "situation": round(situ, 3),
-             "outcome": round(outc, 3) if outc is not None else None}
-    used = [v for v in comps.values() if v is not None]
-    mus = round(sum(used) / len(used), 3)
-    print(f"MUS v0.1 = {mus}  {comps}")
-    text = (f"MUS v0.1 스냅샷: {mus} — bank {comps['bank']} · situation {comps['situation']}"
-            f" · outcome {comps['outcome']} (정의: docs/recallbench.md, 산출: score.py)")
+    comps = {"bank": round(bank, 3), "situation": round(situ, 3)}
+    mus = round(sum(comps.values()) / len(comps), 3)
+    print(f"MUS v0.2 = {mus}  {comps}")
+    text = (f"MUS v0.2 스냅샷: {mus} — bank {comps['bank']} · situation {comps['situation']}"
+            f" (라벨 축 폐기 — 정의: docs/recallbench.md)")
     req = urllib.request.Request(URL, data=json.dumps({
         "jsonrpc": "2.0", "id": 1, "method": "tools/call",
         "params": {"name": "add_memory", "arguments": {
             "text": text, "user_id": "junghunkim",
-            "metadata": {"series": "recallbench.mus2"}}}}).encode(),
+            "metadata": {"series": "recallbench.mus3"}}}}).encode(),
         headers={"Content-Type": "application/json"})
     urllib.request.urlopen(req, timeout=15).read()
-    print("스냅샷 기록 (series=recallbench.mus2 — 시계열 승계 자동)")
+    print("스냅샷 기록 (series=recallbench.mus3 — 시계열 승계 자동)")
 
 if __name__ == "__main__":
     main()
