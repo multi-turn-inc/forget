@@ -24,4 +24,11 @@ cd "$REPO" || { echo "$STAMP FAIL no-repo" >> "$LOG"; exit 0; }
 OUT="$("$REPO/.venv/bin/python" -m forget.consolidation_cycle --live --apply --yes --max-days 3 2>&1)"
 CODE=$?
 echo "$STAMP EXIT=$CODE $(printf '%s' "$OUT" | tail -c 300 | tr '\n' ' ')" >> "$LOG"
+
+# 2단: 사다리 컴파일러 정기 실행 (§4.14) — 판결된 군집의 재성장만 자동 강등
+# (결정론 — 과거 배치 멤버십), 신규 군집은 ~/.forget/compile_proposals/ 제안
+# 큐로 게이트 대기. 가역: compile_ledgers/ 원장 + revert_compile.
+COUT="$("$REPO/.venv/bin/python" -m forget.compiler --scheduled 2>&1)"
+CCODE=$?
+echo "$STAMP COMPILER EXIT=$CCODE $(printf '%s' "$COUT" | tail -c 300 | tr '\n' ' ')" >> "$LOG"
 exit 0

@@ -79,3 +79,37 @@ def test_revert_leaves_foreign_touches_alone(tmp_path):
     out = revert_compile(db, ledger, "b1")
     assert out["restored"] == 1                                 # a2만 — a1은 불가침
     assert _meta(db)["a1"]["sank_by"] == "someone-else"
+
+
+def test_scheduled_run_auto_demotes_regrowth_only(tmp_path):
+    # a군집 = 과거 배치가 판결한 군집의 재성장(a1이 compiler 강등 이력 보유)
+    # b군집 = 신규 → 제안 큐만, 집행 없음
+    db = _db(tmp_path, [
+        ("a1", "2026-08-26T00:00:00Z",
+         '{"sank_by": "compiler:b-old", "superseded_by": "a0", "compiled_form": "rule"}'),
+        ("a2", "2026-08-28T00:00:00Z", "{}"),
+        ("a3", "2026-08-29T00:00:00Z", "{}"),
+        ("b1", "2026-08-26T00:00:00Z", "{}"),
+        ("b2", "2026-08-27T00:00:00Z", "{}"),
+    ])
+    report = [
+        {"form": "other", "via": "llm-gate", "size": 3, "days": 3,
+         "span": "s", "representative": "r", "member_ids": ["a1", "a2", "a3"]},
+        {"form": "fact", "via": "llm-gate", "size": 2, "days": 2,
+         "span": "s", "representative": "r", "member_ids": ["b1", "b2"]},
+    ]
+    ledger = str(tmp_path / "l.jsonl")
+    proposals = str(tmp_path / "p.json")
+    out = __import__("forget.compiler", fromlist=["scheduled_run"]).scheduled_run(
+        db, "u", ledger, proposals, "nightly-t", report=report)
+    # 재성장: a2 강등(a3 정본), a1은 기존 침강 유지(skip). LLM의 other 라벨은
+    # 무시되고 판결(rule)이 승계 — 자동 집행의 근거는 결정론뿐.
+    assert out["regrowth_clusters"] == 1 and out["demoted"] == 1
+    assert out["proposals"] == 1
+    meta = _meta(db)
+    assert meta["a2"]["superseded_by"] == "a3"
+    assert meta["a2"]["compiled_form"] == "rule"
+    assert meta["a1"]["sank_by"] == "compiler:b-old"            # 불가침
+    assert "superseded_by" not in meta["b1"]                    # 신규는 무접촉
+    prop = json.load(open(proposals))
+    assert prop["proposals"][0]["member_ids"] == ["b1", "b2"]

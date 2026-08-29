@@ -331,3 +331,81 @@ def revert_compile(db_path: str, ledger_path: str, batch_id: str) -> dict[str, A
     finally:
         conn.close()
     return {"batch": batch_id, "restored": restored}
+
+
+# ── 정기 실행 (응고 주기 편입, 2026-08-29) ────────────────────────────────
+# 자동/게이트의 경계가 헌법: **이미 판결된 군집의 재성장만 자동 강등**하고
+# (판결 증거 = 과거 compiler 배치가 강등한 멤버의 존재 — 결정론, LLM 불요),
+# 신규 군집은 제안 큐로 게이트 대기. 게이트 라벨(27B/승급 모델)은 제안서의
+# 자문 정보이지 집행 근거가 아니다 — P-C-1c 교훈(의미 판단이 필요 없는
+# 자리에 LLM을 세우지 마라)의 역방향 적용.
+
+
+def _prior_verdicts(conn: sqlite3.Connection, member_ids: list[str]) -> dict[str, Any] | None:
+    """군집 멤버 중 과거 compiler 배치가 강등한 행 → 판결(형태) 회수."""
+    rows = conn.execute(
+        "SELECT metadata FROM memories WHERE id IN ({})".format(
+            ",".join("?" for _ in member_ids)), member_ids).fetchall()
+    for row in rows:
+        meta = json.loads(row["metadata"] or "{}")
+        if str(meta.get("sank_by") or "").startswith("compiler:"):
+            return {"form": meta.get("compiled_form") or "fact",
+                    "batch": meta["sank_by"]}
+    return None
+
+
+def scheduled_run(db_path: str, user_id: str, ledger_path: str,
+                  proposals_path: str, batch_id: str,
+                  report: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """야간 정기 실행 — 재성장 자동 강등 + 신규 제안 큐."""
+    if report is None:
+        report = dry_run(db_path, user_id)["report"]
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    auto, proposals = [], []
+    try:
+        for cluster in report:
+            verdict = _prior_verdicts(conn, cluster["member_ids"])
+            if verdict:
+                auto.append({**cluster, "form": verdict["form"],
+                             "verdict_source": verdict["batch"]})
+            elif cluster.get("form") in COMPILE_FORMS:
+                proposals.append({k: cluster[k] for k in
+                                  ("form", "via", "size", "days", "span",
+                                   "representative", "member_ids")})
+    finally:
+        conn.close()
+    executed = execute_compile(db_path, auto, ledger_path, batch_id) if auto \
+        else {"batch": batch_id, "demoted": 0, "skipped": 0, "clusters": 0}
+    if proposals:
+        with open(proposals_path, "w", encoding="utf-8") as fh:
+            json.dump({"batch": batch_id, "proposals": proposals}, fh,
+                      ensure_ascii=False, indent=1)
+    return {"batch": batch_id, "regrowth_clusters": len(auto),
+            "demoted": executed["demoted"], "skipped": executed["skipped"],
+            "proposals": len(proposals)}
+
+
+def _scheduled_main() -> None:
+    import argparse
+    from datetime import datetime, timezone
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--scheduled", action="store_true", required=True)
+    parser.add_argument("--db", default=_os.path.expanduser("~/.forget/forget.sqlite3"))
+    parser.add_argument("--user", default="junghunkim")
+    args = parser.parse_args()
+    day = datetime.now(timezone.utc).strftime("%Y%m%d")
+    batch_id = f"nightly-{day}"
+    ledger_dir = _os.path.expanduser("~/.forget/compile_ledgers")
+    proposals_dir = _os.path.expanduser("~/.forget/compile_proposals")
+    _os.makedirs(ledger_dir, exist_ok=True)
+    _os.makedirs(proposals_dir, exist_ok=True)
+    out = scheduled_run(args.db, args.user,
+                        f"{ledger_dir}/{batch_id}.jsonl",
+                        f"{proposals_dir}/{batch_id}.json", batch_id)
+    print(json.dumps(out, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    _scheduled_main()
