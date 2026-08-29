@@ -3,6 +3,7 @@ from __future__ import annotations
 import difflib
 import hashlib
 import hmac
+import math
 import importlib.util
 import os
 import re
@@ -5310,6 +5311,7 @@ def _actr_replay(project_id: str, window: int = 50) -> dict[str, Any]:
     scores: dict[str, float] = {}
     last_used: dict[str, int] = {}
     co: dict[str, dict[str, int]] = {}
+    events: dict[str, list[int]] = {}
     chosen: set[str] = set()
     step = -1
     for step, row in enumerate(reversed(rows)):  # 오래된 것부터 — 감쇠가 시간 순서를 존중
@@ -5323,6 +5325,7 @@ def _actr_replay(project_id: str, window: int = 50) -> dict[str, Any]:
         for mid in chosen:
             scores[mid] = scores.get(mid, 0.0) * 0.9 + 1.0
             last_used[mid] = step
+            events.setdefault(mid, []).append(step)
             bucket = co.setdefault(mid, {})
             for other in chosen:
                 if other != mid:
@@ -5331,7 +5334,7 @@ def _actr_replay(project_id: str, window: int = 50) -> dict[str, Any]:
             if mid not in chosen:
                 scores[mid] *= 0.97
     return {"scores": scores, "last_used": last_used, "co": co,
-            "current": chosen, "steps": step + 1}
+            "events": events, "current": chosen, "steps": step + 1}
 
 
 def _actr_inertia_scores(project_id: str, window: int = 50) -> dict[str, float]:
@@ -5351,24 +5354,34 @@ _learned_ranker_cache: dict[str, Any] = {"key": None, "weights": None}
 
 
 def _load_learned_ranker() -> dict[str, Any] | None:
-    """P-M-4 증류 가중치 로드 (mtime 캐시). 없으면 None → 손-공식 폴백."""
-    path = os.environ.get("FORGET_LEARNED_RANKER") or os.path.expanduser(
-        "~/.forget/learned_ranker_v1.json")
-    try:
-        mtime = os.stat(path).st_mtime
-    except OSError:
-        return None
-    key = (path, mtime)
-    if _learned_ranker_cache["key"] == key:
-        return _learned_ranker_cache["weights"]
-    try:
-        with open(path, encoding="utf-8") as fh:
-            weights = json_loads(fh.read())
-        assert all(k in weights for k in ("w1", "b1", "w2", "b2", "feature_mask"))
-    except (OSError, ValueError, TypeError, AssertionError):
-        return None
-    _learned_ranker_cache.update(key=key, weights=weights)
-    return weights
+    """증류 가중치 로드 (mtime 캐시) — 롤백 사다리가 계약.
+
+    v2(P-M-6 감쇠 은행) → v1(P-M-4 MLP) → None(손-공식) 순서로 탐색.
+    v2 파일 삭제 = v1 복귀, 둘 다 삭제 = 손-공식 — 파일 조작만으로 원복.
+    """
+    env = os.environ.get("FORGET_LEARNED_RANKER")
+    paths = [env] if env else [os.path.expanduser("~/.forget/learned_ranker_v2.json"),
+                               os.path.expanduser("~/.forget/learned_ranker_v1.json")]
+    for path in paths:
+        try:
+            mtime = os.stat(path).st_mtime
+        except OSError:
+            continue
+        key = (path, mtime)
+        if _learned_ranker_cache["key"] == key:
+            return _learned_ranker_cache["weights"]
+        try:
+            with open(path, encoding="utf-8") as fh:
+                weights = json_loads(fh.read())
+            if str(weights.get("version") or "").startswith("pm6-decay-bank"):
+                assert all(k in weights for k in ("a1", "a2", "w1", "b1", "w2", "b2"))
+            else:
+                assert all(k in weights for k in ("w1", "b1", "w2", "b2", "feature_mask"))
+        except (OSError, ValueError, TypeError, AssertionError):
+            continue
+        _learned_ranker_cache.update(key=key, weights=weights)
+        return weights
+    return None
 
 
 def _learned_inertia_boosts(state: dict[str, Any]) -> dict[str, float]:
@@ -5383,6 +5396,8 @@ def _learned_inertia_boosts(state: dict[str, Any]) -> dict[str, float]:
     scores = state.get("scores") or {}
     if not weights or not scores:
         return {}
+    if str(weights.get("version") or "").startswith("pm6-decay-bank"):
+        return _decay_bank_boosts(weights, state)
     amax = max(scores.values()) or 1.0
     t_last = state["steps"] - 1
     current = state["current"]
@@ -5401,6 +5416,53 @@ def _learned_inertia_boosts(state: dict[str, Any]) -> dict[str, float]:
             1.0 if mid in current else 0.0,
         ]
         feats = [f * m for f, m in zip(feats, mask)]
+        hidden = [max(0.0, sum(w * f for w, f in zip(row, feats)) + b)
+                  for row, b in zip(w1, b1)]
+        raw[mid] = sum(w * h for w, h in zip(w2[0], hidden)) + b2[0]
+    lo, hi = min(raw.values()), max(raw.values())
+    if hi - lo < 1e-9:
+        return {mid: 1.0 for mid in raw}
+    return {mid: (v - lo) / (hi - lo) for mid, v in raw.items()}
+
+
+def _decay_bank_boosts(weights: dict[str, Any], state: dict[str, Any]) -> dict[str, float]:
+    """P-M-6 감쇠 은행 (§15~16) — 학습된 다중 시간척도 감쇠의 닫힌꼴 forward.
+
+    기억별 상태_c = Σ_j a1_c^(이후 선택 수) · a2_c^(이후 부재 스텝 수) —
+    선택 이력만으로 계산(BPTT 불요). 훈련(pm6_arms.py DecayBank)과 자구
+    일치가 계약: 채널별 스텝-내 최대 정규화 + [co_norm, in_current] 부가
+    피처 + MLP 판독. 공시된 불일치: 훈련 정규화 분모는 top-40 풀,
+    서빙은 관성 전집합 (v1의 min-max와 같은 계급의 어긋남).
+    """
+    scores = state.get("scores") or {}
+    events = state.get("events") or {}
+    a1, a2 = weights["a1"], weights["a2"]
+    w1, b1, w2, b2 = weights["w1"], weights["b1"], weights["w2"], weights["b2"]
+    hist_window = int(weights.get("hist_window") or 20)
+    n_bank = len(a1)
+    t_last = state["steps"] - 1
+    current = state["current"]
+    co = state["co"]
+    log_a1 = [math.log(max(a, 1e-6)) for a in a1]
+    log_a2 = [math.log(max(a, 1e-6)) for a in a2]
+    bank: dict[str, list[float]] = {}
+    for mid in scores:
+        ev = (events.get(mid) or [])[-hist_window:]
+        k = len(ev)
+        states = [0.0] * n_bank
+        for j, tj in enumerate(ev):
+            p = k - 1 - j
+            q = max(0, (t_last - tj) - p)
+            for c in range(n_bank):
+                states[c] += math.exp(p * log_a1[c] + q * log_a2[c])
+        bank[mid] = states
+    ch_max = [max((bank[mid][c] for mid in bank), default=0.0) + 1e-6
+              for c in range(n_bank)]
+    raw: dict[str, float] = {}
+    for mid, states in bank.items():
+        co_s = sum(co.get(c, {}).get(mid, 0) for c in current)
+        feats = [s / m for s, m in zip(states, ch_max)]
+        feats += [min(1.0, co_s / 10.0), 1.0 if mid in current else 0.0]
         hidden = [max(0.0, sum(w * f for w, f in zip(row, feats)) + b)
                   for row, b in zip(w1, b1)]
         raw[mid] = sum(w * h for w, h in zip(w2[0], hidden)) + b2[0]

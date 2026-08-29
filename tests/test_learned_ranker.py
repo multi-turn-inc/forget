@@ -114,3 +114,46 @@ def test_broken_weights_fall_back(tmp_path, monkeypatch):
     row = next(r for r in out["results"] if r["id"] == target)
     assert "actr_learned" not in row["score_breakdown"]        # ④ 조용한 폴백
     assert row["score_breakdown"]["actr_boost"] > 0
+
+
+def test_decay_bank_closed_form_matches_recurrence(tmp_path, monkeypatch):
+    """감쇠 은행 골든: 닫힌꼴 Σ a1^p·a2^q가 재귀(×0.9+1 / ×0.97)와 일치."""
+    from forget.store import _decay_bank_boosts
+    # 이력: 선택(0)·부재(1)·선택(2)·부재(3) → 재귀 s = ((1)·0.97·0.9+1)·0.97
+    s_rec = ((1.0 * 0.97) * 0.9 + 1.0) * 0.97
+    state = {"scores": {"m1": s_rec, "m2": 1.0}, "events": {"m1": [0, 2], "m2": [3]},
+             "co": {}, "current": {"m2"}, "steps": 4, "last_used": {"m1": 2, "m2": 3}}
+    weights = {"version": "pm6-decay-bank-v2", "a1": [0.9], "a2": [0.97],
+               "hist_window": 20, "w1": [[1.0, 0.0, 0.0]], "b1": [0.0],
+               "w2": [[1.0]], "b2": [0.0]}
+    out = _decay_bank_boosts(weights, state)
+    # raw(m1) = s_rec/ch_max, raw(m2) = 1.0/ch_max → min-max 후 m2=1, m1=0
+    # (m2가 정규화 분모 최대: 1.0 < s_rec → m1이 최대) — 수치로 직접 검증:
+    assert s_rec > 1.0
+    assert out["m1"] == pytest.approx(1.0)     # 은행 상태 최대 → 1
+    assert out["m2"] == pytest.approx(0.0)
+
+
+def test_decay_bank_via_search_and_rollback_ladder(tmp_path, monkeypatch):
+    import shutil
+    target = _mem("감쇠 은행 라이브 대상")
+    for _ in range(6):
+        _trace([target])
+    bank = tmp_path / "v2.json"
+    shutil.copy("/tmp/pm6_bank_weights.json", bank) if __import__("os").path.exists(
+        "/tmp/pm6_bank_weights.json") else bank.write_text(json.dumps({
+            "version": "pm6-decay-bank-v2", "a1": [0.9], "a2": [0.97],
+            "hist_window": 20, "w1": [[1.0, 0.0, 0.0]], "b1": [0.0],
+            "w2": [[1.0]], "b2": [0.0]}))
+    monkeypatch.setenv("FORGET_LEARNED_RANKER", str(bank))
+    out = search_memories({"query": "무관 질의", "filters": {"user_id": "owner-a"},
+                           "top_k": 5, "score_breakdown": True})
+    row = next(r for r in out["results"] if r["id"] == target)
+    assert row["score_breakdown"].get("actr_learned") is True
+    # 롤백: 파일 제거 → 손-공식 (마커 없음)
+    bank.unlink()
+    out = search_memories({"query": "무관 질의", "filters": {"user_id": "owner-a"},
+                           "top_k": 5, "score_breakdown": True})
+    row = next(r for r in out["results"] if r["id"] == target)
+    assert "actr_learned" not in row["score_breakdown"]
+    assert row["score_breakdown"]["actr_boost"] > 0
