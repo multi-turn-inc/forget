@@ -158,3 +158,68 @@ def dry_run(db_path: str, user_id: str) -> dict[str, Any]:
         "total_demote": sum(r["demote_count"] for r in report),
         "report": report,
     }
+
+
+# ── 에코 차단기 (P-C-1b 레인 ②) ───────────────────────────────────────────
+# 이미 컴파일된 문면(기상 프롬프트·CLAUDE.md 규율 등)의 일화 에코가 저장
+# 경로로 재유입되는 것을 차단한다. 실측 병리: 시각 규율 124행/5일 — 매 기상
+# 재저장. 등록부는 ~/.forget/compiled_forms.json, 판정은 임베딩 코사인
+# (지시문 0 — 계산만). 게이트는 gate_log에 남겨 관측 가능성 유지.
+
+import os as _os
+import time as _time
+from pathlib import Path as _Path
+
+COMPILED_FORMS_PATH = _Path.home() / ".forget" / "compiled_forms.json"
+# 0.62: 패러프레이즈 에코 실측 0.676 vs 무관 문장 0.121 — 갭이 넓어 낮은
+# 문턱이 안전. 위양성은 gate_log로 상시 관측(스킵은 로그에 남는다).
+ECHO_SIM_THRESHOLD = 0.62
+
+_forms_cache: dict[str, Any] = {"mtime": None, "forms": [], "vectors": None}
+
+
+def load_compiled_forms(project_id: str = "proj_local") -> list[dict[str, Any]]:
+    """등록부 로드 + 임베딩 캐시 (mtime 기반)."""
+    try:
+        mtime = COMPILED_FORMS_PATH.stat().st_mtime
+    except FileNotFoundError:
+        _forms_cache.update(mtime=None, forms=[], vectors=None)
+        return []
+    if _forms_cache["mtime"] == mtime and _forms_cache["vectors"] is not None:
+        return _forms_cache["forms"]
+    try:
+        forms = json.loads(COMPILED_FORMS_PATH.read_text(encoding="utf-8"))
+        assert isinstance(forms, list)
+    except Exception:
+        return _forms_cache["forms"]
+    import numpy as np
+    from .store import embed_text
+    vectors = []
+    for form in forms:
+        vec = embed_text(str(form.get("text") or ""), project_id=project_id)
+        vectors.append(vec if vec else [])
+    dims = {len(v) for v in vectors if v}
+    matrix = None
+    if len(dims) == 1:
+        matrix = np.array([v for v in vectors if v], dtype=np.float32)
+        matrix = matrix / (np.linalg.norm(matrix, axis=1, keepdims=True) + 1e-9)
+    _forms_cache.update(mtime=mtime, forms=forms, vectors=matrix)
+    return forms
+
+
+def check_echo(embedding: list[float] | None, project_id: str = "proj_local") -> dict[str, Any] | None:
+    """신규 기억 임베딩이 컴파일된 문면의 에코인가 — (form, sim) 또는 None."""
+    if not embedding:
+        return None
+    forms = load_compiled_forms(project_id)
+    matrix = _forms_cache.get("vectors")
+    if matrix is None or not forms or matrix.shape[1] != len(embedding):
+        return None
+    import numpy as np
+    q = np.array(embedding, dtype=np.float32)
+    q = q / (np.linalg.norm(q) + 1e-9)
+    sims = matrix @ q
+    best = int(np.argmax(sims))
+    if float(sims[best]) >= ECHO_SIM_THRESHOLD:
+        return {"form": forms[best], "sim": round(float(sims[best]), 4)}
+    return None

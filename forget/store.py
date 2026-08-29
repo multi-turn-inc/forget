@@ -3990,6 +3990,18 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
                         continue
                 # 부호화에만 결합을 싣는다 — hash는 bare fact 그대로이므로 중복 판정 의미 불변.
                 embedding = embed_text(f"{bind} — {fact}" if bind else fact, project_id=project_id)
+                # 에코 차단기 (컴파일러 헌장 4.4): 이미 컴파일된 상시 문면의
+                # 일화 에코는 저장하지 않는다 — 실측 병리(시각 규율 124행/5일,
+                # 매 기상 재저장)의 구조적 수리. 게이트 기록으로 관측 유지.
+                try:
+                    from .compiler import check_echo
+                    echo = check_echo(embedding, project_id)
+                except Exception:
+                    echo = None
+                if echo is not None:
+                    gate_merges.append({"text": fact[:300], "role": "fact",
+                                        "reason": f"compiled_echo:{echo['form'].get('id','?')}:{echo['sim']}"})
+                    continue
                 conn.execute(
                     """
                     INSERT INTO memories (
