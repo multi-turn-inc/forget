@@ -3870,6 +3870,27 @@ def _merge_event_metadata(event_id: str, extra: dict[str, Any]) -> None:
         pass  # accounting must never block the write path
 
 
+_ANCHOR_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9._\-]{2,}|[가-힣]{2,}|\+?\d+\.\d+")
+_SERIES_ANCHOR_CAP = 48   # 앵커 토큰 총량 상한 — 승계 반복으로 무한 성장 방지
+
+
+def _harvest_series_anchor(old_text: str, canonical_text: str, existing: str) -> list[str]:
+    """P-R-6 앵커 유산: 침강하는 구본의 판별 토큰(정본·기존 앵커에 없는 것)을
+    수확한다 — 사슬의 어휘 유산이 어휘-빈곤 정본을 들어올린다 (inc-005)."""
+    base = f"{canonical_text} {existing}".lower()
+    out: list[str] = []
+    seen: set[str] = set()
+    for token in _ANCHOR_TOKEN_RE.findall(old_text or ""):
+        low = token.lower()
+        if low in seen or low in base:
+            continue
+        seen.add(low)
+        out.append(token)
+        if len(out) >= 12:
+            break
+    return out
+
+
 def _succeed_series(conn, project_id: str, record_metadata: dict[str, Any],
                     new_memory_id: str, now: str) -> None:
     """시계열 자동 승계 (2026-08-30 구조 수리) — metadata.series 보유 행의
@@ -3890,14 +3911,33 @@ def _succeed_series(conn, project_id: str, record_metadata: dict[str, Any],
             " AND id != ? AND metadata LIKE ?",
             (project_id, new_memory_id, f'%"series": "{series}"%'),
         ).fetchall()
+        harvested: list[str] = []
+        canon = conn.execute("SELECT memory, metadata FROM memories WHERE id = ?",
+                             (new_memory_id,)).fetchone()
+        canon_text = (canon["memory"] if canon else "") or ""
+        canon_meta = json_loads((canon["metadata"] if canon else None) or "{}")
+        existing_anchor = str(((canon_meta.get("episode") or {}).get("anchor")) or "")
         for row in rows:
             meta = json_loads(row["metadata"] or "{}")
             if meta.get("series") != series or meta.get("superseded_by"):
                 continue
+            old_text = conn.execute("SELECT memory FROM memories WHERE id = ?",
+                                    (row["id"],)).fetchone()
+            harvested += _harvest_series_anchor(
+                (old_text["memory"] if old_text else "") or "", canon_text,
+                existing_anchor + " " + " ".join(harvested))
             meta.update(superseded_by=new_memory_id, superseded_at=now,
                         sank_by=f"series:{series}")
             conn.execute("UPDATE memories SET metadata = ?, updated_at = ? WHERE id = ?",
                          (json_dumps(meta), now, row["id"]))
+        if harvested:
+            merged = (existing_anchor.split() + harvested)[:_SERIES_ANCHOR_CAP]
+            episode = canon_meta.get("episode") or {}
+            episode["anchor"] = " ".join(merged)
+            episode.setdefault("anchor_source", "series-inheritance")
+            canon_meta["episode"] = episode
+            conn.execute("UPDATE memories SET metadata = ? WHERE id = ?",
+                         (json_dumps(canon_meta), new_memory_id))
     except sqlite3.Error:
         pass  # 승계 실패가 저장을 막지 않는다 — 다음 쓰기가 다시 시도
 

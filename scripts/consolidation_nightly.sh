@@ -31,4 +31,9 @@ echo "$STAMP EXIT=$CODE $(printf '%s' "$OUT" | tail -c 300 | tr '\n' ' ')" >> "$
 COUT="$("$REPO/.venv/bin/python" -m forget.compiler --scheduled 2>&1)"
 CCODE=$?
 echo "$STAMP COMPILER EXIT=$CCODE $(printf '%s' "$COUT" | tail -c 300 | tr '\n' ' ')" >> "$LOG"
+
+# 3단: MUS 야간 스냅샷 (recallbench 사이클 7) — 기억 유용성 점수의 정기 계기.
+# score.py가 은행 3×+상황 3×를 직렬로 돌리므로 상한 20분. 실패해도 응고는 무사.
+MOUT="$(cd "$REPO" && timeout 1200 python3 research/recallbench/score.py 2>&1 | tail -2)"
+echo "$STAMP MUS $(printf '%s' "$MOUT" | tr '\n' ' ')" >> "$LOG"
 exit 0

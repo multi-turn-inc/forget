@@ -57,3 +57,19 @@ def test_recall_marks_stale_snapshots():
     assert new in by_id and "superseded" not in by_id[new]["score_breakdown"]
     stale = [r for r in out["results"] if (r.get("score_breakdown") or {}).get("superseded")]
     assert all(r["id"] != new for r in stale)            # ④ 구본만 표기
+
+
+def test_series_anchor_inheritance():
+    """P-R-6: 침강 구본의 판별 토큰이 정본 앵커로 상속 → 채점기 anchor 채널 발동."""
+    _add("리더보드 벤치마크 LAFS 점수 패키지 버전 다섯", series="k.lafs")
+    head = _add("행정 문면 재제출 접수 완료", series="k.lafs")
+    from forget.store import get_memory
+    meta = get_memory(head)["metadata"]
+    anchor = ((meta.get("episode") or {}).get("anchor") or "")
+    assert "리더보드" in anchor and "벤치마크" in anchor          # 유산 상속
+    assert (meta.get("episode") or {}).get("anchor_source") == "series-inheritance"
+    out = search_memories({"query": "리더보드 벤치마크 점수", "temporal_rerank": False,
+                           "filters": {"user_id": "owner-a"}, "top_k": 3,
+                           "score_breakdown": True})
+    hrow = next((r for r in out["results"] if r["id"] == head), None)
+    assert hrow is not None and hrow["score_breakdown"].get("episode_anchor")  # 채점 발동
