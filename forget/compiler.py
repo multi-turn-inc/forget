@@ -241,3 +241,93 @@ def check_echo(embedding: list[float] | None, project_id: str = "proj_local") ->
     if float(sims[best]) >= ECHO_SIM_THRESHOLD:
         return {"form": forms[best], "sim": round(float(sims[best]), 4)}
     return None
+
+
+# ── 집행 모드 v0 (P-C-1d 판정 §4.11 — 가역 supersede 강등) ────────────────
+# 실DB 적용은 정훈 게이트 뒤. 가역성이 계약: 전 처치를 원장(jsonl)에 기록하고
+# revert_compile이 역재생으로 전량 복원한다. 삭제·텍스트 변형 없음 — 기존
+# supersede 침강 경로(metadata.superseded_by/at)와 동일해 회상 경쟁의 억제
+# 간선이 그대로 작동한다.
+
+COMPILE_FORMS = ("rule", "fact", "stale-state")
+
+
+def execute_compile(db_path: str, report: list[dict[str, Any]],
+                    ledger_path: str, batch_id: str) -> dict[str, Any]:
+    """드라이런 리포트의 컴파일 가능 군집을 강등 집행. 멱등(재실행 무해)."""
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    demoted, skipped = 0, 0
+    entries = []
+    try:
+        for cluster in report:
+            if cluster.get("form") not in COMPILE_FORMS:
+                continue
+            member_ids = cluster["member_ids"]
+            rows = conn.execute(
+                "SELECT id, created_at, metadata FROM memories WHERE id IN ({})"
+                " AND deleted = 0".format(",".join("?" for _ in member_ids)),
+                member_ids).fetchall()
+            if len(rows) < 2:
+                continue
+            canonical_id = max(rows, key=lambda r: str(r["created_at"]))["id"]
+            for row in rows:
+                if row["id"] == canonical_id:
+                    continue
+                meta = json.loads(row["metadata"] or "{}")
+                if meta.get("superseded_by"):
+                    skipped += 1          # 이미 침강 — 재집행 무해(멱등)
+                    continue
+                prev = {k: meta.get(k) for k in ("superseded_by", "superseded_at", "sank_by")}
+                meta.update(superseded_by=canonical_id, superseded_at=now,
+                            sank_by=f"compiler:{batch_id}",
+                            compiled_form=cluster["form"])
+                conn.execute("UPDATE memories SET metadata = ? WHERE id = ?",
+                             (json.dumps(meta, ensure_ascii=False), row["id"]))
+                entries.append({"batch": batch_id, "demoted": row["id"],
+                                "canonical": canonical_id,
+                                "form": cluster["form"], "prev": prev, "at": now})
+                demoted += 1
+        conn.commit()
+    finally:
+        conn.close()
+    with open(ledger_path, "a", encoding="utf-8") as fh:
+        for entry in entries:
+            fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    return {"batch": batch_id, "demoted": demoted, "skipped": skipped,
+            "clusters": sum(1 for c in report if c.get("form") in COMPILE_FORMS)}
+
+
+def revert_compile(db_path: str, ledger_path: str, batch_id: str) -> dict[str, Any]:
+    """원장 역재생 — 해당 배치의 강등을 전량 복원 (가역성 계약)."""
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    restored = 0
+    try:
+        for line in open(ledger_path, encoding="utf-8"):
+            entry = json.loads(line)
+            if entry.get("batch") != batch_id:
+                continue
+            row = conn.execute("SELECT metadata FROM memories WHERE id = ?",
+                               (entry["demoted"],)).fetchone()
+            if row is None:
+                continue
+            meta = json.loads(row["metadata"] or "{}")
+            if meta.get("sank_by") != f"compiler:{batch_id}":
+                continue                  # 다른 경로가 손댄 행은 건드리지 않는다
+            meta.pop("compiled_form", None)
+            for key, value in entry["prev"].items():
+                if value is None:
+                    meta.pop(key, None)
+                else:
+                    meta[key] = value
+            conn.execute("UPDATE memories SET metadata = ? WHERE id = ?",
+                         (json.dumps(meta, ensure_ascii=False), entry["demoted"]))
+            restored += 1
+        conn.commit()
+    finally:
+        conn.close()
+    return {"batch": batch_id, "restored": restored}
