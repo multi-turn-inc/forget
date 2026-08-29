@@ -133,8 +133,14 @@ def classify_cluster(items: list[dict], cluster: list[int], X: Any = None) -> di
         order = [cluster[k] for k in centrality.argsort()[::-1]]
     texts = [items[j]["text"] for j in order]
     head = texts[0]
+    # P-C-1c 트랙 라우팅 (§4.8): 군집 과반이 개인 층 밖(app_id 보유)이면
+    # 타 트랙 저널 — 불가침. 의미 판단이 필요 없는 자리에 27B를 세워두고
+    # 오답을 세던 것이 P-C-1b 엄격 75%의 몸통(13/15)이었다.
+    personal = sum(1 for j in cluster if not items[j].get("app_id"))
     if _CAPTURE_RE.search(head) or sum(bool(_CAPTURE_RE.search(t)) for t in texts[:5]) >= 3:
         form, via = "capture-pointer", "deterministic"
+    elif personal * 2 < len(cluster):
+        form, via = "journal", "deterministic-track"
     elif _JOURNAL_RE.search(head) or sum(bool(_JOURNAL_RE.search(t)) for t in texts[:5]) >= 3:
         form, via = "journal", "deterministic"
     else:

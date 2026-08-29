@@ -64,3 +64,24 @@ def test_representatives_ordered_by_centrality(monkeypatch):
     compiler.classify_cluster(items, [0, 1, 2, 3], X)
     assert captured["samples"][0].startswith("중심 표본")   # ③ 중심이 첫 표본
     assert captured["samples"][-1] == "변두리 표본"
+
+
+def test_track_routing_bypasses_llm(monkeypatch):
+    # P-C-1c: 과반이 app_id 보유(타 트랙) → 게이트 호출 없이 journal 불가침
+    called = {"n": 0}
+    monkeypatch.setattr(compiler, "_llm_gate",
+                        lambda *a, **k: called.__setitem__("n", called["n"] + 1) or "rule")
+    items = [{"text": f"사이클 산문 {n}", "day": f"2026-08-2{n}", "id": f"m{n}",
+              "app_id": "forget" if n < 4 else None, "agent_id": None}
+             for n in range(5)]
+    out = compiler.classify_cluster(items, [0, 1, 2, 3, 4])
+    assert out["form"] == "journal" and out["via"] == "deterministic-track"
+    assert out["demote_count"] == 0 and called["n"] == 0
+
+
+def test_personal_majority_still_gated(monkeypatch):
+    monkeypatch.setattr(compiler, "_llm_gate", lambda *a, **k: "fact")
+    items = [{"text": f"개인 사실 {n}", "day": f"2026-08-2{n}", "id": f"m{n}",
+              "app_id": None, "agent_id": None} for n in range(5)]
+    out = compiler.classify_cluster(items, [0, 1, 2, 3, 4])
+    assert out["form"] == "fact" and out["via"] == "llm-gate"
