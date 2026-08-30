@@ -18,7 +18,8 @@ gate-queue.md의 A-168.1 행은 43차에서 멈춰 있었다. 채널 수는 진�
 
 선언된 한계 (이 계기가 못 보는 것):
   ① **선언에서 대상 ID를 산문으로 뽑는다.** 산문이 «A-168.1» 대신 «서열 18′»로만
-     부르면 이 눈 밖이다. ID 표기가 이 계기의 정의역이다.
+     부르면 이 눈 밖이다. ID 표기가 이 계기의 정의역이다. (c261 보강: 무-ID 서열
+     표기는 «판정 불가» 질의 대신 정의역-밖 **노트**로 내린다 — 침묵 아님.)
   ② **경과 서식 의존.** 마스킹은 «N사이클째» 서식을 가정한다. 다른 경과 서식이
      생기면 그 행은 «실질 편집»으로 오고발된다.
   ③ **서열 변동은 이 눈 밖이다.** 행 이동·재번호는 ID 집합을 바꾸지 않으므로
@@ -35,6 +36,10 @@ gate-queue.md의 A-168.1 행은 43차에서 멈춰 있었다. 채널 수는 진�
   ⑧ **동결 판정(㉵ⓐ)은 현재 워킹트리의 정본을 읽는다** — 과거 사이클 검산에서
      시대착오가 원리상 가능하나, 해소 행은 지우지 않고 취소선+사유로 보존하는
      규약(gate-queue c193 정산)상 동결→비동결 전이가 없어 실무 방향은 단조다.
+  ⑨ **부기 대상이 선언 괄호 밖 산문에 사는 서식은 이 눈 밖이다**(c261 부기 창
+     수리의 선언 한계). 센서스(c261 · 표 부기 선언 70행 전수) 반례 1행 = c168
+     («표 부기 1건(2세션)» — 대상 A-156.1이 뒤 산문에). 그 서식의 재생은 «판정
+     불가» 질의로 뜬다 — 침묵이 아니라 손 판정 요청이다.
 
 ㉵ⓐ 규칙 — 취소선 동결 행 질의 제외 (c251 집행, audit-250 R2 소비 = «깨진 계기의
 자기 수리» 재분류 · 선례 c232 계약 수리·c241 이동기 ㉵ⓑ):
@@ -46,6 +51,19 @@ gate-queue.md의 A-168.1 행은 43차에서 멈춰 있었다. 채널 수는 진�
   노트만 남긴다. frame_only 질의(= 동결 행의 재증분 = ⓑ 승계 실패)는 **유지**한다 —
   그 채널이 이동기 스킵 분기의 사망 검출기다. 판정 채널 = 집행 차기 ㉭ 런의
   A-192.1 질의 소멸(질의가 계속 나오면 이 수리는 반증이다).
+
+부기 창 규칙 — 선언 괄호 경계 (c261 집행, audit-260 R2 소비 = «깨진 devloop 소유
+계기의 자기 수리» 넷째 선례 · c232 계약 수리·c241 ㉵ⓑ·c251 ㉵ⓐ):
+  구판 부기 창(«표 부기 N» 뒤 고정 400자)이 무관 산문의 ID를 과수집했다 — 취소선
+  스킵 서술 «A-192.1 재증분 0»(㉵ⓐ가 흡수한 잠재 계열 c257~c260) · 이동기 합류
+  서술 «A-255.1 합류 31→32»(c256 거짓 양성) · «A-245.1 편입 +1» 이형(c247 거짓
+  양성). 수리 = 창을 **선언 직후 균형 괄호군**으로 한정 + «표 부기 0»은 무수집.
+  어휘 마스킹(개별 서술 패턴 제거)이 아니라 구조 경계라 이형 어휘까지 함께 죽는다.
+  센서스(c261 원장 전수 70행): 진성 ID 대상 12행 전부 괄호 안 적중 · 구판과의 차이
+  47행 전부 노이즈 제거 방향 · 반례 c168 1행(한계 ⑨로 강등). 불균형·부재 괄호는
+  무수집(과수집보다 «판정 불가» 질의가 안전한 방향). 판정 채널 = 차기 ㉭ 런들의
+  A-192.1 ㉵ⓐ 제외 노트 소멸 + 과수집발 질의 재발 0(재발 = 반증 · predictions
+  무등록 — R2 소비 문면이 등록 대체[c241·c251 선례]).
 
 대조군 실측 (c189 등록 시점, 원칙 1):
   c185 = **질의 1건**(A-168.1 부기 선언 · 정본은 프레임 이동뿐) ← **관측 116 독립 재검출**
@@ -72,6 +90,8 @@ LEDGER = ROOT / "research" / "devloop" / "metrics.jsonl"
 CANON = "research/devloop/gate-queue.md"
 
 CLAIM_ID = re.compile(r"A-\d{1,4}\.\d{1,3}")
+# 무-ID 부기 대상 표기 (한계 ① c261 보강). census: «서열 1′» 서식 30행.
+SEQ_TARGET = re.compile(r"서열\s*\d+[′″‴⁗']*")
 # 한계 ② — 경과 서식. census(c189 실측): 큐 표의 경과 칸은 «N사이클째» 단일 서식이다.
 AGE = re.compile(r"\d{1,4}\s*사이클째")
 FRAME = re.compile(r"프레임\s*N\s*=\s*\d{1,4}")
@@ -115,19 +135,42 @@ def parse_diff(diff_text: str) -> dict:
     }
 
 
+def bogi_window(text: str, decl_end: int) -> str:
+    """부기 창 = 선언 직후 균형 괄호군 (c261 수리 — 위 «부기 창 규칙» 참조).
+    구판 고정 400자 창의 과수집을 구조 경계로 근절한다. 괄호가 30자 안에
+    없거나 400자 안에 닫히지 않으면 무수집 — 그 서식은 «판정 불가» 질의로
+    손에 넘어간다(한계 ⑨)."""
+    i = text[decl_end:decl_end + 30].find("(")
+    if i < 0:
+        return ""
+    start = decl_end + i
+    depth = 0
+    for j in range(start, min(len(text), start + 400)):
+        if text[j] == "(":
+            depth += 1
+        elif text[j] == ")":
+            depth -= 1
+            if depth == 0:
+                return text[start:j + 1]
+    return ""
+
+
 def parse_declaration(text: str) -> dict:
-    """원장 gate_pending 산문에서 선언 건수와 부기 대상 ID를 뜬다."""
+    """원장 gate_pending 산문에서 선언 건수와 부기 대상(ID·무-ID 서열)을 뜬다."""
     counts = {}
     for k, rx in DECL.items():
         m = rx.search(text)
         counts[k] = int(m.group(1)) if m else None
-    # 부기 대상 ID — «표 부기 N(...A-X.Y 행...)» 근방에서 뽑는다(한계 ①).
+    # 부기 대상 — «표 부기 N(...)» 선언 괄호군 안에서만 뽑는다(한계 ①·c261 수리).
     targets: list[str] = []
+    seq_targets: list[str] = []
     m = DECL["표 부기"].search(text)
-    if m:
-        window = text[m.end():m.end() + 400]
+    if m and int(m.group(1)) > 0:
+        window = bogi_window(text, m.end())
         targets = list(dict.fromkeys(CLAIM_ID.findall(window)))
-    return {"counts": counts, "부기_대상": targets}
+        if not targets:
+            seq_targets = list(dict.fromkeys(SEQ_TARGET.findall(window)))
+    return {"counts": counts, "부기_대상": targets, "무ID_대상": seq_targets}
 
 
 def frozen_ids(canon_text: str) -> set[str]:
@@ -167,7 +210,12 @@ def build_queries(decl: dict, d: dict, frozen: set[str]) -> tuple[list[str], lis
             else:
                 q.append(f"{t} 부기 선언 — 그러나 정본 diff에 그 행이 없다")
     if c["표 부기"] is not None and c["표 부기"] > 0 and not decl["부기_대상"]:
-        q.append(f"표 부기 {c['표 부기']} 선언 — 산문에 대상 ID 표기 없음(한계 ①, 판정 불가)")
+        if decl.get("무ID_대상"):
+            notes.append(
+                f"무-ID 부기 대상 {decl['무ID_대상']} — ID 검산 정의역 밖"
+                f"(한계 ① c261 보강 · 질의 아님)")
+        else:
+            q.append(f"표 부기 {c['표 부기']} 선언 — 산문에 대상 ID 표기 없음(한계 ①, 판정 불가)")
     return q, notes
 
 
@@ -197,7 +245,8 @@ def main() -> int:
     frozen = frozen_ids((ROOT / CANON).read_text(encoding="utf-8"))
 
     print(f"[계기 큐 ㉭ — 선언∖정본-diff 검산 (관측 116 수용 기준 ③)]  c{n} · {sha[:7]}")
-    print(f"  선언(원장 gate_pending): {decl['counts']} · 부기 대상 {decl['부기_대상'] or '—'}")
+    print(f"  선언(원장 gate_pending): {decl['counts']} · 부기 대상 {decl['부기_대상'] or '—'}"
+          f" · 무-ID {decl['무ID_대상'] or '—'}")
     print(f"  정본 diff({CANON}):")
     print(f"    신규 행 {len(d['added'])} {d['added'] or ''}")
     print(f"    소멸 행 {len(d['removed'])} {d['removed'] or ''}")
@@ -207,7 +256,9 @@ def main() -> int:
 
     q, notes = build_queries(decl, d, frozen)
     for x in notes:
-        print(f"  ㉵ⓐ 제외: {x}")
+        # 노트는 두 갈래다(㉵ⓐ 동결 제외 · 무-ID 정의역-밖) — 본문이 자기 분류를
+        # 들고 있으므로 접두는 중립으로 인쇄한다(관측 94: 갈린 분류에 한 도장 금지).
+        print(f"  노트: {x}")
 
     if q:
         print(f"  **질의 {len(q)}건** — 고발이 아니다. 손이 답하고 원장에 적는다(한계 ⑤).")

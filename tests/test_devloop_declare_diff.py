@@ -7,7 +7,8 @@
 **실-원장 값을 상수로 박지 않는다** — 관측 100(«회귀가 자기 사이클의 수확에 붉어진다»)과
 관측 106(«회귀가 결함을 기대 상태로 잠갔다»)의 선례. 전부 합성 diff·합성 산문으로 검사한다.
 
-계약 다섯 + ㉵ⓐ 셋 (c251 추가 — audit-250 R2 소비):
+계약 다섯 + ㉵ⓐ 셋 (c251 추가 — audit-250 R2 소비) + 부기 창 셋 (c261 추가 —
+audit-260 R2 소비):
 ① **프레임 이동뿐인 행을 «실질 편집»으로 읽지 않는다** — 이것이 이 계기의 존재 이유다.
    프레임 이동은 매 사이클 전 행을 만지므로, 가르지 못하면 계기는 항상 «부기 있음»을 내고
    관측 116을 **원리적으로 못 잡는다**.
@@ -18,9 +19,19 @@
    정직 판정기의 오차는 정직한 쪽을 defame한다).
 ⑥ **취소선 동결 행은 «행이 없다» 질의에서 제외된다** — 해소 행은 보존+동결이라
    diff 부재가 정상이다(A-192.1 거짓 양성 14연속의 근절 규칙 ㉵ⓐ).
+   ※ c261 정정: 구판 이 계약의 검사는 과수집 기전(«취소선 스킵» 서술의 ID가 부기
+   대상에 든다)을 **기대 상태로 잠갔다** — 관측 106의 그 모양. 이제 동결 대상을
+   선언 괄호 안에 정식으로 넣어 ㉵ⓐ 규칙 자체를 검사한다.
 ⑦ **동결 행이라도 재증분(frame_only)이면 질의가 산다** — ⓑ 승계 실패의 검출
    채널을 ㉵ⓐ가 침묵시키지 않는다.
 ⑧ **비동결 대상의 «행이 없다» 질의는 그대로 산다** — 수리가 제외를 넓히지 않는다.
+⑨ **취소선 스킵 서술(선언 괄호 밖)의 ID는 부기 후보가 아니다** — A-192.1 잠재
+   계열(c257~c260 ㉵ⓐ 흡수)의 소스 근절. 동결 흡수 **없이도** 질의가 안 난다.
+⑩ **이동기 증분·합류 서술의 ID는 부기 후보가 아니다** — c256 A-255.1 거짓 양성
+   서식의 재현이 침묵한다.
+⑪ **무-ID 서열 대상은 질의가 아니라 노트다** — 정의역-밖 선언(한계 ①)이며,
+   서열 표기조차 없으면 «판정 불가» 질의는 그대로 산다(수리가 질의 채널을 넓게
+   닫지 않는다 — c168 서식·한계 ⑨).
 """
 import importlib.util
 import sys
@@ -114,6 +125,8 @@ def test_declaration_matching_canon_is_silent(mod):
 
 
 # ── 계약 ⑥ 취소선 동결 행은 «행이 없다» 질의에서 제외된다 (㉵ⓐ — c251) ──────
+# c261 정정: 동결 대상을 선언 괄호 **안**에 정식으로 넣는다 — 구판은 과수집 기전으로
+# 대상을 공급받아 결함을 기대 상태로 잠갔다(관측 106 모양 · 헤더 계약 ⑥ ※ 참조).
 def test_frozen_row_absent_from_diff_is_excluded_with_note(mod):
     canon = (
         "| **26** | **A-192.1** (해소된 청구 — 보존 행) | \"승인\" | 효과 | "
@@ -122,10 +135,7 @@ def test_frozen_row_absent_from_diff_is_excluded_with_note(mod):
     )
     frozen = mod.frozen_ids(canon)
     assert frozen == {"A-192.1"}, "동결 술어가 이동기 ㉵ⓑ와 갈렸다"
-    # 기전 재현(한계 ① 과수집): 이동기 서술의 ID가 부기 대상으로 오독된다.
-    decl = mod.parse_declaration(
-        "**표 부기 1**(서열 1′ 재실측) · 취소선 스킵 1행 = A-192.1 재증분 0"
-    )
+    decl = mod.parse_declaration("**표 부기 1**(A-192.1 행 재실측)")
     assert "A-192.1" in decl["부기_대상"]
     d = mod.parse_diff("")  # 동결 행은 diff에 없는 것이 정상이다
     q, notes = mod.build_queries(decl, d, frozen)
@@ -155,9 +165,49 @@ def test_unfrozen_absent_target_is_still_queried(mod):
     assert notes == []
 
 
+# ── 계약 ⑨ 취소선 스킵 서술의 ID는 부기 후보가 아니다 (c261 — 부기 창 수리) ──
+def test_strikethrough_skip_prose_is_not_a_bogi_target(mod):
+    # c257~c260 실서식 재현 — 구판 400자 창은 A-192.1을 과수집했고 ㉵ⓐ 동결
+    # 제외가 우연히 흡수했다. 수리 후엔 동결 흡수 **없이도**(frozen=set()) 침묵한다.
+    decl = mod.parse_declaration(
+        "**표 부기 1**(서열 1′ 재실측 교집합 0건) · 취소선 스킵 1 = A-192.1 재증분 0"
+    )
+    assert decl["부기_대상"] == [], decl
+    q, notes = mod.build_queries(decl, mod.parse_diff(""), frozen=set())
+    assert not any("A-192.1" in x for x in q + notes), (q, notes)
+
+
+# ── 계약 ⑩ 이동기 증분·합류 서술의 ID는 부기 후보가 아니다 (c256 거짓 양성 서식) ──
+def test_mover_increment_prose_is_not_a_bogi_target(mod):
+    decl = mod.parse_declaration(
+        "**표 부기 1**(서열 1′ — 재실측 교집합 0건 유지 2연속) · 무조건부 정산: "
+        "이동기 87세대·증분 **32행**[A-255.1 합류 31→32]·취소선 스킵 1 = A-192.1 재증분 0"
+    )
+    assert decl["부기_대상"] == [], decl
+    q, notes = mod.build_queries(decl, mod.parse_diff(""), frozen=set())
+    assert not any("A-255.1" in x or "A-192.1" in x for x in q + notes), (q, notes)
+
+
+# ── 계약 ⑪ 무-ID 서열 대상은 노트, 무-표기는 질의 유지 (한계 ①·⑨) ───────────
+def test_no_id_seq_target_is_note_not_query(mod):
+    decl = mod.parse_declaration("**표 부기 1**(서열 1′ 재실측)")
+    assert decl["부기_대상"] == [] and decl["무ID_대상"] == ["서열 1′"], decl
+    q, notes = mod.build_queries(decl, mod.parse_diff(""), frozen=set())
+    assert not q, q
+    assert any("무-ID" in x and "서열 1′" in x for x in notes), notes
+    # 서열 표기조차 없으면 «판정 불가» 질의는 그대로 산다 — c168 서식(한계 ⑨).
+    decl2 = mod.parse_declaration("**표 부기 1**건(2세션)")
+    q2, n2 = mod.build_queries(decl2, mod.parse_diff(""), frozen=set())
+    assert any("판정 불가" in x for x in q2), q2
+    assert n2 == [], n2
+    # «표 부기 0»은 무수집 — 뒤 괄호의 ID가 후보로 오르지 않는다.
+    decl3 = mod.parse_declaration("**표 부기 0** (비고: A-168.1 무관 언급)")
+    assert decl3["부기_대상"] == [] and decl3["무ID_대상"] == [], decl3
+
+
 # ── 자기 서술 계약: 선언된 한계가 문서에 살아 있는가 (관행 ⑮) ───────────────
 def test_declared_limits_are_present(mod):
     doc = mod.__doc__ or ""
     for mark in ["한계", "프레임 이동", "고발이 아니라 질의", "서열 변동은 이 눈 밖",
-                 "취소선 동결", "㉵ⓐ"]:
+                 "취소선 동결", "㉵ⓐ", "부기 창 규칙", "선언 괄호"]:
         assert mark in doc, f"선언된 한계가 문서에서 사라졌다: {mark}"
