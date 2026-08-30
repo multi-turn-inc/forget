@@ -430,6 +430,22 @@ def memories_serve(payload: dict[str, Any], request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail=str(error))
 
 
+@app.get("/v1/receipts/statement/", dependencies=[Depends(auth)])
+def receipts_statement(request: Request, grantee: str | None = None,
+                       scope_app: str | None = None, days: int = 30) -> dict[str, Any]:
+    """사용 명세서 — 소유자는 전체, 에이전트 자격은 자기 grantee 몫만."""
+    from . import grants
+    context = _request_auth_context(request)
+    principal = str(context.get("agent_principal") or "").strip()
+    role = str(context.get("role") or context.get("project_role") or "").lower()
+    is_owner = context.get("is_operator") is True or role in {"owner", "admin", "operator"}
+    if not is_owner:
+        if not principal:
+            raise HTTPException(status_code=403, detail="statement requires owner or agent credential")
+        grantee = principal   # 자기 명세만 — 조회 권한이 신원에 결합
+    return grants.usage_statement(grantee=grantee, scope_app=scope_app, days=days)
+
+
 @app.get("/v1/receipts/access/", dependencies=[Depends(auth)])
 def access_receipts_list(request: Request, grantee: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
     from . import grants

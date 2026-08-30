@@ -361,3 +361,53 @@ def list_access_receipts(project_id: str | None = None, grantee: str | None = No
     with get_db() as conn:
         rows = conn.execute(sql, params).fetchall()
     return [json.loads(row["receipt_json"]) for row in rows]
+
+
+def usage_statement(project_id: str | None = None, grantee: str | None = None,
+                    scope_app: str | None = None, days: int = 30) -> dict[str, Any]:
+    """사용 명세서 (마켓 제도, 2026-08-30) — 영수증 원장의 기간 집계.
+
+    «허락한 만큼인지 확인할 수 있게»의 조회면: 서빙/거절 건수·서빙 항목·
+    검문 건수·일별 추이. 원천은 영수증뿐(별도 계수기 없음 — 명세와 원장이
+    어긋날 수 없다). B3O 감사 UX가 이 한 콜로 화면을 그린다.
+    """
+    from .db import get_db
+    from .store import current_project_id
+
+    project_id = project_id or current_project_id()
+    days = max(1, min(int(days or 30), 365))
+    sql = ("SELECT receipt_json, created_at FROM access_receipts"
+           " WHERE project_id = ? AND created_at > datetime('now', ?)")
+    params: list[Any] = [project_id, f"-{days} days"]
+    if grantee:
+        sql += " AND grantee = ?"
+        params.append(grantee)
+    if scope_app:
+        sql += " AND scope_app = ?"
+        params.append(scope_app)
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    serves = denials = items = redactions = 0
+    by_day: dict[str, dict[str, int]] = {}
+    for row in rows:
+        receipt = json.loads(row["receipt_json"])
+        day = str(row["created_at"])[:10]
+        bucket = by_day.setdefault(day, {"serves": 0, "denials": 0, "items": 0})
+        if receipt.get("allowed"):
+            serves += 1
+            bucket["serves"] += 1
+            items += int(receipt.get("items_served") or 0)
+            bucket["items"] += int(receipt.get("items_served") or 0)
+            redactions += int(receipt.get("redactions") or 0)
+        else:
+            denials += 1
+            bucket["denials"] += 1
+    return {
+        "schema_version": "forget-usage-statement-v1",
+        "period_days": days,
+        "grantee": grantee, "scope_app": scope_app,
+        "serves": serves, "denials": denials,
+        "items_served_total": items, "redactions_total": redactions,
+        "by_day": dict(sorted(by_day.items())),
+        "receipt_count": len(rows),
+    }

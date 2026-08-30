@@ -332,3 +332,31 @@ def test_serve_never_leaks_other_app_shared_rows():
     assert out["allowed"] is True
     for row in out["results"]:
         assert "로드맵 수렴" not in row["memory"]        # 타 앱 행 무누출
+
+
+def test_usage_statement_aggregates_receipts():
+    """사용 명세서 (마켓 제도): 원천은 영수증뿐 — 서빙·거절·검문·일별 집계."""
+    _grant()
+    grants.serve({"grantee": "team-agent-1", "scope_app": APP, "query": "client meeting contact"})
+    grants.serve({"grantee": "team-agent-1", "scope_app": APP, "query": "meeting"})
+    grants.serve({"grantee": "stranger-9", "scope_app": APP, "query": "meeting"})   # 거절
+    st = grants.usage_statement(grantee="team-agent-1", scope_app=APP, days=7)
+    assert st["serves"] == 2 and st["denials"] == 0
+    assert st["redactions_total"] >= 1                     # PII 검문이 명세에 잡힘
+    assert sum(d["serves"] for d in st["by_day"].values()) == 2
+    st_all = grants.usage_statement(scope_app=APP, days=7)
+    assert st_all["denials"] == 1                          # 거절도 명세에
+
+
+def test_statement_endpoint_scopes_to_own_grantee():
+    from fastapi.testclient import TestClient
+    from forget.server import app
+    from forget.store import create_api_key
+    _grant()
+    grants.serve({"grantee": "team-agent-1", "scope_app": APP, "query": "meeting"})
+    client = TestClient(app)
+    key = create_api_key({"name": "k", "agent_principal": "team-agent-1"})
+    out = client.get("/v1/receipts/statement/?grantee=someone-else",
+                     headers={"Authorization": f"Bearer {key['api_key']}"})
+    assert out.status_code == 200
+    assert out.json()["grantee"] == "team-agent-1"          # 신원에 강제 결합
