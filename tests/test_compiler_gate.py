@@ -85,3 +85,20 @@ def test_personal_majority_still_gated(monkeypatch):
               "app_id": None, "agent_id": None} for n in range(5)]
     out = compiler.classify_cluster(items, [0, 1, 2, 3, 4])
     assert out["form"] == "fact" and out["via"] == "llm-gate"
+
+
+def test_correction_clusters_use_low_threshold():
+    """P-C-3: 교정-마커 과반 군집은 2회·2일로도 성립, 일반 군집은 4회 유지."""
+    import numpy as np
+    v = np.eye(4, dtype=np.float32)
+    v[1] = v[0]; v[3] = v[2]          # (0,1) 쌍·(2,3) 쌍이 각각 동일 벡터
+    items = [
+        {"text": "정정: 낡은 수치를 인용한 사고", "day": "2026-08-29", "id": "c1", "app_id": None, "agent_id": None},
+        {"text": "자기 교정: 같은 사고의 재기록", "day": "2026-08-30", "id": "c2", "app_id": None, "agent_id": None},
+        {"text": "평범한 반복 진술", "day": "2026-08-29", "id": "p1", "app_id": None, "agent_id": None},
+        {"text": "평범한 반복 진술 둘", "day": "2026-08-30", "id": "p2", "app_id": None, "agent_id": None},
+    ]
+    out = compiler.detect_clusters(items, v)
+    flat = [set(c) for c in out]
+    assert {0, 1} in flat              # 교정 쌍 — 저문턱 성립
+    assert {2, 3} not in flat          # 일반 쌍 — 4회 미달로 미성립

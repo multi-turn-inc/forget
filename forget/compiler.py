@@ -21,6 +21,11 @@ from .utils import decode_embedding
 SIM_THRESHOLD = 0.80
 MIN_REPEATS = 4          # 자신 포함
 MIN_DAYS = 3             # 다일 조건 — 한 세션 내 재진술 제외
+# P-C-3 (야전 정독 «두 번 교정되면 규칙화»): 교정-마커 군집은 저문턱 —
+# 교정의 비용이 반복의 비용보다 크다. 검출만(제안 큐행), 집행 없음.
+CORRECTION_MIN_REPEATS = 2
+CORRECTION_MIN_DAYS = 2
+_CORRECTION_RE = None  # 지연 초기화 (아래 detect_clusters에서)
 LLM_URL = "http://127.0.0.1:18812/v1/chat/completions"
 LLM_TIMEOUT = 90
 
@@ -75,8 +80,17 @@ def load_vectors(db_path: str, user_id: str) -> tuple[list[dict], Any]:
     return [items[i] for i in keep], X
 
 
+def _is_correction(text: str) -> bool:
+    global _CORRECTION_RE
+    if _CORRECTION_RE is None:
+        _CORRECTION_RE = re.compile(r"정정|자기\s*교정|사고\b|자백|틀렸|오진|잘못\s*(?:알|읽|판단)")
+    return bool(_CORRECTION_RE.search(text or ""))
+
+
 def detect_clusters(items: list[dict], X: Any) -> list[list[int]]:
-    """탐욕 군집 — 이웃 많은 씨앗부터, 다일 조건."""
+    """탐욕 군집 — 2-패스 (P-C-3 수정판: 1차 시도가 탐욕 순서를 흔들어
+    기존 군집을 변형시킴 — stale 3→2 실측. 교정 패스는 본 패스의 잔여에서만
+    돌아 기존 결과를 비트 단위로 보존한다)."""
     import numpy as np
 
     S = (X @ X.T).astype(np.float32)
@@ -84,6 +98,7 @@ def detect_clusters(items: list[dict], X: Any) -> list[list[int]]:
     visited: set[int] = set()
     clusters: list[list[int]] = []
     order = np.argsort(-(S > SIM_THRESHOLD).sum(axis=1))
+    # 1패스: 종전과 동일 (4회·3일)
     for i in order:
         if int(i) in visited:
             continue
@@ -94,6 +109,20 @@ def detect_clusters(items: list[dict], X: Any) -> list[list[int]]:
             if len(days) >= MIN_DAYS:
                 visited |= set(cluster)
                 clusters.append(cluster)
+    # 2패스 (P-C-3): 잔여 중 교정-마커 과반 군집만 저문턱(2회·2일)
+    for i in order:
+        if int(i) in visited or not _is_correction(items[int(i)]["text"]):
+            continue
+        nb = {int(j) for j in np.where(S[i] > SIM_THRESHOLD)[0]} - visited
+        cluster = sorted({int(i)} | nb)
+        if len(cluster) < CORRECTION_MIN_REPEATS:
+            continue
+        if sum(_is_correction(items[j]["text"]) for j in cluster) * 2 <= len(cluster):
+            continue
+        days = {items[j]["day"] for j in cluster}
+        if len(days) >= CORRECTION_MIN_DAYS:
+            visited |= set(cluster)
+            clusters.append(cluster)
     return clusters
 
 
