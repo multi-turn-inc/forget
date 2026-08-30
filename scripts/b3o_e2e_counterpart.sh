@@ -10,10 +10,22 @@ B3O="Authorization: Bearer $(cat ~/.forget/keys/b3o-desktop.key)"
 J="Content-Type: application/json"
 SCOPE="${1:-botbotbot}"
 say() { printf '%s\n' "$*"; }
+GID=""
+cleanup() { [ -n "$GID" ] && curl -s -X POST "$BASE/v1/grants/$GID/revoke" -H "$OWNER" > /dev/null || true; }
+trap cleanup EXIT
 
-say "── 0. 무그랜트 거절도 영수증인지"
+say "── 선청소: 이전 런의 잔존 그랜트 회수 (재실행 밀폐성)"
+curl -s "$BASE/v1/grants/" -H "$OWNER" | python3 -c "
+import sys, json
+for g in json.load(sys.stdin):
+    if g['grantee_pattern'] == 'b3o-desktop' and g['scope_app'] == '$SCOPE':
+        print(g['id'])" | while read -r gid; do
+  curl -s -X POST "$BASE/v1/grants/$gid/revoke" -H "$OWNER" > /dev/null && say "  ↺ $gid"
+done
+
+say "── 0. 무그랜트 거절도 영수증인지 (전용 프로브 스코프)"
 curl -s -X POST "$BASE/v1/memories/serve/" -H "$B3O" -H "$J" -d '{
-  "scope_app":"'"$SCOPE"'","query":"스모크","request_id":"botbotbot-denied-'$RANDOM'"}' \
+  "scope_app":"smoke-denied-probe","query":"스모크","request_id":"botbotbot-denied-'$RANDOM'"}' \
 | python3 -c "import sys,json; o=json.load(sys.stdin); assert o['allowed'] is False and o['receipt']['receipt_id']; print('  ✓ 거절 영수증', o['reason'])"
 
 say "── 1. 소유자: b3o-desktop에 그랜트 (쿼터 5·만료 규약은 운영 시 필수)"
@@ -72,4 +84,5 @@ curl -s "$BASE/v1/receipts/statement/?days=1" -H "$B3O" \
 
 say "── 7. 회수"
 curl -s -X POST "$BASE/v1/grants/$GID/revoke" -H "$OWNER" > /dev/null && say "  ✓ 회수됨"
+GID=""
 say "═══ 상대역 전 구간 관통 성공 — 브로커가 붙는 순간 이 스크립트가 E2E의 절반"
