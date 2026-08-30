@@ -66,6 +66,10 @@ OK=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/v1/memories/" -H "$B3
   "text":"사용자 선호: 다크 모드","app_id":"b3o.smoke-ws","human_approved":true}')
 [ "$NO" = "403" ] && [ "$OK" = "200" ] && say "  ✓ 없으면 403 · 명시 true면 200"
 
+say "── 6.5 사용 명세서 (에이전트 자격 = 자기 몫만)"
+curl -s "$BASE/v1/receipts/statement/?days=1" -H "$B3O" \
+| python3 -c "import sys,json; o=json.load(sys.stdin); assert o['grantee']=='b3o-desktop' and o['serves']>=1 and o['receipt_count']>=2; print(f\"  ✓ 서빙 {o['serves']}·거절 {o['denials']}·검문 {o['redactions_total']} — 원천은 영수증뿐\")"
+
 say "── 7. 회수"
 curl -s -X POST "$BASE/v1/grants/$GID/revoke" -H "$OWNER" > /dev/null && say "  ✓ 회수됨"
 say "═══ 상대역 전 구간 관통 성공 — 브로커가 붙는 순간 이 스크립트가 E2E의 절반"
