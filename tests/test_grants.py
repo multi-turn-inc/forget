@@ -360,3 +360,29 @@ def test_statement_endpoint_scopes_to_own_grantee():
                      headers={"Authorization": f"Bearer {key['api_key']}"})
     assert out.status_code == 200
     assert out.json()["grantee"] == "team-agent-1"          # 신원에 강제 결합
+
+
+def test_grant_expiry_defaults_to_ttl_and_indefinite_is_explicit():
+    """만료 기본값 (마켓 제도): 키 부재→30일, 무기한은 명시적 선택만."""
+    g_default = grants.create_grant({"grantee_pattern": "ttl-agent", "scope_app": APP})
+    assert g_default["expires_at"] is not None            # 침묵 무기한 없음
+    g_never = grants.create_grant({"grantee_pattern": "ttl-agent", "scope_app": APP,
+                                   "expires_at": "never"})
+    assert g_never["expires_at"] is None                  # 의도 기록된 무기한
+    g_exp = grants.create_grant({"grantee_pattern": "ttl-agent", "scope_app": APP,
+                                 "expires_at": "2020-01-01T00:00:00Z"})
+    out = grants.serve({"grantee": "ttl-agent", "scope_app": APP, "query": "x"})
+    assert out["allowed"] is True                         # never 그랜트로 입장
+    grants.revoke_grant(g_never["id"])
+    grants.revoke_grant(g_default["id"])
+    out2 = grants.serve({"grantee": "ttl-agent", "scope_app": APP, "query": "x"})
+    assert out2["allowed"] is False and out2["reason"] == "grant-expired"
+    grants.revoke_grant(g_exp["id"])
+
+
+def test_statement_carries_quota_remaining():
+    g = _grant()
+    grants.serve({"grantee": "team-agent-1", "scope_app": APP, "query": "meeting"})
+    st = grants.usage_statement(grantee="team-agent-1", scope_app=APP, days=7)
+    row = next(r for r in st["live_grants"] if r["id"] == g["id"])
+    assert row["remaining"] == row["quota"] - row["used"] and row["used"] >= 1

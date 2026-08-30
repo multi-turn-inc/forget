@@ -35,6 +35,7 @@ PII_DETECTORS: dict[str, re.Pattern[str]] = {
 REQUEST_ID_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9_.:-]{0,126}[A-Za-z0-9])?")
 PRINCIPAL_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}")
 PRINCIPAL_PATTERN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:*?\[\]!-]{0,159}")
+GRANT_DEFAULT_TTL_DAYS = 30
 
 
 def _grant_row_to_dict(row: Any) -> dict[str, Any]:
@@ -78,6 +79,19 @@ def create_grant(payload: dict[str, Any], project_id: str | None = None) -> dict
     answer_mode = str(payload.get("answer_mode") or "passage").strip()
     if answer_mode not in ("passage", "pointer"):
         raise ValueError("answer_mode must be 'passage' or 'pointer'")
+    # 만료 기본값 (마켓 제도, 2026-08-30): 무기한 그랜트는 잊힌 채 살아남는
+    # 조용한 위험이라, 무기한은 기본값이 아니라 명시적 선택이어야 한다.
+    # 키 부재 → 30일 / 키를 두고 null·"never" → 무기한(의도가 기록됨).
+    if "expires_at" in payload:
+        expires_at = payload.get("expires_at")
+        if expires_at in (None, "never"):
+            expires_at = None
+        else:
+            expires_at = str(expires_at)
+    else:
+        from datetime import datetime, timedelta, timezone
+        expires_at = (datetime.now(timezone.utc) + timedelta(days=GRANT_DEFAULT_TTL_DAYS)) \
+            .strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
     grant = {
         "id": new_id("grant"),
         "project_id": project_id,
@@ -89,7 +103,7 @@ def create_grant(payload: dict[str, Any], project_id: str | None = None) -> dict
         "quota": quota,
         "used": 0,
         "answer_mode": answer_mode,
-        "expires_at": payload.get("expires_at"),
+        "expires_at": expires_at,
         "revoked_at": None,
         "created_at": utc_now(),
     }
@@ -402,6 +416,16 @@ def usage_statement(project_id: str | None = None, grantee: str | None = None,
         else:
             denials += 1
             bucket["denials"] += 1
+    live_grants = [
+        {"id": g["id"], "scope_app": g["scope_app"], "quota": g["quota"],
+         "used": g["used"], "remaining": max(0, g["quota"] - g["used"]),
+         "expires_at": g["expires_at"]}
+        for g in list_grants(project_id)
+        if (not grantee or (
+            fnmatch.fnmatchcase(grantee, g["grantee_pattern"])
+            if g.get("principal_mode") == "pattern" else grantee == g["grantee_pattern"]))
+        and (not scope_app or g["scope_app"] == scope_app)
+    ]
     return {
         "schema_version": "forget-usage-statement-v1",
         "period_days": days,
@@ -410,4 +434,5 @@ def usage_statement(project_id: str | None = None, grantee: str | None = None,
         "items_served_total": items, "redactions_total": redactions,
         "by_day": dict(sorted(by_day.items())),
         "receipt_count": len(rows),
+        "live_grants": live_grants,
     }
