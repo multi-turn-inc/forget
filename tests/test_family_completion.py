@@ -43,7 +43,12 @@ def test_transitive_inheritance_reaches_chain_head(monkeypatch):
     ids = [r["id"] for r in rows]
     assert head in ids                                            # ① 머리 도달 (1홉이면 중간본)
     hrow = next(r for r in rows if r["id"] == head)
-    assert hrow["score_breakdown"].get("inherited_from")          # ④ 상속 계기
+    # ④ 계기 기록 — 도달 경로 둘 다 정당 (P-R-6 앵커 유산 이후 머리가 자력
+    # 도달 가능해짐): 간선 소환이면 머리에 inherited_from, 함께-인출이면
+    # 구본에 inhibited_by(머리 지목). 어느 쪽이든 판정 근거가 원장에 남는다.
+    if not hrow["score_breakdown"].get("inherited_from"):
+        stale_rows = [r for r in rows if r["id"] in (a, b)]
+        assert all(r["score_breakdown"].get("inhibited_by") == head for r in stale_rows)
     stale_ranks = [ids.index(x) for x in (a, b) if x in ids]
     if stale_ranks:
         assert ids.index(head) < min(stale_ranks)                 # 구본 위
