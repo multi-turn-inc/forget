@@ -85,6 +85,9 @@ def create_grant(payload: dict[str, Any], project_id: str | None = None) -> dict
     if "expires_at" in payload:
         expires_at = payload.get("expires_at")
         if expires_at in (None, "never"):
+            # b3o.* 스코프는 무기한 불가 — 승격 계약 문면(«만료 필수»)의 집행.
+            if scope_app.startswith("b3o."):
+                raise ValueError("b3o.* grants require a finite expires_at (promotion contract)")
             expires_at = None
         else:
             expires_at = str(expires_at)

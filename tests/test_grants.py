@@ -386,3 +386,13 @@ def test_statement_carries_quota_remaining():
     st = grants.usage_statement(grantee="team-agent-1", scope_app=APP, days=7)
     row = next(r for r in st["live_grants"] if r["id"] == g["id"])
     assert row["remaining"] == row["quota"] - row["used"] and row["used"] >= 1
+
+
+def test_b3o_scope_grant_rejects_indefinite_expiry():
+    """승격 계약 집행: b3o.* 그랜트는 만료 필수 — 무기한은 구조적으로 불가."""
+    with pytest.raises(ValueError, match="finite expires_at"):
+        grants.create_grant({"grantee_pattern": "b3o-desktop", "scope_app": "b3o.ws1",
+                             "expires_at": "never"})
+    ok = grants.create_grant({"grantee_pattern": "b3o-desktop", "scope_app": "b3o.ws1"})
+    assert ok["expires_at"] is not None                   # 기본값 30일이 채움
+    grants.revoke_grant(ok["id"])
