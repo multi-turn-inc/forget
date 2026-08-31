@@ -1275,6 +1275,34 @@ def _exit_declared(para: str) -> bool:
     return False
 
 
+# ㉸ 처치 (c268). 관측 76 처치 ①은 종류(kind) 축만 어순 둔감화했고 제목 축은
+# `body[:rfind("(사이클")]` 그대로 남아, 괄호절-선행 헤더
+# `## 관측 N (사이클 C, …) — 회부: 제목`(관측 79·80 실측, audit-220 §7 진단 ·
+# c224 판별)에서 제목 전체가 절단돼 인덱스에 빈 제목으로 인쇄됐다. 계상(tagged·
+# exited)은 tail 검사가 독립이라 무영향 — 흠은 표시 한정. 처치는 **보수적
+# 폴백**이다: 괄호절 앞 구간을 지금까지와 동일하게 우선하고(기존 비-빈 제목
+# 전건 무접촉), 그 구간이 비었을 때만 괄호절 뒤 구간에서 태그 어휘(회부/후보)를
+# 벗겨 취한다. 판정 채널 = 파트 F 인쇄(관측 79·80 제목이 비지 않아야).
+_OBS_TITLE_TAG = re.compile(r"^(?:회부|후보)\s*[:：]\s*")
+
+
+def obs_title(body: str) -> str:
+    """관측 원본 헤더의 제목 추출 — 어순 둔감 (㉸, c268). **순수 함수**.
+
+    body = 헤더 행에서 `관측 N` 매치 직후부터 끝까지.
+    """
+    body = body.replace("**", "")
+    cut = body.rfind("(사이클")
+    if cut < 0:
+        return body.strip(" —·:")
+    before = body[:cut].strip(" —·:")
+    if before:
+        return before
+    close = body.find(")", cut)
+    after = body[close + 1:] if close >= 0 else ""
+    return _OBS_TITLE_TAG.sub("", after.strip(" —·:")).strip(" —·:")
+
+
 def _obs_paragraph(lines: list[str], start: int) -> str:
     """start 행부터 첫 공백 행 전까지 — 처분 문단의 이탈 마커 탐색 범위. **순수 함수**."""
     out = []
@@ -1322,9 +1350,7 @@ def parse_observations(text: str) -> dict[int, dict]:
                 tail = line[line.rfind("(사이클"):] if "(사이클" in line else line
                 # 관측 76 처치 ②: 태그 단조성 — 원본 분기는 기존 태그를 내리지 못한다
                 entry["tagged"] = entry["tagged"] or ("회부" in tail) or ("후보" in tail)
-                body = line[m.end():].replace("**", "")
-                cut = body.rfind("(사이클")
-                entry["title"] = (body[:cut] if cut >= 0 else body).strip(" —·:")
+                entry["title"] = obs_title(line[m.end():])  # ㉸ 어순 둔감 (c268)
             elif kind == "처분":
                 para = _obs_paragraph(lines, idx)
                 if _exit_declared(para):

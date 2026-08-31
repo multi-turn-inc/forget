@@ -127,11 +127,55 @@ def test_title_extraction_strips_markup_and_cycle_paren():
     assert obs[5]["title"] == "후보 태그도 계상 대상이다"
 
 
+# ---- ㉸ (c268): 제목 추출의 어순 둔감화 — 괄호절-선행 헤더 -----------------------
+# 관측 79·80 실측 어순 `## 관측 N (사이클 C, 날짜) — 회부: 제목`에서 구판은
+# `body[:rfind("(사이클")]`이 제목 전체를 버려 빈 제목을 인쇄했다(audit-220 §7 ·
+# c224 판별). 계약: ① 괄호절 앞이 비면 뒤에서 취한다 ② 태그 어휘(회부/후보)는
+# 벗긴다 ③ 표준 어순의 기존 제목은 전건 무접촉 ④ 계상(tagged)은 어순 불문 유지.
+
+PAREN_FIRST = """\
+## 관측 79 (사이클 148, 2026-08-17) — 회부: 계기의 사망과 오염 — 보고가 원인을 복제한다
+
+본문.
+
+## 관측 80 (사이클 149, 2026-08-17) — 후보: 검색은 읽기가 아니다
+
+본문.
+"""
+
+
+def test_paren_first_header_title_is_not_empty_and_tag_stripped():
+    obs = c48.parse_observations(PAREN_FIRST)
+    assert obs[79]["title"] == "계기의 사망과 오염 — 보고가 원인을 복제한다"
+    assert obs[80]["title"] == "검색은 읽기가 아니다"
+
+
+def test_paren_first_header_tagged_accounting_unaffected():
+    obs = c48.parse_observations(PAREN_FIRST)
+    assert obs[79]["tagged"] is True and obs[80]["tagged"] is True
+    assert obs[79]["opened"] == 148 and obs[80]["opened"] == 149
+
+
+def test_obs_title_pure_function_orders():
+    # 표준 어순(앞 구간 우선 — 기존 동작 무접촉) · 무괄호 · 볼드 마커.
+    assert c48.obs_title(" — 제목이다 (사이클 10, 유형 판정 회부)") == "제목이다"
+    assert c48.obs_title(" — 괄호 없는 제목") == "괄호 없는 제목"
+    assert c48.obs_title(" (사이클 12) — **회부: 굵은 제목**") == "굵은 제목"
+
+
 # ---- 실제 대장: 불변 역사만 단언 (미래 사이클에도 깨지지 않는 술어) ------------------
 
 def _real():
     text = (ROOT / "research" / "devloop" / "frictions.md").read_text(encoding="utf-8")
     return c48.parse_observations(text)
+
+
+def test_real_obs_79_80_titles_not_empty():
+    # ㉸ 판정 채널의 회귀형 — 79·80 원본 헤더는 불변 역사(c148·c149 기재)이므로
+    # 제목 비-빈 단언은 미래 사이클에 깨지지 않는다(관측 100 경계 준수).
+    obs = _real()
+    assert obs[79]["title"] != ""
+    assert obs[80]["title"] != ""
 
 
 def test_real_ledger_has_contiguous_observation_numbers_24_to_59():
