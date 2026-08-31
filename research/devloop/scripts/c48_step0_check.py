@@ -131,6 +131,65 @@ def task_state_lag(ledger_last: int, summary: str) -> tuple[int | None, str]:
     return state_cycle, "앞섬(원장 미기재 — 절차 5 미완주 의심)"
 
 
+def head_loop_cycle(subject: str) -> int | None:
+    """HEAD 커밋 제목에서 `loop(cycle N)`의 N을 뽑는다. **순수 함수** (㉼, c267).
+
+    비-loop 제목이면 None — 그 축은 갈림이 아니라 **판정 불가**다. 남의 트랙 커밋이
+    HEAD에 오면 사망 지문이 지워지는 사각(관측 126)과 같은 모양이며, 이 함수는 그
+    사각을 '일치'로 접지 않고 호출자에게 None으로 돌려준다.
+    """
+    m = re.match(r"loop\(cycle\s+(\d+)\)", subject.strip())
+    return int(m.group(1)) if m else None
+
+
+def crash_orphan_verdict(ledger_last: int, head_cycle: int | None,
+                         state_cycle: int | None) -> tuple[bool, list[str]]:
+    """㉼ (c264 실측 · c265 상신 · c267 집행): 첫 줄 N의 crash-orphan 3자 대조. **순수 함수**.
+
+    기전(c264 실측): 직전 세션이 수확 중 죽으면 metrics.jsonl에는 orphan 행이 남고
+    커밋은 없다 — `N = max(cycle)+1`이 그 행을 세어 첫 줄이 다음 모드로 오도된다
+    (c264: 죽은 세션의 c264 행 착지·커밋 실패 → 첫 줄 N=265 회고 오인, 손 재판정 =
+    c264 일반). 파트 S(P53)는 사망을 탐지하는데 첫 줄 N 계산이 그 증거를 소비하지
+    않았다 — 이 눈이 그 배선이다.
+
+    규율 둘: ① **자동 차감 금물** — 이 함수는 N을 만지지 않는다. 갈림을 경고로만
+    바꾼다(오판 시 원장 이중 기재 위험 — 판정은 손 몫). ② None 축은 '판정 불가'다 —
+    일치로도 갈림으로도 계상하지 않는다(compare_fingerprint의 규율).
+
+    정상 프레임의 근거: step 0 시점의 3자는 전부 직전 완주 사이클을 가리킨다 —
+    HEAD = 직전 수확 커밋 `loop(cycle N-1)` · task_state 세대 = N-1 · ledger max =
+    N-1. 따라서 세 값의 등호가 정상이고, ledger만 앞서는 것이 c264 지문이다.
+    """
+    lines: list[str] = []
+    diverged: list[tuple[str, int]] = []
+    unknown: list[str] = []
+    for name, val in (("HEAD", head_cycle), ("task_state", state_cycle)):
+        if val is None:
+            unknown.append(name)
+        elif val != ledger_last:
+            diverged.append((name, val))
+    head_s = "판정 불가" if head_cycle is None else str(head_cycle)
+    state_s = "판정 불가" if state_cycle is None else str(state_cycle)
+    lines.append("  [㉼ 3자 대조 — crash-orphan 눈 (c264 실측 · c265 상신 · c267 배선)]")
+    lines.append(f"    ledger_last={ledger_last} · HEAD loop(cycle)={head_s}"
+                 f" · task_state 세대={state_s}")
+    if diverged:
+        axes = " · ".join(f"{name}={val}" for name, val in diverged)
+        lines.append(f"    !! «crash-orphan 의심 — N 재판정 필요» — 갈린 축: {axes}")
+        lines.append("       위 첫 줄 N을 신뢰하기 전에 orphan 원장 행 여부를 손으로 판정하라")
+        lines.append("       (c166형/c264형 크래시 복구 절차). **자동 차감은 하지 않았다** —")
+        lines.append("       오판 시 원장 이중 기재 위험이 있어 판정은 손 몫이다(㉼ 문면).")
+    elif unknown:
+        lines.append(f"    → 대조 가능 축 일치 · 판정 불가 축 {len(unknown)}"
+                     f" ({', '.join(unknown)}) — 판정 불가는 일치가 아니다")
+    else:
+        lines.append("    → 3자 일치 (crash-orphan 증거 0)")
+    if head_cycle is None:
+        lines.append("    ※ HEAD 축 판정 불가 = 비-loop 커밋이 HEAD다 — 남의 트랙 커밋이")
+        lines.append("      사망 지문을 지우는 사각(관측 126)과 같은 모양. 이때 남은 축만 본다.")
+    return bool(diverged), lines
+
+
 #: 절차 5의 재조회 확인을 보고하는 원장 필드. **구조적으로 영수증이 아니다** — 이 필드가
 #: 사는 원장 행은 `원장 append → 커밋 → push → record_task_state → 재조회` 순서(관측 55
 #: 수용 기준 ②, c96)에서 **재조회보다 먼저** 쓰인다. 그래서 값은 의도 선언이며, 진위는
@@ -413,12 +472,33 @@ def part_n() -> None:
             if line:
                 cycles.append(int(json.loads(line)["cycle"]))
     n, mode = cycle_number_and_mode(cycles)
+    # ㉼ (c267): 첫 줄을 인쇄하기 **전에** 3자 대조를 계산한다 — 경고는 첫 줄 병기가
+    # 문면이고, 인쇄 후 계산이면 첫 줄이 이미 나가 있다. 축 채취 실패는 침묵이 아니라
+    # 인쇄다(part_s와 같은 규율) — 실패한 축은 판정 불가로 계상된다.
+    head_cycle = head_loop_cycle(run(["git", "log", "-1", "--format=%s"]))
+    state_cycle: int | None = None
+    state_probe_err = ""
+    try:
+        rows = (call("get_task_state", {"task_id": "devloop", "limit": 1}) or {}).get("results") or []
+        if rows:
+            summary = " ".join(str(rows[0].get("summary") or "").split())
+            state_match = re.search(r"사이클\s*(\d+)", summary)
+            state_cycle = int(state_match.group(1)) if state_match else None
+    except Exception as exc:  # noqa: BLE001 — 도달 실패도 관측이며 침묵보다 낫다
+        state_probe_err = f"{type(exc).__name__}: {exc}"
+    orphan_suspect, orphan_lines = crash_orphan_verdict(max(cycles), head_cycle, state_cycle)
+    orphan_flag = "  !! «crash-orphan 의심 — N 재판정 필요»" if orphan_suspect else ""
     print("[!] metrics.jsonl을 직접 열지 말 것 — 번호·모드는 아래 한 줄이 정본이다.")
     print("    (tail/cat/head 계열 0회. 이 스크립트가 이미 전체를 파싱했다.")
     print("     지시서 절차 0의 '마지막 줄에서 N' 문면은 A-55.1 게이트 대기 중인 구본이며,")
     print("     감사 사이클의 metrics 정독 임무는 번호 결정 단계와 별개로 허용된다.)")
     print(f"[N. 사이클 번호 — cycle 필드 max+1]")
-    print(f"  last_cycle={max(cycles)}  N={n}  mode={mode} (N%10={n % 10}, N%5={n % 5})")
+    print(f"  last_cycle={max(cycles)}  N={n}  mode={mode} (N%10={n % 10}, N%5={n % 5})"
+          f"{orphan_flag}")
+    for line in orphan_lines:
+        print(line)
+    if state_probe_err:
+        print(f"    ※ task_state 축 채취 실패({state_probe_err}) — 그 축은 판정 불가로 계상됐다")
     print("[T. 턴 배치 규약 — **정본 = 저장소 루트 CLAUDE.md (c135 개정본)** · c91 문면 폐기]")
     print("    A. 기적재 하네스(ToolSearch 불요) = **2턴**")
     print("       턴1 = cycle-prompt.md Read + get_task_state(devloop) + 이 스크립트"
