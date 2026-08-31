@@ -2465,11 +2465,38 @@ PERMANENT_INSTRUMENT_VOCAB: dict[str, tuple[str, ...]] = {
           "짝", "c188_", "검산", "동격"),
     "㉭": ("declare_diff", "㉭", "선언∖", "선언\\", "프레임 이동뿐",
           "c189_", "질의", "부기 선언", "정본 diff"),
+    # ㉺·㉷ = c271 등재 (audit-270 R2 — c269·c266 상설 승격 시 미등재로 ㉶절이
+    # «어휘 미등록»을 2사이클 인쇄한 실측의 소비. 등재 의무는 승격 사이클 몫이었다.)
+    "㉺": ("vocab_receipt", "㉺", "영수증 블록", "어휘 게이트", "신규 위반",
+          "c243_", "harvest_stat", "기지 P39", "재검"),
+    "㉷": ("queue_mover", "㉷", "이동기", "얇은 호출자", "드리프트",
+          "재계산", "상설 표", "queue_ages", "세대"),
 }
 
 #: 처분 문면이 «파트 N 상설»이면 step 0 내장 계기다 — 값은 그 파트의 전사 의무가
 #: 나르므로 이 인용 눈의 정의역 밖이다(예: ㉰ = 파트 O 상설).
 _EMBEDDED_RX = re.compile(r"파트\s*\S+\s*상설")
+
+_TEST_FN_RX = re.compile(r"^\s*def test_", re.M)
+
+
+def instrument_mass(scripts_dir: str, tests_dir: str) -> dict:
+    """계기 질량 — 상설 scripts 본수 + devloop 회귀 본수. **순수 함수**(인자 경로만 읽는다).
+
+    왜 (audit-270 F-A). 자기 수리 선례의 경계 감시는 계기 큐 계수(줄어드는 수)만
+    보았고, 그 감시 아래에서 계기 질량(상설 모듈·회귀 테스트 — 늘어나는 수)은
+    자[尺] 없이 자랐다(c266~c269 상설 2본·회귀 25본). 이 함수가 그 자[尺]다.
+    값만 잰다 — 문턱·판정은 손 몫(상수를 발명하면 규약이 된다, c174의 교훈).
+    """
+    scripts = [f for f in os.listdir(scripts_dir) if f.endswith(".py")]
+    test_files = [f for f in os.listdir(tests_dir)
+                  if f.startswith("test_devloop_") and f.endswith(".py")]
+    test_funcs = 0
+    for f in sorted(test_files):
+        with open(os.path.join(tests_dir, f), encoding="utf-8") as fh:
+            test_funcs += len(_TEST_FN_RX.findall(fh.read()))
+    return {"scripts": len(scripts), "test_files": len(test_files),
+            "test_funcs": test_funcs}
 
 
 def permanent_instruments(text: str) -> list[dict]:
@@ -2680,6 +2707,23 @@ def part_d() -> None:
     except Exception as exc:
         print(f"\n  [상설 계기 인용·표본 칸 — ㉶+㉬] !! 미측정: {type(exc).__name__}: {exc}")
         print("     → '무인용 0·질의 0'으로 읽지 말 것.")
+
+    # ── 계기 질량 계열 (c271 신설 · audit-270 R2 — F-A의 선언된 반증 조건) ────
+    # 파트 D 안에 둔 것은 의도다: 자기 수리 선례를 소비하는 손이 보는 화면(계기
+    # 큐·판정 기한)과 같은 화면에, 그 선례들이 쌓아 올리는 질량이 함께 있어야
+    # 단측 성장이 보인다. 값 인쇄 전용 — 추세·개선 주장은 원장 전사값 대조로만(원칙 1).
+    try:
+        mass = instrument_mass(os.path.dirname(os.path.abspath(__file__)),
+                               os.path.join(REPO, "tests"))
+        print(f"\n  [계기 질량 — 매 사이클 (c271 신설, audit-270 R2 · F-A 반증 조건)]")
+        print(f"    scripts *.py = {mass['scripts']}본 · tests/test_devloop_*.py ="
+              f" {mass['test_files']}파일 · test 함수 = {mass['test_funcs']}본"
+              f"  [프레임 N={n_now}]")
+        print("    ※ 이 세 수를 원장에 **그대로** 전사할 것 — 추세는 전사 계열에서만"
+              " 읽힌다(손 증분 금지, P46 (a)와 같은 규율).")
+    except Exception as exc:
+        print(f"\n  [계기 질량] !! 미측정: {type(exc).__name__}: {exc}")
+        print("     → '질량 불변'으로 읽지 말 것.")
 
     # 회고·감사 시계는 예측 대장이 아니라 사이클 번호가 정한다. 같은 화면에 둔다 —
     # 기한을 만나는 손이 "그 판정을 쓸 문서가 언제 열리는가"도 함께 알아야 한다(관행 ⑧).
