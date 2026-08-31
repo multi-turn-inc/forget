@@ -196,7 +196,14 @@ def main() -> int:
     print("  " + "─" * 70)
     print(format_denominator_block(sha, subject, rows, CORPUS_PATHS, nxt))
     print("  " + "─" * 70)
-    return 0 if agree else 1
+
+    # ㉺ (c269 · 관측 128 ③): 어휘 게이트 편집-후 기계 영수증. 파트 P는 step 0
+    # 계기라 자기 사이클의 상태줄 편집에 눈멀다 — 이 호출이 수확 시점의 대장을
+    # 재검한다. 파트 H가 이 스크립트의 매 사이클 실행을 의무화하므로 손 단계 0.
+    print()
+    from vocab_receipt import run_for_harvest  # noqa: PLC0415
+    fresh_n = run_for_harvest()
+    return 0 if agree and fresh_n == 0 else 1
 
 
 if __name__ == "__main__":
