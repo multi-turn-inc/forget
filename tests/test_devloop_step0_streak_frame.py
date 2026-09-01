@@ -192,6 +192,98 @@ def test_headline_ignores_a_frame_declared_in_another_field():
     assert c48.streak_headline(claims, {"restore_note": 7}, 2, 173) == []
 
 
+# ── c283 — 계기 큐 ㉩ 집행 (관측 110 사각 수리: FRAME_RX 서식 변이) ──────────────
+#
+# 고장 표본(규율 1 인용): c280 `frictions_note`가 «[프레임 = 자기행 포함 c280·중단 c269 값 1]»
+# 로 프레임을 정직 기재했으나 구판 FRAME_RX(«원장 최종 cN»만)가 못 읽어 declared_frames()
+# = {} → 파트 O가 «선언 프레임 무기재»로 인쇄. c283 step 0 실측: 같은 서식이 c265~c280
+# **16행 연속**이었다(구판 정규식 106쌍 해석 · 느슨 탐침 적중-미해석 16쌍). 아래는 능력을
+# 합성 표본으로 고정한다(관행 ⑯) — 실 원장의 분포는 마지막 테스트가 인쇄만 한다.
+
+#: c280 행의 모양을 그대로 뜬 합성 표본.
+C280_SHAPED = {
+    "cycle": 280,
+    "frictions_note": (
+        "종결 0·보강 0. fixed 0 = **11연속**[프레임 = 자기행 포함 c280·중단 c269 값 1]. "
+        "★재발 표본 계수 **여섯째 라이브** = 총 **92건**."
+    ),
+}
+
+
+def test_self_inclusive_frame_variant_is_parsed_as_that_cycle():
+    """★ ㉩ 처치의 핵. «자기행 포함 cN»은 «원장 최종 cN»과 같은 뜻(원장 행 cN까지)이므로
+    같은 프레임 값으로 읽는다. 구판은 이 표본에서 `{}`를 돌려줬다."""
+    assert c48.declared_frames(C280_SHAPED) == {"frictions_note": 280}
+    assert c48.unparsed_frame_fields(C280_SHAPED) == {}
+
+
+def test_self_inclusive_frame_judges_the_value_at_that_frame():
+    """값 11(자기행 포함 프레임 c280)은 선언 프레임 c280에서 **11**이다 — 갈라짐 없음.
+    구판이 «무기재»로 침묵한 자리에서 이 눈이 이제 «후보에 있음»을 말할 수 있다."""
+    rows = _rows([(269, 1)] + [(c, 0) for c in range(270, 281)])
+    frame = c48.declared_frames(C280_SHAPED)["frictions_note"]
+    st = c48.field_streak([r for r in rows if r["cycle"] <= frame], "frictions_fixed", 0)
+    claims = {v for _, v in c48.streak_claim_matches(C280_SHAPED, FIXED_VOCAB)}
+    assert st["streak"] == 11, st
+    assert st["streak"] in claims, (st, claims)
+
+
+def test_two_frame_shape_reads_the_first_canonical_frame():
+    """c281·c282 서식 «원장 최종 c281 · 자기행 포함 시 13» — 첫 정본 서식이 프레임이고
+    뒤의 «자기행 포함 시 13»은 값이지 프레임이 아니다(c 접두 없음). 확장이 이것을
+    프레임 13으로 오독하면 안 된다."""
+    row = {"cycle": 282,
+           "frictions_note": "fixed 0 = **12연속**[프레임 = 원장 최종 c281 · 자기행 포함 시 13 · 중단 c269 값 1]."}
+    assert c48.declared_frames(row) == {"frictions_note": 281}
+
+
+def test_unknown_frame_syntax_is_reported_not_folded_into_absence():
+    """★ 정직 기재를 무기재로 접지 않는다. «프레임 =»을 적었는데 두 정본 서식 어느 쪽도
+    아니면 프레임을 **추측하지 않고** 미해석 조각을 돌려준다 — 인쇄는 «판정 불가»다."""
+    row = {"cycle": 5, "frictions_note": "fixed 0 = **3연속**[프레임 = 직전 행까지 c4]."}
+    assert c48.declared_frames(row) == {}
+    got = c48.unparsed_frame_fields(row)
+    assert set(got) == {"frictions_note"}
+    assert got["frictions_note"].startswith("프레임 = 직전 행까지 c4")
+
+
+def test_truly_absent_frame_is_neither_parsed_nor_unparsed():
+    """무기재는 무기재다 — 느슨 탐침도 침묵해야 «무기재» 인쇄가 참이다."""
+    row = {"cycle": 1, "frictions_note": "**5연속**이다."}
+    assert c48.declared_frames(row) == {}
+    assert c48.unparsed_frame_fields(row) == {}
+
+
+def test_unparsed_is_per_field_and_excludes_parsed_fields():
+    """필드별이다(관측 108·109·110 공통 기전). 읽힌 필드는 미해석 목록에 오르지 않는다."""
+    row = {
+        "cycle": 9,
+        "frictions_note": "**2연속**[프레임 = 자기행 포함 c9].",
+        "open_observations_note": "캡슐 miss **7연속**[프레임 = 뭔가 다른 c8].",
+    }
+    assert c48.declared_frames(row) == {"frictions_note": 9}
+    assert set(c48.unparsed_frame_fields(row)) == {"open_observations_note"}
+
+
+def test_real_ledger_self_inclusive_frames_are_now_read():
+    """실 원장 **인쇄 전용** + 프레임 독립 항등식 하나: «프레임 =»을 적은 (행,필드)는
+    해석되거나 미해석 목록에 오르거나 둘 중 하나다 — 침묵으로 사라지지 않는다.
+    현재 분포(해석/미해석 수)는 인쇄만 한다(관행 ⑯)."""
+    ledger = ROOT / "research" / "devloop" / "metrics.jsonl"
+    rows = [json.loads(ln) for ln in ledger.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    parsed = unparsed = 0
+    for r in rows:
+        fr = c48.declared_frames(r)
+        un = c48.unparsed_frame_fields(r)
+        assert not (set(fr) & set(un)), (r["cycle"], fr, un)
+        for fld, v in r.items():
+            if isinstance(v, str) and c48.FRAME_LOOSE_RX.search(v):
+                assert fld in fr or fld in un, (r["cycle"], fld)
+        parsed += len(fr)
+        unparsed += len(un)
+    print(f"[인쇄] «프레임 =» 기재 (행,필드) = 해석 {parsed} · 미해석 {unparsed}")
+
+
 def test_real_ledger_declared_frame_never_exceeds_its_own_cycle():
     """실 원장 항등식 — **프레임 독립**이다: 어떤 행도 미래의 원장을 프레임으로
     선언할 수 없다. 데이터가 자라도, 관측 110이 고쳐져도 참이어야 한다.

@@ -1738,7 +1738,15 @@ def field_streak(rows: list[dict], field: str, value: object) -> dict:
 
 #: c173 신설 (관측 110 처치). 상태형 계수기의 **선언 프레임**. 서식 = `프레임 = 원장 최종 cN`.
 #: 산술형의 `[프레임 N=173]`과 서식이 달라야 두 자[尺]가 한 정규식에 섞이지 않는다.
-FRAME_RX = re.compile(r"프레임\s*=\s*원장\s*최종\s*c(\d+)")
+#: c283 확장 (계기 큐 ㉩ 집행 — 관측 110 사각 수리). 둘째 서식 `프레임 = 자기행 포함 cN`을
+#: 흡수한다. 정직한 행이 c265~c280 **16행 연속** 이 서식으로 프레임을 적었고 구판 정규식은
+#: 전부 `{}`로 읽어 «선언 프레임 무기재»를 인쇄했다 — 기재를 무기재로 접은 것이다.
+#: 두 서식 모두 «프레임 = 원장 행 cN까지»를 뜻하므로 값 의미는 같다(자기행 포함 = 그 행이
+#: 원장에 있는 프레임). 이 밖의 서식은 `FRAME_LOOSE_RX`가 «미해석»으로 따로 인쇄한다.
+FRAME_RX = re.compile(r"프레임\s*=\s*(?:원장\s*최종|자기행\s*포함)\s*c(\d+)")
+#: 느슨 탐침 — «프레임 =»이라고 적었는데 위 서식 어느 쪽도 아닌 경우. 무기재와 구별해
+#: «서식 미해석 — 판정 불가»로 인쇄한다(정직 기재를 침묵으로 접지 않는 쪽 — ㉩ 처치 방향).
+FRAME_LOOSE_RX = re.compile(r"프레임\s*=")
 
 
 def streak_claim_matches(row: dict, vocab_rx: str) -> list[tuple[str, int]]:
@@ -1799,6 +1807,27 @@ def declared_frames(row: dict) -> dict[str, int]:
     for fld, v in row.items():
         if isinstance(v, str) and (m := FRAME_RX.search(v)):
             out[fld] = int(m.group(1))
+    return out
+
+
+def unparsed_frame_fields(row: dict, width: int = 40) -> dict[str, str]:
+    """«프레임 =»을 적었으나 `FRAME_RX`가 못 읽는 **필드별** 원문 조각. 순수 함수 (c283, ㉩).
+
+    왜 있는가. 구판 파트 O는 `declared_frames() == {}`를 «선언 프레임 무기재»로 인쇄했다.
+    그런데 `{}`에는 두 경우가 섞여 있다 — 정말 안 적은 행과, 적었으나 정규식이 모르는
+    서식으로 적은 행. c265~c280 16행이 후자였고(«자기행 포함 cN»), 그 16사이클 동안 인쇄는
+    «무기재»였다. 정직한 기재를 무기재로 접는 것은 관측 108·109가 겨눈 병의 변종이다.
+
+    이 함수는 서식을 **해석하지 않는다** — 값을 추측해 프레임으로 쓰면 없는 프레임을
+    만드는 셈이다. 못 읽었다는 사실과 원문 조각만 돌려주고, 인쇄가 «판정 불가»로 말한다.
+    `FRAME_RX`가 이미 읽은 필드는 여기 오르지 않는다.
+    """
+    out: dict[str, str] = {}
+    for fld, v in row.items():
+        if not isinstance(v, str) or FRAME_RX.search(v):
+            continue
+        if m := FRAME_LOOSE_RX.search(v):
+            out[fld] = v[m.start():m.start() + width]
     return out
 
 
@@ -2178,7 +2207,16 @@ def part_o() -> None:
                 print(f"          [{fld}] {v}  {{{'·'.join(marks) or '어느 값과도 불일치'}}}")
             # 관측 110. 값을 계기가 고른 한 프레임에서만 재던 것이 P52 (a) 반증의
             # 기전이다 — 행이 **스스로 선언한** 프레임을 여기서 처음 심판에 쓴다.
-            if not frames:
+            # c283 (㉩). «무기재»와 «적었으나 못 읽음»을 가른다 — 후자를 전자로 인쇄한 것이
+            # c265~c280 16사이클의 사각이었다. 미해석은 판정 불가이지 무기재가 아니다.
+            unparsed = unparsed_frame_fields(last)
+            if not frames and unparsed:
+                for fld, frag in sorted(unparsed.items()):
+                    print(f"          !! [{fld}] **프레임 서식 미해석 — 판정 불가**"
+                          f" (적혀 있으나 FRAME_RX 정의역 밖): «{frag}…»"
+                          " — 서식을 정본(원장 최종 cN / 자기행 포함 cN)으로 맞추거나"
+                          " FRAME_RX를 확장할 것. 무기재로 계상하지 않는다(㉩ c283).")
+            elif not frames:
                 print("          ※ 선언 프레임 무기재 — 값의 프레임을 검증할 수 없다"
                       "(관측 110의 사각: 갈라짐이 있어도 이 눈은 침묵한다).")
             for fld, fr in sorted(frames.items()):
