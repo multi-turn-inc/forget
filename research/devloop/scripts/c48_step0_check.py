@@ -1313,6 +1313,26 @@ def _obs_paragraph(lines: list[str], start: int) -> str:
     return " ".join(out)
 
 
+def header_kind(line: str) -> tuple[int, str] | None:
+    """관측 헤더 행의 (번호, 종류) 판별 — 어순 둔감 (관측 76 처치 ①). **순수 함수**.
+
+    ㉻(c272 집행)이 인덱스 생성기와 이 파서가 **같은 분류 술어**를 쓰도록 추출했다 —
+    규칙을 두 벌 두면 관측 30·34(자[尺] 무선언 분기)의 다음 표본이 된다.
+    비-헤더 행은 None."""
+    m = OBS_HEADER.match(line)
+    if not m:
+        return None
+    num, kind = int(m.group(1)), (m.group(2) or "원본")
+    if kind == "원본":
+        seg_m = _OBS_KIND_SEG.match(line)
+        seg = seg_m.group(1) if seg_m else ""
+        for k in ("처분", "보강", "재발"):
+            if k in seg:
+                kind = k
+                break
+    return num, kind
+
+
 def parse_observations(text: str) -> dict[int, dict]:
     """frictions.md의 실재 표기 관행에서 관측별 상태를 파생한다. **순수 함수** (c108, P34).
 
@@ -1328,17 +1348,10 @@ def parse_observations(text: str) -> dict[int, dict]:
     current: int | None = None
     lines = text.splitlines()
     for idx, line in enumerate(lines):
-        m = OBS_HEADER.match(line)
-        if m:
-            num, kind = int(m.group(1)), (m.group(2) or "원본")
-            if kind == "원본":
-                # 관측 76 처치 ①: 어순 둔감 — 대시 전 구간에서 종류 어휘 탐색
-                seg_m = _OBS_KIND_SEG.match(line)
-                seg = seg_m.group(1) if seg_m else ""
-                for k in ("처분", "보강", "재발"):
-                    if k in seg:
-                        kind = k
-                        break
+        hk = header_kind(line)  # 관측 76 처치 ① — 판별은 header_kind 단일 술어 (㉻ 추출)
+        if hk:
+            num, kind = hk
+            m = OBS_HEADER.match(line)
             entry = obs.setdefault(num, {
                 "opened": None, "last": None, "tagged": False,
                 "exited": False, "partial_disposal": False, "title": ""})
