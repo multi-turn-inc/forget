@@ -13,6 +13,12 @@ c170~c265 96세대 동안 tmp/cN_queue_ages.py가 같은 로직을 상수만 바
 규율 승계: `### 정산 (cNNN)` 이하 산문은 과거 프레임의 기록이라 건드리지 않는다.
 상설 절의 불릿(정산 이력)도 마찬가지 — 이 모듈은 **표 행만** 만진다.
 회귀 = tests/test_devloop_queue_mover.py.
+
+㉨ (c284 집행 — «깨진 devloop 소유 계기의 자기 수리» 열째 선례): 이동기는 자기 산출물의
+영수증 거처(«- **cN 정산**:» 불릿)를 검산하지 않았다 — c276~c280 다섯 프레임의 정산 줄이
+무공지로 소멸해도(관측 130) 드리프트 0만 인쇄했다. 처치 = 재계산 패스 말미에
+**직전 프레임 정산 줄 존재 1비트**를 읽기 전용으로 산출한다(`settlement_receipt`) —
+부재면 시끄럽게, 침묵 금지. 불릿은 **읽기만** 한다(무접촉 규율 불변).
 """
 import re
 
@@ -22,6 +28,8 @@ FORMULA_RE = re.compile(r"`\s*N\s*[−-]\s*(\d+)\s*\+\s*1\s*`")
 QUEUE_HDR = "## 큐 (프레임"
 PERM_HDR = "## 상설 파생 계수기"
 FRAME_CELL_RE = re.compile(r"프레임 N=(\d+) 값")
+# 정산 불릿 두 서식: «- **cN 정산**:» (단일·범위 cA~cB) / «- **cA~cB 정산 줄 공백**» (공백 기재)
+SETTLE_RE = re.compile(r"^- \*\*c(\d+)(?:~c(\d+))? 정산(?P<gap> 줄 공백)?")
 
 
 class FrameMismatch(Exception):
@@ -124,9 +132,94 @@ def recalc_permanent_table(lines, new_n):
     return report
 
 
+def settlement_receipt(lines, prev_n):
+    """㉨ — 직전 프레임 cN 정산 줄 **존재 1비트** (읽기 전용·불릿 무접촉).
+
+    정의역 = 파일 전체의 «- **cN 정산**» 불릿 계열(단일 cN · 범위 cA~cB · «줄 공백» 기재).
+    범위 불릿은 그 구간 전 프레임을 덮는다. «줄 공백» 기재는 정산 줄이 아니라 **공백의
+    기록**이므로 present=False이되 kind='gap'으로 갈라 적는다 — 기재된 공백과 침묵 소멸을
+    한 값으로 접지 않는다(관측 130의 병은 후자다).
+
+    반환: {prev_frame, present(bool: 정산 줄 자체가 있다), kind('settle'|'gap'|None),
+           line(1-based|None), series_min, series_max, recorded_gaps[프레임],
+           silent_missing[프레임 — series_min..prev_n 중 어느 불릿도 안 덮는 것],
+           duplicates[프레임 — 불릿 2개 이상]}
+    """
+    covered = {}
+    for i, l in enumerate(lines):
+        m = SETTLE_RE.match(l)
+        if not m:
+            continue
+        a = int(m.group(1))
+        b = int(m.group(2) or a)
+        kind = "gap" if m.group("gap") else "settle"
+        for f in range(a, b + 1):
+            covered.setdefault(f, []).append((kind, i + 1))
+    r = {"prev_frame": prev_n, "present": False, "kind": None, "line": None,
+         "series_min": None, "series_max": None, "recorded_gaps": [],
+         "silent_missing": [], "duplicates": []}
+    if not covered:
+        r["silent_missing"] = [prev_n]
+        return r
+    r["series_min"], r["series_max"] = min(covered), max(covered)
+    hit = covered.get(prev_n)
+    if hit:
+        kinds = [k for k, _ in hit]
+        if "settle" in kinds:
+            r["present"], r["kind"] = True, "settle"
+            r["line"] = next(ln for k, ln in hit if k == "settle")
+        else:
+            r["kind"], r["line"] = "gap", hit[0][1]
+    r["recorded_gaps"] = sorted(f for f, v in covered.items()
+                                if all(k == "gap" for k, _ in v))
+    r["silent_missing"] = [f for f in range(r["series_min"], prev_n + 1)
+                           if f not in covered]
+    r["duplicates"] = sorted(f for f, v in covered.items() if len(v) > 1)
+    return r
+
+
+def format_settlement_receipt(r):
+    """인쇄 서식 — 부재는 «!!»로 시끄럽게. 문자열 리스트 반환(호출자가 print)."""
+    n = r["prev_frame"]
+    out = []
+    if r["present"]:
+        out.append(f"[㉨] 직전 프레임 c{n} 정산 줄 = 존재 (L{r['line']}) · 1비트 = 1")
+    elif r["kind"] == "gap":
+        out.append(f"[㉨] !! 직전 프레임 c{n} 정산 줄 = 부재 — 단 «줄 공백» 기재 있음 (L{r['line']}) · 1비트 = 0(기재된 공백)")
+    else:
+        out.append(f"[㉨] !! 직전 프레임 c{n} 정산 줄 = **부재·무기재** — 관측 130 재발 표본 · 1비트 = 0 · 원장에 적을 것(침묵 금지)")
+    if r["series_min"] is not None:
+        out.append(f"     불릿 계열 c{r['series_min']}~c{r['series_max']} · 기재된 공백 {len(r['recorded_gaps'])}프레임"
+                   + (f" {_ranges(r['recorded_gaps'])}" if r["recorded_gaps"] else ""))
+    if r["silent_missing"]:
+        out.append(f"     !! 침묵 소멸(어느 불릿도 안 덮음) {len(r['silent_missing'])}프레임: {_ranges(r['silent_missing'])}")
+    if r["duplicates"]:
+        out.append(f"     [주의] 불릿 2개 이상인 프레임: {_ranges(r['duplicates'])}")
+    return out
+
+
+def _ranges(frames):
+    """[206,207,208,210] → 'c206~c208·c210' — 인쇄 축약 전용."""
+    if not frames:
+        return ""
+    runs, start, prev = [], frames[0], frames[0]
+    for f in frames[1:]:
+        if f != prev + 1:
+            runs.append((start, prev))
+            start = f
+        prev = f
+    runs.append((start, prev))
+    return "·".join(f"c{a}" if a == b else f"c{a}~c{b}" for a, b in runs)
+
+
 def move_frame(text, old_n, new_n):
-    """두 패스 일괄 실행. 반환 (new_text, queue_report, perm_report)."""
+    """두 패스 일괄 실행 + ㉨ 영수증. 반환 (new_text, queue_report, perm_report).
+
+    perm_report['settlement_prev'] = settlement_receipt(직전 프레임 = old_n) — 이동 직전
+    프레임의 정산 줄은 그 사이클 수확이 썼어야 하므로, 이동 시점이 그 1비트의 검산 시점이다.
+    """
     lines = text.splitlines()
     q = shift_queue_frame(lines, old_n, new_n)
     p = recalc_permanent_table(lines, new_n)
+    p["settlement_prev"] = settlement_receipt(lines, old_n)
     return "\n".join(lines) + "\n", q, p
