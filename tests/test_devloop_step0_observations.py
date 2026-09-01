@@ -217,3 +217,56 @@ def test_real_ledger_opening_cycles_are_immutable_history():
     assert obs[24]["opened"] == 63
     assert obs[52]["opened"] == 94
     assert obs[59]["opened"] == 105
+
+
+# ---- 재발 표본 계수 reinforcement_counts (audit-270 R3 · c275 배선) --------------
+# 합성 픽스처만(관측 100·106 경계) — 실대장 값 고정은 미래-가정 상수가 된다(㉹ 규율).
+
+REINF_SAMPLE = """
+## 관측 7 — 원본 헤더는 계상 밖 (사이클 20, 유형 회부)
+
+본문에 보강 (사이클 21) 같은 산문 인용이 있어도 세지 않는다.
+
+## 관측 7 보강 (사이클 22): 첫 재발 표본
+
+본문.
+
+## 관측 7 보강 (사이클 22): 같은 사이클 둘째 표본 — 누적된다
+
+본문.
+
+## 관측 8 처분 (사이클 23): 처분 헤더는 보강이 아니다
+
+이 관측은 종결로 회부 상태를 벗는다.
+
+## 관측 9 보강 (사이클 24): 다른 사이클 표본
+
+본문.
+"""
+
+
+def test_reinforcement_counts_headers_only_and_accumulate():
+    # 계약 ①: 헤더로 판별된 «보강»만 계수 — 산문 인용(c21)은 0, 같은 사이클 둘은 누적.
+    counts = c48.reinforcement_counts(REINF_SAMPLE)
+    assert counts == {22: 2, 24: 1}
+
+
+def test_reinforcement_counts_excludes_original_and_disposal():
+    # 계약 ②: 원본(c20)·처분(c23) 헤더는 어떤 값으로도 등장하지 않는다.
+    counts = c48.reinforcement_counts(REINF_SAMPLE)
+    assert 20 not in counts and 23 not in counts
+
+
+def test_reinforcement_counts_predicate_is_header_kind():
+    # 계약 ③: 분류 술어는 header_kind 단일 정본이다(규칙 두 벌 금지 — ㉻ 규율).
+    # header_kind가 보강으로 읽는 행만 계수 대상이 될 수 있다.
+    reinf_lines = [line for line in REINF_SAMPLE.splitlines()
+                   if (hk := c48.header_kind(line)) and hk[1] == "보강"]
+    assert reinf_lines  # 픽스처가 보강 헤더를 실제로 담고 있다
+    for line in reinf_lines:
+        assert c48.reinforcement_counts(line + "\n")
+
+
+def test_reinforcement_counts_empty_text_is_empty():
+    # 계약 ④: 무표본 = 빈 dict — 0을 값으로 위장하지 않는다(부재와 0의 구별은 호출부 몫).
+    assert c48.reinforcement_counts("") == {}

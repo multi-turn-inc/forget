@@ -1392,6 +1392,31 @@ def open_observation_numbers(obs: dict[int, dict]) -> list[int]:
     return sorted(n for n, o in obs.items() if o["tagged"] and not o["exited"])
 
 
+_REINF_CYCLE = re.compile(r"보강 \(사이클 (\d+)")
+
+
+def reinforcement_counts(text: str) -> dict[int, int]:
+    """«보강 (사이클 N» **헤더**의 기재-사이클별 계수 (audit-270 R3 · c275 배선). **순수 함수**.
+
+    왜. 무주조 규율(기지 계열 재발은 새 번호를 주조하지 않는다 — P69 정신)이 자리잡은 뒤
+    frictions_logged 창 합계가 60→4→1로 붕괴했는데, 재발 표본은 «보강 (사이클 N)» 헤더로
+    계속 기재됐고 **어떤 계수기도 그 헤더를 세지 않았다** — 원장 헤드라인 (0, 0)이
+    «사건 흐름 0»으로 읽히는 채널이 열려 있었다(audit-270 §1-1). 이 함수가 그 자[尺]다.
+    분류 술어는 header_kind 단일 정본(㉻ 규율 — 규칙 두 벌 금지)이고, 이 정규식은
+    헤더로 판별된 행에서 기재-사이클 추출만 한다. 헤더 밖 산문의 같은 문자열은
+    계상하지 않는다(그 차이는 호출부가 느슨 탐침으로 병기 — 진단 전용, 관측 107 규율).
+    """
+    out: dict[int, int] = {}
+    for line in text.splitlines():
+        hk = header_kind(line)
+        if hk and hk[1] == "보강":
+            m = _REINF_CYCLE.search(line)
+            if m:
+                c = int(m.group(1))
+                out[c] = out.get(c, 0) + 1
+    return out
+
+
 # c123 정독(관측 69 수용 기준 ①)이 확정한 정직 재고 범위. **빈티지 상수**다 —
 # 자동 인쇄가 36이던 시점의 값이고, 이 범위의 무번호 성분(20/16 + 무태그 c41 1건
 # − 중복 후보 4)만이 상수의 몫이다. 자동 성분이 움직이면 범위도 그만큼 움직이므로,
@@ -2198,7 +2223,8 @@ def part_f() -> None:
     말한 "상수 크기 조망"이다 — 원문은 여전히 표적 조회로 연다.
     """
     with open(FRICTIONS, encoding="utf-8") as fh:
-        obs = parse_observations(fh.read())
+        frictions_text = fh.read()
+    obs = parse_observations(frictions_text)
     rows = []
     with open(os.path.join(REPO, "research", "devloop", "metrics.jsonl"), encoding="utf-8") as fh:
         for line in fh:
@@ -2254,6 +2280,18 @@ def part_f() -> None:
         print("     ※ 서수 = 당 사이클 포함(c161 ㉠ 통일, 파트 O와 동일 자[尺]).")
         print("       c160까지의 인쇄는 개시 제외였으므로 구 계열보다 **+1**이다 —")
         print("       추세를 읽는 손은 c161 경계에서 +1을 알 것(소급 편집 없음, P46 한계 ③).")
+
+    # audit-270 R3 (c275 배선) — 재발 표본 흐름. frictions_logged 무주조 규율 아래에서도
+    # 사건 흐름이 0으로 읽히지 않게 «보강 (사이클 N» 헤더를 기계 계수한다(§1-1).
+    reinf = reinforcement_counts(frictions_text)
+    total_r = sum(reinf.values())
+    loose_r = frictions_text.count("보강 (사이클")
+    recent_r = [(c, k) for c, k in sorted(reinf.items()) if c >= n_now - 30]
+    recent_txt = " ".join(f"c{c}×{k}" if k > 1 else f"c{c}" for c, k in recent_r) or "없음"
+    print(f"  [재발 표본 계수 — audit-270 R3 (c275 배선)] «보강 (사이클 N» 헤더 = 총 {total_r}건")
+    print(f"     최근 30창(c{n_now - 30}~): {len(recent_r)}사이클 {sum(k for _, k in recent_r)}건 — {recent_txt}")
+    print(f"     ↳ 느슨 탐침(헤더 외 산문 포함 부분문자열) = {loose_r}건 — 차이 {loose_r - total_r}건은"
+          f" 산문 인용분. **진단 전용·고발 없음**(관측 107) — 정본 계수는 header_kind 술어 쪽이다.")
 
     print(f"  무태그(유형 기귀속, 계상 밖): {' '.join(str(n) for n in untagged)}"
           f"   회부 이탈: {' '.join(str(n) for n in exited)}")
