@@ -271,17 +271,20 @@ def test_real_ledger_self_inclusive_frames_are_now_read():
     현재 분포(해석/미해석 수)는 인쇄만 한다(관행 ⑯)."""
     ledger = ROOT / "research" / "devloop" / "metrics.jsonl"
     rows = [json.loads(ln) for ln in ledger.read_text(encoding="utf-8").splitlines() if ln.strip()]
-    parsed = unparsed = 0
+    parsed = unparsed = quoted = 0
     for r in rows:
         fr = c48.declared_frames(r)
         un = c48.unparsed_frame_fields(r)
+        qt = c48.quoted_frame_fields(r)  # c286 ㉩′ — 셋째 갈래(인용)에 이름을 준다
         assert not (set(fr) & set(un)), (r["cycle"], fr, un)
+        assert not (set(fr) & set(qt)), (r["cycle"], fr, qt)
         for fld, v in r.items():
             if isinstance(v, str) and c48.FRAME_LOOSE_RX.search(v):
-                assert fld in fr or fld in un, (r["cycle"], fld)
+                assert fld in fr or fld in un or fld in qt, (r["cycle"], fld)
         parsed += len(fr)
         unparsed += len(un)
-    print(f"[인쇄] «프레임 =» 기재 (행,필드) = 해석 {parsed} · 미해석 {unparsed}")
+        quoted += len(qt)
+    print(f"[인쇄] «프레임 =» 기재 (행,필드) = 해석 {parsed} · 미해석 {unparsed} · 인용 {quoted}")
 
 
 def test_real_ledger_declared_frame_never_exceeds_its_own_cycle():

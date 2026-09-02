@@ -1682,6 +1682,27 @@ STREAK_COUNTERS = (
     ("`rt` 불변 2 연속", "restore_turns", 2, r"`rt`"),
 )
 
+#: c286 신설 (계기 큐 ㉳ 집행 — P67 한계 ④ · c192·c230 표본). 캡슐 축 `restore_grade_capsule`의
+#: **셋째 값**: 파트 B에 **도달하지 못한** 사이클(SessionStart 훅 무발화·캡슐 채취 실패)의
+#: 원장 기재 어휘. 구판 정의역은 {miss, partial}뿐이라 «캡슐이 왔는데 무용»(miss)과 «캡슐이
+#: 오지 않았다»(비도달)가 한 값에 합쳐졌다 — c192는 1세션이 «판정 불가»를 산문에 적고
+#: 2세션이 miss로 대체했고, c230은 훅 무발화를 «어휘 4치 제약»으로 miss에 강제 기재했다
+#: (c286 재실측: 두 행 다 필드값 miss·산문만 «판정 불가»). 캡슐 축은 c91 원장 파생 필드이고
+#: 지시서 절차 0의 4치(full/partial/stale/miss)는 **종합 축** 어휘이므로 이 값의 추가는 지시서
+#: 개정 불요(c285 회고 확인). **소급 편집 0** — c192·c230은 miss인 채 남고, 이 값은 c286
+#: 이후 비도달 사이클만 쓴다. 계수기 쪽 처치는 `STREAK_EXCLUDE`: 이 값은 miss 연속을
+#: **끊지도 잇지도 않는다**(정의역 밖 = 미측정) — 비도달을 «무용»으로도 «유용»으로도 세지
+#: 않는 것이 ㉳의 전부다. 종합 축 `restore_grade`·A-106.1 무간섭.
+CAPSULE_UNDECIDABLE = "판정 불가"
+
+#: 필드별 **정의역 제외값**. 상태형 계수기가 «값 == 표적 / 아니면 중단»의 2분법으로 세므로
+#: 셋째 값은 등록하지 않으면 중단으로 읽혀 연속을 끊는다 — 비도달이 «캡슐이 유용했다»로
+#: 계상되는 방향이다(관측 87 부류: 눈 감김이 건강으로 읽힘). 여기 등록된 값의 행은
+#: `field_streak`가 정의역에서 빼고 `excluded`로 따로 돌려준다.
+STREAK_EXCLUDE: dict[str, tuple] = {
+    "restore_grade_capsule": (CAPSULE_UNDECIDABLE,),
+}
+
 #: 값 서식은 계수기와 무관하게 하나다. 어휘 식별과 값 추출을 **두 단계로 가르는** 것이
 #: 관측 109 처치의 전부다 — 한 정규식에 이름과 값을 함께 넣으면 둘이 서로를 먹는다.
 #:
@@ -1699,7 +1720,8 @@ STREAK_VALUE_RX = re.compile(r"(\d+)\s*(?:사이클\s*)?연속")
 STREAK_CLAIM_WINDOW = 60
 
 
-def field_streak(rows: list[dict], field: str, value: object) -> dict:
+def field_streak(rows: list[dict], field: str, value: object,
+                 exclude: tuple = ()) -> dict:
     """원장 역순으로 `field == value`가 끊길 때까지 센다. **순수 함수.**
 
     자[尺] 선언 (관측 85 · 96). 이 계수기의 프레임은 파트 O 산술형과 **다르다**:
@@ -1715,8 +1737,17 @@ def field_streak(rows: list[dict], field: str, value: object) -> dict:
 
     `off_value`는 정의역 안에서 값이 다른 행이다. *"도입 이래 전부 miss"*류 주장은
     이 목록이 비어야 참이며, c168 실측으로 **거짓**이었다(c91~c94·c119 = `partial` 5건).
+
+    `exclude` (c286, ㉳). 여기 든 값의 행은 **정의역 밖**이다 — 연속을 잇지도 끊지도
+    않으며 `excluded`에 사이클만 돌려준다. 캡슐 축의 «판정 불가»(비도달)가 첫 손님이다:
+    미측정을 중단으로 읽으면 비도달이 «캡슐 유용»으로 계상되고, 표적값으로 읽으면
+    «무용»으로 계상된다 — 어느 쪽도 그 사이클이 잰 것이 아니다. `frame_last`는 제외
+    행을 **포함**한 마지막 행이다(프레임 = 원장 행 cN까지 — 제외 행도 원장에 있다).
+    기본값 빈 튜플이면 구판과 결과가 같다(`excluded` 키만 추가).
     """
-    ordered = sorted((r for r in rows if field in r), key=lambda r: int(r["cycle"]))
+    present = sorted((r for r in rows if field in r), key=lambda r: int(r["cycle"]))
+    excluded = [int(r["cycle"]) for r in present if r.get(field) in exclude]
+    ordered = [r for r in present if r.get(field) not in exclude]
     domain = [int(r["cycle"]) for r in ordered]
     off_value = [int(r["cycle"]) for r in ordered if r.get(field) != value]
     streak, brk = 0, None
@@ -1732,7 +1763,8 @@ def field_streak(rows: list[dict], field: str, value: object) -> dict:
         "domain": len(domain),
         "span": (domain[0], domain[-1]) if domain else None,
         "off_value": off_value,
-        "frame_last": domain[-1] if domain else None,
+        "frame_last": int(present[-1]["cycle"]) if present else None,
+        "excluded": excluded,
     }
 
 
@@ -1747,6 +1779,18 @@ FRAME_RX = re.compile(r"프레임\s*=\s*(?:원장\s*최종|자기행\s*포함)\s
 #: 느슨 탐침 — «프레임 =»이라고 적었는데 위 서식 어느 쪽도 아닌 경우. 무기재와 구별해
 #: «서식 미해석 — 판정 불가»로 인쇄한다(정직 기재를 침묵으로 접지 않는 쪽 — ㉩ 처치 방향).
 FRAME_LOOSE_RX = re.compile(r"프레임\s*=")
+#: c286 (계기 큐 ㉩′ 집행 — ㉩ 판정 채널의 인용문 거짓 양성). 서식 **이름을 인용**한 문면은
+#: 느슨 탐침의 정의역 밖이다. c284 실측은 리터럴 `cN`(«프레임 = 자기행 포함 cN») 1건이었으나
+#: c286 센서스(`tmp/c286_frame_next_census.py` — 정본 적중 136자리 · 비정본 4자리)는 인용의
+#: 모양이 **셋**임을 냈다: ① 리터럴 `cN` ② 토큰 자체를 따옴표로 닫음(«「프레임 =」 기재»)
+#: ③ 코드 식별자(«(직전 프레임 = old_n)»). 넷 다 «서식을 말하는 문장»이고 «서식을 쓰는 문장»
+#: 이 아니다 — 진짜 미지 서식은 실원장에 0. 판별 술어 = «=» 뒤가 닫는 따옴표이거나 `c+숫자`가
+#: 아닌 ASCII 식별자. 정본 서식(FRAME_RX)은 `c\d+`를 요구하므로 이 술어와 서로소다.
+#: **선언된 한계**: ASCII 식별자로 시작하는 미지 서식(예: «프레임 = N=286»)은 인용으로 오분류
+#: 된다 — 그런 행은 `quoted_frame_fields`에 잡히므로 실원장 항등식의 «인용» 계수가 뛰는 것으로
+#: 보인다(침묵 소멸이 아니라 계수 이동). 한글로 시작하는 미지 서식은 여전히 «미해석»이다.
+FRAME_LITERAL_RX = re.compile(
+    r"프레임\s*=\s*(?:원장\s*최종|자기행\s*포함)?\s*(?:[」»'\"”』]|`?(?!c\d)[A-Za-z_]\w*\b)")
 
 
 def streak_claim_matches(row: dict, vocab_rx: str) -> list[tuple[str, int]]:
@@ -1821,13 +1865,39 @@ def unparsed_frame_fields(row: dict, width: int = 40) -> dict[str, str]:
     이 함수는 서식을 **해석하지 않는다** — 값을 추측해 프레임으로 쓰면 없는 프레임을
     만드는 셈이다. 못 읽었다는 사실과 원문 조각만 돌려주고, 인쇄가 «판정 불가»로 말한다.
     `FRAME_RX`가 이미 읽은 필드는 여기 오르지 않는다.
+
+    c286 (㉩′). 서식 이름을 **인용**한 자리(`FRAME_LITERAL_RX` — 리터럴 `cN`)는 건너뛴다.
+    한 필드에 인용과 진짜 미해석 서식이 함께 있으면 인용은 건너뛰고 미해석만 돌려준다 —
+    인용 하나가 같은 필드의 진짜 미해석을 가리면 관측 104의 침묵이 재발한다.
     """
     out: dict[str, str] = {}
     for fld, v in row.items():
         if not isinstance(v, str) or FRAME_RX.search(v):
             continue
-        if m := FRAME_LOOSE_RX.search(v):
+        for m in FRAME_LOOSE_RX.finditer(v):
+            if FRAME_LITERAL_RX.match(v, m.start()):
+                continue
             out[fld] = v[m.start():m.start() + width]
+            break
+    return out
+
+
+def quoted_frame_fields(row: dict) -> dict[str, int]:
+    """«프레임 =»을 **인용**한 자리 수, 정본 서식이 없는 필드만. 순수 함수 (c286, ㉩′).
+
+    왜 있는가. `unparsed_frame_fields`가 인용을 건너뛰기 시작하면 «프레임 =»을 적은
+    필드의 갈래가 셋이 된다 — 해석·미해석·인용. 셋째에 이름이 없으면 실원장 항등식
+    («기재는 해석 또는 미해석 어느 한쪽 — 침묵 소멸 금지»)이 인용 행에서 붉어지거나,
+    항등식을 느슨하게 풀어 침묵을 허용하게 된다. 이 함수가 그 셋째 갈래의 이름이다:
+    항등식은 «해석 ∨ 미해석 ∨ 인용»으로 닫히고 세 계수가 함께 인쇄된다.
+    """
+    out: dict[str, int] = {}
+    for fld, v in row.items():
+        if not isinstance(v, str) or FRAME_RX.search(v):
+            continue
+        n = sum(1 for m in FRAME_LOOSE_RX.finditer(v) if FRAME_LITERAL_RX.match(v, m.start()))
+        if n:
+            out[fld] = n
     return out
 
 
@@ -2157,8 +2227,9 @@ def part_o() -> None:
     print("  [상태형 계수기 — c168 신설 (관측 96 처치 · P52). 산술형과 **프레임이 다르다**:")
     print("   원장에 이미 쓰인 행만 센다(실행 사이클 행은 아직 없다). 값과 프레임을 같이 전사할 것.]")
     for label, field, value, vocab_rx in STREAK_COUNTERS:
-        st = field_streak(rows, field, value)
-        if st["frame_last"] is None:
+        exclude = STREAK_EXCLUDE.get(field, ())
+        st = field_streak(rows, field, value, exclude)
+        if st["frame_last"] is None or st["span"] is None:
             print(f"    {label}  →  !! 필드 `{field}` 보유 행 0 — 미측정이다"
                   " ('연속 0'으로 읽지 말 것).")
             continue
@@ -2167,6 +2238,14 @@ def part_o() -> None:
               f"  [프레임 = 원장 최종 c{st['frame_last']} · 실행 사이클 c{n_exec} **미포함**]")
         print(f"       정의역 {st['domain']}행 (c{span[0]}~c{span[1]}) · "
               f"중단 = {'c%d 값 %r' % st['break'] if st['break'] else '없음(정의역 전체가 연속)'}")
+        if exclude:
+            # c286 (㉳). 비도달(«판정 불가»)은 정의역 밖이다 — 연속을 잇지도 끊지도 않는다.
+            # 0행이어도 인쇄한다: «분리했는데 없다»와 «분리하지 않았다»는 다른 침묵이다.
+            ex = st["excluded"]
+            shown = " ".join(f"c{c}" for c in ex[:8]) + (" …" if len(ex) > 8 else "")
+            print(f"       정의역 밖 {'/'.join(map(str, exclude))}(비도달) = **{len(ex)}행**"
+                  f"{' [' + shown + ']' if ex else ''} — miss 연속을 잇지도 끊지도 않음(㉳ c286)."
+                  f"{' 어휘 도입 이전 비도달 표본 c192·c230은 miss인 채 — 소급 편집 0.' if not ex else ''}")
         if st["off_value"] != []:
             shown = " ".join(f"c{c}" for c in st["off_value"][:8])
             print(f"       정의역 내 값 다른 행 {len(st['off_value'])}건: {shown}"
@@ -2187,7 +2266,7 @@ def part_o() -> None:
             # 규약대로 전사한 행을 «전량 불일치»로 인쇄했다.
             frame_streaks = {
                 fld: field_streak([r for r in rows if int(r["cycle"]) <= fr],
-                                  field, value)["streak"]
+                                  field, value, exclude)["streak"]
                 for fld, fr in frames.items() if any(f == fld for f, _ in claims)
             }
             matched = streak_headline(claims, frame_streaks, st["streak"], st["frame_last"])
