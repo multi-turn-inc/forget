@@ -2645,6 +2645,16 @@ PERMANENT_INSTRUMENT_VOCAB: dict[str, tuple[str, ...]] = {
 #: 나르므로 이 인용 눈의 정의역 밖이다(예: ㉰ = 파트 O 상설).
 _EMBEDDED_RX = re.compile(r"파트\s*\S+\s*상설")
 
+#: 규율 3의 **부정 선언** — 처분 칸이 «상설 승격 아님/없음»을 명시한 항은 상설이 아니다.
+#: 왜 (㉶′ c287). 이 눈의 정의역 술어는 처분 칸의 «상설» 어휘 **존재**였는데, 자기 수리
+#: 규율 3(instrument-queue.md)은 집행 사이클에게 «상설 승격 아님»을 처분 칸에 **적으라**
+#: 요구한다 — 정직한 부정 선언이 긍정 술어의 미끼가 됐다(관측 124 모양: c285 3건 →
+#: c286 2건 → c287 4건 «어휘 미등록» 인쇄, 전건 ㉨·㉩·㉳·㉴ 해소 행). 부정이 적힌 항은
+#: «기존 상설 모듈 내 함수 추가»처럼 «상설»이 또 나와도 정의역 밖이다 — 규율 3 문면이
+#: 그 행의 자기 선언이고, 자기 선언이 산문 언급보다 우선한다. 제외분은 침묵하지 않고
+#: `rule3_negated_instruments`로 별도 인쇄된다(0항이어도).
+_RULE3_NEGATION_RX = re.compile(r"상설\s*승격\s*(?:아님|없음|없다|비해당|안\s*함)")
+
 _TEST_FN_RX = re.compile(r"^\s*def test_", re.M)
 
 
@@ -2667,14 +2677,12 @@ def instrument_mass(scripts_dir: str, tests_dir: str) -> dict:
             "test_funcs": test_funcs}
 
 
-def permanent_instruments(text: str) -> list[dict]:
-    """instrument-queue.md «집행·해소 이력» 표에서 처분에 «상설»이 든 항을 직독한다.
+def _history_rows(text: str):
+    """«집행·해소 이력» 표의 (항, 내용, 처분) 셀을 순서대로 낸다 — 두 정의역 함수의 공통 독자.
 
-    **순수 함수** — 인자 텍스트만 본다. 명단을 상수로 박지 않는 이유: 다음 상설
-    계기가 태어날 때 이 눈이 침묵하는 것이 정확히 관측 119(정의역 미선언)의
-    재발이기 때문이다(am-195 §4-① 정의역 조항).
+    한 독자를 둘이 쓰는 이유: 포함 술어와 제외 술어가 다른 파서 위에 살면 «제외했는데
+    없다»와 «못 읽었다»가 같은 침묵이 된다(관측 100·106 부류).
     """
-    rows: list[dict] = []
     in_history = False
     for line in text.splitlines():
         if line.startswith("## "):
@@ -2686,12 +2694,41 @@ def permanent_instruments(text: str) -> list[dict]:
         cells = [c.strip() for c in stripped.strip("|").split("|")]
         if len(cells) < 3 or cells[0] == "항" or set(cells[0]) <= set("-: "):
             continue
-        marker, content, disposal = cells[0], cells[1], cells[2]
-        if "상설" not in disposal:
+        yield cells[0], cells[1], cells[2]
+
+
+def rule3_negated(disposal: str) -> bool:
+    """처분 칸이 규율 3 부정(«상설 승격 아님/없음»)을 명시했는가 — 순수 술어."""
+    return bool(_RULE3_NEGATION_RX.search(disposal))
+
+
+def permanent_instruments(text: str) -> list[dict]:
+    """instrument-queue.md «집행·해소 이력» 표에서 처분에 «상설»이 든 항을 직독한다.
+
+    **순수 함수** — 인자 텍스트만 본다. 명단을 상수로 박지 않는 이유: 다음 상설
+    계기가 태어날 때 이 눈이 침묵하는 것이 정확히 관측 119(정의역 미선언)의
+    재발이기 때문이다(am-195 §4-① 정의역 조항).
+
+    ㉶′(c287): 규율 3 부정 선언이 적힌 항은 «상설»이 또 나와도 정의역 밖 —
+    `rule3_negated_instruments`가 그 제외분을 낸다(침묵 금지).
+    """
+    rows: list[dict] = []
+    for marker, content, disposal in _history_rows(text):
+        if "상설" not in disposal or rule3_negated(disposal):
             continue
         rows.append({"marker": marker, "content": content, "disposal": disposal,
                      "embedded": bool(_EMBEDDED_RX.search(disposal))})
     return rows
+
+
+def rule3_negated_instruments(text: str) -> list[dict]:
+    """«상설»이 적혀 있으나 규율 3 부정 선언으로 정의역 밖인 항 — 인쇄용. **순수 함수.**
+
+    0항이면 빈 리스트(None 아님) — «제외했는데 없다»는 인쇄할 값이다.
+    """
+    return [{"marker": m, "content": c, "disposal": d}
+            for m, c, d in _history_rows(text)
+            if "상설" in d and rule3_negated(d)]
 
 
 def instrument_citation(row: dict, roster: list[dict],
@@ -2869,9 +2906,10 @@ def part_d() -> None:
     # 배달 채널 ①(P68 등록문 명시)이 이 파트의 매 사이클 인쇄이기 때문이다.
     try:
         with open(INSTRUMENT_QUEUE_PATH, encoding="utf-8") as fh:
-            roster = permanent_instruments(fh.read())
-        _print_instrument_eyes(roster, rows[-1],
-                               sample_cell_scan(PRED.read_text(encoding="utf-8")))
+            queue_text = fh.read()
+        _print_instrument_eyes(permanent_instruments(queue_text), rows[-1],
+                               sample_cell_scan(PRED.read_text(encoding="utf-8")),
+                               negated=rule3_negated_instruments(queue_text))
     except Exception as exc:
         print(f"\n  [상설 계기 인용·표본 칸 — ㉶+㉬] !! 미측정: {type(exc).__name__}: {exc}")
         print("     → '무인용 0·질의 0'으로 읽지 말 것.")
@@ -2956,7 +2994,8 @@ def _print_status_stamp(rec: dict) -> None:
               " 번호를 가르는 것이 정본 처치다(개명 패킷 = 게이트 대기).")
 
 
-def _print_instrument_eyes(roster: list[dict], last_row: dict, scan: dict) -> None:
+def _print_instrument_eyes(roster: list[dict], last_row: dict, scan: dict,
+                           negated: list[dict] | None = None) -> None:
     """㉶+㉬ 인쇄 — 계산과 가른다(`_print_status_stamp`와 같은 이유)."""
     n_last = last_row.get("cycle")
     print("\n  [상설 계기 인용·표본 칸 — ㉶+㉬ 병합 (c196 신설, am-195 §4-① · P68)"
@@ -2969,6 +3008,11 @@ def _print_instrument_eyes(roster: list[dict], last_row: dict, scan: dict) -> No
         line += (f" · 내장 {len(embedded)}항({' '.join(r['marker'] for r in embedded)}"
                  " — 그 파트의 전사 의무 몫, 이 눈 밖)")
     print(line)
+    # ㉶′(c287): 규율 3 부정 선언 제외분 — 0항이어도 인쇄(«제외했는데 없다» ≠ «제외하지 않았다»).
+    negated = negated or []
+    marks = " ".join(r["marker"] for r in negated) if negated else "—"
+    print(f"    규율 3 부정(«상설 승격 아님») 제외 = **{len(negated)}항**({marks})"
+          " — 처분 칸에 «상설»이 적혀 있으나 자기 선언이 부정이라 정의역 밖(㉶′ c287).")
     print(f"    검사 = 직전 원장 행 c{n_last}의 계기별 어휘 매치"
           "(느슨 — 과잉 매치 방향 · **후보만, 판정은 손**):")
     for rec in instrument_citation(last_row, standalone):

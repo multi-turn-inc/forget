@@ -123,3 +123,57 @@ def test_landing_cycle_is_the_max_stamp_in_section():
             "- **판정 (사이클 193)** — 1차.\n- **판정 (사이클 196)** — 재판정, 표본 칸 없음.\n")
     scan = c48.sample_cell_scan(text, since=196)
     assert scan["candidates"] == [("P96", 196, "표본 칸 부재")]
+
+
+# ── ㉶′ (c287) — 규율 3 부정 선언은 정의역 밖 ───────────────────────────────────
+# 왜. 자기 수리 규율 3은 집행 사이클에게 «상설 승격 아님»을 처분 칸에 적으라 요구하고,
+# 이 눈의 정의역 술어는 «상설» 어휘의 존재였다 — 정직한 부정 선언이 긍정 술어의 미끼가
+# 돼 c285 3건 → c286 2건 → c287 4건 «어휘 미등록» 거짓 양성을 인쇄했다(관측 124 모양).
+# 합성 픽스처만(관측 100·106 경계) + 실원장 항등식 1본(계수 고정 없음).
+QUEUE_RULE3 = """# 계기 큐
+
+## 집행·해소 이력
+
+| 항 | 내용 | 처분 |
+|---|---|---|
+| ㉨ | 영수증 축 결손 | **c284 집행·해소** — 규율 3: 상설 승격 아님(queue_mover 기존 상설 모듈 내 함수 추가·㉷ 어휘 기등재) |
+| ㉴ | 채택률 인쇄 | **c282 해소** — 규율 1·2·3 = 비해당(수리·건설 아님·상설 승격 없음) |
+| ㉮ | 범위∖계수 검산 | c188 건설 — 상설 (P64 판정 c193) |
+| ㉰ | 미계기화 «N연속» 탐지 | c191 건설 — 파트 O 상설 |
+| ㉲ | 일회성 census | **c193 집행·해소** |
+"""
+
+
+def test_rule3_negation_excludes_row_even_when_permanent_word_recurs():
+    """⑤ «상설 승격 아님»이 적힌 항은 «기존 상설 모듈»이 또 나와도 정의역 밖이다."""
+    roster = [r["marker"] for r in c48.permanent_instruments(QUEUE_RULE3)]
+    assert "㉨" not in roster
+    assert c48.rule3_negated("규율 3: 상설 승격 아님(기존 상설 모듈 내 함수 추가)") is True
+
+
+def test_rule3_negation_variants_and_genuine_rows_unaffected():
+    """⑥ «상설 승격 없음» 변이도 부정 · 진짜 상설(㉮)·내장(㉰)은 그대로다."""
+    roster = {r["marker"]: r for r in c48.permanent_instruments(QUEUE_RULE3)}
+    assert set(roster) == {"㉮", "㉰"}
+    assert roster["㉰"]["embedded"] is True and roster["㉮"]["embedded"] is False
+    assert c48.rule3_negated("c188 건설 — 상설 (P64 판정 c193)") is False
+
+
+def test_rule3_excluded_rows_are_printed_not_silent():
+    """⑦ 제외분은 별도 반환된다 — 부정 0항이면 빈 리스트(None 아님) = 인쇄할 값."""
+    negated = [r["marker"] for r in c48.rule3_negated_instruments(QUEUE_RULE3)]
+    assert negated == ["㉨", "㉴"]
+    assert c48.rule3_negated_instruments(QUEUE) == []
+
+
+def test_real_queue_roster_and_negated_are_disjoint_partition():
+    """⑧ 실원장 항등식 — 실제 instrument-queue.md에서 포함·제외가 서로소이고 제외분은 전건
+    «상설»+부정 문면이다. 계수는 고정하지 않는다(관측 100·106 — 다음 상설 계기가 태어나도 초록)."""
+    text = (ROOT / "research" / "devloop" / "instrument-queue.md").read_text(encoding="utf-8")
+    roster = {r["marker"] for r in c48.permanent_instruments(text)}
+    negated = c48.rule3_negated_instruments(text)
+    assert roster.isdisjoint({r["marker"] for r in negated})
+    for r in negated:
+        assert "상설" in r["disposal"] and c48.rule3_negated(r["disposal"])
+    for r in c48.permanent_instruments(text):
+        assert not c48.rule3_negated(r["disposal"])
