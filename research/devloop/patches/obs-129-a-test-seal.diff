@@ -1,0 +1,16 @@
+--- a/tests/test_update_awareness.py
++++ b/tests/test_update_awareness.py
+@@ -81,7 +81,12 @@ def _capsule_output(monkeypatch, tmp_path, capsys, result_payload: dict) -> str:
+     module = _load("forget_sessionstart")
+     # hermetic: the hook reads FORGET_HOME/update-check.json — without this pin,
+     # the real machine's cache leaks in and a product release flips the test
+     monkeypatch.setenv("FORGET_HOME", str(tmp_path))
+     monkeypatch.setattr(module, "STATE_DIR", str(tmp_path))
++    # hermetic (관측 129): forget_bstate resolves ~/.forget/bstate at import time and
++    # bypasses the FORGET_HOME pin above — a live B-layer capture on the dogfood machine
++    # would otherwise be injected into the "empty capsule stays silent" case
++    import forget_bstate
++    monkeypatch.setattr(forget_bstate, "BSTATE_DIR", str(tmp_path / "bstate"))
+     monkeypatch.setattr(module, "project_key_for_path", lambda path: None)
+
+     class FakeResponse:

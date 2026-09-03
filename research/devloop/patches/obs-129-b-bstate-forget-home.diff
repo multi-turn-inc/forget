@@ -1,0 +1,12 @@
+--- a/hooks/forget_bstate.py
++++ b/hooks/forget_bstate.py
+@@ -33,7 +33,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+ from forget_project import project_key_for_path  # noqa: E402
+
+-BSTATE_DIR = os.path.expanduser("~/.forget/bstate")
++# FORGET_HOME first (test pins · relocated homes) — a bare ~/.forget bypassed the pin (관측 129)
++BSTATE_DIR = os.path.join(os.environ.get("FORGET_HOME") or os.path.expanduser("~/.forget"), "bstate")
+ THROTTLE_MIN = int(os.environ.get("FORGET_BSTATE_THROTTLE_MIN", "10"))
+ DIALOGUE_BUDGET = 6000          # 요약 입력 (P39와 동일)
+ STATE_BUDGET = 600              # 4청크 상태 예산 (P39와 동일)
