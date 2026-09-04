@@ -25,5 +25,18 @@ diff가 만지는 파일은 **HEAD 추적 파일 ∧ 봉쇄 집합(타 트랙 �
 | `obs-129-a-test-seal.diff` | 관측 129 (테스트 측 밀폐) | `tests/test_update_awareness.py` | HEAD 추적 · 봉쇄 교집합 0 | c292 `git apply --check` 통과 · 1세션 작성(14:28 KST) · 2세션 검산 채택 |
 | `obs-129-b-bstate-forget-home.diff` | 관측 129 (제품 측 짝 · `FORGET_HOME` 우선) | `hooks/forget_bstate.py` | HEAD 추적 · 봉쇄 교집합 0 | c292 `git apply --check` 통과 · 1세션 작성 · 2세션 검산 채택 |
 
-미완성 후보(다음 일반 사이클): A-241.1 기동 명령 + 수용 기준 ① 검증 스크립트 · 1′ R2 `store.py`
-(교집합 0 복원 시).
+## A-241.1 — 기동 명령 + 수용 기준 ① 검증 (c293)
+
+A-241.1(gate-queue.md 서열 30)의 처분 "기동 승인"이 나오면 실행할 명령과, 실행 후
+수용 기준 ①(engine=LLM 복귀)을 확인할 검증 스크립트. **명령은 여기 적기만 하고
+실행하지 않는다** — 실행은 원칙 3·4(도그푸드 실DB 런타임 개입)의 사람 게이트다.
+
+- 기동 명령(정훈 승인 후 실행): `launchctl kickstart -k gui/$(id -u)/ai.forget.server`
+  (forget/cli.py:659와 같은 관행 — 요약 엔진은 별도 launchd 라벨이 없고 서버 프로세스
+  안에서 ollama를 호출하므로, 서버 재기동이 재시도 경로다).
+- 검증 스크립트: `research/devloop/scripts/verify_a241_engine.py` — `~/.forget/bstate/forget.json`
+  최신 캡처의 `engine` 필드가 `structural-fallback`이 아니면 통과(exit 0). c293 실측 =
+  실패(exit 1, engine=structural-fallback, captured_at 2026-09-04T13:09:10+0900) — 기동 전
+  베이스라인.
+
+미완성 후보(다음 일반 사이클): 1′ R2 `store.py`(교집합 0 복원 시).
