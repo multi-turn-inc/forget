@@ -96,7 +96,9 @@ export default async function forgetExtension(pi: any) {
       input: ["text"],
       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
       contextWindow: 24576,
-      maxTokens: 4096,
+      // 6144: 4096은 thinking 러너웨이가 발화 전에 참(생각만 남는 기상),
+      // 8192는 8분 알람을 침(EXIT=142 실측) — 벽시계와 발화의 균형점.
+      maxTokens: 6144,
     }));
     if (models.length) {
       pi.registerProvider("local-qwen", {
@@ -226,14 +228,18 @@ export default async function forgetExtension(pi: any) {
     label: "team ledger note",
     description:
       "Write to the shared team ledger (forget-dev) as agent 'selfharness'. " +
-      "kind: decision|proposal|challenge|question|contract. Use to answer items " +
-      "addressed to the team. Never record a plan as done.",
+      "kind: decision|proposal|challenge|question|contract|trail|digest. " +
+      "trail = non-binding 'why' attached via thinking_for (decision/proposal/" +
+      "challenge/contract only). digest = periodic briefing — MUST supersede the " +
+      "previous digest (single active). Long thoughts: commit a doc under docs/ " +
+      "and reference path+hash. Never record a plan as done.",
     parameters: Type.Object({
       kind: Type.String(),
       text: Type.String(),
       reply_to: Type.Optional(Type.String()),
       addressed_to: Type.Optional(Type.String()),
       supersedes: Type.Optional(Type.String()),
+      thinking_for: Type.Optional(Type.String()),
       idempotency_key: Type.Optional(Type.String()),
     }),
     async execute(_id: string, params: any) {
@@ -243,6 +249,7 @@ export default async function forgetExtension(pi: any) {
             ...(params.reply_to ? { reply_to: String(params.reply_to) } : {}),
             ...(params.addressed_to ? { addressed_to: String(params.addressed_to) } : {}),
             ...(params.supersedes ? { supersedes: String(params.supersedes) } : {}),
+            ...(params.thinking_for ? { thinking_for: String(params.thinking_for) } : {}),
             ...(params.idempotency_key ? { idempotency_key: String(params.idempotency_key) } : {}),
         });
         return { content: [{ type: "text", text: JSON.stringify(out).slice(0, 1000) }] };

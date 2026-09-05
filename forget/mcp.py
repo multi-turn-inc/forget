@@ -108,6 +108,34 @@ def _team_credential_principal(context: dict[str, str] | None) -> str:
     return principal
 
 
+def _market_credential_identity(context: dict[str, str] | None) -> tuple[str, str, str]:
+    """Return the buyer binding established by auth + connector profile.
+
+    ``user_id`` from an MCP URL is a memory scope selector, not proof of vault
+    ownership.  Marketplace grants therefore accept only the owner id stored
+    on the bearer API-key row (``credential_vault_id``).
+    """
+    context = context or {}
+    principal = str(context.get("credential_principal") or "").strip()
+    vault_id = str(context.get("credential_vault_id") or "").strip()
+    scoped_vault_id = str(context.get("user_id") or "").strip()
+    auth = str(context.get("credential_principal_auth") or "").strip()
+    profile = str(context.get("tool_profile") or "").strip().lower()
+    client_id = {"codex": "codex", "claude": "claude-code", "claude-code": "claude-code"}.get(profile, "")
+    if not principal or auth != "credential":
+        raise HTTPException(status_code=403, detail="Memory Agent tools require an agent-bound Bearer credential")
+    if not vault_id:
+        raise HTTPException(status_code=403, detail="Memory Agent tools require a credential-bound personal vault")
+    if scoped_vault_id and scoped_vault_id != vault_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Memory Agent URL vault does not match the authenticated credential",
+        )
+    if not client_id:
+        raise HTTPException(status_code=403, detail="Memory Agent tools require profile=codex or profile=claude")
+    return principal, vault_id, client_id
+
+
 def _team_rows() -> list[dict[str, Any]]:
     return [
         memory for memory in list_memory_dicts()
@@ -1160,6 +1188,97 @@ TOOLS: list[dict[str, Any]] = [
             "properties": {"event_id": {"type": "string"}},
         },
     },
+    {
+        "name": "catalog_search",
+        "description": (
+            "Search published zero-price Memory Agent products. Returns product metadata only; "
+            "it never searches or exposes the buyer's personal vault."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "capability": {"type": "string"},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 50},
+            },
+        },
+    },
+    {
+        "name": "product_quote",
+        "description": (
+            "Create a signed, short-lived quote for one Memory Agent. The authenticated credential "
+            "binds buyer, personal vault and client; this prototype always charges zero units."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "required": ["product_id", "purpose"],
+            "properties": {
+                "product_id": {"type": "string"},
+                "purpose": {"type": "string", "maxLength": 240},
+                "quota": {"type": "integer", "minimum": 1, "maximum": 100},
+            },
+        },
+    },
+    {
+        "name": "grant_create",
+        "description": (
+            "Approve an exact signed Memory Agent quote. Requires approve=true and creates a "
+            "revocable grant bound to the authenticated principal, vault and client."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "required": ["quote_id", "approve"],
+            "properties": {
+                "quote_id": {"type": "string"},
+                "approve": {"type": "boolean", "description": "Must be true after the user reviews the quote."},
+            },
+        },
+    },
+    {
+        "name": "agent_consult",
+        "description": (
+            "Consult a granted Memory Agent using only its explicitly reviewed corpus. Results are "
+            "minimized and PII-gated; a signed receipt is persisted before any result is returned."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "required": ["grant_id", "query"],
+            "properties": {
+                "grant_id": {"type": "string"},
+                "query": {"type": "string"},
+                "request_id": {"type": "string"},
+                "top_k": {"type": "integer", "minimum": 1, "maximum": 3},
+            },
+        },
+    },
+    {
+        "name": "receipt_verify",
+        "description": (
+            "Verify a Memory Agent consultation receipt against the exact query, product and "
+            "credential-bound buyer/vault/client plus local persistence."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "required": ["receipt", "expected_query", "expected_product_id"],
+            "properties": {
+                "receipt": {"type": "object"},
+                "expected_query": {"type": "string"},
+                "expected_product_id": {"type": "string"},
+            },
+        },
+    },
+    {
+        "name": "grant_revoke",
+        "description": (
+            "Immediately revoke one Memory Agent grant owned by the authenticated principal, "
+            "personal vault and current client."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "required": ["grant_id"],
+            "properties": {"grant_id": {"type": "string"}},
+        },
+    },
 ]
 
 # MCP tool annotations (readOnlyHint/destructiveHint) required by connector
@@ -1176,12 +1295,16 @@ _MUTATING_TOOLS = {
     "create_claim_evaluation",
     "create_summary",
     "update_memory",
+    "product_quote",
+    "grant_create",
+    "agent_consult",
 }
 _DESTRUCTIVE_TOOLS = {
     "delete_memory",
     "delete_memories",
     "delete_all_memories",
     "delete_entities",
+    "grant_revoke",
 }
 
 
@@ -1860,6 +1983,55 @@ def _dispatch_tool(name: str, arguments: dict[str, Any] | None, context: dict[st
         return _text_result(lora_training_readiness(project_id=str(args.get("project_id") or "proj_local")))
     if name == "get_lora_base_model_plan":
         return _text_result(lora_base_model_plan(dict(args), project_id=str(args.get("project_id") or "proj_local")))
+    if name in {
+        "catalog_search", "product_quote", "grant_create", "agent_consult",
+        "receipt_verify", "grant_revoke",
+    }:
+        from . import market
+
+        _reject_unknown_args(name, args)
+        principal, vault_id, client_id = _market_credential_identity(context)
+        if name == "catalog_search":
+            return _text_result(market.catalog_search(args))
+        if name == "product_quote":
+            return _text_result(market.product_quote(
+                args,
+                buyer_principal=principal,
+                buyer_vault_id=vault_id,
+                client_id=client_id,
+            ))
+        if name == "grant_create":
+            return _text_result(market.grant_create(
+                args,
+                buyer_principal=principal,
+                buyer_vault_id=vault_id,
+                client_id=client_id,
+            ))
+        if name == "agent_consult":
+            return _text_result(market.agent_consult(
+                args,
+                buyer_principal=principal,
+                buyer_vault_id=vault_id,
+                client_id=client_id,
+            ))
+        if name == "receipt_verify":
+            receipt = args.get("receipt")
+            if not isinstance(receipt, dict):
+                raise HTTPException(status_code=400, detail="receipt must be an object")
+            return _text_result(market.receipt_verify(
+                receipt,
+                expected_query=str(args.get("expected_query") or ""),
+                expected_product_id=str(args.get("expected_product_id") or ""),
+                buyer_principal=principal,
+                buyer_vault_id=vault_id,
+                client_id=client_id,
+            ))
+        return _text_result(market.grant_revoke(
+            str(args.get("grant_id") or ""),
+            buyer_principal=principal,
+            buyer_vault_id=vault_id,
+            client_id=client_id,
+        ))
     if name == "team_read":
         viewer = _team_credential_principal(context)
         limit = max(1, min(int(args.get("limit") or 20), 100))
@@ -2253,11 +2425,10 @@ _CORE_TOOL_NAMES = {
     "list_summaries",
 }
 
-# Codex has no native transcript hooks and pays for every visible tool schema.
-# Keep its default surface intentionally small: one cwd-bound context read,
-# explicit durable fact lifecycle, outcome feedback, and the authenticated team
-# ledger. Task-state/autopilot remain off this profile until their project
-# binding is strict enough to never promote an unrelated active task.
+# Codex now has a lifecycle-hook adapter, but every visible schema still has a
+# context cost. Keep its default surface intentionally small: one cwd-bound
+# context read, explicit durable fact lifecycle, outcome feedback, the
+# authenticated team ledger, and the six Memory Agent contract tools.
 _CODEX_TOOL_NAMES = {
     "prepare_codex_context",
     "search_memories",
@@ -2268,6 +2439,21 @@ _CODEX_TOOL_NAMES = {
     "record_context_outcome",
     "team_read",
     "team_note",
+    "catalog_search",
+    "product_quote",
+    "grant_create",
+    "agent_consult",
+    "receipt_verify",
+    "grant_revoke",
+}
+
+_MEMORY_AGENT_TOOL_NAMES = {
+    "catalog_search",
+    "product_quote",
+    "grant_create",
+    "agent_consult",
+    "receipt_verify",
+    "grant_revoke",
 }
 
 
@@ -2275,6 +2461,8 @@ def tools_for_profile(profile: str | None = None) -> list[dict[str, Any]]:
     resolved = str(profile or os.getenv("MEM1_MCP_TOOL_PROFILE") or "full").strip().lower()
     if resolved == "codex":
         return [tool for tool in TOOLS if tool["name"] in _CODEX_TOOL_NAMES]
+    if resolved in {"claude", "claude-code"}:
+        return [tool for tool in TOOLS if tool["name"] in (_CORE_TOOL_NAMES | _MEMORY_AGENT_TOOL_NAMES)]
     if resolved == "core":
         return [tool for tool in TOOLS if tool["name"] in _CORE_TOOL_NAMES]
     return TOOLS

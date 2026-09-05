@@ -1,0 +1,6 @@
+interface:
+  display_name: "Memory Agent"
+  short_description: "Consult privacy-gated Forget memory products"
+  default_prompt: "Use $memory-agent to find and safely consult a Memory Agent for this task."
+policy:
+  allow_implicit_invocation: true

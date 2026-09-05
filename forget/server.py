@@ -198,6 +198,25 @@ def _request_auth_context(request: Request) -> dict[str, Any]:
     return getattr(request.state, "auth_context", None) or {}
 
 
+def _mcp_credential_identity(request: Request) -> dict[str, str]:
+    """Project an authenticated API-key binding into MCP tool context.
+
+    The scoped URL's user id remains a memory selector.  Marketplace tools use
+    only these credential-derived fields, so changing a URL cannot impersonate
+    another personal vault or buyer principal.
+    """
+    auth_context = _request_auth_context(request)
+    principal = str(auth_context.get("agent_principal") or "").strip()
+    vault_id = str(auth_context.get("user_id") or "").strip()
+    identity: dict[str, str] = {}
+    if principal:
+        identity["credential_principal"] = principal
+        identity["credential_principal_auth"] = "credential"
+    if vault_id:
+        identity["credential_vault_id"] = vault_id
+    return identity
+
+
 def _has_auth_scope(context: dict[str, Any], scope: str) -> bool:
     scopes = context.get("scopes") or []
     return isinstance(scopes, list) and ("*" in scopes or scope in scopes)
@@ -270,7 +289,7 @@ def mcp_rpc(
 ) -> JSONResponse:
     if ptoken:
         raise HTTPException(status_code=400, detail="query-string team tokens are not accepted")
-    context: dict[str, str] = {}
+    context: dict[str, str] = _mcp_credential_identity(request)
     if profile:
         context["tool_profile"] = profile
     bound_principal = _credential_bound_team_principal(request, principal)
@@ -323,7 +342,11 @@ def mcp_rpc_scoped(
     # (2026-07-13 dogfooding: a fresh client recalled nothing).
     # ?project=<key>는 무필터 호출에 프로젝트 층(훅의 layered_filter와 동일)을
     # 추가로 고정한다 — 공용 서버는 cwd가 없으므로 연결 URL이 프로젝트를 나른다.
-    context: dict[str, str] = {"user_id": user_id, "client_name": app_id}
+    context: dict[str, str] = {
+        "user_id": user_id,
+        "client_name": app_id,
+        **_mcp_credential_identity(request),
+    }
     if profile:
         context["tool_profile"] = profile
     if project:

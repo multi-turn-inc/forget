@@ -1,8 +1,7 @@
 // The hooks layer is the product thesis made real: memory that arrives
-// without being asked. Claude Code gets four harness hooks — a session-start
-// context capsule, per-turn push recall with conflict-zone alerts, and
-// session capture feeding the outcome flywheel. Other clients (Codex,
-// Desktop) rely on instruction rules until they grow hook systems.
+// without being asked. Claude Code and Codex share the same scripts and
+// ownership rules, while each receives only lifecycle events its client
+// actually emits. Desktop continues to rely on instruction rules.
 //
 // First rule of touching ~/.claude/settings.json: it is the user's file.
 // Foreign hooks (other tools register there too) must survive connect,
@@ -20,6 +19,7 @@ export const HOOK_SCRIPTS = [
   "forget_sessionstart.py",
   "forget_turnrecall.py",
   "forget_capture.py",
+  "forget_bstate.py", // compact structured working state shared by both clients
   "forget_project.py", // shared project-boundary detection (imported by the others)
   "forget_projecttag.py", // PreToolUse: stamps memory/task writes with the cwd's project
 ];
@@ -47,6 +47,9 @@ export function hooksDirFor(options = {}) {
 export function settingsPathFor(options = {}) {
   const env = options.env ?? process.env;
   const home = options.home ?? env.HOME ?? env.USERPROFILE ?? os.homedir();
+  if (options.clientId === "codex") {
+    return path.join(env.CODEX_HOME ?? path.join(home, ".codex"), "hooks.json");
+  }
   return path.join(home, ".claude", "settings.json");
 }
 
@@ -55,8 +58,8 @@ export function hookCommand(script, { hooksDir, url }) {
   return `FORGET_MCP_URL=${shellQuote(url)} python3 ${shellQuote(scriptPath)}`;
 }
 
-export function hookEntries({ hooksDir, url }) {
-  return {
+export function hookEntries({ hooksDir, url, clientId = "claude-code" }) {
+  const shared = {
     SessionStart: {
       command: hookCommand("forget_sessionstart.py", { hooksDir, url }),
       timeout: 12,
@@ -67,6 +70,23 @@ export function hookEntries({ hooksDir, url }) {
       timeout: 6,
       statusMessage: "forget: checking relevant memories",
     },
+  };
+  if (clientId === "codex") {
+    return {
+      ...shared,
+      SessionStart: {
+        ...shared.SessionStart,
+        matcher: "startup|resume|compact",
+      },
+      Stop: {
+        command: hookCommand("forget_capture.py", { hooksDir, url }),
+        timeout: 10,
+        statusMessage: "forget: capturing turn + outcome",
+      },
+    };
+  }
+  return {
+    ...shared,
     PreCompact: {
       command: hookCommand("forget_capture.py", { hooksDir, url }),
       timeout: 10,
@@ -127,10 +147,11 @@ function validatedHooks(config, label) {
   return hooks;
 }
 
-export function connectHooksSettings(raw, { hooksDir, url }) {
-  const config = parseJsonStrict(raw, "settings.json");
-  const hooks = validatedHooks(config, "settings.json");
-  for (const [event, entry] of Object.entries(hookEntries({ hooksDir, url }))) {
+export function connectHooksSettings(raw, { hooksDir, url, clientId = "claude-code" }) {
+  const label = clientId === "codex" ? "hooks.json" : "settings.json";
+  const config = parseJsonStrict(raw, label);
+  const hooks = validatedHooks(config, label);
+  for (const [event, entry] of Object.entries(hookEntries({ hooksDir, url, clientId }))) {
     const groups = withoutOurHooks(hooks[event] ?? []);
     const group = {
       hooks: [{
@@ -148,10 +169,11 @@ export function connectHooksSettings(raw, { hooksDir, url }) {
   return `${JSON.stringify(config, null, 2)}\n`;
 }
 
-export function disconnectHooksSettings(raw) {
-  const config = parseJsonStrict(raw, "settings.json");
+export function disconnectHooksSettings(raw, { clientId = "claude-code" } = {}) {
+  const label = clientId === "codex" ? "hooks.json" : "settings.json";
+  const config = parseJsonStrict(raw, label);
   if (config.hooks === undefined) return raw;
-  const hooks = validatedHooks(config, "settings.json");
+  const hooks = validatedHooks(config, label);
   let touched = false;
   for (const [event, groups] of Object.entries(hooks)) {
     const cleaned = withoutOurHooks(groups);
@@ -168,15 +190,19 @@ export function disconnectHooksSettings(raw) {
   return `${JSON.stringify(config, null, 2)}\n`;
 }
 
-export function hooksInstalled(raw, { hooksDir } = {}) {
+export function hooksInstalled(raw, { hooksDir, clientId = "claude-code" } = {}) {
   let config;
   try {
-    config = parseJsonStrict(raw, "settings.json");
+    config = parseJsonStrict(raw, clientId === "codex" ? "hooks.json" : "settings.json");
   } catch {
     return false;
   }
   if (!isObject(config.hooks)) return false;
-  const events = Object.keys(hookEntries({ hooksDir: hooksDir ?? "", url: "http://x" }));
+  const events = Object.keys(hookEntries({
+    hooksDir: hooksDir ?? "",
+    url: "http://x",
+    clientId,
+  }));
   return events.every((event) => {
     const groups = config.hooks[event];
     return Array.isArray(groups) && groups.some(
@@ -214,16 +240,16 @@ export async function installHookScripts(hooksDir) {
   return written;
 }
 
-export async function inspectHooks({ env } = {}) {
+export async function inspectHooks({ env, clientId = "claude-code" } = {}) {
   const hooksDir = hooksDirFor({ env });
-  const settingsPath = settingsPathFor({ env });
+  const settingsPath = settingsPathFor({ env, clientId });
   let settingsRaw = "";
   try {
     settingsRaw = await readFile(settingsPath, "utf8");
   } catch {
     settingsRaw = "";
   }
-  const registered = hooksInstalled(settingsRaw, { hooksDir });
+  const registered = hooksInstalled(settingsRaw, { hooksDir, clientId });
   let scriptsPresent = true;
   for (const script of HOOK_SCRIPTS) {
     try {

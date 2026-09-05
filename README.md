@@ -100,7 +100,7 @@ curl -X POST localhost:8000/v1/memories/search/ \
 
 ## Connect your AI (MCP)
 
-Forget speaks MCP over streamable HTTP at `/mcp` — 42 tools including
+Forget speaks MCP over streamable HTTP at `/mcp` — the full surface includes
 `search_memories`, `add_memory`, `supersede_memory`, `confirm_memory`, and
 `prepare_context_autopilot`.
 
@@ -132,21 +132,28 @@ server-side default scope of your OS username and says so in each write):
 **Claude Code**
 
 ```json
-{ "mcpServers": { "forget": { "type": "http", "url": "http://localhost:8000/mcp/claude-code/http/<your-username>" } } }
+{ "mcpServers": { "forget": { "type": "http", "url": "http://localhost:8000/mcp/forget/http/<your-username>" } } }
 ```
 
 **Codex** (`~/.codex/config.toml`)
 
 ```toml
 [mcp_servers.forget]
-url = "http://localhost:8000/mcp/codex/http/<your-username>"
+url = "http://localhost:8000/mcp/forget/http/<your-username>?profile=codex"
 ```
+
+The Codex profile exposes only nine daily-use tools and replaces generic
+autopilot with `prepare_codex_context(query, client_workdir)`. It binds recall
+to the detected repository plus global/legacy memory and fails closed when the
+working directory cannot be resolved. `forget-connect` installs this profile
+and its matching `AGENTS.md` rules only for Codex; Claude clients retain their
+hook-based context path.
 
 **Claude Desktop** (bridge via mcp-remote, `claude_desktop_config.json`)
 
 ```json
 { "mcpServers": { "forget": { "command": "npx",
-  "args": ["-y", "mcp-remote@latest", "http://localhost:8000/mcp/claude-desktop/http/<your-username>"] } } }
+  "args": ["-y", "mcp-remote@latest", "http://localhost:8000/mcp/forget/http/<your-username>"] } } }
 ```
 
 > **Tip — make agents actually use it.** `npx forget-connect` handles this:

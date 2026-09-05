@@ -9,6 +9,29 @@ export const REQUIRED_TOOLS = [
   "record_context_outcome",
   "record_task_state",
   "get_task_state",
+  "catalog_search",
+  "product_quote",
+  "grant_create",
+  "agent_consult",
+  "receipt_verify",
+  "grant_revoke",
+];
+export const CODEX_REQUIRED_TOOLS = [
+  "prepare_codex_context",
+  "search_memories",
+  "add_memory",
+  "supersede_memory",
+  "confirm_memory",
+  "get_event_status",
+  "record_context_outcome",
+  "team_read",
+  "team_note",
+  "catalog_search",
+  "product_quote",
+  "grant_create",
+  "agent_consult",
+  "receipt_verify",
+  "grant_revoke",
 ];
 
 function addSensitiveValueVariants(variants, value) {

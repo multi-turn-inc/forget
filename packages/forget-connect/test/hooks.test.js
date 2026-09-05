@@ -8,8 +8,10 @@ import {
   connectHooksSettings,
   disconnectHooksSettings,
   hookCommand,
+  hookEntries,
   hooksInstalled,
   readHookAssets,
+  settingsPathFor,
 } from "../src/hooks.js";
 
 const HOOKS_DIR = "/home/user/.forget/hooks";
@@ -36,6 +38,30 @@ test("connect on an empty settings file registers all four events", () => {
     assert.ok(hook.command.includes("forget_"));
     assert.ok(hook.command.includes(`FORGET_MCP_URL='${MCP_URL}'`));
   }
+});
+
+test("Codex adapter uses only supported lifecycle events and its own hooks file", () => {
+  const entries = hookEntries({ hooksDir: HOOKS_DIR, url: MCP_URL, clientId: "codex" });
+  assert.deepEqual(Object.keys(entries), ["SessionStart", "UserPromptSubmit", "Stop"]);
+  assert.equal(entries.SessionStart.matcher, "startup|resume|compact");
+
+  const connected = connectHooksSettings("", {
+    hooksDir: HOOKS_DIR,
+    url: `${MCP_URL}?profile=codex`,
+    clientId: "codex",
+  });
+  const config = parse(connected);
+  assert.equal(config.hooks.SessionStart[0].matcher, "startup|resume|compact");
+  assert.match(config.hooks.Stop[0].hooks[0].command, /profile=codex/);
+  assert.equal(hooksInstalled(connected, { hooksDir: HOOKS_DIR, clientId: "codex" }), true);
+  assert.equal(
+    settingsPathFor({ env: { HOME: "/home/u", CODEX_HOME: "/opt/codex" }, clientId: "codex" }),
+    "/opt/codex/hooks.json",
+  );
+  assert.equal(
+    parse(disconnectHooksSettings(connected, { clientId: "codex" })).hooks,
+    undefined,
+  );
 });
 
 test("connect preserves foreign hooks and reconnect stays idempotent", () => {

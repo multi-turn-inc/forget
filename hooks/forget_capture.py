@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Session capture + mechanical outcome labeling (PreCompact and SessionEnd).
+"""Session capture + mechanical outcome labeling (PreCompact, SessionEnd, Stop).
 
 Two judgment-free jobs, each fail-open on its own:
 1. capture — register the session in forget: pointer + mechanical digest,
    source_role="tool" (green). The transcript on disk is the lossless ledger;
    this makes it findable.
-2. outcome — if a SessionStart capsule was offered this session (state file
+2. outcome — if a SessionStart capsule was offered this session/turn (state file
    exists), measure mechanically whether the session echoed it and record a
    context outcome against the capsule's trace. This is the crudest possible
    label (all-or-none echo, substring match); its job is to start the data
    flywheel, not to be right — retire it when a learned labeler exists
    (observer W2) or when per-memory matching lands.
 
-At PreCompact a third job is delegated, not owned: forget_digest.flush()
+At Claude PreCompact a third job is delegated, not owned: forget_digest.flush()
 digests the whole undigested segment before the handoff note is written
 (rolling consolidation ②), so a compaction can only evaporate turns that
 already reached forget.
@@ -221,9 +221,9 @@ def main() -> None:
             _handoff(digest, transcript_path, session_id)
         except Exception:
             pass
-    # Outcome is a session-final label: a mid-session compact must not consume
-    # the offer ledger, or usage after the compact goes unmeasured.
-    if str(hook_input.get("hook_event_name") or "") == "SessionEnd":
+    # Outcome is terminal for Claude (SessionEnd) and per completed Codex turn
+    # (Stop). A mid-session compact must not consume the offer ledger.
+    if str(hook_input.get("hook_event_name") or "") in {"SessionEnd", "Stop"}:
         try:
             _outcome(digest, session_id)
         except Exception:

@@ -20,12 +20,13 @@ import {
   validateScopeId,
   validateApiKey,
 } from "./core.js";
-import { doctorRemote } from "./doctor.js";
+import { CODEX_REQUIRED_TOOLS, doctorRemote } from "./doctor.js";
 import {
   commandsDirFor,
   connectHooksSettings,
   disconnectHooksSettings,
   hooksDirFor,
+  hooksInstalled,
   inspectHooks,
   installCommandAssets,
   installHookScripts,
@@ -45,6 +46,12 @@ import {
   wireProxyEnv,
   writeWiringState,
 } from "./proxy.js";
+import {
+  inspectMemoryAgentSkill,
+  installMemoryAgentSkill,
+  removeMemoryAgentSkill,
+  skillDirFor,
+} from "./skills.js";
 
 const CLIENT_IDS = new Set(["claude-code", "codex", "claude-desktop"]);
 
@@ -67,13 +74,17 @@ Options:
 
 Scope:
   Local connections default to one canonical scoped endpoint (all clients share it):
-  /mcp/<client>/http/<os-username>. This keeps each user's and client's
-  memories isolated. Override with --user-id/--app-id, or opt out with
-  --no-scope. An explicit --url is installed verbatim.
+  /mcp/forget/http/<os-username>. This keeps each user's vault isolated while
+  Codex and Claude retain distinct provider profiles and provenance. Override
+  with --user-id/--app-id, or opt out with --no-scope. An explicit --url is
+  installed verbatim.
   --no-auth            Connect without a Bearer token
+  --local-auth         Send FORGET_API_KEY to an explicit loopback server
+                       (required by credential-bound Memory Agent tools)
   --no-rules           Do not manage CLAUDE.md or AGENTS.md instruction blocks
-  --no-hooks           Do not install Claude Code memory hooks (session capsule,
-                       per-turn recall, conflict alerts, session capture)
+  --no-skill           Do not install the shared Memory Agent skill
+  --no-hooks           Do not install Codex/Claude Code memory hooks (session
+                       capsule, per-turn recall, session capture)
   --no-proxy           Do not wire the local capture proxy (launchd service +
                        ANTHROPIC_BASE_URL override + health watchdog; macOS only)
   --no-migrate-enacta  Keep matching legacy config and rules blocks
@@ -87,6 +98,7 @@ Scope:
 Authentication:
   The default local server needs no token. For --hosted (legacy) set
   FORGET_API_KEY, or run interactively and paste the key when prompted.
+  Credential-bound local tools require FORGET_API_KEY plus --local-auth.
   Keys are intentionally not accepted as command-line arguments.
 
 Examples:
@@ -139,7 +151,9 @@ export function parseArgs(argv, env = process.env) {
     scope: null,
     defaultScope: null,
     auth: true,
+    localAuth: false,
     rules: true,
+    skills: true,
     hooks: true,
     proxy: true,
     migrateLegacy: true,
@@ -185,8 +199,12 @@ export function parseArgs(argv, env = process.env) {
       options.noScope = true;
     } else if (arg === "--no-auth") {
       options.auth = false;
+    } else if (arg === "--local-auth") {
+      options.localAuth = true;
     } else if (arg === "--no-rules") {
       options.rules = false;
+    } else if (arg === "--no-skill") {
+      options.skills = false;
     } else if (arg === "--no-hooks") {
       options.hooks = false;
     } else if (arg === "--no-proxy") {
@@ -228,6 +246,12 @@ export function parseArgs(argv, env = process.env) {
   }
   options.baseUrl = normalizeUrl(options.url);
   options.hosted = isHostedBaseUrl(options.baseUrl);
+  if (options.localAuth && !options.auth) {
+    throw new ConfigError("--local-auth and --no-auth are mutually exclusive.");
+  }
+  if (options.localAuth && !isLoopbackUrl(options.baseUrl)) {
+    throw new ConfigError("--local-auth is only allowed for a loopback MCP URL.");
+  }
   if (Boolean(options.userId) !== Boolean(options.appId)) {
     throw new ConfigError("--user-id and --app-id must be provided together.");
   }
@@ -243,12 +267,10 @@ export function parseArgs(argv, env = process.env) {
   options.url = options.scope
     ? scopedMcpUrl(options.baseUrl, options.scope)
     : options.baseUrl;
-  // Cold-install default: scope each client into its own memory pool at
-  // /mcp/<client>/http/<os-username>. The unscoped /mcp endpoint pools every
-  // client's memories into the server's fallback scope (cold-install audit
-  // 2026-07-29), so plain /mcp is now the opt-in (--no-scope), not the
-  // default. An explicit --url stays verbatim, and hosted keeps requiring an
-  // explicit account identity — the OS username is not a hosted account.
+  // Cold-install default: all providers use one personal vault at
+  // /mcp/forget/http/<os-username>; the query profile keeps their tool surface
+  // and provenance separate. The unscoped /mcp endpoint pools data into the
+  // server fallback, so it remains an explicit opt-in (--no-scope).
   options.defaultScope = null;
   if (!options.scope && !options.noScope && !options.hosted && !options.urlExplicit) {
     const osUser = defaultScopeUserId(env);
@@ -276,17 +298,23 @@ function defaultScopeUserId(env) {
 }
 
 export function urlForClient(options, client) {
-  if (options.scope) return options.url;
+  let resolved = options.url;
+  if (options.scope) resolved = options.url;
   if (options.defaultScope && client) {
     // Every client shares the canonical pool; which tool wrote a memory is
     // provenance, not a scope boundary (issue #27). A per-client pool made
     // Codex writes invisible to Claude and vice versa.
-    return scopedMcpUrl(options.baseUrl, {
+    resolved = scopedMcpUrl(options.baseUrl, {
       userId: options.defaultScope.userId,
       appId: CANONICAL_APP_ID,
     });
   }
-  return options.url;
+  if (client?.id === "codex" || client?.id === "claude-code") {
+    const parsed = new URL(normalizeUrl(resolved));
+    parsed.searchParams.set("profile", client.id === "codex" ? "codex" : "claude");
+    return parsed.toString().replace(/\/$/, "");
+  }
+  return resolved;
 }
 
 function requestedClientIds(values) {
@@ -406,11 +434,15 @@ async function apiKeyFor(options, env) {
         "Bearer authentication requires HTTPS. Use --no-auth for a local HTTP server.",
       );
     }
-    // A leftover hosted key must not block the local-first default flow, and
-    // a loopback target never puts the secret on the wire anyway.
+    if (options.localAuth) return validateApiKey(fromEnv);
+    // A leftover hosted key must not silently become a local credential.
+    // Credential-bound local features opt in with --local-auth.
     stderr.write(
       "Note: FORGET_API_KEY is set but the target is a loopback HTTP server; connecting without a token.\n",
     );
+  }
+  if (options.localAuth) {
+    throw new ConfigError("Set FORGET_API_KEY when using --local-auth.");
   }
   if (!options.hosted) return "";
   const prompted = (await promptHidden("Paste your Forget API key: ")).trim();
@@ -462,7 +494,13 @@ function printDoctor(result) {
     const hooksDetail = result.hooks.registered
       ? `registered, scripts ${result.hooks.scripts_present ? "present" : "missing"}, python3 ${result.hooks.python3 ? "ok" : "missing"}`
       : "not installed (use connect without --no-hooks)";
-    stdout.write(`${result.hooks.ok ? "✓" : "✗"} Hooks: ${hooksDetail}\n`);
+    stdout.write(`${result.hooks.ok ? "✓" : "✗"} Claude Code hooks: ${hooksDetail}\n`);
+  }
+  if (result.codex_hooks) {
+    const hooksDetail = result.codex_hooks.registered
+      ? `registered, scripts ${result.codex_hooks.scripts_present ? "present" : "missing"}, python3 ${result.codex_hooks.python3 ? "ok" : "missing"}`
+      : "not installed (use connect without --no-hooks)";
+    stdout.write(`${result.codex_hooks.ok ? "✓" : "✗"} Codex hooks: ${hooksDetail}\n`);
   }
   for (const client of result.clients) {
     const details = [
@@ -541,7 +579,13 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
       }
       const installed = scopeFromUrl(configuredServerUrl(client, raw));
       if (!installed) continue;
-      urlOverrides.set(client.id, scopedMcpUrl(installed.baseUrl, installed));
+      const installedScopedUrl = scopedMcpUrl(installed.baseUrl, installed);
+      urlOverrides.set(client.id, urlForClient({
+        ...options,
+        url: installedScopedUrl,
+        scope: installed,
+        defaultScope: null,
+      }, client));
       if (!first) first = installed;
     }
     if (first) {
@@ -572,6 +616,7 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
         clientVersion: await version(),
         expectedScope: probeScope,
         requireScope: options.hosted,
+        ...(clients[0]?.id === "codex" ? { requiredTools: CODEX_REQUIRED_TOOLS } : {}),
       })
       : {
         ok: false,
@@ -592,14 +637,26 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
         },
       };
     const hooksStatus = clients.some((client) => client.id === "claude-code")
-      ? await inspectHooks({ env })
+      ? await inspectHooks({ env, clientId: "claude-code" })
       : null;
+    const codexHooksStatus = clients.some((client) => client.id === "codex")
+      ? await inspectHooks({ env, clientId: "codex" })
+      : null;
+    const skillStatus = await Promise.all(
+      clients
+        .filter((client) => ["claude-code", "codex"].includes(client.id))
+        .map(async (client) => ({ client: client.id, ...await inspectMemoryAgentSkill(client.id, { env }) })),
+    );
     const result = {
-      ok: local.every((client) => client.ok) && remote.ok && (hooksStatus?.ok ?? true),
+      ok: local.every((client) => client.ok) && remote.ok
+        && (hooksStatus?.ok ?? true) && (codexHooksStatus?.ok ?? true)
+        && (!options.skills || skillStatus.every((skill) => skill.installed && skill.current)),
       url: redactUrlForDisplay(probeUrl),
       scope: { configured: Boolean(probeScope) },
       clients: local,
       hooks: hooksStatus,
+      codex_hooks: codexHooksStatus,
+      skills: skillStatus,
       remote,
     };
     if (options.json) stdout.write(`${JSON.stringify(result)}\n`);
@@ -615,12 +672,15 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
     migrateLegacy: options.migrateLegacy,
     legacyUrls: [...new Set([options.url, options.baseUrl, HOSTED_MCP_URL])],
   });
+  const skillClients = clients.filter((client) => ["claude-code", "codex"].includes(client.id));
+  const manageSkills = skillClients.length > 0
+    && (options.action === "disconnect" || options.skills);
 
-  // Claude Code is the only client with a hook system today; the hooks are
-  // what make memory arrive without being asked. Disconnect always cleans
-  // them up, even when the install used --no-hooks.
+  // Codex and Claude Code use different lifecycle event sets but share the
+  // same fail-open scripts. Disconnect removes only our entries.
   const claudeCode = clients.find((client) => client.id === "claude-code");
-  let manageHooks = Boolean(claudeCode)
+  const hookClients = clients.filter((client) => ["claude-code", "codex"].includes(client.id));
+  let manageHooks = hookClients.length > 0
     && (options.action === "disconnect" || options.hooks);
   if (manageHooks && process.platform === "win32" && options.action === "connect") {
     // The hook commands are POSIX shell strings and the scripts need
@@ -647,21 +707,40 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
   }
 
   const hooksDir = manageHooks ? hooksDirFor({ env }) : "";
+  const hookSettings = new Map();
   let proxyPlan = null;
-  if (manageHooks || manageProxy) {
-    const settingsPath = settingsPathFor({ env });
-    let settingsRaw = "";
-    try {
-      settingsRaw = await readFile(settingsPath, "utf8");
-    } catch (error) {
-      if (!error || error.code !== "ENOENT") throw error;
+  if (manageHooks) {
+    for (const client of hookClients) {
+      const settingsPath = settingsPathFor({ env, clientId: client.id });
+      let settingsRaw = "";
+      try {
+        settingsRaw = await readFile(settingsPath, "utf8");
+      } catch (error) {
+        if (!error || error.code !== "ENOENT") throw error;
+      }
+      const settingsNext = options.action === "connect"
+        ? connectHooksSettings(settingsRaw, {
+          hooksDir,
+          url: urlFor(client),
+          clientId: client.id,
+        })
+        : disconnectHooksSettings(settingsRaw, { clientId: client.id });
+      hookSettings.set(client.id, { client, settingsPath, settingsRaw, settingsNext });
     }
-    let settingsNext = settingsRaw;
-    if (manageHooks) {
-      settingsNext = options.action === "connect"
-        ? connectHooksSettings(settingsNext, { hooksDir, url: urlFor(claudeCode) })
-        : disconnectHooksSettings(settingsNext);
+  }
+  if (manageProxy) {
+    const settingsPath = settingsPathFor({ env, clientId: "claude-code" });
+    let record = hookSettings.get("claude-code");
+    if (!record) {
+      let settingsRaw = "";
+      try {
+        settingsRaw = await readFile(settingsPath, "utf8");
+      } catch (error) {
+        if (!error || error.code !== "ENOENT") throw error;
+      }
+      record = { client: claudeCode, settingsPath, settingsRaw, settingsNext: settingsRaw };
     }
+    let settingsNext = record.settingsNext;
     if (manageProxy && options.action === "connect") {
       proxyPlan = wireProxyEnv(settingsNext);
       if (proxyPlan.status === "skip") {
@@ -680,21 +759,41 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
         original: wiring?.original_base_url ?? null,
       }).next;
     }
-    if (settingsRaw !== settingsNext) {
+    hookSettings.set("claude-code", { ...record, settingsNext });
+  }
+  for (const record of hookSettings.values()) {
+    if (record.settingsRaw !== record.settingsNext) {
       changes.push({
-        client: claudeCode,
-        filePath: settingsPath,
-        before: settingsRaw,
-        after: settingsNext,
+        client: record.client,
+        filePath: record.settingsPath,
+        before: record.settingsRaw,
+        after: record.settingsNext,
         kind: "settings",
         sensitive: false,
         backup: options.action === "connect",
       });
     }
   }
+  let removeSharedHookScripts = false;
+  if (manageHooks && options.action === "disconnect") {
+    let anyRegistered = false;
+    for (const clientId of ["claude-code", "codex"]) {
+      const staged = hookSettings.get(clientId);
+      let raw = staged?.settingsNext ?? "";
+      if (!staged) {
+        try {
+          raw = await readFile(settingsPathFor({ env, clientId }), "utf8");
+        } catch (error) {
+          if (!error || error.code !== "ENOENT") throw error;
+        }
+      }
+      if (hooksInstalled(raw, { hooksDir, clientId })) anyRegistered = true;
+    }
+    removeSharedHookScripts = !anyRegistered;
+  }
 
   if (options.dryRun) {
-    if (!changes.length && !manageHooks && !manageProxy) {
+    if (!changes.length && !manageHooks && !manageProxy && !manageSkills) {
       stdout.write("No changes needed.\n");
       return;
     }
@@ -703,11 +802,15 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
     }
     if (manageHooks && options.action === "connect") {
       stdout.write(`Would install hook scripts into ${hooksDir}\n`);
-      stdout.write(`Would install slash commands (/forget, /forget-settings) into ${commandsDirFor({ env })}\n`);
+      if (claudeCode) {
+        stdout.write(`Would install slash commands (/forget, /forget-settings) into ${commandsDirFor({ env })}\n`);
+      }
     }
     if (manageHooks && options.action === "disconnect") {
-      stdout.write(`Would remove hook scripts from ${hooksDir}\n`);
-      stdout.write(`Would remove our slash commands from ${commandsDirFor({ env })} (user-edited files are kept)\n`);
+      if (removeSharedHookScripts) stdout.write(`Would remove hook scripts from ${hooksDir}\n`);
+      if (claudeCode) {
+        stdout.write(`Would remove our slash commands from ${commandsDirFor({ env })} (user-edited files are kept)\n`);
+      }
     }
     if (manageProxy && options.action === "connect") {
       stdout.write(`Would register launchd services ${PROXY_LABEL} + ${WATCHDOG_LABEL} (capture proxy at ${PROXY_BASE_URL})\n`);
@@ -718,20 +821,39 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
     if (manageProxy && options.action === "disconnect") {
       stdout.write(`Would remove launchd services ${PROXY_LABEL} + ${WATCHDOG_LABEL} and restore ANTHROPIC_BASE_URL\n`);
     }
+    if (manageSkills) {
+      for (const client of skillClients) {
+        const verb = options.action === "connect" ? "install" : "remove";
+        stdout.write(`Would ${verb} the Memory Agent skill at ${skillDirFor(client.id, { env })}\n`);
+      }
+    }
     return;
   }
 
   const result = await applyPlan(changes);
+  let skillPaths = [];
+  if (manageSkills) {
+    for (const client of skillClients) {
+      const skillResult = options.action === "connect"
+        ? await installMemoryAgentSkill(client.id, { env })
+        : await removeMemoryAgentSkill(client.id, { env });
+      skillPaths = skillPaths.concat(skillResult.written ?? skillResult.removed ?? []);
+      if ((skillResult.skipped ?? skillResult.kept ?? []).length) {
+        stderr.write(`Note: kept an existing unowned Memory Agent skill for ${client.name}.\n`);
+      }
+    }
+  }
   let hookScriptPaths = [];
   if (manageHooks) {
-    hookScriptPaths = options.action === "connect"
-      ? await installHookScripts(hooksDir)
-      : await removeHookScripts(hooksDir);
-    const commandsDir = commandsDirFor({ env });
-    const commandPaths = options.action === "connect"
-      ? await installCommandAssets(commandsDir)
-      : await removeCommandAssets(commandsDir);
-    hookScriptPaths = hookScriptPaths.concat(commandPaths);
+    if (options.action === "connect") hookScriptPaths = await installHookScripts(hooksDir);
+    else if (removeSharedHookScripts) hookScriptPaths = await removeHookScripts(hooksDir);
+    if (claudeCode) {
+      const commandsDir = commandsDirFor({ env });
+      const commandPaths = options.action === "connect"
+        ? await installCommandAssets(commandsDir)
+        : await removeCommandAssets(commandsDir);
+      hookScriptPaths = hookScriptPaths.concat(commandPaths);
+    }
   }
   let proxyPaths = [];
   let proxyUpstream = null;
@@ -761,7 +883,7 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
     }
   }
   const verb = options.action === "connect" ? "Connected" : "Disconnected";
-  if (!result.changed.length && !hookScriptPaths.length && !proxyPaths.length) {
+  if (!result.changed.length && !hookScriptPaths.length && !proxyPaths.length && !skillPaths.length) {
     stdout.write("No changes needed.\n");
   } else {
     stdout.write(`${verb} ${clients.map((client) => client.name).join(", ")}.\n`);
@@ -770,6 +892,7 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
     const hookVerb = options.action === "connect" ? "installed" : "removed";
     for (const filePath of hookScriptPaths) stdout.write(`  ${hookVerb} ${filePath}\n`);
     for (const filePath of proxyPaths) stdout.write(`  ${hookVerb} ${filePath}\n`);
+    for (const filePath of skillPaths) stdout.write(`  ${hookVerb} ${filePath}\n`);
   }
   if (options.action === "connect") {
     if (options.scope) {
@@ -780,14 +903,19 @@ export async function run(argv = process.argv.slice(2), env = process.env) {
       );
     }
     if (manageHooks) {
-      stdout.write("  hooks: session capsule, per-turn recall, conflict alerts, session capture (needs python3 on PATH)\n");
-      stdout.write("  commands: /forget (the recall dial) · /forget-settings (status, doctor, cloud usage)\n");
+      stdout.write("  hooks: shared capsule, per-turn recall, and session capture (needs python3 on PATH)\n");
+      if (claudeCode) {
+        stdout.write("  commands: /forget (the recall dial) · /forget-settings (status, doctor, cloud usage)\n");
+      }
     }
     if (manageProxy) {
       stdout.write(`  proxy: capture proxy at ${PROXY_BASE_URL} (launchd ${PROXY_LABEL}, watchdog ${WATCHDOG_LABEL})\n`);
       if (proxyUpstream) {
         stdout.write(`  proxy upstream: ${proxyUpstream} (your previous ANTHROPIC_BASE_URL, chained)\n`);
       }
+    }
+    if (manageSkills) {
+      stdout.write("  skill: shared Memory Agent quote, approval, receipt, and revoke contract\n");
     }
     if (options.hosted && !options.scope) {
       stdout.write(

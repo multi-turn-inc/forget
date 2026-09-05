@@ -3,7 +3,28 @@ import http from "node:http";
 import test from "node:test";
 
 import { ConfigError } from "../src/core.js";
-import { MCP_PROTOCOL_VERSION, REQUIRED_TOOLS, doctorRemote } from "../src/doctor.js";
+import { CODEX_REQUIRED_TOOLS, MCP_PROTOCOL_VERSION, REQUIRED_TOOLS, doctorRemote } from "../src/doctor.js";
+
+test("Codex doctor expects only the Codex profile surface", () => {
+  assert.deepEqual(CODEX_REQUIRED_TOOLS, [
+    "prepare_codex_context",
+    "search_memories",
+    "add_memory",
+    "supersede_memory",
+    "confirm_memory",
+    "get_event_status",
+    "record_context_outcome",
+    "team_read",
+    "team_note",
+    "catalog_search",
+    "product_quote",
+    "grant_create",
+    "agent_consult",
+    "receipt_verify",
+    "grant_revoke",
+  ]);
+  assert.equal(CODEX_REQUIRED_TOOLS.includes("prepare_context_autopilot"), false);
+});
 
 async function withServer(t, handler) {
   const server = http.createServer(handler);

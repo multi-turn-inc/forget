@@ -335,3 +335,56 @@ async def test_upstream_errors_and_other_paths_pass_through_uncaptured(tmp_path)
 
     # Neither exchange was a completed 2xx /v1/messages → nothing captured.
     assert _capture_lines(tmp_path) == []
+
+
+@pytest.mark.asyncio
+async def test_upstream_error_status_is_logged_with_correlation_ids(tmp_path, capsys):
+    """An upstream error otherwise leaves no trace at all: capture is 2xx-only
+    and the relay path is silent. That made "was it the gateway or the API?"
+    answerable only by elimination, so the error is logged with upstream's own
+    correlation ids — which a local gateway could not have invented."""
+
+    def responder(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/models":
+            return httpx.Response(
+                200,
+                headers={"content-type": "application/json"},
+                stream=_BodyStream([b'{"data": []}']),
+                request=request,
+            )
+        return httpx.Response(
+            529,
+            headers={
+                "content-type": "application/json",
+                "request-id": "req_011CdzzTestOnly",
+                "cf-ray": "a2a8c1878efbd1f2-ICN",
+            },
+            stream=_BodyStream([b'{"type":"error","error":{"type":"overloaded_error"}}']),
+            request=request,
+        )
+
+    app = create_app(
+        "https://upstream.test", capture_dir=tmp_path, transport=_UpstreamTransport(responder)
+    )
+
+    async with _proxy_client(app) as client:
+        overloaded = await client.post("/v1/messages", json=REQUEST_BODY)
+        healthy = await client.get("/v1/models")
+
+    assert overloaded.status_code == 529
+    assert healthy.status_code == 200
+
+    err = capsys.readouterr().err
+    assert "upstream 529 on POST /v1/messages" in err
+    assert "request-id=req_011CdzzTestOnly" in err
+    assert "cf-ray=a2a8c1878efbd1f2-ICN" in err
+
+    # A healthy response stays silent — this log must not become noise.
+    assert "upstream 200" not in err
+
+    # Every line is stamped, so a burst can be correlated with a client's error
+    # after the fact instead of only while the process is still up.
+    lines = [line for line in err.splitlines() if "forget-proxy:" in line]
+    assert len(lines) == 1
+    stamp = lines[0].split(" forget-proxy:")[0]
+    assert datetime.fromisoformat(stamp.replace("Z", "+00:00")).tzinfo is timezone.utc

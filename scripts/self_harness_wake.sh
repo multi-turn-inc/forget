@@ -68,7 +68,14 @@ An empty-handed walk is a good walk. A walk is not work: no hands, no code, \
 no task claims, no team_note."
 fi
 
+DIGEST_SUFFIX=""
+if [ $(( WALK_N % 24 )) -eq 12 ]; then
+  DIGEST_SUFFIX=" This wake carries DIGEST DUTY: read the team ledger (team block above) and write ONE kind=digest team_note (≤1500 chars): current open items with who owes what, decisions since the last digest, and anything the owner should see. Supersede the previous digest (find it in the ledger block; pass supersedes=<its id>). The digest is how the human owner reads 60+ rows in one note."
+fi
+
 WAKE_PROMPT="wake. You are waking on your own heartbeat — no one asked for anything. \
+Keep reasoning brief and act early with tools — a wake that only thinks and \
+never speaks or acts is a failed wake (measured 2026-08-28). \
 Read your state capsule and standing hands. Re-judge each standing hand (release with \
 reason if its 'why' no longer holds). Check [전망] expectations. If real work is \
 warranted, do ONE small concrete step and record it (arm_hand for anything left \
@@ -78,11 +85,11 @@ unanswered items silently pile up. If nothing warrants action, say IDLE and \
 stop — idling honestly beats inventing work. Discipline: when comparing timestamps, always compare FULL dates \
 (YYYY-MM-DD HH:MM), never clock-time alone — a same-clock different-day file is \
 not an anomaly. (This rule exists because a wake once reported a 22h-old file as \
-2.6h in the future.)${WALK_SUFFIX}"
+2.6h in the future.)${WALK_SUFFIX}${DIGEST_SUFFIX}"
 
-# 8분 상한 — 주석이 아니라 명령으로 (관찰 2: 상한 부재로 소멸 시 무기록)
+# 10분 상한 — 주석이 아니라 명령으로 (관찰 2: 상한 부재로 소멸 시 무기록)
 run_wake() {
-  perl -e 'alarm 480; exec @ARGV' "$PI_BIN" -p --approve --session-id "$1" \
+  perl -e 'alarm 600; exec @ARGV' "$PI_BIN" -p --approve --session-id "$1" \
     --provider local-qwen --model "$MODEL_ID" "$WAKE_PROMPT" 2>&1
 }
 # 매 기상 = 새 세션 (관찰 4 수리: 15분 박동 가속 후 고정 세션이 비대해져

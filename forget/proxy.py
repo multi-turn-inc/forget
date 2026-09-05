@@ -68,6 +68,15 @@ _RESPONSE_DROP = {"content-length", "transfer-encoding", "connection"}
 _CAPTURE_MAX_BYTES = 16 * 1024 * 1024
 
 
+def _log(message: str) -> None:
+    """One diagnostic line on stderr, stamped.
+
+    proxy.log used to carry no clock, so a burst of failures could not be
+    correlated with anything — not with a client's error, not with each other.
+    """
+    print(f"{utc_now()} forget-proxy: {message}", file=sys.stderr, flush=True)
+
+
 def forget_home() -> Path:
     return Path(os.environ.get("FORGET_HOME", Path.home() / ".forget"))
 
@@ -279,7 +288,7 @@ def create_app(
             upstream_response = await client.send(upstream_request, stream=True)
         except httpx.HTTPError as exc:
             # Upstream unreachable — the one case the proxy answers for itself.
-            print(f"forget-proxy: upstream request failed: {exc}", file=sys.stderr, flush=True)
+            _log(f"upstream request failed: {exc}")
             return JSONResponse(
                 {
                     "type": "error",
@@ -289,6 +298,18 @@ def create_app(
                     },
                 },
                 status_code=502,
+            )
+
+        # An error status is upstream's own answer, relayed verbatim below —
+        # the proxy leaves no other trace of it (capture is 2xx-only). Without
+        # this line "was it the gateway or the API?" is answerable only by
+        # elimination, and only while the process is still up.
+        if upstream_response.status_code >= 400:
+            _log(
+                f"upstream {upstream_response.status_code} on "
+                f"{request.method} {request.url.path} "
+                f"(request-id={upstream_response.headers.get('request-id', '-')} "
+                f"cf-ray={upstream_response.headers.get('cf-ray', '-')})"
             )
 
         should_capture = (
@@ -322,11 +343,7 @@ def create_app(
                         int((time.monotonic() - started) * 1000),
                     )
                 except Exception as exc:  # noqa: BLE001 — fail-open by contract
-                    print(
-                        f"forget-proxy: capture skipped ({exc.__class__.__name__}: {exc}) — relay unaffected",
-                        file=sys.stderr,
-                        flush=True,
-                    )
+                    _log(f"capture skipped ({exc.__class__.__name__}: {exc}) — relay unaffected")
 
         headers = {
             k: v for k, v in upstream_response.headers.items() if k.lower() not in _RESPONSE_DROP
@@ -390,7 +407,7 @@ def main(argv: list[str] | None = None) -> None:
     except OSError as exc:
         # Fail-open extends to startup: a broken capture dir degrades to
         # pure passthrough instead of refusing to serve.
-        print(f"forget-proxy: capture dir unavailable ({exc}) — relaying without capture", file=sys.stderr)
+        _log(f"capture dir unavailable ({exc}) — relaying without capture")
 
     sock = _bind_or_exit(args.host, args.port)
     print(

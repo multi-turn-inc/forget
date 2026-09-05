@@ -265,3 +265,163 @@ def test_failed_write_releases_idempotency_reservation(monkeypatch):
     monkeypatch.setattr(mcp_module, "add_memories", original)
     _note(text="retryable", principal="gpt-live", idempotency_key="retry-after-failure")
     assert len(_team_rows_for_test()) == 1
+
+
+def test_trail_preserves_reasoning_without_closing(  # 개정 3: 사고의 고고학
+):
+    _note(kind="proposal", text="설계 제안", principal="claude-exec", addressed_to="gpt-live")
+    pid = next(m["id"] for m in list_memory_dicts()
+               if (m.get("metadata") or {}).get("kind") == "proposal")
+    call_tool("team_note", {"kind": "trail", "text": "이렇게 생각한 이유: 통합 위험 조기 노출",
+                            "thinking_for": pid}, context=_ctx("claude-exec"))
+    open_after = str(call_tool("team_read", {"open_only": True},
+                               context=_ctx("gpt-live"))["content"][0]["text"])
+    assert "설계 제안" in open_after            # trail은 미결을 닫지 않는다
+    with pytest.raises(HTTPException):
+        call_tool("team_note", {"kind": "trail", "text": "고아 trail"},
+                  context=_ctx("claude-exec"))  # thinking_for 필수
+    with pytest.raises(HTTPException):
+        call_tool("team_note", {"kind": "trail", "text": "유령 대상",
+                                "thinking_for": "no-such-id"}, context=_ctx("claude-exec"))
+
+
+def test_owner_sourced_marker_persists():      # 개정 3: 소유자 결정의 원장화
+    call_tool("team_note", {"kind": "decision", "text": "빌링은 최후 단계로 연기",
+                            "on_behalf_of_owner": True}, context=_ctx("gpt-live"))
+    row = [m for m in list_memory_dicts() if m.get("app_id") == TEAM_LEDGER_APP][0]
+    assert (row.get("metadata") or {}).get("owner_sourced") is True
+    assert row.get("agent_id") == "gpt-live"   # 귀속은 기록 에이전트 유지
+
+
+def test_digest_supersedes_previous_digest():  # 개정 3: 브리핑 사슬
+    call_tool("team_note", {"kind": "digest", "text": "브리핑 1"}, context=_ctx("selfharness"))
+    d1 = next(m["id"] for m in list_memory_dicts()
+              if (m.get("metadata") or {}).get("kind") == "digest")
+    call_tool("team_note", {"kind": "digest", "text": "브리핑 2", "supersedes": d1},
+              context=_ctx("selfharness"))
+    payload = json.loads(call_tool("team_read", {}, context=_ctx("gpt-live"))["content"][0]["text"])
+    txt = str(payload)
+    assert "브리핑 2" in txt
+
+
+def test_rev3_hole_fixes():                    # gpt-live 6구멍 봉인 (개정 3.1)
+    # ①+④ projection: thinking_for·owner_sourced 노출 + yellow 명시
+    call_tool("team_note", {"kind": "decision", "text": "소유자 결정",
+                            "on_behalf_of_owner": True}, context=_ctx("gpt-live"))
+    payload = json.loads(call_tool("team_read", {}, context=_ctx("claude-exec"))["content"][0]["text"])
+    txt = json.dumps(payload, ensure_ascii=False)
+    assert "owner_sourced" in txt and "yellow" in txt
+    # ② 엄격 boolean + decision 한정
+    with pytest.raises(HTTPException):
+        call_tool("team_note", {"kind": "decision", "text": "x", "on_behalf_of_owner": "false"},
+                  context=_ctx("gpt-live"))
+    with pytest.raises(HTTPException):
+        call_tool("team_note", {"kind": "question", "text": "x", "on_behalf_of_owner": True},
+                  context=_ctx("gpt-live"))
+    # ⑤a trail은 question에 부착 불가
+    call_tool("team_note", {"kind": "question", "text": "열린 질문"}, context=_ctx("gpt-live"))
+    qid = next(m["id"] for m in list_memory_dicts()
+               if (m.get("metadata") or {}).get("kind") == "question")
+    with pytest.raises(HTTPException):
+        call_tool("team_note", {"kind": "trail", "text": "y", "thinking_for": qid},
+                  context=_ctx("claude-exec"))
+    # ⑤b digest 단일 활성: supersede 없이 둘째 digest 거부, 비-digest supersede 거부
+    call_tool("team_note", {"kind": "digest", "text": "브리핑"}, context=_ctx("selfharness"))
+    with pytest.raises(HTTPException) as second:
+        call_tool("team_note", {"kind": "digest", "text": "병행 브리핑"}, context=_ctx("selfharness"))
+    assert second.value.status_code == 409
+    did = next(m["id"] for m in list_memory_dicts()
+               if (m.get("metadata") or {}).get("kind") == "decision")
+    with pytest.raises(HTTPException):
+        call_tool("team_note", {"kind": "digest", "text": "z", "supersedes": did},
+                  context=_ctx("gpt-live"))
+
+
+def test_rev31_hold_residuals():               # gpt-live 잔여 5건 봉인 (개정 3.2)
+    # D) 같은 idempotency_key로 owner_sourced만 바꾸면 409 (재바인딩 충돌)
+    call_tool("team_note", {"kind": "decision", "text": "같은 본문",
+                            "idempotency_key": "kd", "on_behalf_of_owner": True},
+              context=_ctx("gpt-live"))
+    with pytest.raises(HTTPException) as rebind:
+        call_tool("team_note", {"kind": "decision", "text": "같은 본문",
+                                "idempotency_key": "kd"}, context=_ctx("gpt-live"))
+    assert rebind.value.status_code == 409
+    # A) digest는 다른 작성자가 승계 가능 (브리핑 슬롯 — 교착 방지)
+    call_tool("team_note", {"kind": "digest", "text": "시드"}, context=_ctx("claude-exec"))
+    d1 = next(m["id"] for m in list_memory_dicts()
+              if (m.get("metadata") or {}).get("kind") == "digest")
+    call_tool("team_note", {"kind": "digest", "text": "승계", "supersedes": d1},
+              context=_ctx("selfharness"))   # 교차 작성자 — 예외 없이 통과해야
+    # 비-digest는 여전히 동일 작성자만 supersede
+    call_tool("team_note", {"kind": "decision", "text": "남의 결정"}, context=_ctx("gpt-live"))
+    other = next(m["id"] for m in list_memory_dicts()
+                 if "남의 결정" in str(m.get("memory")))
+    with pytest.raises(HTTPException):
+        call_tool("team_note", {"kind": "decision", "text": "가로채기", "supersedes": other},
+                  context=_ctx("claude-exec"))
+    # E) codex가 로스터에 있어 addressed_to 가능
+    call_tool("team_note", {"kind": "question", "text": "codex 앞", "addressed_to": "codex"},
+              context=_ctx("claude-exec"))
+
+
+def test_owner_confirmation_receipt_promotes_to_green():  # yellow→green 승격 문
+    from fastapi.testclient import TestClient
+    from forget.server import app
+    from forget import receipts as _receipts
+    call_tool("team_note", {"kind": "decision", "text": "소유자 결정",
+                            "on_behalf_of_owner": True}, context=_ctx("gpt-live"))
+    item = next(m["id"] for m in list_memory_dicts()
+                if (m.get("metadata") or {}).get("owner_sourced"))
+    client = TestClient(app)
+    agent_key = create_api_key({"name": "agent", "agent_principal": "claude-exec"})
+    denied = client.post("/v1/team/confirm/", json={"item_id": item},
+                         headers={"Authorization": f"Bearer {agent_key['api_key']}"})
+    assert denied.status_code == 403                    # 에이전트 자격 거부
+    owner_key = create_api_key({"name": "owner", "scopes": ["grants:admin"]})
+    ok = client.post("/v1/team/confirm/", json={"item_id": item},
+                     headers={"Authorization": f"Bearer {owner_key['api_key']}"})
+    assert ok.status_code == 200
+    receipt = ok.json()["receipt"]
+    assert _receipts.verify_receipt(receipt) is True    # 공용 검증기로 검증
+    projected = json.dumps(json.loads(
+        call_tool("team_read", {}, context=_ctx("claude-exec"))["content"][0]["text"]),
+        ensure_ascii=False)
+    assert "green" in projected and "owner-confirmed" in projected
+    replay = client.post("/v1/team/confirm/", json={"item_id": item},
+                         headers={"Authorization": f"Bearer {owner_key['api_key']}"})
+    assert replay.json().get("idempotent_replay") is True  # 단방향·멱등
+    # 비-owner_sourced 항목은 확인 불가
+    call_tool("team_note", {"kind": "decision", "text": "일반 결정"}, context=_ctx("gpt-live"))
+    plain = next(m["id"] for m in list_memory_dicts()
+                 if "일반 결정" in str(m.get("memory")))
+    bad = client.post("/v1/team/confirm/", json={"item_id": plain},
+                      headers={"Authorization": f"Bearer {owner_key['api_key']}"})
+    assert bad.status_code == 400
+
+
+def test_owner_confirmation_acceptance_gates():   # gpt-live 계약 수용 게이트
+    from fastapi.testclient import TestClient
+    from forget.server import app
+    client = TestClient(app)
+    call_tool("team_note", {"kind": "decision", "text": "구 결정",
+                            "on_behalf_of_owner": True}, context=_ctx("gpt-live"))
+    old = next(m["id"] for m in list_memory_dicts()
+               if (m.get("metadata") or {}).get("owner_sourced"))
+    owner_key = create_api_key({"name": "owner", "scopes": ["grants:admin"]})
+    first = client.post("/v1/team/confirm/", json={"item_id": old},
+                        headers={"Authorization": f"Bearer {owner_key['api_key']}"}).json()
+    replay = client.post("/v1/team/confirm/", json={"item_id": old},
+                         headers={"Authorization": f"Bearer {owner_key['api_key']}"}).json()
+    # 정확 재생: 같은 영수증 그대로 (새 영수증 발급 금지)
+    assert replay["receipt"]["receipt_id"] == first["receipt"]["receipt_id"]
+    # supersede 뒤: 과거 확인이 새 decision을 승격하지 못함
+    call_tool("team_note", {"kind": "decision", "text": "새 결정",
+                            "on_behalf_of_owner": True, "supersedes": old},
+              context=_ctx("gpt-live"))
+    new_id_ = next(m["id"] for m in list_memory_dicts()
+                   if "새 결정" in str(m.get("memory")))
+    items = json.loads(call_tool("team_read", {}, context=_ctx("claude-exec"))["content"][0]["text"])
+    blob = {i["id"]: i for i in (items.get("items") or [])}
+    if blob:
+        assert "green" not in str(blob.get(new_id_, {}).get("owner_sourced_trust"))
+        assert "green" in str(blob.get(old, {}).get("owner_sourced_trust"))
