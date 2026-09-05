@@ -42,6 +42,7 @@
 
 ## 사이클 2~ (사이클 1 숫자 뒤에 확정)
 - H-3①을 forget-connect 0.7.0 기본값으로: Claude Code·Codex `PostCompact`/SessionStart에서 요약 **대신** 원장 주입 (pi에선 이미 대체).
+- H-3①-b **투명한 상속** (Codex 압축 상속의 우리 판, 9/5 정훈 «참고할 만»): 부모가 서브에이전트를 띄울 때 원장에 인계 항목(작업 id·사실·결정·다음 손, 각 출처 라벨)을 쓰고 자식 SessionStart가 읽는다. 암호화 상속과 달리 볼 수 있고·게이트가 걸리고·자식의 supersede가 부모에게 보인다. Chronicle(화면 녹화)은 채택 안 함 — 정훈 판단(실사용 평 낮음), 프라이버시 대비 신호 약함.
 - H-3② 확장: frictions.md 289절 인제스트, 실패 서명 학습.
 - 30분: Plus 계정에서 Codex `features.context_management.experimental_mode` 켜고 `~/.codex/` 관찰 — 노트 형식·검색 방식 실측(문서 부재).
 - 8/29 goal(Titans·EM-LLM·TTT 정독)은 ①의 응고화 설계에 필요할 때만.
