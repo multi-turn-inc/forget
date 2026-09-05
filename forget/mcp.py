@@ -680,6 +680,7 @@ TOOLS: list[dict[str, Any]] = [
                 "filters": _FILTERS_PROPERTY,
                 "top_k": {"type": "integer"},
                 "limit": {"type": "integer", "description": "Alias of top_k (top_k wins when both are given)."},
+                "include_quarantined": {"type": "boolean", "description": "Also return machine-origin facts (transcript/OCR/crawl) still in quarantine, i.e. not yet confirmed. Default false: quarantined facts are hidden, not deleted."},
                 "threshold": {"type": "number"},
                 "rerank": {"type": "boolean"},
                 "recall": {
@@ -1714,7 +1715,7 @@ _CONTEXT_ASSEMBLY_ARGS = (
 )
 _EXTRA_ACCEPTED_ARGS: dict[str, frozenset[str]] = {
     "search_memories": frozenset(
-        {"show_expired", "keyword_search", "filter_memories", "reference_date", "scope_fallback", "temporal_rerank"}
+        {"show_expired", "keyword_search", "filter_memories", "reference_date", "scope_fallback", "temporal_rerank", "include_quarantined"}
     )
     | _AS_OF_ARGS,
     "search_memory": frozenset({"top_k"}),

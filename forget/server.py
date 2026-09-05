@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import Body, Depends, FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 
 from .db import init_db
 from .mcp import TEAM_AGENTS, TEAM_LEDGER_APP, TOOLS, handle_mcp_rpc, mem1_capabilities_payload
@@ -121,6 +121,36 @@ def ready() -> dict[str, Any]:
         "version": __version__,
         "commit": SOURCE_COMMIT,
     }
+
+
+# --- 부재 응답 (공개 · 무인증) -------------------------------------------------
+# «내가 없을 때 나 대신 답하는 AI» v0 — 링크에 질문 하나, 기억으로 답 하나, 영수증 하나.
+# 가게는 ~/.forget/absence.json(MEM1_ABSENCE_CONFIG)에 주인이 직접 연다. 파일이 없으면 404.
+
+
+@app.get("/ask/{handle}", response_class=HTMLResponse)
+def ask_page(handle: str) -> HTMLResponse:
+    from . import absence
+
+    shop = absence.load_config().get(handle)
+    if shop is None:
+        raise HTTPException(status_code=404, detail="no such shop")
+    return HTMLResponse(absence.ask_page_html(shop))
+
+
+@app.post("/ask/{handle}")
+def ask_question(handle: str, payload: dict[str, Any], request: Request) -> dict[str, Any]:
+    from . import absence
+
+    client_key = f"{handle}|{request.client.host if request.client else 'unknown'}"
+    if absence.rate_limited(client_key):
+        raise HTTPException(status_code=429, detail="너무 많이 물어보셨어요. 한 시간 뒤에 다시 와 주세요.")
+    try:
+        return absence.answer_question(handle, str((payload or {}).get("question") or ""))
+    except KeyError:
+        raise HTTPException(status_code=404, detail="no such shop")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 # --- MCP --------------------------------------------------------------------

@@ -112,6 +112,9 @@ def _reassemble(item: dict) -> float:
         score = round(score * 0.5, 4)
     if item.get("scope") == "fallback":
         score = round(score * 0.88, 4)
+    if "provenance" in b:
+        # 출처 가중치 (2026-09-01, _apply_provenance_rank): green ×1.15, action_report ×0.85.
+        score = round(score * b["provenance"], 4)
     return round(score, 4)
 
 

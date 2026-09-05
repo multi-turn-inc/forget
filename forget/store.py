@@ -814,13 +814,56 @@ def _action_completion(fact: str) -> bool:
     return bool(ACTION_COMPLETION_RE.search(str(fact or "")))
 
 
+# 행동급 사실 판별자 (2026-09-01 오염 사건 봉인 — tests/test_contamination_replay.py).
+# 일정·마감·시각·금액을 담은 사실은 읽는 즉시 행동을 부른다. 사건: 기계 녹취에서
+# 온 «8/31 자정 마감»이 yellow note 한 줄만 달고 1위로 돌아왔고, 읽는 쪽은 그 위에
+# 스프린트를 세웠다. 조언(note)은 읽는 자의 성실함에 기대고, 그 성실함은 마감
+# 앞에서 사라진다. 그래서 비-green 행동급 사실에는 구조(gate)를 단다.
+ACTION_GRADE_RE = re.compile(
+    r"(?<!\d)\d{1,2}/\d{1,2}(?!\d)|\d{4}-\d{2}-\d{2}|마감|까지|오후\s*\d|오전\s*\d"
+    r"|\d[\d,]*원|\$\d|\bdeadline\b|\bdue\b",
+    re.IGNORECASE,
+)
+# 기계 유래 유입원: 이 origin으로 들어온 비-green 사실은 본장부가 아니라 검역층
+# (metadata.quarantine.status == "pending")에 앉고, 확인(confirm_memory) 전에는
+# 기본 검색에서 보이지 않는다. 삭제가 아니라 격리 — include_quarantined로 열람.
+MACHINE_ORIGINS = frozenset({"transcript", "recording", "asr", "ocr", "crawl", "scrape"})
+ACTION_GATE_NOTE = (
+    "action-grade fact (date/deadline/amount) from an unconfirmed source — "
+    "do not plan on it; confirm with the user or an independent source first"
+)
+
+
+def _action_grade(fact: str) -> bool:
+    return bool(ACTION_GRADE_RE.search(str(fact or "")))
+
+
+def _provenance_gate(trust: dict[str, Any] | None, fact: str) -> dict[str, Any] | None:
+    """비-green 행동급 사실에 confirm_required 게이트를 단다 (읽기·쓰기 양쪽에서 호출)."""
+    if not _action_grade(fact):
+        return trust
+    gated = dict(trust or {"light": "yellow", "source": "unknown", "kind": "fact"})
+    if gated.get("light") == "green":
+        return gated
+    gated["gate"] = "confirm_required"
+    gated.setdefault("note", ACTION_GATE_NOTE)
+    return gated
+
+
+def _quarantine_stamp(metadata: dict[str, Any], source_role: str) -> dict[str, Any] | None:
+    origin = str((metadata or {}).get("origin") or "").strip().lower()
+    if origin in MACHINE_ORIGINS and source_role not in ("user", "tool"):
+        return {"status": "pending", "origin": origin, "since": utc_now()}
+    return None
+
+
 def _memory_trust(source_role: str, fact: str) -> dict[str, str]:
     light = "green" if source_role in ("user", "tool") else "yellow"
     kind = "action_report" if _action_completion(fact) else "fact"
     trust = {"light": light, "source": source_role, "kind": kind}
     if light == "yellow" and kind == "action_report":
         trust["note"] = "unverified action claim from an agent-side summary — confirm with the user before acting on it"
-    return trust
+    return _provenance_gate(trust, fact)
 
 
 def _fact_relation(text: str) -> dict[str, str] | None:
@@ -4032,6 +4075,9 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
             fact = record["fact"]
             source_role = _claim_source_role(record)
             record_metadata = {**metadata, "trust": _memory_trust(source_role, fact)}
+            quarantine = _quarantine_stamp(metadata, source_role)
+            if quarantine:
+                record_metadata["quarantine"] = quarantine
             bind = anchor if anchor_applies(fact, anchor) else ""
             if anchor:
                 record_metadata["episode"] = {"event_id": event_id, "anchor": anchor,
@@ -5598,6 +5644,7 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
     show_expired = bool(payload.get("show_expired", False))
     include_session_captures = bool(payload.get("include_session_captures", False))
     keyword_search = bool(payload.get("keyword_search", False))
+    include_quarantined = bool(payload.get("include_quarantined", False))
     filter_memories_enabled = bool(payload.get("filter_memories", False))
     time_decay_enabled = _bool_or(payload.get("time_decay"),
                                   os.environ.get("MEM1_TIME_DECAY") == "1")
@@ -5714,6 +5761,8 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
             score_breakdown["feedback"] = round(adjusted - score, 4)
         score = adjusted
         memory_meta_early = memory.get("metadata") or {}
+        if not include_quarantined and (memory_meta_early.get("quarantine") or {}).get("status") == "pending":
+            continue  # 검역층: 확인 전 기계 유래 사실은 기본 검색에 없다 (격리, 삭제 아님)
         if memory_meta_early.get("superseded_at"):
             # 억제 간선 (본선 3, 2026-08-23): 억압은 저장된 상태가 아니라 인출 시점의
             # 경쟁이다 — 대체본이 함께 인출될 때 그 대체본이 구본을 누른다. 링크가
@@ -5777,6 +5826,7 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
             trust = memory_meta.get("trust")
             if memory_meta.get("superseded_at"):
                 trust = {**(trust or {}), "light": "red", "note": "superseded — reference only, prefer the newer fact"}
+            trust = _provenance_gate(trust, memory.get("memory", ""))  # 구본(라벨 이전 저장분)도 읽기 시점에 게이트
             if trust:
                 item["trust"] = trust
             if not in_primary_scope:
@@ -5800,6 +5850,7 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
     if rerank:
         scored = rerank_memory_results(query, scored, project_id=project_id, top_n=top_k)
     scored = _apply_inhibition_edges(scored, project_id=project_id, as_of=memory_as_of)
+    scored = _apply_provenance_rank(scored)
     scored.sort(key=lambda item: (item["score"], item["updated_at"]), reverse=True)
     if not memory_as_of:
         # 시점 질의에는 확산 안 함 — 간선은 현재 원장의 것이라 과거를 오염시킨다.
@@ -8283,6 +8334,29 @@ def _context_trust_rank(memory: dict[str, Any]) -> float:
     light = _CONTEXT_TRUST_LIGHT_WEIGHTS.get(str(trust.get("light") or ""), 1.0)
     kind = _CONTEXT_TRUST_KIND_WEIGHTS.get(str(trust.get("kind") or ""), 1.0)
     return base * light * kind * _context_recency_factor(memory)
+
+
+def _apply_provenance_rank(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """검색 경로에도 출처 가중치를 건다 (2026-09-01).
+
+    캡슐 랭커(_context_trust_rank)만 출처를 봤고 매일 쓰는 search_memories는
+    보지 않았다. 실측: «정훈 오디션 주최 프로그램» 질의에 기계 녹취 유래 yellow
+    (0.387)가 정훈 직접 진술 green(0.332) 위에 섰다 — 사고는 우연이 아니라 구조.
+    red(대체본)는 여기서 건드리지 않는다: 무조건 강등은 구본을 문턱 아래로
+    가라앉혀 사실상 삭제했던 전력이 있고, 그 경쟁은 _apply_inhibition_edges 몫이다.
+    """
+    for item in items:
+        trust = item.get("trust") if isinstance(item.get("trust"), dict) else None
+        if not trust or trust.get("light") == "red":
+            continue
+        weight = _CONTEXT_TRUST_LIGHT_WEIGHTS.get(str(trust.get("light") or ""), 1.0)
+        weight *= _CONTEXT_TRUST_KIND_WEIGHTS.get(str(trust.get("kind") or ""), 1.0)
+        if weight == 1.0:
+            continue
+        item["score"] = round(float(item.get("score") or 0.0) * weight, 4)
+        if isinstance(item.get("score_breakdown"), dict):
+            item["score_breakdown"]["provenance"] = round(weight, 4)
+    return items
 
 
 _CONTEXT_NEAR_DUPLICATE_THRESHOLD = 0.55
@@ -14052,7 +14126,10 @@ def confirm_memory(memory_id: str, payload: dict[str, Any] | None = None, projec
     trust.setdefault("source", "assistant")
     trust.setdefault("kind", "action_report")
     trust["note"] = f"verified {now[:10]}: {evidence[:120]}"
+    trust.pop("gate", None)  # 확인됐으니 게이트 해제
     metadata["trust"] = trust
+    if isinstance(metadata.get("quarantine"), dict):
+        metadata["quarantine"] = {**metadata["quarantine"], "status": "confirmed", "confirmed_at": now}
 
     with get_db() as conn:
         conn.execute(
