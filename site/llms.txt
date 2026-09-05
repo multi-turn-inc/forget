@@ -78,6 +78,13 @@ commit provenance (sha, author, date), backdated to the commit time.
 - Archive: LongMemEval full-500 78.4% ± 0.4 fully local, three seeds
   (paper baseline: 60.6% full-context, 87.0% oracle).
 - Every memory carries provenance (who vouches for it) and a trust label.
+- Provenance is enforced, not advisory (0.5.0): non-green facts with a
+  date/deadline/amount return `trust.gate = confirm_required`; facts from
+  transcripts/OCR/crawls are quarantined until confirmed
+  (`include_quarantined` to see them); search ranks by source weight.
+- LongMemEval (S, n=500) best config 81.8%, reproduced three times
+  (81.8 / 82.4 / 81.8); fully-local pipeline 76.2%. Harness and every run
+  file: https://github.com/multi-turn-inc/forget/tree/main/research/longmemeval
 - Paid layer: forget cloud Pro, $8/mo, 2,000 deep recalls on the certified
   model (https://forget.sh/cloud).
 - Not shipped yet: E2EE sync, Windows support. Hosted: only the optional
