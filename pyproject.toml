@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "forget-ai"
-version = "0.4.0"
+version = "0.5.0"
 description = "Memory for your AI. It forgets the junk, keeps what matters."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -28,6 +28,18 @@ forget-proxy = "forget.proxy:main"
 [project.urls]
 Homepage = "https://multi-turn.ai"
 Repository = "https://github.com/multi-turn-inc/forget"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "forget/**",
+  "hooks/**",
+  "tests/**",
+  "README.md",
+  "CHANGELOG.md",
+  "LICENSE*",
+  "pyproject.toml",
+]
+exclude = ["**/__pycache__", "**/*.pyc"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["forget"]

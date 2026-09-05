@@ -27,7 +27,7 @@ HANDOFF_MAX_AGE_SECONDS = 48 * 3600  # a stale shift-note is worse than none
 # The server capability these hooks are built against. The capsule response
 # carries server_version from 0.3.9 on; older servers silently drop arguments
 # these hooks send (project layering) — that mismatch must never be silent.
-REQUIRED_SERVER_VERSION = "0.3.9"
+REQUIRED_SERVER_VERSION = "0.5.0"
 
 
 def _version_tuple(value: str) -> tuple:
