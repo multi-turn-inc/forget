@@ -1,17 +1,20 @@
-# 장기 작업 하네스 — 사이클 1 지시서 (9/9 시작)
+# 장기 작업 하네스 — 사이클 1 지시서 (9/9 시작) — v2, Astra 연구 반영
 
 정훈 확정(2026-09-05): «MCP 도구의 한계를 벗어나서, Astra가 하는 것처럼.»
 정본 헌장: `docs/self-harness-design.md` (L1 여섯 성질 · L5 계단 H-0/H-1/H-2). 이 트랙은 그 계단의 **H-3**이며, H-1 판정(P-H-1: 응고화 0.8% vs 전량 압축 20%, 합성 과제 n=10)을 실작업으로 옮긴다.
 원장: task_state `goal:long-horizon-harness`. 예측 등록은 `research/devloop/predictions.md`에 P77~.
 
-## Astra가 한 것 → 우리 계단
+## Astra가 한 것 → 우리 계단 (astra-study-2026-09-05.md §D 정본)
 
-| Astra (Codex 하네스, 2026-09-03) | 우리 것 (있음/없음) | 계단 |
-|---|---|---|
-| 창이 차면 요약 대신 창 밖 노트 유지 | forget task_state·캡슐·유언장 (있음, MCP 밖에서 훅이 읽음) | H-1 |
-| 이전 창의 메시지·도구 출력 검색 | search_memories·에피소드 층 (있음, 도구 출력은 미캡처) | H-3① |
-| 과거 실패 원인·요구사항·테스트 결과 재검색 | frictions.md 129건(마크다운, 검색 불가) · forget_toolrecall(Bash 실패 서명 4종 정적) | H-3② |
-| 29시간 자율, 64 서브에이전트 | devloop 301사이클 · 심장박동 90분 · **연속 시간 지표 없음** | H-3③ |
+| Astra | 우리 것 | 판정 | 계단 |
+|---|---|---|---|
+| 압축 대신 노트(불투명·서버) | pi: consolidate가 압축 **대체** · Claude Code: PreCompact 훅 둘 **병행** | pi 있음 / CC 부분 | H-3① |
+| 이전 창 메시지 검색 | search_memories + 에피소드 층 | 있음 | — |
+| **이전 창 도구 출력·실패·테스트 결과 재검색** | **없음** (toolrecall은 Bash 실패 서명 4종 정적) | **없음** | H-3② |
+| Memories(세션 간, 전역, 무출처, MCP 채팅 제외) | forget 원장(출처·게이트·검역·supersede·영수증·범위·로컬) | forget 앞섬 | 0.5.0 |
+| 29h 자율·64 서브에이전트 | 연속성 지표 없음 | 없음 | H-3③ |
+
+핵심 숫자: ARC-AGI-3에서 같은 모델이 중립 하네스 62.7% / 기억 하네스 99.9%. **기억 하네스가 점수의 절반.** 우리 질문 = «투명한 기억 하네스도 같은 이득을 내는가».
 
 ## 사이클 1 = ③ 재기 (만들기 전에 잰다)
 
@@ -24,7 +27,7 @@
 | M_handoff | 리셋 뒤 «직전 상태를 잘못 이어받은» 사건 수 (사실 변형·의도 미상속·중복 작업) — 8/26 표본 1·2호 분류 재사용 |
 | K_human | 사람이 개입한 횟수 (승인 프롬프트 포함) |
 
-**작업(피검체).** H-3① 자체: «PreCompact 훅이 컴팩션 직전에 forget 원장(사실·결정·다음 손·실패)을 쓰고, SessionStart가 재개 시 Claude의 요약 대신 그 원장을 주입한다»를 forget-connect 기본 경로로 구현·테스트. 피검체가 곧 다음 계단이라 실측이 낭비되지 않는다.
+**작업(피검체) — v2에서 ②로 교체(정훈 승인 대기).** H-3② «도구 출력·실패 색인»: PostToolUse 훅이 모든 도구 결과(명령·에러 서명·성공/실패·소요)를 forget 에피소드 층에 기록하고, `search_tool_outputs`(또는 search_memories의 `kind=tool_output`)로 이전 창의 도구 출력·실패 원인·테스트 결과를 회수한다. 이유: Astra 발표 문면 중 우리에게 0인 유일한 항목이고, ①은 pi에 절반 있다. 피검체가 곧 다음 계단이라 실측이 낭비되지 않는다. (①은 사이클 2: Claude Code·Codex `PostCompact`에서 요약 대신 원장 주입으로 승격.)
 
 **몸.** pi 루프(`scripts/self_harness_wake.sh` 규약: 프로바이더 local-qwen 고정 아님 — 이번엔 실작업이므로 Sonnet, 사이클 비용 $2 상한) + forget 8000. 8시간 상한. `~/.forget/selfharness/pause`로 정지 가능.
 
@@ -38,8 +41,9 @@
 - LongMemEval. 이 트랙의 벤치마크는 «시간·리셋·오류·개입»이다.
 
 ## 사이클 2~ (사이클 1 숫자 뒤에 확정)
-- H-3①을 forget-connect 0.7.0 기본값으로 (P-H-1 기전의 제품화).
-- H-3② `search_failures`: PostToolUse 실패 자동 캡처(에러 서명·명령·수리) + frictions.md 129건 인제스트 + 도구.
+- H-3①을 forget-connect 0.7.0 기본값으로: Claude Code·Codex `PostCompact`/SessionStart에서 요약 **대신** 원장 주입 (pi에선 이미 대체).
+- H-3② 확장: frictions.md 289절 인제스트, 실패 서명 학습.
+- 30분: Plus 계정에서 Codex `features.context_management.experimental_mode` 켜고 `~/.codex/` 관찰 — 노트 형식·검색 방식 실측(문서 부재).
 - 8/29 goal(Titans·EM-LLM·TTT 정독)은 ①의 응고화 설계에 필요할 때만.
 
 ## 정훈이 하는 것
