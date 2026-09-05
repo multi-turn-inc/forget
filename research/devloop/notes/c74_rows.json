@@ -1,0 +1,672 @@
+[
+ {
+  "created_at": "2026-08-07T17:58:01Z",
+  "chars": 300,
+  "words": 36,
+  "n": 4,
+  "spread": 0.04530000000000001,
+  "flat": false,
+  "query_head": "devloop 사이클을 정확히 한 바퀴 실행",
+  "query_sha256": "6d186218eb854502"
+ },
+ {
+  "created_at": "2026-08-07T14:56:14Z",
+  "chars": 10,
+  "words": 3,
+  "n": 5,
+  "spread": 0.058800000000000074,
+  "flat": false,
+  "query_head": "너가 해주면 안돼?",
+  "query_sha256": "1d61e22f2f116893"
+ },
+ {
+  "created_at": "2026-08-07T14:46:43Z",
+  "chars": 14,
+  "words": 5,
+  "n": 5,
+  "spread": 0.01419999999999999,
+  "flat": true,
+  "query_head": "서버 두개 다 쓰고 있어?",
+  "query_sha256": "a769817dd10c39e8"
+ },
+ {
+  "created_at": "2026-08-07T14:42:30Z",
+  "chars": 8,
+  "words": 3,
+  "n": 5,
+  "spread": 0.015800000000000036,
+  "flat": true,
+  "query_head": "잘 돼고 있어?",
+  "query_sha256": "27bff00a5fcc120e"
+ },
+ {
+  "created_at": "2026-08-07T11:48:57Z",
+  "chars": 42,
+  "words": 7,
+  "n": 5,
+  "spread": 0.014599999999999946,
+  "flat": true,
+  "query_head": "sudo apt install nvidia-",
+  "query_sha256": "1a62135d1a428bb9"
+ },
+ {
+  "created_at": "2026-08-07T11:38:52Z",
+  "chars": 11,
+  "words": 4,
+  "n": 5,
+  "spread": 0.03189999999999993,
+  "flat": false,
+  "query_head": "지금 바로 올려도 돼",
+  "query_sha256": "c3a016cbdd4009e2"
+ },
+ {
+  "created_at": "2026-08-07T11:37:15Z",
+  "chars": 27,
+  "words": 7,
+  "n": 5,
+  "spread": 0.018399999999999972,
+  "flat": true,
+  "query_head": "dilab 아직 안 끝났어? 끝났을껄? 끝내",
+  "query_sha256": "4ba38b89e0da3605"
+ },
+ {
+  "created_at": "2026-08-07T09:37:00Z",
+  "chars": 10,
+  "words": 4,
+  "n": 5,
+  "spread": 0.015799999999999925,
+  "flat": true,
+  "query_head": "다 했어 2호기 ㄱ",
+  "query_sha256": "c6d76cbca5e191f7"
+ },
+ {
+  "created_at": "2026-08-07T09:06:26Z",
+  "chars": 8,
+  "words": 2,
+  "n": 5,
+  "spread": 0.007300000000000084,
+  "flat": true,
+  "query_head": "580으로 했어",
+  "query_sha256": "63df6f3655d35411"
+ },
+ {
+  "created_at": "2026-08-07T09:02:44Z",
+  "chars": 300,
+  "words": 43,
+  "n": 5,
+  "spread": 0.03489999999999993,
+  "flat": false,
+  "query_head": "silla@silla:~$ sudo apt ",
+  "query_sha256": "eec8623e71d71d6a"
+ },
+ {
+  "created_at": "2026-08-07T09:01:30Z",
+  "chars": 300,
+  "words": 25,
+  "n": 5,
+  "spread": 0.009000000000000008,
+  "flat": true,
+  "query_head": "silla@silla:~$ sudo ubun",
+  "query_sha256": "cd4d9e6a747d0c1e"
+ },
+ {
+  "created_at": "2026-08-07T08:21:52Z",
+  "chars": 18,
+  "words": 4,
+  "n": 5,
+  "spread": 0.053199999999999914,
+  "flat": false,
+  "query_head": "silla는 내가 어떻게 해줄까?",
+  "query_sha256": "1f760052d37df32f"
+ },
+ {
+  "created_at": "2026-08-07T07:51:36Z",
+  "chars": 169,
+  "words": 29,
+  "n": 5,
+  "spread": 0.019499999999999962,
+  "flat": true,
+  "query_head": "3면 작전 가동 중 (16:00 기준):\n\n",
+  "query_sha256": "e8cbbced13ce4a30"
+ },
+ {
+  "created_at": "2026-08-07T07:42:26Z",
+  "chars": 67,
+  "words": 16,
+  "n": 5,
+  "spread": 0.10629999999999995,
+  "flat": false,
+  "query_head": "아 연구실 작업 그거 멈춰도 되는거라서 잠시",
+  "query_sha256": "b87e8bc5d5d7dbc8"
+ },
+ {
+  "created_at": "2026-08-07T06:20:44Z",
+  "chars": 200,
+  "words": 19,
+  "n": 5,
+  "spread": 0.07469999999999999,
+  "flat": false,
+  "query_head": "Alias\n\n4090\nHost\n\n155.23",
+  "query_sha256": "356ab6a19e69a36b"
+ },
+ {
+  "created_at": "2026-08-07T06:14:33Z",
+  "chars": 76,
+  "words": 17,
+  "n": 5,
+  "spread": 0.02650000000000008,
+  "flat": true,
+  "query_head": "오.. 쉣.. 뭐야 ARB-C를 기반으로 가",
+  "query_sha256": "89338b609bc12cce"
+ },
+ {
+  "created_at": "2026-08-07T06:07:46Z",
+  "chars": 16,
+  "words": 3,
+  "n": 5,
+  "spread": 0.0044999999999999485,
+  "flat": true,
+  "query_head": "0.586 범위부터 확인해보자",
+  "query_sha256": "febbafdff6bfafb5"
+ },
+ {
+  "created_at": "2026-08-07T06:00:39Z",
+  "chars": 19,
+  "words": 4,
+  "n": 5,
+  "spread": 0.006700000000000039,
+  "flat": true,
+  "query_head": "공표 0.586은 어떻게 한거라고?",
+  "query_sha256": "37257e91d4cce0b3"
+ },
+ {
+  "created_at": "2026-08-07T05:54:04Z",
+  "chars": 51,
+  "words": 10,
+  "n": 5,
+  "spread": 0.03180000000000005,
+  "flat": false,
+  "query_head": "어떻게 진행되고 있어? 그리고 DeepInf",
+  "query_sha256": "f9da6670da4eaf56"
+ },
+ {
+  "created_at": "2026-08-07T05:43:10Z",
+  "chars": 67,
+  "words": 17,
+  "n": 5,
+  "spread": 0.030999999999999917,
+  "flat": false,
+  "query_head": "그건 그렇고 어제 작업하던거 있잖아? 낮에 ",
+  "query_sha256": "750c47a0abdfc475"
+ },
+ {
+  "created_at": "2026-08-07T05:17:44Z",
+  "chars": 46,
+  "words": 10,
+  "n": 5,
+  "spread": 0.022199999999999998,
+  "flat": true,
+  "query_head": "공표 SOTA는 어떻게 넘지? vision을",
+  "query_sha256": "1910e5f0a837195c"
+ },
+ {
+  "created_at": "2026-08-07T04:29:56Z",
+  "chars": 22,
+  "words": 6,
+  "n": 5,
+  "spread": 0.0031999999999999806,
+  "flat": true,
+  "query_head": "c20 결과 나오면 알려줘 몇시쯤 끝나?",
+  "query_sha256": "aceab9ff6560297d"
+ },
+ {
+  "created_at": "2026-08-07T02:32:42Z",
+  "chars": 300,
+  "words": 56,
+  "n": 5,
+  "spread": 0.022199999999999998,
+  "flat": true,
+  "query_head": "김정훈  [오전 11:17]\n보내주신 PDF",
+  "query_sha256": "f9ce3275ee55d597"
+ },
+ {
+  "created_at": "2026-08-07T02:11:38Z",
+  "chars": 300,
+  "words": 53,
+  "n": 5,
+  "spread": 0.022299999999999986,
+  "flat": true,
+  "query_head": "@\"/Users/junghunkim/Down",
+  "query_sha256": "361dd9798528758c"
+ },
+ {
+  "created_at": "2026-08-06T23:08:08Z",
+  "chars": 236,
+  "words": 51,
+  "n": 5,
+  "spread": 0.038900000000000046,
+  "flat": false,
+  "query_head": "wire 에이전트(이거봤어요)로 오늘의 AI",
+  "query_sha256": "0c9e67a5193304a2"
+ },
+ {
+  "created_at": "2026-08-06T22:07:08Z",
+  "chars": 299,
+  "words": 40,
+  "n": 4,
+  "spread": 0.18489999999999995,
+  "flat": false,
+  "query_head": "심장박동. ~/.forget/CHARTER.",
+  "query_sha256": "36da8c71a811de62"
+ },
+ {
+  "created_at": "2026-08-06T18:44:32Z",
+  "chars": 17,
+  "words": 3,
+  "n": 5,
+  "spread": 0.02839999999999998,
+  "flat": true,
+  "query_head": "언제까지 제출마감이지? 가격은?",
+  "query_sha256": "4d6a2b29a5620574"
+ },
+ {
+  "created_at": "2026-08-06T18:44:23Z",
+  "chars": 12,
+  "words": 2,
+  "n": 5,
+  "spread": 0.0131,
+  "flat": true,
+  "query_head": "언제까지 제출마감이지?",
+  "query_sha256": "6d40614d1ef12860"
+ },
+ {
+  "created_at": "2026-08-06T18:28:43Z",
+  "chars": 8,
+  "words": 3,
+  "n": 5,
+  "spread": 0.012600000000000056,
+  "flat": true,
+  "query_head": "잘 되고 이썽?",
+  "query_sha256": "2d96cf0f6b419de7"
+ },
+ {
+  "created_at": "2026-08-06T18:15:51Z",
+  "chars": 115,
+  "words": 15,
+  "n": 5,
+  "spread": 0.09960000000000002,
+  "flat": false,
+  "query_head": "Quant short-term trading",
+  "query_sha256": "964307ddb8a90672"
+ },
+ {
+  "created_at": "2026-08-06T18:12:31Z",
+  "chars": 71,
+  "words": 10,
+  "n": 5,
+  "spread": 0.019999999999999907,
+  "flat": true,
+  "query_head": "Quant mobile Tailscale a",
+  "query_sha256": "cf338d255df83565"
+ },
+ {
+  "created_at": "2026-08-06T18:10:16Z",
+  "chars": 89,
+  "words": 21,
+  "n": 4,
+  "spread": 0.015100000000000002,
+  "flat": true,
+  "query_head": "참고 문헌이 너무 적지 않아? 그리고 그림 ",
+  "query_sha256": "438a6e62a94d82ae"
+ },
+ {
+  "created_at": "2026-08-06T18:07:05Z",
+  "chars": 86,
+  "words": 12,
+  "n": 5,
+  "spread": 0.08110000000000006,
+  "flat": false,
+  "query_head": "Quant mobile approval Ta",
+  "query_sha256": "76bb33c5798bde52"
+ },
+ {
+  "created_at": "2026-08-06T18:04:32Z",
+  "chars": 198,
+  "words": 33,
+  "n": 5,
+  "spread": 0.0363,
+  "flat": false,
+  "query_head": "@\"/Users/junghunkim/Desk",
+  "query_sha256": "a777976ec58bf4ec"
+ },
+ {
+  "created_at": "2026-08-06T18:03:10Z",
+  "chars": 11,
+  "words": 3,
+  "n": 5,
+  "spread": 0.05349999999999999,
+  "flat": false,
+  "query_head": "한글판도 다시 구워줘",
+  "query_sha256": "0170557fd787fb15"
+ },
+ {
+  "created_at": "2026-08-06T17:45:07Z",
+  "chars": 55,
+  "words": 12,
+  "n": 5,
+  "spread": 0.0403,
+  "flat": false,
+  "query_head": "음.. 뭐랄까 논문스타일의 문체인지가 걸리네",
+  "query_sha256": "873a2a86730e1ca1"
+ },
+ {
+  "created_at": "2026-08-06T17:41:02Z",
+  "chars": 14,
+  "words": 3,
+  "n": 5,
+  "spread": 0.032299999999999995,
+  "flat": false,
+  "query_head": "비전은 어떻게 사용해보지?",
+  "query_sha256": "57704faf17e2d93a"
+ },
+ {
+  "created_at": "2026-08-06T17:31:43Z",
+  "chars": 120,
+  "words": 11,
+  "n": 5,
+  "spread": 0.04139999999999999,
+  "flat": false,
+  "query_head": "session startup in /User",
+  "query_sha256": "68ea90d741c0c2fc"
+ },
+ {
+  "created_at": "2026-08-06T17:18:42Z",
+  "chars": 36,
+  "words": 9,
+  "n": 5,
+  "spread": 0.008199999999999985,
+  "flat": true,
+  "query_head": "관객 반응은 몰라서 그냥 없이 가자. 한글 ",
+  "query_sha256": "f1d316503b7089e7"
+ },
+ {
+  "created_at": "2026-08-06T17:17:08Z",
+  "chars": 57,
+  "words": 14,
+  "n": 4,
+  "spread": 0.0010999999999999899,
+  "flat": true,
+  "query_head": "근데 블로그를 심사위원이 볼 일 이 있어? ",
+  "query_sha256": "d868f22b13143a47"
+ },
+ {
+  "created_at": "2026-08-06T17:15:29Z",
+  "chars": 39,
+  "words": 8,
+  "n": 5,
+  "spread": 0.014700000000000046,
+  "flat": true,
+  "query_head": "아참, VR부분과 vercel 부분은 전시한",
+  "query_sha256": "7b2c83a4de079d44"
+ },
+ {
+  "created_at": "2026-08-06T17:05:59Z",
+  "chars": 114,
+  "words": 26,
+  "n": 5,
+  "spread": 0.018900000000000028,
+  "flat": true,
+  "query_head": "잊은 것들의 목록은 빼자.  Fossil w",
+  "query_sha256": "ace859d4386e447e"
+ },
+ {
+  "created_at": "2026-08-06T17:02:53Z",
+  "chars": 8,
+  "words": 3,
+  "n": 5,
+  "spread": 0.0045000000000000595,
+  "flat": true,
+  "query_head": "잘 되고 있어?",
+  "query_sha256": "df3bddf2ec687c3b"
+ },
+ {
+  "created_at": "2026-08-06T17:02:46Z",
+  "chars": 76,
+  "words": 11,
+  "n": 5,
+  "spread": 0.03920000000000001,
+  "flat": false,
+  "query_head": "Quant Toss mobile one-ta",
+  "query_sha256": "e513ea4261de383c"
+ },
+ {
+  "created_at": "2026-08-06T16:58:21Z",
+  "chars": 81,
+  "words": 11,
+  "n": 5,
+  "spread": 0.027699999999999947,
+  "flat": true,
+  "query_head": "session startup in /User",
+  "query_sha256": "f0b2eab9268f751c"
+ },
+ {
+  "created_at": "2026-08-06T15:53:35Z",
+  "chars": 54,
+  "words": 14,
+  "n": 5,
+  "spread": 0.02969999999999995,
+  "flat": true,
+  "query_head": "아 지금보다 밝기 조정을 더 빨리 해줄수 있",
+  "query_sha256": "a89ae484ed2ffdf8"
+ },
+ {
+  "created_at": "2026-08-06T15:45:44Z",
+  "chars": 14,
+  "words": 3,
+  "n": 5,
+  "spread": 0.03520000000000001,
+  "flat": false,
+  "query_head": "연속 AE방식을 이식해줘.",
+  "query_sha256": "2e53deb4bd9c9b27"
+ },
+ {
+  "created_at": "2026-08-06T15:39:41Z",
+  "chars": 169,
+  "words": 34,
+  "n": 5,
+  "spread": 0.005099999999999993,
+  "flat": true,
+  "query_head": "그건 그렇고 잠시만\n\nssh silla@sl",
+  "query_sha256": "e6c9152e742374da"
+ },
+ {
+  "created_at": "2026-08-06T15:23:38Z",
+  "chars": 98,
+  "words": 18,
+  "n": 5,
+  "spread": 0.0263000000000001,
+  "flat": true,
+  "query_head": "그런데 그러고 보니 잊은 것들의 목록은 후보",
+  "query_sha256": "04910d268c7c1fca"
+ },
+ {
+  "created_at": "2026-08-06T15:22:42Z",
+  "chars": 52,
+  "words": 10,
+  "n": 5,
+  "spread": 0.023299999999999987,
+  "flat": true,
+  "query_head": "그런데 그러고 보니 잊은 것들의 목록은 후보",
+  "query_sha256": "08e45768c72ac339"
+ },
+ {
+  "created_at": "2026-08-06T15:18:03Z",
+  "chars": 79,
+  "words": 3,
+  "n": 5,
+  "spread": 0.039999999999999925,
+  "flat": false,
+  "query_head": "@\"/Users/junghunkim/Down",
+  "query_sha256": "e60acf3fe979bc78"
+ },
+ {
+  "created_at": "2026-08-06T15:11:53Z",
+  "chars": 62,
+  "words": 15,
+  "n": 5,
+  "spread": 0.07999999999999996,
+  "flat": false,
+  "query_head": "Quant 모바일 대시보드 외부 접속 Tai",
+  "query_sha256": "c609578be10eeb6e"
+ },
+ {
+  "created_at": "2026-08-06T15:10:24Z",
+  "chars": 12,
+  "words": 3,
+  "n": 5,
+  "spread": 0.33709999999999996,
+  "flat": false,
+  "query_head": "c15 eta를 알려줘",
+  "query_sha256": "a2f0fd4b6eaf2620"
+ },
+ {
+  "created_at": "2026-08-06T15:09:54Z",
+  "chars": 61,
+  "words": 16,
+  "n": 5,
+  "spread": 0.11549999999999994,
+  "flat": false,
+  "query_head": "사용자는 Quant 실계좌 소액 자동 트레이",
+  "query_sha256": "d6a32c3665233beb"
+ },
+ {
+  "created_at": "2026-08-06T15:06:12Z",
+  "chars": 57,
+  "words": 16,
+  "n": 5,
+  "spread": 0.04139999999999999,
+  "flat": false,
+  "query_head": "Quant 자동 트레이딩 사용자 매번 승인 ",
+  "query_sha256": "a9addef3f0ae4d5b"
+ },
+ {
+  "created_at": "2026-08-06T14:55:53Z",
+  "chars": 61,
+  "words": 16,
+  "n": 5,
+  "spread": 0.04090000000000005,
+  "flat": false,
+  "query_head": "Quant Toss 실투자 매 주문 승인 반",
+  "query_sha256": "62eb7e951dc794df"
+ },
+ {
+  "created_at": "2026-08-06T13:08:18Z",
+  "chars": 22,
+  "words": 7,
+  "n": 5,
+  "spread": 0.011900000000000022,
+  "flat": true,
+  "query_head": "응 c14는 잘 되고 있어? 언제 끝나?",
+  "query_sha256": "0c29729cc3d3ab89"
+ },
+ {
+  "created_at": "2026-08-06T09:37:55Z",
+  "chars": 11,
+  "words": 2,
+  "n": 5,
+  "spread": 0.04379999999999995,
+  "flat": false,
+  "query_head": "18:30 넘었는데?",
+  "query_sha256": "75241978b294b8fe"
+ },
+ {
+  "created_at": "2026-08-06T09:36:18Z",
+  "chars": 25,
+  "words": 6,
+  "n": 5,
+  "spread": 0.0393,
+  "flat": false,
+  "query_head": "PDF 버전도 만들어줘. 검수하기 쉬워서 그",
+  "query_sha256": "c795cbcd2a3348e3"
+ },
+ {
+  "created_at": "2026-08-06T09:32:34Z",
+  "chars": 12,
+  "words": 3,
+  "n": 5,
+  "spread": 0.00539999999999996,
+  "flat": true,
+  "query_head": "한글 버전도 만들어줘.",
+  "query_sha256": "ee46adbdeed0da93"
+ },
+ {
+  "created_at": "2026-08-06T09:32:16Z",
+  "chars": 9,
+  "words": 2,
+  "n": 5,
+  "spread": 0.3184,
+  "flat": false,
+  "query_head": "에러가 발생했나?",
+  "query_sha256": "b7a75ac7b1332912"
+ },
+ {
+  "created_at": "2026-08-06T09:32:02Z",
+  "chars": 25,
+  "words": 4,
+  "n": 5,
+  "spread": 0.06310000000000004,
+  "flat": false,
+  "query_head": "알지. 미국시장에서 사놓을수있는건 있을거아냐",
+  "query_sha256": "f1c48985c0bbaedc"
+ },
+ {
+  "created_at": "2026-08-06T09:31:04Z",
+  "chars": 11,
+  "words": 2,
+  "n": 5,
+  "spread": 0.04149999999999998,
+  "flat": false,
+  "query_head": "지금 투자해놓으려고.",
+  "query_sha256": "9c93dfbe7f01f876"
+ },
+ {
+  "created_at": "2026-08-06T09:02:43Z",
+  "chars": 35,
+  "words": 7,
+  "n": 5,
+  "spread": 0.021100000000000008,
+  "flat": true,
+  "query_head": "실체감을 계속 해봐.c13 mini는 언제 ",
+  "query_sha256": "98e91f624fa3f233"
+ },
+ {
+  "created_at": "2026-08-06T07:56:53Z",
+  "chars": 29,
+  "words": 6,
+  "n": 5,
+  "spread": 0.01529999999999998,
+  "flat": true,
+  "query_head": "체감은 어때? 아직 프로토타입이라서 아쉬운점",
+  "query_sha256": "bdadaf05af4444fc"
+ },
+ {
+  "created_at": "2026-08-06T07:56:53Z",
+  "chars": 24,
+  "words": 6,
+  "n": 4,
+  "spread": 0.02740000000000009,
+  "flat": true,
+  "query_head": "Paddle 웹훅 서명 검증 방식이 뭐였지?",
+  "query_sha256": "2be527097b9c74e4"
+ },
+ {
+  "created_at": "2026-08-06T07:46:02Z",
+  "chars": 35,
+  "words": 8,
+  "n": 5,
+  "spread": 0.05459999999999998,
+  "flat": false,
+  "query_head": "포켓 결제 관련해서 Paddle 웹훅 서명은",
+  "query_sha256": "3f123c8fe597c37b"
+ }
+]

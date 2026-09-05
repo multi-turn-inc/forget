@@ -18,6 +18,10 @@ function invoke(home, args, extraEnv = {}) {
     HOME: home,
     CODEX_HOME: path.join(home, ".codex"),
     FORGET_API_KEY: SECRET,
+    // Proxy wiring writes plists and settings into the fixture HOME, but the
+    // real launchd is a machine-global registry: tests must never bootstrap
+    // into it. This seam skips only the launchctl calls.
+    FORGET_PROXY_LAUNCHCTL: "skip",
     ...extraEnv,
   };
   return spawnSync(process.execPath, [BIN, ...args], {
@@ -123,12 +127,17 @@ test("local connect defaults to the canonical scoped endpoint (issue #27)", () =
   const osUser = os.userInfo().username;
   const clients = getClients({ home: "/tmp/forget-connect-scope-unit", env: {} });
   const claude = clients.find((client) => client.id === "claude-code");
+  const codex = clients.find((client) => client.id === "codex");
 
   const defaults = parseArgs([], {});
   assert.deepEqual(defaults.defaultScope, { userId: osUser });
   assert.equal(
     urlForClient(defaults, claude),
-    scopedMcpUrl("http://localhost:8000/mcp", { userId: osUser, appId: "forget" }),
+    `${scopedMcpUrl("http://localhost:8000/mcp", { userId: osUser, appId: "forget" })}?profile=claude`,
+  );
+  assert.equal(
+    urlForClient(defaults, codex),
+    `${scopedMcpUrl("http://localhost:8000/mcp", { userId: osUser, appId: "forget" })}?profile=codex`,
   );
 
   // Opt-outs: --no-scope, an explicit --url (installed verbatim), and hosted
@@ -136,7 +145,7 @@ test("local connect defaults to the canonical scoped endpoint (issue #27)", () =
   assert.equal(parseArgs(["connect", "--no-scope"], {}).defaultScope, null);
   const verbatim = parseArgs(["connect", "--url", "http://localhost:8001/mcp"], {});
   assert.equal(verbatim.defaultScope, null);
-  assert.equal(urlForClient(verbatim, claude), "http://localhost:8001/mcp");
+  assert.equal(urlForClient(verbatim, claude), "http://localhost:8001/mcp?profile=claude");
   assert.equal(parseArgs(["connect", "--hosted"], {}).defaultScope, null);
   assert.throws(
     () => parseArgs(["connect", "--no-scope", "--user-id", "u", "--app-id", "a"], {}),
@@ -146,7 +155,7 @@ test("local connect defaults to the canonical scoped endpoint (issue #27)", () =
   // An explicit scope pins one endpoint for every client.
   const explicit = parseArgs(["connect", "--user-id", "u1", "--app-id", "a1"], {});
   assert.equal(explicit.defaultScope, null);
-  assert.equal(urlForClient(explicit, claude), "http://localhost:8000/mcp/a1/http/u1");
+  assert.equal(urlForClient(explicit, claude), "http://localhost:8000/mcp/a1/http/u1?profile=claude");
 });
 
 test("default connect writes the canonical scoped endpoint for every client; --no-scope opts out", async (t) => {
@@ -186,24 +195,24 @@ test("default connect writes the canonical scoped endpoint for every client; --n
   const optOut = invoke(home, ["connect", "--client", "codex", "--no-scope"]);
   assert.equal(optOut.status, 0, optOut.stderr);
   const codexConfig = await readFile(path.join(home, ".codex", "config.toml"), "utf8");
-  assert.match(codexConfig, /url = "http:\/\/localhost:8000\/mcp"/);
+  assert.match(codexConfig, /url = "http:\/\/localhost:8000\/mcp\?profile=codex"/);
 });
 
 test("bare doctor adopts each client's own installed scope", async (t) => {
   const home = await mkdtemp(path.join(os.tmpdir(), "forget-connect-doctor-scopes-"));
   t.after(() => rm(home, { recursive: true, force: true }));
-  // Two clients installed with per-client app pools (the new default). Base
+  // Two clients share a vault but retain provider-specific tool profiles. Base
   // 127.0.0.1:1 guarantees the remote probe fails fast without a live server.
   await mkdir(path.join(home, ".codex"), { recursive: true });
   await writeFile(
     path.join(home, ".codex", "config.toml"),
-    '[mcp_servers.forget]\nurl = "http://127.0.0.1:1/mcp/codex/http/user-one"\n',
+    '[mcp_servers.forget]\nurl = "http://127.0.0.1:1/mcp/forget/http/user-one?profile=codex"\n',
   );
   await writeFile(
     path.join(home, ".claude.json"),
     `${JSON.stringify({
       mcpServers: {
-        forget: { type: "http", url: "http://127.0.0.1:1/mcp/claude-code/http/user-one" },
+        forget: { type: "http", url: "http://127.0.0.1:1/mcp/forget/http/user-one?profile=claude" },
       },
     })}\n`,
   );
@@ -225,7 +234,7 @@ test("bare doctor adopts each client's own installed scope", async (t) => {
   }
 });
 
-test("Bearer authentication is never sent over a plaintext URL", async (t) => {
+test("Bearer authentication blocks remote plaintext and requires local opt-in", async (t) => {
   const home = await mkdtemp(path.join(os.tmpdir(), "forget-connect-http-auth-"));
   t.after(() => rm(home, { recursive: true, force: true }));
 
@@ -251,6 +260,28 @@ test("Bearer authentication is never sent over a plaintext URL", async (t) => {
     "utf8",
   );
   assert.doesNotMatch(loopbackConfig, new RegExp(SECRET));
+
+  const localAuth = invoke(home, [
+    "connect",
+    "--client",
+    "codex",
+    "--local-auth",
+  ]);
+  assert.equal(localAuth.status, 0, localAuth.stderr);
+  assert.doesNotMatch(localAuth.stdout + localAuth.stderr, new RegExp(SECRET));
+  const localAuthConfig = await readFile(
+    path.join(home, ".codex", "config.toml"),
+    "utf8",
+  );
+  assert.match(localAuthConfig, /Authorization = "Bearer integration-secret-must-not-print"/);
+  assert.throws(
+    () => parseArgs(["connect", "--local-auth", "--no-auth"], {}),
+    /mutually exclusive/,
+  );
+  assert.throws(
+    () => parseArgs(["connect", "--local-auth", "--url", "https:\/\/example.test\/mcp"], {}),
+    /only allowed for a loopback/,
+  );
 
   const noAuth = invoke(home, [
     "connect",
@@ -434,6 +465,48 @@ test("clean-room: connect installs the full memory experience, disconnect remove
     );
     const configOff = JSON.parse(await readFile(path.join(home, ".claude.json"), "utf8"));
     assert.ok(!configOff.mcpServers?.forget, "MCP server removed");
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+test("clean-room: Codex and Claude share scripts but retain profiles and safe removal", async () => {
+  const home = await mkdtemp(path.join(os.tmpdir(), "forget-both-clients-"));
+  try {
+    const connect = invoke(home, [
+      "connect",
+      "--client",
+      "claude-code,codex",
+      "-y",
+      "--no-proxy",
+    ]);
+    assert.equal(connect.status, 0, connect.stderr);
+
+    const claudeConfig = JSON.parse(await readFile(path.join(home, ".claude.json"), "utf8"));
+    assert.match(claudeConfig.mcpServers.forget.url, /profile=claude/);
+    assert.match(await readFile(path.join(home, ".codex", "config.toml"), "utf8"), /profile=codex/);
+    const codexHooks = JSON.parse(await readFile(path.join(home, ".codex", "hooks.json"), "utf8"));
+    assert.deepEqual(Object.keys(codexHooks.hooks), ["SessionStart", "UserPromptSubmit", "Stop"]);
+    await readFile(path.join(home, ".codex", "skills", "memory-agent", "SKILL.md"), "utf8");
+    await readFile(path.join(home, ".claude", "skills", "memory-agent", "SKILL.md"), "utf8");
+
+    const removeCodex = invoke(home, ["disconnect", "--client", "codex", "--no-proxy"]);
+    assert.equal(removeCodex.status, 0, removeCodex.stderr);
+    const codexHooksOff = JSON.parse(await readFile(path.join(home, ".codex", "hooks.json"), "utf8"));
+    assert.equal(codexHooksOff.hooks, undefined);
+    await readFile(path.join(home, ".forget", "hooks", "forget_capture.py"), "utf8");
+    await readFile(path.join(home, ".claude", "skills", "memory-agent", "SKILL.md"), "utf8");
+    await assert.rejects(
+      readFile(path.join(home, ".codex", "skills", "memory-agent", "SKILL.md")),
+      /ENOENT/,
+    );
+
+    const removeClaude = invoke(home, ["disconnect", "--client", "claude-code", "--no-proxy"]);
+    assert.equal(removeClaude.status, 0, removeClaude.stderr);
+    await assert.rejects(
+      readFile(path.join(home, ".forget", "hooks", "forget_capture.py")),
+      /ENOENT/,
+    );
   } finally {
     await rm(home, { recursive: true, force: true });
   }

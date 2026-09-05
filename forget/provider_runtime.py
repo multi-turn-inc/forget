@@ -895,12 +895,18 @@ def provider_health_payload(project_id: str = "proj_local") -> dict[str, Any]:
     settings = get_project_settings(project_id)
     checks = {category: _health_check(category, settings) for category in ("llms", "embeddings", "vector_stores", "graphs", "rerankers")}
     ready = all(check["ready"] for check in checks.values())
+    # The embeddings check above reads stored settings, but semantic-by-default
+    # can silently run fastembed on an unconfigured "local" — health must
+    # declare the running stack alongside, as the catalog already does.
+    from .providers import effective_embedding_stack
+
     return {
         "schema_version": "mem1-provider-health-v1",
         "project_id": project_id,
         "ready": ready,
         "status": "ready" if ready else "blocked",
         "checks": checks,
+        "effective": effective_embedding_stack(project_id),
     }
 
 

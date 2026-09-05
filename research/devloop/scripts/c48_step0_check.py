@@ -12,25 +12,78 @@
       c47이 (iii)의 니들에 "tail 금지"를 추가한 뒤 3/3을 보고했다. 대조군(c46·c47 초측
       1/3)은 확장 전 니들로 쟀으므로, 같은 캡슐을 두 판본으로 재서 확장분을 분리한다.
 
-규약: 결론 문장을 상수로 인쇄하지 않는다. 숫자만 낸다.
+      **c64 확장 (P19, 가산적 — 기존 자를 치우지 않는다).** V1·V2의 니들은 규약의
+      *내용*이 아니라 c47이 목격한 *어휘*를 고정했고, 루프가 같은 지시를 다른 말로 옮겨
+      적을 때마다 계측이 조용히 0으로 내려앉았다(거짓 음성 6종째, c62 발견·c64 재확인:
+      캡슐이 "번호·모드는 … c48_step0_check.py 첫 줄"을 실제로 날라 그 손이 준수했는데
+      capsule_reach=1/3). 방향이 위험한 쪽이다 — **해결된 것을 미해결로 보고**한다.
+      그래서 셋을 더한다: V3 의미 니들(표현의 논리합) · **캡슐 원문 인쇄** · sha256.
+      V1·V2는 문면 그대로 둔다 — c46~c64 시계열의 비교 가능성이 그 자에 걸려 있다.
+      한계(정직): V3도 리터럴의 논리합이라 표류를 늦출 뿐 없애지 못한다. 드리프트에
+      대한 실제 방어는 원문 인쇄이고 V3는 시계열 숫자를 잇기 위한 보조다.
+
+규약: 결론 문장을 상수로 인쇄하지 않는다. 숫자와 원문만 낸다.
 """
 
 from __future__ import annotations
 
+import glob
+import hashlib
 import json
 import os
 import re
+import sqlite3
 import subprocess
 import sys
+import time
+import traceback
+import urllib.parse
 import urllib.request
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
 INSTALLED_HOOKS = os.path.expanduser("~/.forget/hooks")
 FORGET_URL = "http://localhost:8000/mcp/forget/http/junghunkim"
+FINGERPRINT_BASELINE = os.path.join(REPO, "research", "devloop", "body-fingerprint.json")
+FORGET_DB = os.path.expanduser("~/.forget/forget.sqlite3")
+UNKNOWN = "미확인"
 
 
 def run(cmd: list[str]) -> str:
     return subprocess.run(cmd, cwd=REPO, capture_output=True, text=True).stdout.strip()
+
+
+def run_raw(cmd: list[str]) -> str:
+    """strip() 없이 stdout 그대로.
+
+    c64 발견: `git status --porcelain`의 행 형식은 `XY<space><path>`이고 미스테이지
+    변경의 X는 **공백**이다(` M path`). `run()`의 `.strip()`은 그 선행 공백을
+    **첫 행에서만** 지워 `line[3:]`이 경로의 첫 글자를 먹고, 존재하지 않는 경로가 되어
+    조용히 `continue`된다 — 즉 **변경 파일 목록의 첫 항목이 언제나 보이지 않았다**.
+    변경 파일이 정확히 1개면 검사는 `0`을 답한다: 절차 2가 막으려는 바로 그 상황
+    (타 세션 WIP 1건이 있는데 "깨끗함"으로 읽고 코드 사이클 진입)에서 침묵한다.
+    part_a가 폭로하려던 `.git/HEAD` 거짓 음성 기계와 같은 종류의 결함을 part_a 자신이
+    갖고 있었다. 형식이 열(column)로 정의된 출력은 strip하지 않는다.
+    """
+    return subprocess.run(cmd, cwd=REPO, capture_output=True, text=True).stdout
+
+
+class ForgetRpcError(RuntimeError):
+    """서버가 규격대로 돌려준 **오류 봉투**를 그대로 나르는 예외 (c192, 관측 121 ㉠).
+
+    구판은 `body["result"]`를 무조건 인덱싱했다. 서버가 JSON-RPC `error`를 돌려주면
+    그 줄이 `KeyError: 'result'`로 죽었고 — **서버가 보낸 진단이 전부 버려졌다.**
+    c192 실측: 코드 −32603 / 메시지 'list index out of range'를 눈으로 보기까지
+    별도 진단 스크립트 3본이 들었다. 그 문자열은 처음부터 응답 안에 있었다.
+
+    규율: 계기는 **남의 오류를 자기 오류로 오역하지 않는다.** 오역은 두 번 손해다 —
+    진단을 잃고, 게다가 계기 자신이 고장난 것처럼 보여 엉뚱한 곳을 파게 만든다.
+    """
+
+    def __init__(self, tool: str, code: object, message: str) -> None:
+        self.tool = tool
+        self.code = code
+        self.message = message
+        super().__init__(f"{tool}: forget 서버 오류 [{code}] {message}")
 
 
 def call(name: str, arguments: dict) -> dict:
@@ -39,7 +92,958 @@ def call(name: str, arguments: dict) -> dict:
     req = urllib.request.Request(FORGET_URL, data=json.dumps(payload).encode("utf-8"),
                                  headers={"Content-Type": "application/json"})
     body = json.loads(urllib.request.urlopen(req, timeout=20).read())
+    if "result" not in body:
+        err = body.get("error") if isinstance(body.get("error"), dict) else {}
+        # 봉투에 error도 없으면 그 사실 자체를 메시지에 담는다 — 모르는 것을
+        # 그럴듯한 기본값으로 접지 않는다(compare_fingerprint의 규율).
+        raise ForgetRpcError(name, err.get("code", UNKNOWN),
+                             str(err.get("message") or f"result·error 둘 다 없음: {body!r}"[:300]))
     return json.loads(body["result"]["content"][0]["text"])
+
+
+def cycle_number_and_mode(cycles: list[int]) -> tuple[int, str]:
+    """cycle 필드 max+1과 모드. **순수 함수** — part_n의 산술을 테스트 가능하게 분리 (c71).
+
+    part_n/part_a/part_b 파싱 테스트 미커버가 c64→c70 7회 재이월된 부채의 부분 상환:
+    번호·모드 산술이 처음으로 회귀 감시 아래 들어간다. 출력 문면은 불변이다.
+    """
+    n = max(cycles) + 1
+    mode = "적대 감사" if n % 10 == 0 else ("회고" if n % 5 == 0 else "일반")
+    return n, mode
+
+
+def task_state_lag(ledger_last: int, summary: str) -> tuple[int | None, str]:
+    """원장 마지막 사이클과 task_state 세대의 사이클을 대조한다. **순수 함수** (c93).
+
+    두 원장은 서로 독립이다: metrics.jsonl은 git이 지키는 불변 기록이고, task_state는
+    스토어의 유동층이다. 둘이 어긋나는 유일한 정상 구간은 "이번 사이클이 아직 절차 5를
+    돌지 않았다"인데, 그 구간은 N-1 == ledger_last로 나타난다. ledger_last보다 **뒤진**
+    세대는 정상 구간이 없다 — 그 사이 어느 사이클의 쓰기가 착지하지 못한 것이다.
+    """
+    match = re.search(r"사이클\s*(\d+)", summary)
+    if not match:
+        return None, "판정 불가(세대 문면에 사이클 번호 없음)"
+    state_cycle = int(match.group(1))
+    if state_cycle == ledger_last:
+        return state_cycle, "일치"
+    if state_cycle < ledger_last:
+        return state_cycle, "지연"
+    return state_cycle, "앞섬(원장 미기재 — 절차 5 미완주 의심)"
+
+
+def head_loop_cycle(subject: str) -> int | None:
+    """HEAD 커밋 제목에서 `loop(cycle N)`의 N을 뽑는다. **순수 함수** (㉼, c267).
+
+    비-loop 제목이면 None — 그 축은 갈림이 아니라 **판정 불가**다. 남의 트랙 커밋이
+    HEAD에 오면 사망 지문이 지워지는 사각(관측 126)과 같은 모양이며, 이 함수는 그
+    사각을 '일치'로 접지 않고 호출자에게 None으로 돌려준다.
+    """
+    m = re.match(r"loop\(cycle\s+(\d+)\)", subject.strip())
+    return int(m.group(1)) if m else None
+
+
+def crash_orphan_verdict(ledger_last: int, head_cycle: int | None,
+                         state_cycle: int | None) -> tuple[bool, list[str]]:
+    """㉼ (c264 실측 · c265 상신 · c267 집행): 첫 줄 N의 crash-orphan 3자 대조. **순수 함수**.
+
+    기전(c264 실측): 직전 세션이 수확 중 죽으면 metrics.jsonl에는 orphan 행이 남고
+    커밋은 없다 — `N = max(cycle)+1`이 그 행을 세어 첫 줄이 다음 모드로 오도된다
+    (c264: 죽은 세션의 c264 행 착지·커밋 실패 → 첫 줄 N=265 회고 오인, 손 재판정 =
+    c264 일반). 파트 S(P53)는 사망을 탐지하는데 첫 줄 N 계산이 그 증거를 소비하지
+    않았다 — 이 눈이 그 배선이다.
+
+    규율 둘: ① **자동 차감 금물** — 이 함수는 N을 만지지 않는다. 갈림을 경고로만
+    바꾼다(오판 시 원장 이중 기재 위험 — 판정은 손 몫). ② None 축은 '판정 불가'다 —
+    일치로도 갈림으로도 계상하지 않는다(compare_fingerprint의 규율).
+
+    정상 프레임의 근거: step 0 시점의 3자는 전부 직전 완주 사이클을 가리킨다 —
+    HEAD = 직전 수확 커밋 `loop(cycle N-1)` · task_state 세대 = N-1 · ledger max =
+    N-1. 따라서 세 값의 등호가 정상이고, ledger만 앞서는 것이 c264 지문이다.
+    """
+    lines: list[str] = []
+    diverged: list[tuple[str, int]] = []
+    unknown: list[str] = []
+    for name, val in (("HEAD", head_cycle), ("task_state", state_cycle)):
+        if val is None:
+            unknown.append(name)
+        elif val != ledger_last:
+            diverged.append((name, val))
+    head_s = "판정 불가" if head_cycle is None else str(head_cycle)
+    state_s = "판정 불가" if state_cycle is None else str(state_cycle)
+    lines.append("  [㉼ 3자 대조 — crash-orphan 눈 (c264 실측 · c265 상신 · c267 배선)]")
+    lines.append(f"    ledger_last={ledger_last} · HEAD loop(cycle)={head_s}"
+                 f" · task_state 세대={state_s}")
+    if diverged:
+        axes = " · ".join(f"{name}={val}" for name, val in diverged)
+        lines.append(f"    !! «crash-orphan 의심 — N 재판정 필요» — 갈린 축: {axes}")
+        lines.append("       위 첫 줄 N을 신뢰하기 전에 orphan 원장 행 여부를 손으로 판정하라")
+        lines.append("       (c166형/c264형 크래시 복구 절차). **자동 차감은 하지 않았다** —")
+        lines.append("       오판 시 원장 이중 기재 위험이 있어 판정은 손 몫이다(㉼ 문면).")
+    elif unknown:
+        lines.append(f"    → 대조 가능 축 일치 · 판정 불가 축 {len(unknown)}"
+                     f" ({', '.join(unknown)}) — 판정 불가는 일치가 아니다")
+    else:
+        lines.append("    → 3자 일치 (crash-orphan 증거 0)")
+    if head_cycle is None:
+        lines.append("    ※ HEAD 축 판정 불가 = 비-loop 커밋이 HEAD다 — 남의 트랙 커밋이")
+        lines.append("      사망 지문을 지우는 사각(관측 126)과 같은 모양. 이때 남은 축만 본다.")
+    return bool(diverged), lines
+
+
+#: 절차 5의 재조회 확인을 보고하는 원장 필드. **구조적으로 영수증이 아니다** — 이 필드가
+#: 사는 원장 행은 `원장 append → 커밋 → push → record_task_state → 재조회` 순서(관측 55
+#: 수용 기준 ②, c96)에서 **재조회보다 먼저** 쓰인다. 그래서 값은 의도 선언이며, 진위는
+#: 다음 사이클의 파트 S만이 판정할 수 있다 (관측 88 · P47).
+REVERIFY_FIELD = "step5_write_reverified"
+
+#: 유보 = **주장을 하지 않은 값**(c162~ 서식). 반증될 주장이 없으므로 고발 대상이 아니다.
+#: 이 술어는 계열 함수와 라이브 고발 블록이 **함께** 쓴다 — c167 이전에는 사본이 둘이었고,
+#: 계열은 유보를 면책하는데 라이브 블록은 같은 행에 `★ 모순`을 찍었다(P47 판정 거짓 양성).
+#: 벌한 대상이 하필 **정직**이었다: 유보 서식은 맨 `True`를 쓰지 않으려고 도입된 것인데
+#: 그 정직한 유보가 c155·c161의 거짓 `True`와 같은 도장을 받았다. 사본을 하나로 만든다.
+DEFERRAL_MARKERS = ("미정", "유보")
+
+
+def is_deferred(val: object) -> bool:
+    """자기보고 값이 **유보**(주장 없음)인가. bool은 주장이므로 유보가 아니다."""
+    return not isinstance(val, bool) and any(k in str(val) for k in DEFERRAL_MARKERS)
+
+
+def reverify_claim_mark(claim: object) -> str:
+    """라이브 고발 블록이 누락 구간 각 행에 찍을 도장. 순수 함수 (c167, P51).
+
+    함수로 뺀 이유는 **회귀 아래 두기 위해서**다. c162~c166 동안 이 판단은 인쇄문 안에
+    인라인으로 살았고 계열 함수와 사본 관계였다 — 그래서 조용히 갈라졌고, 갈라진 것을
+    아무 테스트도 잡지 못했다. 이제 두 경로가 `is_deferred` 하나를 공유하고, 그 공유를
+    `tests/test_devloop_step0_reverify.py`가 고정한다.
+    """
+    if not claim or claim == "**필드 없음**":
+        return "  (주장 없음)"
+    if is_deferred(claim):
+        return "  (유보 — 주장 없음)"
+    return "★ 모순"
+
+#: N+1의 restore_note에 인쇄된 파트 S 판정을 읽는 눈. 문면이 바뀌면 **거짓 음성**이고,
+#: 그 경우 '무결'이 아니라 '미측정'으로 계상해야 한다 (P47 한계 ③).
+RE_PART_S_VERDICT = re.compile(r"판정\s*=\s*(일치|지연|앞섬)")
+
+#: c172 신설 (관측 107). 위 한계 ③은 c162에 **선언**됐고 c172에 처음 **실측**됐다:
+#: P51 (a)의 판정 창 c168~c172 5본 중 c170이 판정을 적었는데 엄격 눈이 못 봤다 —
+#: 문면이 ``파트 S `ledger_last=169 = task_state_cycle=169` 일치``로 `판정=` 접두 없이
+#: 백틱 뒤에 값을 놓았기 때문이다. 그래서 `미측정`은 두 가지를 한 수에 넣고 있었다:
+#: 그 사이클이 **안 적었다**(c169 — 느슨 탐침도 침묵)와, **적었는데 눈이 못 봤다**(c170).
+#: 관측 104가 파트 O에서 고친 것과 **같은 병이며 다른 계기**다.
+#:
+#: 느슨 탐침은 진단 전용이다 — 계열 계산(모순 판정)에 **쓰지 않는다.** 이유는 P51 자신이
+#: 가르쳐 줬다: 이 계기의 고발 대상은 «정직»이고, 산문을 흐리게 읽어 얻은 판정으로
+#: 자기보고를 반증하면 벌하는 쪽이 다시 정직이 된다. 진단은 넓게, 고발은 좁게.
+RE_PART_S_VERDICT_LOOSE = re.compile(
+    r"(?:파트 S|task_state_cycle|ledger_last)[^\n]{0,80}?(일치|지연|앞섬)")
+
+
+def reverify_contradictions(rows: list[dict]) -> dict:
+    """`step5_write_reverified` 자기보고를 **외부 관측**과 대조한다. 순수 함수 (c162, P47).
+
+    외부 앵커. 사이클 N의 `record_task_state`가 실제로 착지했는지 N 자신은 알 수 없다 —
+    보고가 곧 자기 보고이기 때문이다. 아는 것은 **N+1의 파트 S**다(`ledger_last` vs
+    `task_state_cycle`). 그 판정은 N+1의 `restore_note`에 인쇄돼 원장에 남는다. 따라서
+    원장 하나만으로 자기보고 대 관측의 대조가 가능하다 — 손 증분 없이(P46 (a)의 계승).
+
+    반환의 `unmeasured`가 핵심이다. 파트 S는 c93 처치 이후에만 인쇄되므로 그 이전 행들은
+    **모순이 없는 것이 아니라 잴 수 없는 것**이다. 둘을 섞으면 이 계기가 바로 자기가
+    고발하는 병(자기보고의 존재를 검사의 존재로 읽기)에 걸린다.
+
+    **`지연`만이 N의 자기보고를 반증한다** (c162 자기 수정). 첫 판본은 "판정 != 일치"를
+    모순으로 셌고 c95를 고발했다 — 오판이다. `앞섬`은 `task_state_cycle > ledger_last`,
+    즉 세대가 **존재하고 앞서** 있다는 뜻이므로 N의 쓰기는 착지했고, 병은 N+1 세션의
+    완주 선기재다(관측 55, c96 실전 첫 발화가 바로 그 자리다). 남의 병으로 N을 고발하면
+    관측 74의 모양 — 파서의 거짓 값이 손 판정을 통과해 사실로 굳는다. 그래서 `앞섬`은
+    모순이 아니라 **별도 계상**한다.
+    """
+    by_cycle = {int(r["cycle"]): r for r in rows}
+    field_rows = sorted(c for c in by_cycle if REVERIFY_FIELD in by_cycle[c])
+    # 값은 세 종류다. bool = **의도 선언**(구조적으로 영수증 불가, 관측 88).
+    # 산문 = c93·c94의 claim/epoch id — 그 시점 순서에서는 재조회가 원장 append보다
+    # **앞**이었으므로 진짜 영수증이었다. 유보 = 주장을 하지 않은 행(c162~).
+    # 셋을 한 칸에 세면 이 계기가 자기가 고발하는 병에 걸린다.
+    deferred, prose = [], []
+    for c in field_rows:
+        val = by_cycle[c][REVERIFY_FIELD]
+        if isinstance(val, bool):
+            continue
+        (deferred if is_deferred(val) else prose).append(c)
+
+    checked = agree = unmeasured = 0
+    contradictions: list[tuple[int, str]] = []
+    ahead: list[int] = []
+    pending: int | None = None
+    # 미측정의 두 원인을 가른다 (c172, 관측 107). `blind`는 **후속 행이 판정을 적었는데
+    # 엄격 눈이 못 본** 경우다 — 이 목록이 비어 있지 않으면 그것이 이 계기의 사각이고,
+    # 계열 계산에는 반영하지 않는다(진단 전용, 위 상수 주석의 사유).
+    blind: list[tuple[int, str]] = []
+    silent: list[int] = []
+    for c in field_rows:
+        nxt = by_cycle.get(c + 1)
+        if nxt is None:
+            pending = c  # 후속 행이 아직 없다 = 이 세션이 그 후속이다
+            continue
+        note = str(nxt.get("restore_note") or "")
+        m = RE_PART_S_VERDICT.search(note)
+        if not m:
+            unmeasured += 1
+            loose = RE_PART_S_VERDICT_LOOSE.search(note)
+            (blind.append((c + 1, loose.group(1))) if loose else silent.append(c + 1))
+            continue
+        checked += 1
+        verdict = m.group(1)
+        if verdict == "앞섬":
+            ahead.append(c + 1)  # 병은 N+1의 선기재다 — N의 자기보고와 무관
+            agree += 1
+        elif c in deferred:
+            agree += 1  # 주장하지 않은 행은 반증될 주장이 없다
+        elif by_cycle[c][REVERIFY_FIELD] and verdict != "일치":
+            contradictions.append((c, verdict))
+        else:
+            agree += 1
+    return {
+        "field_rows": field_rows,
+        "prose_receipts": prose,
+        "deferred": deferred,
+        "checked": checked,
+        "agree": agree,
+        "contradictions": contradictions,
+        "ahead": ahead,
+        "unmeasured": unmeasured,
+        "unmeasured_blind": blind,    # 후속 행이 **적었다** — 엄격 눈의 사각 (관측 107)
+        "unmeasured_silent": silent,  # 후속 행이 **안 적었다** — 정직한 침묵
+        "pending": pending,
+    }
+
+
+def part_s() -> None:
+    """[S] 유동층 대조 — 원장과 task_state가 같은 사이클을 가리키는가 (c93 처치, 관측 49).
+
+    왜. c92는 완주·커밋했고 원장 c92 행은 "record_task_state를 호출했고 응답의 배열이
+    비어 있지 않음을 눈으로 확인했다"고 적었다. 그러나 스토어에 c92 세대는 없었다
+    (그 세션 창의 TASK_STATE 이벤트 0건 — c93 1차 증거). 다음 세션은 c91 완주본을
+    **현재로** 받았고, 그 문면이 정확하고 최신처럼 보였기에 실패는 소리를 내지 않았다.
+
+    조용한 실패의 방어는 자기 보고가 아니라 계기다: 두 원장이 어긋나면 턴2에 소리가 난다.
+    한계(정직): 이 검사는 **직전 사이클의 실패**만 잡는다. 이번 사이클 자신의 절차 5
+    쓰기가 착지했는지는 호출 뒤 재조회로만 확인되며, 그 규약을 아래에 함께 인쇄한다.
+    """
+    ledger_rows = []
+    with open(os.path.join(REPO, "research", "devloop", "metrics.jsonl"), encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if line:
+                ledger_rows.append(json.loads(line))
+    cycles = [int(r["cycle"]) for r in ledger_rows]
+    ledger_last = max(cycles)
+    by_cycle = {int(r["cycle"]): r for r in ledger_rows}
+    print("[S. 유동층 대조 — 원장 마지막 사이클 vs task_state 세대 (c93 처치, 관측 49)]")
+    try:
+        rows = (call("get_task_state", {"task_id": "devloop", "limit": 1}) or {}).get("results") or []
+    except Exception as exc:  # noqa: BLE001 — 도달 실패도 관측이며 침묵보다 낫다
+        print(f"  판정 불가 — get_task_state 도달 실패: {type(exc).__name__}: {exc}")
+        return
+    if not rows:
+        print(f"  ledger_last={ledger_last}  task_state=**세대 없음**")
+        print("  ★ devloop 유동층이 통째로 비었다 — 복원은 저장소만으로 해야 한다.")
+        return
+    row = rows[0]
+    summary = " ".join(str(row.get("summary") or "").split())
+    state_cycle, verdict = task_state_lag(ledger_last, summary)
+    print(f"  ledger_last={ledger_last}  task_state_cycle={state_cycle}  "
+          f"valid_from={row.get('valid_from')}  판정={verdict}")
+    if verdict == "지연":
+        span = f"{state_cycle + 1}~{ledger_last}" if state_cycle is not None else "?"
+        print(f"  ★ 불일치: 사이클 {span}의 record_task_state가 스토어에 세대를 남기지 않았다.")
+        print("    → 이 세션의 restore_grade(task_state 채널)는 **stale**이다. 해당 원장 행이")
+        print("      완주를 주장한다면 그 주장은 이 대조로 반증된다(관측 49의 기전).")
+        # 그 원장 행이 실제로 무엇을 주장했는지 **여기서 인쇄한다** — 위 문장이 84사이클간
+        # 조건문으로만 있었고 피고발인의 이름을 부른 적이 없다 (관측 88, P47 (a)).
+        if state_cycle is not None:
+            for miss in range(state_cycle + 1, ledger_last + 1):
+                claim = (by_cycle.get(miss) or {}).get(REVERIFY_FIELD, "**필드 없음**")
+                print(f"    {reverify_claim_mark(claim)}  c{miss}.{REVERIFY_FIELD} = {claim!r}")
+            print("    → 자기보고는 원장 행에 살고 그 행은 record_task_state보다 **먼저** 쓰인다")
+            print("      (순서 = 원장 append → 커밋 → push → 호출 → 재조회, 관측 55 수용 기준 ②).")
+            print("      구조적으로 영수증이 아니라 의도 선언이다 — 관측 88.")
+
+    # ── 직전 세션 사망 의심 — 파트 S의 사각 (c168 2세션 신설, 관측 97 · P53) ──────────
+    # `일치`는 무결의 증거가 아니다. 위 대조는 두 채널을 **서로** 재므로 함께 낡으면
+    # 침묵하고, 원장 append 전에 죽은 세션이 정확히 그 창이다. 그 창의 유일한 증거는
+    # **작업 트리**이며 파트 A가 이미 인쇄해 왔다 — 오늘 붙이는 것은 두 인쇄의 연결이다.
+    try:
+        dd = predecessor_death_evidence(
+            blockade_rows(changed_entries(), int(run(["git", "log", "-1", "--format=%ct"])),
+                          time.time()))
+    except Exception as exc:  # noqa: BLE001 — 검사 불가도 관측이며 침묵보다 낫다
+        print(f"  [직전 세션 사망 의심] 판정 불가 — {type(exc).__name__}: {exc}")
+    else:
+        ev, unk = dd["evidence"], dd["unknown"]
+        print("  [직전 세션 사망 의심 — devloop 소유 미커밋 ∩ HEAD보다 새로움"
+              " (c168 신설, 관측 97 · P53)]")
+        if ev:
+            print(f"    ★★ 증거 {len(ev)}건 — 직전 세션이 **원장 append 전에** 죽었을 수 있다."
+                  f" 위 판정({verdict})은 이 사망을 배제하지 않는다.")
+            for path, since_now, vs_head in ev:
+                since = f"{since_now:8.1f}h" if since_now is not None else f"{'?':>9s}"
+                print(f"       {since} {vs_head:+9.1f}h  {path}")
+            print("    → 확인 순서: ① 그 산출물이 어느 사이클 것인지 파일 안에서 직독")
+            print("      ② tmp/cNNN_* 산출물 ③ 원장에 그 사이클 행이 있는가. 있으면 c166형")
+            print("      (원장 착지·커밋 실패) · 없으면 c168형(원장 미착지 = 이 눈의 표적).")
+        else:
+            print(f"    증거 0건(devloop 소유 미커밋 없음) · 판정 불가 {len(unk)}건"
+                  f"{' ' + str(unk) if unk else ''}")
+        print("    ※ 이 눈은 **step 0에서만** 유효하다 — 사이클 도중 재실행하면 내 편집분이")
+        print("      같은 조건에 걸린다(파트 A의 같은 주의와 동일한 이유).")
+
+    # 자기보고 대 외부 관측의 **계열**. 손 증분 0 — 원장에서 매 사이클 재계산한다 (P47 (b)).
+    rv = reverify_contradictions(ledger_rows)
+    print(f"  [자기보고 대조 — `{REVERIFY_FIELD}` (c162 신설, 관측 88 · P47)]")
+    n_bare = len(rv["field_rows"]) - len(rv["prose_receipts"]) - len(rv["deferred"])
+    print(f"    필드 등장 {len(rv['field_rows'])}행"
+          f"(c{rv['field_rows'][0]}~c{rv['field_rows'][-1]}) · "
+          f"산문 영수증 {len(rv['prose_receipts'])}행 {rv['prose_receipts']} · "
+          f"유보 {len(rv['deferred'])}행 {rv['deferred']} · "
+          f"맨 True(의도 선언) {n_bare}행")
+    print(f"    외부 대조 가능 {rv['checked']}행 · 일치 {rv['agree']} · "
+          f"**모순 {len(rv['contradictions'])}** · 미측정 {rv['unmeasured']}행")
+    for c, v in rv["contradictions"]:
+        print(f"      !! c{c}: 자기보고 True 인데 c{c + 1} 파트 S = {v}")
+    if rv["ahead"]:
+        print(f"    ※ `앞섬` {len(rv['ahead'])}건 {rv['ahead']} = **모순 아님** — 세대가 앞서면"
+              " 직전 쓰기는 착지했고")
+        print("      병은 그 사이클 자신의 완주 선기재다(관측 55). 남의 병으로 고발하지 않는다.")
+    if rv["pending"] is not None:
+        print(f"    ※ c{rv['pending']}은 후속 원장 행이 없다 — **이 세션의 위 판정이 그 대조다**.")
+    # 미측정의 두 원인 (c172 신설, 관측 107 처치) — 파트 O 피복 처치와 같은 자[尺].
+    if rv["unmeasured_blind"]:
+        blind = rv["unmeasured_blind"]
+        print(f"    ↳ 미측정 중 **적혀 있었다**(느슨 탐침 적중 = 엄격 눈의 사각) {len(blind)}건: "
+              + " ".join(f"c{c}:{v}" for c, v in blind))
+        # 느슨 적중값이 `일치`가 아니면 **고발에 관계된 사실이 사각에 앉아 있다**. 진단
+        # 전용 규율은 유지하되(고발은 좁게) 이 경우만은 소리를 낸다 — c172 실측은 26건
+        # 전부 `일치`였고, 그 비용 0은 측정된 값이지 설계의 보장이 아니다.
+        loud = [(c, v) for c, v in blind if v != "일치"]
+        if loud:
+            print("       !! 사각의 값이 `일치`가 아니다 — 고발 경로가 못 보는 자리에"
+                  f" 판정이 있다: {loud}")
+            print("          → 해당 행의 자기보고를 **손으로** 대조하라. 느슨 탐침은"
+                  " 고발하지 않는다(관측 107 ②).")
+    if rv["unmeasured_silent"]:
+        s = rv["unmeasured_silent"]
+        head = "c" + " c".join(str(c) for c in s[:12]) + (" …" if len(s) > 12 else "")
+        print(f"    ↳ 미측정 중 **안 적었다**(탐침도 침묵 = 그 행이 판정 무기재) {len(s)}건: {head}")
+    print("    ※ 미측정은 무결이 아니다(파트 S는 c93 처치 이후에만 인쇄) · 문면이 바뀌면")
+    print("      정규식이 거짓 음성을 낸다 — P47 한계 ③. **위 두 줄이 그 한계의 실측이며,")
+    print("      느슨 탐침은 진단 전용이다 — 고발(모순 판정)에는 쓰지 않는다(관측 107).**")
+
+    print("  [쓰기 규약] 절차 5의 record_task_state는 호출로 끝나지 않는다 — 호출 뒤")
+    print("    get_task_state로 **재조회**해 이번 사이클 번호가 돌아오는지 확인할 것.")
+    print("    c92는 '눈으로 확인했다'고 적었고 세대는 없었다. 확인은 재조회로만 성립한다.")
+
+
+def part_n() -> None:
+    """c52 재배선(F-절차0 처치): 사이클 번호 N을 이 스크립트가 인쇄한다.
+
+    근본 원인(c52 발견): 지시서 절차 0의 문면("metrics.jsonl 마지막 줄에서 N = 마지막+1")이
+    tail류 접근을 사실상 지시하고, 'cycle 필드만·tail 금지' 규약은 그림자 채널에만 있어
+    문면과 충돌한다 — '알고도' 위반 4연속(c49~c52)의 기전. 금지문 대신 물리 경로를 바꾼다:
+    이미 의무인 영토 검사가 번호를 함께 배달하면 metrics.jsonl을 열 동기 자체가 사라진다.
+    번호는 cycle 필드의 max+1 — 마지막 줄이 아니라 전체 파싱(순서 오염에도 안전).
+
+    c61 추가 배선(F-절차0 10회차 처치, 무-게이트): 금지문 자체를 이 출력에 싣는다.
+    c61 실측 — 캡슐 병행 트랙 슬롯이 90자에서 끊겨 도착분 마지막 토큰이 `metrics`,
+    금지 술어 `열지 마라`의 시작 인덱스는 91(컷 밖 1문자)이었다. 캡슐은 목적어를
+    배달하고 술어를 버렸고, 도착분만 읽으면 위반이 지시로 오독된다. 산문 채널(캡슐·
+    지시서)이 절단·충돌로 실패하므로 P14 교훈("규약은 도구 채널로 보내라")을 적용:
+    번호를 얻으려 이 스크립트를 실행하는 손은 금지문을 절단 불가능한 형태로 함께 받는다.
+    한계(정직): 이 처치는 **절단 축**만 다룬다. 지시서 절차 0 문면("마지막 줄에서 N")은
+    A-55.1 게이트 대기 중이라 살아 있고, step0을 병렬 배선하면 규약 도착과 위반이 같은
+    턴에 고정되는 축도 남는다 — c62~c66 재발 시 남은 원인은 문면 단독으로 확정한다.
+    """
+    cycles = []
+    with open(os.path.join(REPO, "research", "devloop", "metrics.jsonl"), encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if line:
+                cycles.append(int(json.loads(line)["cycle"]))
+    n, mode = cycle_number_and_mode(cycles)
+    # ㉼ (c267): 첫 줄을 인쇄하기 **전에** 3자 대조를 계산한다 — 경고는 첫 줄 병기가
+    # 문면이고, 인쇄 후 계산이면 첫 줄이 이미 나가 있다. 축 채취 실패는 침묵이 아니라
+    # 인쇄다(part_s와 같은 규율) — 실패한 축은 판정 불가로 계상된다.
+    head_cycle = head_loop_cycle(run(["git", "log", "-1", "--format=%s"]))
+    state_cycle: int | None = None
+    state_probe_err = ""
+    try:
+        rows = (call("get_task_state", {"task_id": "devloop", "limit": 1}) or {}).get("results") or []
+        if rows:
+            summary = " ".join(str(rows[0].get("summary") or "").split())
+            state_match = re.search(r"사이클\s*(\d+)", summary)
+            state_cycle = int(state_match.group(1)) if state_match else None
+    except Exception as exc:  # noqa: BLE001 — 도달 실패도 관측이며 침묵보다 낫다
+        state_probe_err = f"{type(exc).__name__}: {exc}"
+    orphan_suspect, orphan_lines = crash_orphan_verdict(max(cycles), head_cycle, state_cycle)
+    orphan_flag = "  !! «crash-orphan 의심 — N 재판정 필요»" if orphan_suspect else ""
+    print("[!] metrics.jsonl을 직접 열지 말 것 — 번호·모드는 아래 한 줄이 정본이다.")
+    print("    (tail/cat/head 계열 0회. 이 스크립트가 이미 전체를 파싱했다.")
+    print("     지시서 절차 0의 '마지막 줄에서 N' 문면은 A-55.1 게이트 대기 중인 구본이며,")
+    print("     감사 사이클의 metrics 정독 임무는 번호 결정 단계와 별개로 허용된다.)")
+    print(f"[N. 사이클 번호 — cycle 필드 max+1]")
+    print(f"  last_cycle={max(cycles)}  N={n}  mode={mode} (N%10={n % 10}, N%5={n % 5})"
+          f"{orphan_flag}")
+    for line in orphan_lines:
+        print(line)
+    if state_probe_err:
+        print(f"    ※ task_state 축 채취 실패({state_probe_err}) — 그 축은 판정 불가로 계상됐다")
+    print("[T. 턴 배치 규약 — **정본 = 저장소 루트 CLAUDE.md (c135 개정본)** · c91 문면 폐기]")
+    print("    A. 기적재 하네스(ToolSearch 불요) = **2턴**")
+    print("       턴1 = cycle-prompt.md Read + get_task_state(devloop) + 이 스크립트"
+          " + git status **4중 병렬**")
+    print("       턴2 = (비감사면 LOOP.md Read +) 첫 유효 행동  →  restore_turns **2**")
+    print("    B. 미적재 하네스(ToolSearch 필요) = **3턴**")
+    print("       턴1 = cycle-prompt.md Read + ToolSearch(5스키마) / 턴2 = 위 3중 병렬")
+    print("       턴3 = 첫 유효 행동  →  restore_turns **3**")
+    print("    C. 제3형 하네스(mcp__forget__* 미적재 **그리고** ToolSearch 부재 — c232~c235 실측)")
+    print("       턴1 = cycle-prompt.md Read + 이 스크립트 + git status **3중 병렬**")
+    print("       턴2 = (비감사면 LOOP.md Read +) curl 폴백 get_task_state + **모드가 여는**")
+    print("       **소스 정독**(모드는 턴1 c48 첫 줄로 판명) — 회고·감사는 소스가 task_state")
+    print("       비종속이라 턴2가 첫 유효 행동  →  restore_turns **2** / 일반은 선택(절차 2)이")
+    print("       next_actions 종속이라 턴3  →  restore_turns **3** (c232~c234 실측 3/3)")
+    print("    ★ **LOOP.md를 턴1에 읽지 않는다** — 모드(위 N%10)를 알기 전에 열면 적대")
+    print("       감사가 금독 대상을 노출한 채 시작된다(P40). 비감사면 턴2에 읽는다.")
+    print("    ※ restore_note에 하네스 A/B/C를 **병기**할 것 — 세 계열이 한 분모에 섞이면")
+    print("       지표가 판정 불가가 된다.")
+    print("    ※ 이 인쇄는 턴2(A)·턴2(B)에 열리므로 **턴1 규약을 집행할 수 없다**(관측 47)")
+    print("       — 턴1 이전 채널은 CLAUDE.md와 캡슐이다. 판정은 P29·P38(지지 5/5)·P40.")
+    print("    ※ c171까지 이 파트는 c91 문면(*'턴1 = LOOP.md+cycle-prompt.md Read'*)을")
+    print("       인쇄했고 CLAUDE.md c135가 그것을 폐기한 뒤로 **두 채널이 서로를 반박**")
+    print("       했다(관측 102). 회귀 = tests/test_devloop_step0_turn_protocol.py.")
+    print("[H. 절차 5 — 다음 HAND 분모는 손으로 옮겨적지 않는다 (audit-150 R6, P42)]")
+    print("    수확 커밋 직후: .venv/bin/python research/devloop/scripts/harvest_stat.py"
+          f" --cycle {n}")
+    print("    출력 말미의 붙여넣기 블록을 task_state에 **그대로** 넣는다. 손 계산 금지 —")
+    print("    계열 실측 c147 Δ−1 · c149 Δ±1 · c150 Δ−19, 문면 처치 3회 실효 0.")
+
+
+def compare_fingerprint(live: dict[str, str], baseline: dict[str, str]) -> tuple[str, list[str], list[str]]:
+    """live와 baseline을 대조한다. **순수 함수** — I/O 없음, 그래서 테스트된다.
+
+    설계의 핵심 성질 하나: **채취하지 못한 항목을 '일치'로 보고하지 않는다.**
+    관측 30의 병리가 조용한 흡수였으므로, 미채취(`UNKNOWN`)는 '일치'가 아니라
+    **판정 불가**로 격리한다. baseline에 없는 신규 키도 미채취와 같게 다룬다 —
+    지문 정의를 넓히는 것은 자[尺] 변경이고, 그 변경은 baseline 커밋으로만 승인된다.
+
+    반환: (verdict, changed, unknown)
+      changed 있으면 "재교정 필요" (몸이 바뀌었다)
+      changed 없고 unknown 있으면 "판정 불가" (모른다 — 위양성으로 계상하지 않는다)
+      둘 다 없으면 "일치"
+    """
+    changed: list[str] = []
+    unknown: list[str] = []
+    for key in sorted(set(live) | set(baseline)):
+        got, want = live.get(key, UNKNOWN), baseline.get(key, UNKNOWN)
+        if got == UNKNOWN or want == UNKNOWN:
+            unknown.append(key)
+        elif got != want:
+            changed.append(key)
+    verdict = "재교정 필요" if changed else ("판정 불가" if unknown else "일치")
+    return verdict, changed, unknown
+
+
+def _installed_dist_info() -> str:
+    di = glob.glob(os.path.expanduser(
+        "~/.forget/venv/lib/python3*/site-packages/forget_ai-*.dist-info"))
+    return os.path.basename(di[0]).replace(".dist-info", "") if di else UNKNOWN
+
+
+def editable_target(direct_url_text: str) -> str | None:
+    """dist-info `direct_url.json` 본문에서 editable 설치의 대상 경로를 뽑는다. **순수 함수**.
+
+    editable 선언이 없거나, JSON이 깨졌거나, file:// 스킴이 아니면 None —
+    채취 실패는 UNKNOWN으로 남는다(모르는 것을 일치로 보고하지 않는다).
+    반환은 URL 디코드된 로컬 경로다(비ASCII 워크트리 이름이 %인코딩으로 온다).
+    """
+    try:
+        info = json.loads(direct_url_text)
+    except (TypeError, json.JSONDecodeError):
+        return None
+    if not isinstance(info, dict) or not (info.get("dir_info") or {}).get("editable"):
+        return None
+    url = str(info.get("url") or "")
+    if not url.startswith("file://"):
+        return None
+    return urllib.parse.unquote(url[len("file://"):])
+
+
+def _installed_vs_repo() -> str:
+    """설치본과 저장소본의 최상위 .py 해시 대조 (c66_body_identity.py에서 이식).
+
+    c197 확장(notes/cycle-197-body-recalibration.md §③): 복사본 디렉토리가 없고
+    dist-info가 editable 설치를 선언하면 `editable:<대상 경로>`를 낸다 — 영구
+    «판정 불가»가 아니라 **다른 종류의 몸**이다. 대상 경로가 다른 체크아웃으로
+    바뀌거나 복사본 설치로 회귀하면 문자열이 갈려 «재교정 필요»가 뜬다.
+    """
+    inst = glob.glob(os.path.expanduser("~/.forget/venv/lib/python3*/site-packages/forget"))
+    repo_pkg = os.path.join(REPO, "forget")
+    if not inst:
+        for du in glob.glob(os.path.expanduser(
+                "~/.forget/venv/lib/python3*/site-packages/forget_ai-*.dist-info/direct_url.json")):
+            try:
+                with open(du, encoding="utf-8") as fh:
+                    target = editable_target(fh.read())
+            except OSError:
+                continue
+            if target:
+                return f"editable:{target}"
+        return UNKNOWN
+    if not os.path.isdir(repo_pkg):
+        return UNKNOWN
+
+    def digest(path: str) -> str:
+        with open(path, "rb") as fh:
+            return hashlib.sha256(fh.read()).hexdigest()
+
+    rfiles = {f for f in os.listdir(repo_pkg) if f.endswith(".py")}
+    ifiles = {f for f in os.listdir(inst[0]) if f.endswith(".py")}
+    both = rfiles & ifiles
+    same = sum(1 for f in both
+               if digest(os.path.join(repo_pkg, f)) == digest(os.path.join(inst[0], f)))
+    # 분모는 합집합이다 — 교집합을 분모로 쓰면 한쪽에만 있는 파일이 사라진다 (c64 규율).
+    return f"{same}/{len(rfiles | ifiles)}"
+
+
+def _store_vec() -> str:
+    """스토어 임베딩의 형식·우세 차원. 디코드 없이 byte length만 집계한다.
+
+    행 수는 싣지 않는다 — 매 사이클 증가하므로 위양성 기계가 된다 (P21 (b)).
+    dim = (len - 4) // 4  (MEB1 = 4바이트 매직 + little-endian float32).
+    """
+    if not os.path.exists(FORGET_DB):
+        return UNKNOWN
+    try:
+        con = sqlite3.connect(f"file:{FORGET_DB}?mode=ro", uri=True)
+        try:
+            # 매직 비교는 **hex 리터럴**이어야 한다: embedding은 BLOB이고 SQLite에서
+            # BLOB은 TEXT 리터럴('MEB1')과 절대 같지 않다(저장 클래스가 다르면 불일치).
+            # 첫 배선에서 이 비교가 항상 거짓이라 1540바이트 MEB1 행을 JSON으로 보고했고,
+            # baseline 대조가 같은 사이클 안에서 그것을 잡았다 — 계측기가 자기 결함을
+            # 자기 첫 런에서 검출한 표본이다. x'4D454231' = b"MEB1".
+            rows = con.execute(
+                "select substr(embedding,1,4)=x'4D454231', length(embedding), count(*) "
+                "from memories where deleted=0 and embedding is not null and embedding != '' "
+                "group by 1, 2 order by count(*) desc limit 1").fetchall()
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return UNKNOWN
+    if not rows:
+        return UNKNOWN
+    is_meb1, blen, _ = rows[0]
+    return f"MEB1:{(int(blen) - 4) // 4}" if is_meb1 else f"JSON:len{int(blen)}"
+
+
+def _effective_stack() -> tuple[str, str, str]:
+    """살아 있는 몸에게 직접 묻는다 — 디스크가 아니라 **적재된 런타임**의 자기 보고.
+
+    두 필드를 함께 낸다. `checks.embeddings`는 **저장된 설정**의 거울이라
+    폴백 이름(deterministic-128)을 들고 있고, `effective`가 실제 실행 스택이다
+    (provider_runtime.py:779-784). 불일치 자체가 지문의 일부다.
+    """
+    try:
+        health = call("get_provider_health", {})
+    except Exception:  # noqa: BLE001 — 서버 정지도 데이터다. 조용히 '일치'가 되지만 않으면 된다.
+        return UNKNOWN, UNKNOWN, UNKNOWN
+    eff = health.get("effective") or {}
+    chk = (health.get("checks") or {}).get("embeddings") or {}
+    effective = (f"{eff.get('embedding_provider')}:{eff.get('embedding_model')}"
+                 if eff.get("embedding_model") else UNKNOWN)
+    checks = (f"{chk.get('provider')}:{chk.get('model')}" if chk.get("model") else UNKNOWN)
+    return effective, str(eff.get("resolution") or UNKNOWN), checks
+
+
+def part_body() -> None:
+    """P21 처치 (c67 배선) — 몸 지문을 step 0의 첫 화면에 세운다.
+
+    계기: 관측 30 / notes/cycle-66. c59 oracle replay가 무수정 재실행에서 재현되지
+    않았고 원인은 어휘가 아니라 **12시간 전에 교체된 몸**이었다. 루프는 c61~c65
+    다섯 사이클을 새 몸에서 돌면서 그 사실을 원장에 적지 못했다(검출 지연 5사이클).
+    step 0 스크립트를 고른 이유: F-절차0 처치가 만든 **절단 불가능 채널**이고,
+    관측 29가 실측한 대로 그 채널에 없는 규약은 산다는 보장이 없다.
+
+    등록본 이탈 1건(선언): ②'프로세스 기동 시각'을 빼고 **effective 스택 + resolution**을
+    넣었다 — lsof/ps가 샌드박스 승인에 의존해 승인 없는 런에서 지문이 조용히 미지로
+    내려앉기 때문이다. 근거와 대안은 body-fingerprint.json의 `_omitted_process_start`.
+
+    출력은 **3줄 고정** (P21 정직 병기 ②: 늘어나면 F-절차0 재발로 계상한다).
+    """
+    effective, resolution, checks = _effective_stack()
+    live = {"dist_info": _installed_dist_info(),
+            "installed_vs_repo": _installed_vs_repo(),
+            "effective_embedding": effective,
+            "embedding_resolution": resolution,
+            "checks_embedding": checks,
+            "store_vec": _store_vec()}
+    try:
+        with open(FINGERPRINT_BASELINE, encoding="utf-8") as fh:
+            baseline = json.load(fh).get("fingerprint", {})
+    except (OSError, json.JSONDecodeError):
+        baseline = {}
+    verdict, changed, unknown = compare_fingerprint(live, baseline)
+
+    mark = "**재교정 필요**" if changed else verdict
+    print(f"[Body. 몸 지문 — 게이트 상수 의존 계기의 유효 전제 (P21, baseline=body-fingerprint.json)]")
+    print(f"  {live['dist_info']} inst_vs_repo={live['installed_vs_repo']} "
+          f"eff={live['effective_embedding']} res={resolution.split(' (')[0]} "
+          f"checks={live['checks_embedding']} store={live['store_vec']}")
+    print(f"  대조: {mark}"
+          + (f" — 변경 {changed}" if changed else "")
+          + (f" / 미채취 {unknown}" if unknown else "")
+          + ("  → oracle replay 계열·gate_audit·score_weight_* 를 재교정 전 판정 금지"
+             if changed else ""))
+
+
+def recall_components(note: str) -> dict[str, int] | None:
+    """recall_note에서 성분 4값(능동 hit/miss · 주입 hit/miss)을 추출한다. **순수 함수**.
+
+    정본 형식(P15 (b)): `능동 X회(hit a·miss b) / 주입 Y건(hit c·miss d)`.
+    관측된 의역(c70: "능동 검색 0회", "주입 4건 = … hit 1 + … 3건 miss")도 받되,
+    값이 **유일하게** 정해지지 않으면 None을 반환한다 — '추출 불가'는 P24 (b)의
+    계상 대상이지 조용히 0으로 접을 값이 아니다(compare_fingerprint와 같은 규율:
+    모르는 것을 '일치'로 보고하지 않는다).
+    """
+    text = note.replace("*", "")
+    inj = re.search(r"주입\s*(\d+)\s*건", text)
+    act = re.search(r"능동[^0-9]{0,12}?(\d+)\s*회", text)
+    if not inj or not act:
+        return None
+
+    def hitmiss(seg: str) -> tuple[int | None, int | None]:
+        h = re.search(r"hit\s*(\d+)", seg)
+        m = re.search(r"miss\s*(\d+)", seg) or re.search(r"(\d+)\s*건[^0-9]{0,8}?miss", seg)
+        return (int(h.group(1)) if h else None), (int(m.group(1)) if m else None)
+
+    act_seg, inj_seg = text[:inj.start()], text[inj.start():]
+    a_cnt, i_cnt = int(act.group(1)), int(inj.group(1))
+    a_hit, a_miss = hitmiss(act_seg)
+    if a_hit is None and a_miss is None and a_cnt == 0:
+        a_hit = a_miss = 0  # "능동 0회"는 분해 생략이 유일 해석이다
+    if a_hit is None or a_miss is None:
+        return None
+    i_hit, i_miss = hitmiss(inj_seg)
+    # 한쪽만 명시돼도 총계로 닫히면 유일 결정이다 (예: "주입 4건 = hit 1 + 3건 miss")
+    if i_hit is None and i_miss is not None and i_miss <= i_cnt:
+        i_hit = i_cnt - i_miss
+    elif i_miss is None and i_hit is not None and i_hit <= i_cnt:
+        i_miss = i_cnt - i_hit
+    if i_hit is None or i_miss is None:
+        return None
+    return {"active_hits": a_hit, "active_misses": a_miss, "active_total": a_cnt,
+            "injected_hits": i_hit, "injected_misses": i_miss, "injected_total": i_cnt}
+
+
+def recall_identity(row: dict) -> tuple[str, str]:
+    """원장 행의 recall 필드가 성분 합과 일치하는지 검산한다. **순수 함수** (P24 처치 ②).
+
+    반환 (verdict, detail). verdict ∈ {일치, 불일치, 추출 불가}.
+    audit-70 §1-a가 적발한 c64형 결함(필드=구정의·산문=신정의, 무선언 분열)을
+    다음 사이클의 step 0이 기계로 잡는다. 결론 문장은 만들지 않는다 — 값과 판정만.
+    """
+    comp = recall_components(str(row.get("recall_note", "")))
+    if comp is None:
+        return "추출 불가", "성분 4값 유일 추출 실패 — P24 (b) 계상 대상"
+    want = (comp["active_hits"] + comp["injected_hits"],
+            comp["active_misses"] + comp["injected_misses"])
+    got = (int(row.get("recall_hits", -1)), int(row.get("recall_misses", -1)))
+    detail = (f"fields(hits={got[0]}·misses={got[1]}) vs "
+              f"성분(능동 {comp['active_hits']}·{comp['active_misses']} / "
+              f"주입 {comp['injected_hits']}·{comp['injected_misses']})")
+    return ("일치" if got == want else "불일치"), detail
+
+
+def part_recall() -> None:
+    """P15 (a) 반증 처방의 배선 (c71, P24) — 정의 A를 절단 불가능 채널로 인쇄하고
+    직전 원장 행의 `성분 합 = 필드 값` 항등식을 검산한다.
+    """
+    rows = []
+    with open(os.path.join(REPO, "research", "devloop", "metrics.jsonl"), encoding="utf-8") as fh:
+        for line in fh:
+            if line.strip():
+                rows.append(json.loads(line))
+    last = max(rows, key=lambda r: r["cycle"])
+    verdict, detail = recall_identity(last)
+    print("\n[R. recall 계상 — 정의 A 정본 출력 (P15 (a) 반증 → P24 배선, c71)]")
+    print("  계상 대상 = 이 사이클에 표면화된 회상 전체: 능동 검색 + 주입(캡슐·task_state·훅).")
+    print("  계기의 검색 호출은 계상 제외(c68 선언). hit = 행동을 바꾼 신규 정보이며, 도착")
+    print("  시각이 행동을 바꾸면 hit(c64 확장의 성문화 — 노출이지 승인 아님, audit-70 N7).")
+    print("  필드 항등식: recall_hits = 능동hit+주입hit · recall_misses = 능동miss+주입miss.")
+    print("  recall_note 병기 형식: '능동 X회(hit a·miss b) / 주입 Y건(hit c·miss d)'.")
+    print("  [공표 가드 — audit-140 R3, c141 성문] hit_rate 구간 집계는 계상 체제 변화(c64·c71)에 걸치고 hit 주 원천이 task_state 재귀다 — 단일 체제 구간·재귀 성분 제외 없이는 제품 개선으로 공표 불가.")
+    print(f"  [직전 행 검산] cycle={last['cycle']}: {detail} → {verdict}")
+
+
+def _dequote_c_style(path: str) -> str:
+    """git이 인용한 경로(`"..."`)를 C 스타일 이스케이프까지 디코드한다. **순수 함수** (c83).
+
+    관측 38-② 처치. core.quotepath 기본값(true)에서 비ASCII 바이트는 8진 이스케이프로
+    온다 — `"\\355\\225\\234\\352\\270\\200.md"` → `한글.md`. 디코드는 바이트로 모은 뒤
+    surrogateescape로 되돌린다: 비UTF-8 파일명도 os.path.exists가 그대로 통과하는
+    유일한 복원이다(strict는 죽고 replace는 디스크에 없는 다른 경로를 만든다 —
+    거짓 음성을 고치려다 같은 방향의 거짓 음성을 재생산하지 않는다).
+    인용부호가 없으면 원문 그대로 — 정상 경로의 무해 통과를 보존한다.
+    """
+    if not (len(path) >= 2 and path.startswith('"') and path.endswith('"')):
+        return path
+    inner = path[1:-1]
+    simple = {"\\": ord("\\"), '"': ord('"'), "n": ord("\n"), "t": ord("\t"),
+              "r": ord("\r"), "a": 7, "b": 8, "f": 12, "v": 11}
+    out = bytearray()
+    i = 0
+    while i < len(inner):
+        ch = inner[i]
+        if ch == "\\" and i + 1 < len(inner):
+            nxt = inner[i + 1]
+            if nxt in "01234567":
+                j = i + 2
+                while j < min(i + 4, len(inner)) and inner[j] in "01234567":
+                    j += 1
+                out.append(int(inner[i + 1:j], 8) & 0xFF)
+                i = j
+                continue
+            if nxt in simple:
+                out.append(simple[nxt])
+                i += 2
+                continue
+        out.extend(ch.encode("utf-8"))
+        i += 1
+    return out.decode("utf-8", "surrogateescape")
+
+
+def _split_rename_columns(rest: str) -> list[str]:
+    """리네임/카피 행의 `old -> new` 열을 양쪽 경로로 가른다. **순수 함수** (c83).
+
+    관측 38-① 처치. old가 인용된 경우(`"a -> b.md" -> c.md`)는 닫는 인용부호를
+    스캔해 인용 속 화살표를 경로의 일부로 지킨다. 한계(정직): porcelain v1은
+    무인용 경로 속 ` -> `를 진짜 구분자와 가릴 수 없다(근본 처치는 -z NUL 형식) —
+    여기서는 첫 ` -> `에서 가른다. 그 모호성은 경로가 인용되지 않는 평문 ASCII
+    파일명에 화살표가 실제로 들어간 경우에만 남는다.
+    """
+    if rest.startswith('"'):
+        i = 1
+        while i < len(rest):
+            if rest[i] == "\\":
+                i += 2
+                continue
+            if rest[i] == '"':
+                break
+            i += 1
+        head, tail = rest[:i + 1], rest[i + 1:]
+        if tail.startswith(" -> "):
+            return [head, tail[4:]]
+        return [rest]
+    if " -> " in rest:
+        old, new = rest.split(" -> ", 1)
+        return [old, new]
+    return [rest]
+
+
+def porcelain_changed_paths(raw: str) -> list[str]:
+    """`git status --porcelain` 원문(무-strip)에서 경로 열을 뽑는다. **순수 함수** (c82).
+
+    part_a 인라인이던 파싱의 분리 — "part_n/part_a/part_b 파싱 미커버" 부채(c64 등재,
+    c71 부분 상환, audit-80 §3-(b) 재지적)의 잔여 상환. 행 형식 `XY<space><path>`에서
+    `line[3:]`, 공백 행 무시. 입력은 run_raw의 무-strip 원문이어야 한다 — strip된
+    원문을 주면 첫 행의 X열(공백)이 사라져 경로 첫 글자를 먹는다(run_raw 독스트링의
+    c64 결함, 테스트가 방향을 고정).
+
+    거짓 음성 2종 처치 (c82 관측 38 → c83 수리, frictions.md 수용 기준 ②):
+      ① 상태 코드에 R/C가 있는 행은 `old -> new`를 양쪽 경로로 가른다 — old는
+         디스크에 없어 하류 exists에서 걸러지고(D 행과 같은 취급), new가 mtime
+         검사에 들어간다. 리네임된 미커밋 WIP가 영토 검사에 보인다.
+      ② 인용 경로는 8진 이스케이프까지 디코드한다 — 한국어 파일명이 디스크에
+         실재하는 문자열로 돌아온다.
+    두 처치 모두 "변경 있음→'깨끗함'" 방향의 침묵을 막는다(절차 2가 막으려는 상황).
+    c82가 현행 동작으로 고정해 둔 단언 2건은 이 처치와 함께 정상 동작 단언으로
+    교체됐다 — 울리라고 둔 종이 울렸고, 종을 새 자리에 다시 걸었다.
+    """
+    paths: list[str] = []
+    for line in raw.splitlines():
+        if not line.strip():
+            continue
+        xy, rest = line[:2], line[3:]
+        segs = _split_rename_columns(rest) if ("R" in xy or "C" in xy) else [rest]
+        paths.extend(_dequote_c_style(seg.strip()) for seg in segs)
+    return paths
+
+
+# 코드 사이클 큐 — 절차 2에서 "봉쇄를 풀 증명"에 쓰이는 쪽 피연산자 (audit-150 §3, c151).
+#
+# 루프가 매 사이클 인쇄해 온 무교집합은 `이번 사이클의 변경분 ∩ 봉쇄 경로 = ∅`였다.
+# 그것은 **"내가 남의 파일을 밟지 않았다"**만 증명한다. 봉쇄를 풀려면 반대 방향이
+# 필요하다: **"내가 하려는 일이 남의 파일과 무관하다"** = `코드 큐 ∩ 봉쇄 경로 = ∅`.
+# 43사이클 동안 전자만 인쇄됐고 후자는 c150 감사가 손으로 한 번 쟀다. 여기 싣는다.
+#
+# 이 상수는 손으로 유지된다(큐의 정본은 task_state next_actions와 frictions 대장이며,
+# 기계가독 형식이 아직 없다). 매 사이클 인쇄되므로 표류는 **눈에 보이는 채로** 썩는다 —
+# 조용히 틀리는 것보다 낫다. 큐가 바뀌면 이 줄을 바꾸고 사이클 보고에 선언한다.
+CODE_QUEUE_PATHS = ("forget/store.py",)
+
+#: 봉쇄 계측의 판정 어휘. **문자열도 분류다** — 두 곳에서 리터럴로 쓰면 조용히 갈라지고,
+#: 갈라진 쪽이 고발을 담당한다(관행 ㊷, 관측 94의 교훈). 파트 S의 사망 의심 검사는 이
+#: 판정을 재계산하지 않고 **그대로 재사용**한다.
+TOUCHED_AFTER_HARVEST = "수확 이후 접촉"
+UNTOUCHED_AFTER_HARVEST = "수확 이후 무접촉"
+
+#: devloop 루프가 **소유한** 경로. 이 경로의 미커밋 변경은 타 트랙 WIP가 아니라 이 루프
+#: 자신의 산출이므로, step 0 시점에 존재한다면 그것을 만든 세션은 커밋에 도달하지 못했다.
+#: 손 유지 상수 — 소유 범위가 바뀌면 이 줄을 고치고 사이클 보고에 선언한다
+#: (CODE_QUEUE_PATHS·ORDINAL_ANCHORS·DEFERRAL_MARKERS와 같은 규율).
+DEVLOOP_OWNED_PREFIXES = ("research/devloop/", "tests/test_devloop_")
+
+
+def blockade_rows(entries: list[tuple[str, float | None]], head_ct: float,
+                  now_ts: float) -> list[tuple[str, float | None, float | None, str]]:
+    """(경로, mtime|None)을 (경로, now대비h, HEAD대비h, 판정) 행으로. **순수 함수** (c151).
+
+    핵심 성질: mtime을 못 읽은 경로를 **버리지 않는다.** 목록에서 조용히 빠지면
+    "봉쇄 3건 전부 무접촉" 같은 거짓 전수 주장이 만들어진다 — compare_fingerprint와
+    같은 규율이고, 자기규율 8회차("0건은 '없음'과 '못 봄'을 구별하지 않는다")의 적용이다.
+    못 읽은 행은 '판정 불가'로 **인쇄에 남는다**.
+
+    판정 어휘는 두 개뿐이고 결론을 만들지 않는다(이 스크립트의 상시 규약):
+    HEAD 커밋 시각보다 mtime이 뒤면 '수확 이후 접촉', 아니면 '수확 이후 무접촉'.
+    무접촉이 곧 "죽은 WIP"라는 추론은 **여기서 하지 않는다** — 그 판단은 사람 몫이고,
+    frictions.md:515-516의 비-WIP 시험(장기 mtime 불변)이 그 자[尺]다.
+    """
+    rows: list[tuple[str, float | None, float | None, str]] = []
+    for path, mt in entries:
+        if mt is None:
+            rows.append((path, None, None, "판정 불가(stat 실패·경로 부재)"))
+            continue
+        rows.append((path, (now_ts - mt) / 3600.0, (mt - head_ct) / 3600.0,
+                     TOUCHED_AFTER_HARVEST if mt > head_ct else UNTOUCHED_AFTER_HARVEST))
+    return rows
+
+
+def predicate_divergence(
+    rows: list[tuple[str, float | None, float | None, str]],
+    prefixes: tuple[str, ...] = DEVLOOP_OWNED_PREFIXES,
+) -> dict[str, object]:
+    """절차 2 봉쇄의 **두 술어**를 나란히 계산한다. **순수 함수** (c175, 관측 113).
+
+    규약(`cycle-prompt.md:27`)이 쓰는 것은 **존재 술어**다 —
+    "devloop 외의 미커밋 변경이 **있으면** 코드 사이클 금지".
+    관측 81의 처치가 재기 시작한 것은 **활성 술어**다 — "그중 살아 있는 것이 있는가".
+    c151~c174 24사이클 동안 계기는 활성을 인쇄했고 규약은 존재를 읽었으며,
+    `pcus`는 24행 전부 +1이었다(출력 불변). **이 함수는 두 술어가 갈리는 자리를 보인다.**
+
+    상수를 발명하지 않는다. "며칠이면 죽은 WIP인가"는 이 스크립트가 정할 것이 아니므로,
+    문턱 T를 **자유 변수로 남기고 갈림 구간만** 낸다:
+
+        활성 술어(T) = 봉쇄  ⟺  min(경과) < T   (T보다 최근에 손댄 외부 경로가 있다)
+        두 술어가 갈린다     ⟺  min(경과) ≥ T   (아무것도 활성이 아닌데 존재 술어는 막는다)
+
+    그러므로 갈림 구간은 `T ≤ min(경과)`이고, 그 경계값 하나가 전부다.
+
+    **결론 문장을 만들지 않는다** — 이 스크립트의 상시 규약(c151 blockade_rows와 동일).
+    갈림의 존재를 보이는 것과 "진행해도 좋다"는 다르고, 후자는 사람 몫이다.
+    규약이 아직 존재 술어이므로 **갈려도 따를 것은 존재 술어다**(관측 113 수용 기준 ②).
+
+    mtime을 못 읽은 외부 경로가 하나라도 있으면 활성 술어는 **판정 불가**다 —
+    못 읽은 것을 "오래됐다"로도 "최근"으로도 세지 않는다(자기규율: 0건은 '없음'과
+    '못 봄'을 구별하지 않는다).
+    """
+    foreign = [r for r in rows if not r[0].startswith(prefixes)]
+    if not foreign:
+        return {"foreign": [], "existence": "해제", "activity": "해제",
+                "diverges_at_or_below": None, "unreadable": 0, "note": "외부 경로 0건"}
+
+    unreadable = [r for r in foreign if r[1] is None]
+    readable = [r for r in foreign if r[1] is not None]
+    if unreadable or not readable:
+        return {"foreign": foreign, "existence": "봉쇄", "activity": "판정 불가",
+                "diverges_at_or_below": None, "unreadable": len(unreadable),
+                "note": "mtime 미판독 경로가 있어 활성 술어를 세울 수 없다"}
+
+    youngest = min(readable, key=lambda r: r[1])
+    return {
+        "foreign": foreign,
+        "existence": "봉쇄",
+        "activity": "문턱 의존",
+        "diverges_at_or_below": youngest[1],
+        "youngest_path": youngest[0],
+        "unreadable": 0,
+        "note": "",
+    }
+
+
+def queue_intersection(changed: list[str], queue: tuple[str, ...] = CODE_QUEUE_PATHS) -> list[str]:
+    """코드 큐 ∩ 봉쇄 경로. **순수 함수** (c151).
+
+    경로 문자열 동일성으로만 잰다 — 디렉터리 포함 관계는 세지 않는다. 큐 항목이
+    디렉터리가 되면 이 함수도 함께 바뀌어야 하고, 그 전까지 여기서 짐작하지 않는다.
+    """
+    return sorted(set(changed) & set(queue))
+
+
+def changed_entries(changed: list[str] | None = None) -> list[tuple[str, float | None]]:
+    """(미커밋 경로, mtime|None) 목록. 파트 A와 파트 S가 **함께** 쓴다 (c168 2세션).
+
+    한 벌로 두는 이유는 관행 ㊷다 — 같은 개념(무엇이 미커밋이고 언제 손댔는가)의 계산이
+    두 파트에 사본으로 살면 조용히 갈라지고, 갈라진 쪽이 판정을 담당하게 된다. mtime을
+    못 읽은 경로를 **버리지 않는다**(None으로 남긴다) — blockade_rows와 같은 규율.
+    """
+    if changed is None:
+        changed = porcelain_changed_paths(run_raw(["git", "status", "--porcelain"]))
+    entries: list[tuple[str, float | None]] = []
+    for rel in changed:
+        full = os.path.join(REPO, rel)
+        try:
+            if os.path.isdir(full):
+                mt = max((os.path.getmtime(os.path.join(r, f))
+                          for r, _, fs in os.walk(full) for f in fs), default=None)
+            else:
+                mt = os.path.getmtime(full)
+        except OSError:
+            mt = None
+        entries.append((rel, mt))
+    return entries
+
+
+def predecessor_death_evidence(
+    rows: list[tuple[str, float | None, float | None, str]],
+    owned: tuple[str, ...] = DEVLOOP_OWNED_PREFIXES,
+) -> dict:
+    """직전 세션이 **원장 append 전에** 죽었다는 증거. 순수 함수 (c168 2세션, 관측 97 · P53).
+
+    왜 파트 S가 이것을 못 보는가. 파트 S는 원장과 task_state를 **서로** 잰다. 그래서 두
+    채널이 **함께** 낡으면 `일치`가 나온다 — 절차 5의 첫 걸음(원장 append) 전에 죽은
+    세션은 둘 다 건드리지 않았으므로 그 대조는 무증상이다.
+
+    사망의 지문은 세 종류이고 **쓰기 순서가 그것을 정한다**(관측 97):
+      c96  — task_state를 먼저 써서 `앞섬`   → 파트 S가 잡았다
+      c166 — 원장까지 쓰고 커밋 전에 죽어 `지연` → 파트 S가 잡았다
+      c168 1세션 — 원장 append 직전에 죽어 `일치` → **파트 S가 못 봤다**
+    셋째가 조용한 것은 우연이 아니라 관측 55 처치의 대가다: '완주 선기재'를 막으려
+    record_task_state를 맨 뒤로 밀자, 맨 앞에서 죽는 창이 두 채널을 같은 세대로 남겼다.
+
+    증거는 이미 인쇄되고 있었다 — 파트 A의 `uncommitted_paths_newer_than_HEAD`. 없던 것은
+    계측이 아니라 **두 인쇄의 연결**이다. `unknown`을 따로 돌려주는 이유는 이 파일의 상시
+    규약: mtime을 못 읽은 행을 버리면 "증거 0건"이 거짓 전수 주장이 된다.
+    """
+    evidence: list[tuple[str, float | None, float | None]] = []
+    unknown: list[str] = []
+    for path, since_now, vs_head, verdict in rows:
+        if not path.startswith(tuple(owned)):
+            continue
+        if vs_head is None:
+            unknown.append(path)
+        elif verdict == TOUCHED_AFTER_HARVEST:
+            evidence.append((path, since_now, vs_head))
+    return {"evidence": evidence, "unknown": unknown}
 
 
 def part_a() -> None:
@@ -60,8 +1064,9 @@ def part_a() -> None:
     # 참조 파일 mtime이 아니라 **커밋 시각**과 비교한다 — .git/HEAD의 mtime은
     # 체크아웃·페치 같은 무관한 조작으로도 갱신되므로 커밋 시각이 더 정확한 기준이다.
     newer: list[tuple[str, int]] = []
-    for line in run(["git", "status", "--porcelain"]).splitlines():
-        rel = line[3:].strip().strip('"')
+    changed = porcelain_changed_paths(run_raw(["git", "status", "--porcelain"]))
+    print(f"  changed_paths_total={len(changed)}")  # c64: 분모를 병기해 침묵 절단을 드러낸다
+    for rel in changed:
         full = os.path.join(REPO, rel)
         if os.path.isdir(full):
             mt = max((os.path.getmtime(os.path.join(r, f))
@@ -77,10 +1082,74 @@ def part_a() -> None:
     for rel, delta in newer:
         print(f"    +{delta:5d}s  {rel}")
 
+    # ── 봉쇄 계측 (audit-150 R1, c151 배선) ──────────────────────────────────
+    # git status는 파일의 **존재**를 증명하고 **활성**을 증명하지 않는다. 그 구별이
+    # 없어서 영토 봉쇄의 전제('타 세션의 진성 WIP')가 43사이클간 무검증으로 지나갔고,
+    # 검증법은 루프가 c31에 자기 손으로 써 놓은 채였다(frictions.md:515-516,
+    # "장기 mtime 불변" = 비-WIP 시험). 여기 세 줄이 그 시험을 상시화한다.
+    if changed:
+        # 경로·mtime 수집은 `changed_entries` 한 벌이다 — 파트 S의 사망 의심 검사가 같은
+        # 함수를 쓴다(c168 2세션, 관행 ㊷). 사본이 둘이면 조용히 갈라진다.
+        rows = blockade_rows(changed_entries(changed), head_ct, time.time())
+        print("  [미커밋 경로의 활성 계측 — 존재가 아니라 활성 (audit-150 R1)]")
+        print("    now 대비 = 마지막 손댐 이후 경과. 사이클 ≈ 1일 — 판단은 사람 몫이다.")
+        print("    ※ 이 목록은 '타 트랙 WIP'가 아니라 **미커밋 전체**다. step 0(턴2)에는")
+        print("      둘이 같지만, 사이클 도중 재실행하면 자기 편집분이 ~0.0h로 함께 뜬다.")
+        for rel, since_now, vs_head, verdict in rows:
+            if since_now is None:
+                print(f"    {'':>9s} {'':>10s}  {rel}  ← {verdict}")
+            else:
+                print(f"    {since_now:8.1f}h {vs_head:+9.1f}h  {rel}  ← {verdict}")
+        inter = queue_intersection(changed)
+        print(f"    코드 큐 {list(CODE_QUEUE_PATHS)} ∩ 미커밋 {len(changed)}건"
+              f" = {len(inter)}건 {inter if inter else '(교집합 없음)'}")
+        print("    ※ 이 교집합이 절차 2의 '봉쇄를 풀 증명' 쪽 피연산자다 — 매 사이클")
+        print("      인쇄되던 무교집합(내 변경분 ∩ 봉쇄)은 방향이 반대였다(audit-150 §3).")
+
+        # ── 두 술어 대조 (c175 배선, 관측 113) ───────────────────────────────
+        # 관측 81의 처치는 활성을 **재게** 했고, 규약은 여전히 존재를 **읽는다**.
+        # 24사이클(c151~c174) 동안 계기는 인쇄했고 pcus는 24행 전부 +1이었다 —
+        # 계측이 보고에 들어가고 결정에 들어가지 않았다. 아래가 그 갈림을 보인다.
+        pd = predicate_divergence(rows)
+        print("  [두 술어 대조 — 규약이 읽는 술어 vs 계기가 재는 술어 (c175, 관측 113)]")
+        print(f"    규약 문면(cycle-prompt.md:27) = **존재** 술어  →  판정 **{pd['existence']}**")
+        n_foreign = len(pd["foreign"])  # type: ignore[arg-type]
+        print(f"    외부(비-devloop) 미커밋 경로 = {n_foreign}건")
+        boundary = pd["diverges_at_or_below"]
+        if boundary is None:
+            print(f"    활성 술어 = **{pd['activity']}**  ({pd['note']})")
+        else:
+            print(f"    최연소 외부 경로 = {boundary:.1f}h  ({pd['youngest_path']})")
+            print(f"    → 활성 술어(문턱 T) = 봉쇄 ⟺ T > {boundary:.1f}h")
+            print(f"    → **두 술어는 T ≤ {boundary:.1f}h 에서 갈린다**"
+                  f" · T > {boundary:.1f}h 에서 일치한다")
+        print("    ※ 문턱 T는 이 스크립트가 정하지 않는다 — 상수를 발명하면 그 상수가")
+        print("      다음 손에게 규약으로 배달된다(c174가 상수 23에서 겪은 것).")
+        print("    ※ **갈려도 따를 것은 존재 술어다** — 규약이 아직 그것이다.")
+        print("      이 인쇄를 무단 코드 사이클의 근거로 쓰지 말 것(관측 113 수용 기준 ②).")
+        print("      규약 문면 개정은 게이트 대기 `A-175.1`. 판정 = P63(c180).")
+        if boundary is not None:
+            print("    ★ 의무: 갈림이 인쇄된 사이클의 원장은 ① 갈렸다 ② 존재 술어를")
+            print("      따랐다 를 둘 다 적는다 — 이 줄이 그 의무의 배달 채널이다")
+            print("      (관측 115 · P63 (b) 반증의 항구 처치, audit-180 R1 · c185 배선).")
+
 
 def needle_reach(capsule: str, rules: dict[str, list[str]]) -> tuple[int, dict[str, int]]:
     detail = {k: int(any(nd in capsule for nd in v)) for k, v in rules.items()}
     return sum(detail.values()), detail
+
+
+def capsule_char_budget(src: str) -> int:
+    """훅 소스에서 CAPSULE_CHAR_BUDGET 정수를 뽑는다. **순수 함수** (c82).
+
+    part_b 인라인 정규식의 분리 — 같은 부채의 잔여 상환. 예산은 truncated 판정과
+    니들 도달의 분모를 정한다: 이 값을 잘못 읽으면 part_b 전체가 통째로 어긋난다.
+    `1_600` 같은 밑줄 리터럴을 허용한다(현행 동작 보존). 마커 부재 시 AttributeError로
+    **시끄럽게** 죽는다 — 조용히 기본값으로 접혀 거짓 음성이 되는 것보다 낫고,
+    그 성질도 테스트가 고정한다(compare_fingerprint의 규율: 모르는 것을 '일치'로
+    보고하지 않는다).
+    """
+    return int(re.search(r"CAPSULE_CHAR_BUDGET\s*=\s*([0-9_]+)", src).group(1).replace("_", ""))
 
 
 def part_b() -> None:
@@ -89,7 +1158,7 @@ def part_b() -> None:
     from forget_project import layered_filter, project_key_for_path, scope_disabled  # noqa: E402
 
     src = open(os.path.join(INSTALLED_HOOKS, "forget_sessionstart.py"), encoding="utf-8").read()
-    budget = int(re.search(r"CAPSULE_CHAR_BUDGET\s*=\s*([0-9_]+)", src).group(1).replace("_", ""))
+    budget = capsule_char_budget(src)
 
     project = None if scope_disabled() else project_key_for_path(REPO)
     args = {"query": f"session startup in {REPO} — active tasks, open loops, recent decisions",
@@ -98,20 +1167,1965 @@ def part_b() -> None:
     if pf:
         args["filters"] = pf
         args["project"] = project
-    capsule = str(call("prepare_context_autopilot", args).get("capsule_text") or "").strip()
+    try:
+        capsule = str(call("prepare_context_autopilot", args).get("capsule_text") or "").strip()
+    except ForgetRpcError:
+        # c192(관측 121 수용 기준 ④): 캡슐을 **못 본 것**과 **봤는데 무용한 것**은
+        # 다른 사건이다. 원장의 `recall_*`에는 후자의 칸밖에 없어서, 여기서 조용히
+        # 빈 캡슐로 접히면 그 사이클은 «miss»로 계상되고 miss 계열에 1이 더해진다 —
+        # 그것은 측정이 아니라 발명이다(관측 104: 모르는 것을 0으로 적지 않는다).
+        # 그래서 계열에 값을 주지 않고 **판정 불가**를 인쇄한 뒤 위로 올린다.
+        print("  캡슐 판정 = **판정 불가** (채널 사망 — 조회 자체가 실패했다)")
+        print("    ※ 이 사이클의 캡슐 계열에 miss를 더하지 말 것. 못 본 것은 miss가 아니다.")
+        print("    ※ 니들 대조(V1·V2·V3)·원문 인쇄·sha256도 전부 측정되지 않았다.")
+        raise
     shown = capsule[:budget]
     print(f"  budget={budget} capsule_chars={len(capsule)} truncated={len(capsule) > budget}")
 
     v1 = {"(i)": ["devloop-self"], "(ii)": ["mtime"], "(iii)": ["cycle` 필드", "cycle 필드"]}
     v2 = {"(i)": ["devloop-self"], "(ii)": ["mtime"], "(iii)": ["cycle` 필드", "cycle 필드", "tail 금지"]}
-    for label, rules in (("V1 (c46 원본 니들)", v1), ("V2 (c47 확장 니들)", v2)):
+    # V3 (c64, P19): 어휘가 아니라 **규약의 내용**을 노린다. 각 항은 그 규약을 나르는
+    # 알려진 표현들의 논리합이며, 새 표현이 관측되면 여기에 더한다(그 추가는 자[尺]
+    # 변경이므로 사이클 보고에 선언한다). 넓히되 **규약 간 경계는 넘지 않는다** —
+    # 아무 캡슐이나 3/3으로 통과시키는 자가 되면 P19 (a)가 반증된다.
+    v3 = {
+        "(i)": ["devloop-self", "devloop_self"],
+        "(ii)": ["mtime", "미커밋", "HEAD보다", "newer", "영토 규약"],
+        "(iii)": ["cycle` 필드", "cycle 필드", "tail 금지", "tail/cat/head",
+                  "c48_step0_check", "번호·모드", "열지 마"],
+    }
+    for label, rules in (("V1 (c46 원본 니들)", v1), ("V2 (c47 확장 니들)", v2),
+                         ("V3 (c64 의미 니들)", v3)):
         hits, detail = needle_reach(shown, rules)
         print(f"  {label:22s} capsule_reach={hits}/3  {detail}")
 
-    for lit in ("tail 금지", "cycle 필드", "cycle` 필드", "mtime", "devloop-self"):
-        print(f"    literal {lit!r:16s} in_capsule={int(lit in shown)}")
+    for lit in ("tail 금지", "cycle 필드", "cycle` 필드", "mtime", "devloop-self",
+                "c48_step0_check", "번호·모드"):
+        print(f"    literal {lit!r:18s} in_capsule={int(lit in shown)}")
+
+    # 원문 인쇄 (c64, P19 ②) — 관측 23이 명시한 수용 기준의 직접 이행.
+    # 니들 판본은 표류하지만 원문은 표류하지 않는다. 다음 손이 육안으로 대조한다.
+    # 주의: 이 캡슐은 SessionStart 주입본과 **같은 질의·다른 시각**의 별개 응답이다.
+    print(f"  capsule_sha256={hashlib.sha256(capsule.encode('utf-8')).hexdigest()[:16]}"
+          f"  shown_chars={len(shown)}")
+    print("  [캡슐 원문 — SessionStart 주입본의 재취득본, 동일 질의·다른 시각]")
+    for line in shown.splitlines():
+        print(f"  | {line}")
+
+
+FRICTIONS = os.path.join(REPO, "research", "devloop", "frictions.md")
+
+# 상태 헤더 규약 — 이 어휘가 파트 F의 눈이다 (A-95.1 루프 몫, P34 ②③):
+#   원본  `## [미분류 ]관측 N — 제목 (사이클 C, …)` — 괄호절에 '회부'/'후보'면 계상 대상
+#   갱신  `## 관측 N 보강|재발… (사이클 C, …)` — 최근 사이클만 갱신
+#   처분  `## 관측 N 처분 …` 헤더 또는 절 안 행 첫머리 `**처분 (사이클` 문단.
+#         처분 문단에 "종결" 또는 "회부 상태를 벗"이 있어야 회부 이탈 —
+#         없으면 부분 처분으로 존속한다(관측 55·58이 실측 반례: 하위 항목/계열 표기만).
+OBS_HEADER = re.compile(r"^##\s+(?:미분류\s+)?관측\s+(\d+)(?:\s+(보강|재발|처분))?")
+# 관측 76 처치 (c131 적용, audit-130 R1 승인). OBS_HEADER는 번호 **바로 다음** 어절만
+# 종류로 읽어 `## 관측 74 수용 기준 ③ 최초 집행 …` 같은 어순을 원본으로 오분류했고,
+# 원본 분기가 tagged를 괄호절로 덮어써 살아 있는 관측이 인덱스에서 무공지 소멸했다
+# (c129 실측: 38→37, Δ 게이트가 잡음). 처치 ① 어순 둔감: 번호 뒤 대시(—) 전 구간에서
+# 처분/보강/재발을 탐색. 처치 ② 태그 단조성: 원본 분기가 기존 tagged=True를 내리지
+# 못한다 — 태그는 원본 등재로만 켜지고, 처분은 exited로만 끈다.
+# 자[尺] 교체 선언 (관측 28 규율 — 무공지 교체 금지): 반사실 영수증은 실물 파서 대조
+# 2회 — audit-130 §4 (c130, open 39/39·차집합 ∅) + c131 재발행 (open 40/40·차집합 ∅,
+# 재해석 헤딩 전수 1건 = c128 `관측 71 잔여 하자 처분` → 처분, 71은 기이탈이라 무영향.
+# 무태그 목록만 71 제외로 이동). 소급 이동 Δ0 확인 후 적용했다.
+_OBS_KIND_SEG = re.compile(r"^##\s+(?:미분류\s+)?관측\s+\d+([^—\n]*)")
+_OBS_CYCLE = re.compile(r"사이클\s*(\d+)")
+_INLINE_DISPOSAL = re.compile(r"^\*\*처분\s*\(사이클")
+_EXIT_MARKS = ("종결", "회부 상태를 벗")
+
+# 관측 63 처치 (c126). 순수 부분문자열 탐색은 부정 문맥을 격발어와 구별하지 못했다 —
+# "이 처분은 ①의 이행 기록이지 종결이 아니다"(관측 61 c113)가 이탈로 읽혀 존속 선언
+# 자체가 관측을 인덱스에서 지웠다. 처치는 **발생 단위** 판정이다: 마커 직후 창에
+# 부정어가 오면 그 발생만 무효이고, 같은 문단의 다른 발생이 긍정이면 이탈은 성립한다
+# (관측 53 처분 문단이 반례 — "→ **종결.**" 뒤 문장에 "…아니다"가 온다).
+#
+# 창은 **문장 종결 전 3어절**이다. 글자 수가 아니라 어절로 세는 이유: 부정 종결어미는
+# 마커 뒤 1~3어절에 붙고("종결이 아니다" 2 · "회부 상태를 벗어나지 않는다" 2 ·
+# "종결로 보지 않는다" 3), 그 너머의 부정어는 **다른 절의 것**이다. 창을 넓히면
+# "종결이며 더 이상 보정하지 않는다"류의 긍정 선언이 뒤 절 부정어에 오염돼 거짓
+# 음성(존속 과계상)이 난다 — 이 예에서 부정어는 6어절 뒤라 3어절 창 밖이다.
+# 대장 실측 8개 발생 전수에서 이 창은 부정 1건(관측 61 c113)만 배제한다.
+# 한계(정직): 휴리스틱이다. 4어절 이상 떨어진 부정 종결("종결이라고 이 절이 말하지는
+# 않는다")은 여전히 위양성으로 남는다. 어휘·거리가 표류하면 P34 (b) 채널 팔로 계상하고
+# 자[尺] 변경을 선언한 뒤 넓힌다 — V3 니들과 같은 규율.
+_NEG_TOKENS = 3
+_SENT_END = re.compile(r"[.。\n]")
+_NEGATION = re.compile(r"(아니|않|못하|없)")
+
+
+def _exit_declared(para: str) -> bool:
+    """이탈 마커가 **부정 문맥이 아닌 자리에** 한 번이라도 나오면 이탈. **순수 함수**."""
+    for mark in _EXIT_MARKS:
+        pos = 0
+        while True:
+            i = para.find(mark, pos)
+            if i < 0:
+                break
+            pos = i + len(mark)
+            window = para[pos:]
+            cut = _SENT_END.search(window)
+            if cut:
+                window = window[:cut.start()]
+            if not _NEGATION.search(" ".join(window.split()[:_NEG_TOKENS])):
+                return True
+    return False
+
+
+# ㉸ 처치 (c268). 관측 76 처치 ①은 종류(kind) 축만 어순 둔감화했고 제목 축은
+# `body[:rfind("(사이클")]` 그대로 남아, 괄호절-선행 헤더
+# `## 관측 N (사이클 C, …) — 회부: 제목`(관측 79·80 실측, audit-220 §7 진단 ·
+# c224 판별)에서 제목 전체가 절단돼 인덱스에 빈 제목으로 인쇄됐다. 계상(tagged·
+# exited)은 tail 검사가 독립이라 무영향 — 흠은 표시 한정. 처치는 **보수적
+# 폴백**이다: 괄호절 앞 구간을 지금까지와 동일하게 우선하고(기존 비-빈 제목
+# 전건 무접촉), 그 구간이 비었을 때만 괄호절 뒤 구간에서 태그 어휘(회부/후보)를
+# 벗겨 취한다. 판정 채널 = 파트 F 인쇄(관측 79·80 제목이 비지 않아야).
+_OBS_TITLE_TAG = re.compile(r"^(?:회부|후보)\s*[:：]\s*")
+
+
+def obs_title(body: str) -> str:
+    """관측 원본 헤더의 제목 추출 — 어순 둔감 (㉸, c268). **순수 함수**.
+
+    body = 헤더 행에서 `관측 N` 매치 직후부터 끝까지.
+    """
+    body = body.replace("**", "")
+    cut = body.rfind("(사이클")
+    if cut < 0:
+        return body.strip(" —·:")
+    before = body[:cut].strip(" —·:")
+    if before:
+        return before
+    close = body.find(")", cut)
+    after = body[close + 1:] if close >= 0 else ""
+    return _OBS_TITLE_TAG.sub("", after.strip(" —·:")).strip(" —·:")
+
+
+def _obs_paragraph(lines: list[str], start: int) -> str:
+    """start 행부터 첫 공백 행 전까지 — 처분 문단의 이탈 마커 탐색 범위. **순수 함수**."""
+    out = []
+    for line in lines[start:]:
+        if not line.strip():
+            break
+        out.append(line)
+    return " ".join(out)
+
+
+def header_kind(line: str) -> tuple[int, str] | None:
+    """관측 헤더 행의 (번호, 종류) 판별 — 어순 둔감 (관측 76 처치 ①). **순수 함수**.
+
+    ㉻(c272 집행)이 인덱스 생성기와 이 파서가 **같은 분류 술어**를 쓰도록 추출했다 —
+    규칙을 두 벌 두면 관측 30·34(자[尺] 무선언 분기)의 다음 표본이 된다.
+    비-헤더 행은 None."""
+    m = OBS_HEADER.match(line)
+    if not m:
+        return None
+    num, kind = int(m.group(1)), (m.group(2) or "원본")
+    if kind == "원본":
+        seg_m = _OBS_KIND_SEG.match(line)
+        seg = seg_m.group(1) if seg_m else ""
+        for k in ("처분", "보강", "재발"):
+            if k in seg:
+                kind = k
+                break
+    return num, kind
+
+
+def parse_observations(text: str) -> dict[int, dict]:
+    """frictions.md의 실재 표기 관행에서 관측별 상태를 파생한다. **순수 함수** (c108, P34).
+
+    별도 인덱스 파일을 두지 않는 이유: 두 번째 원장은 대장과 어긋나며 썩는다
+    (관측 57 상속 계수의 파일판). 대장이 단일 정본으로 남고, 위 상태 헤더 규약이
+    A-95.1이 요구한 "기계가독 상태 마커"의 실행형이다.
+    한계(정직): 처분이 amendment 문서에만 있고 대장에 주석되지 않으면 이 눈에는
+    보이지 않는다 — amendment-105 §5의 "판정 집행은 frictions.md 주석" 관행이 전제다.
+    이탈 마커 어휘가 표류하면 P34 (b) 채널 팔로 계상하고 어휘를 넓힌다(자[尺] 변경
+    선언 동반 — V3 니들과 같은 규율).
+    """
+    obs: dict[int, dict] = {}
+    current: int | None = None
+    lines = text.splitlines()
+    for idx, line in enumerate(lines):
+        hk = header_kind(line)  # 관측 76 처치 ① — 판별은 header_kind 단일 술어 (㉻ 추출)
+        if hk:
+            num, kind = hk
+            m = OBS_HEADER.match(line)
+            entry = obs.setdefault(num, {
+                "opened": None, "last": None, "tagged": False,
+                "exited": False, "partial_disposal": False, "title": ""})
+            cycles = _OBS_CYCLE.findall(line)
+            if cycles:
+                entry["last"] = max(entry["last"] or 0, int(cycles[-1]))
+            if kind == "원본":
+                entry["opened"] = int(cycles[-1]) if cycles else None
+                tail = line[line.rfind("(사이클"):] if "(사이클" in line else line
+                # 관측 76 처치 ②: 태그 단조성 — 원본 분기는 기존 태그를 내리지 못한다
+                entry["tagged"] = entry["tagged"] or ("회부" in tail) or ("후보" in tail)
+                entry["title"] = obs_title(line[m.end():])  # ㉸ 어순 둔감 (c268)
+            elif kind == "처분":
+                para = _obs_paragraph(lines, idx)
+                if _exit_declared(para):
+                    entry["exited"] = True
+                else:
+                    entry["partial_disposal"] = True
+            current = num
+            continue
+        if line.startswith("## "):
+            current = None
+            continue
+        if current is not None and _INLINE_DISPOSAL.match(line):
+            para = _obs_paragraph(lines, idx)
+            if _exit_declared(para):
+                obs[current]["exited"] = True
+            else:
+                obs[current]["partial_disposal"] = True
+            cycles = _OBS_CYCLE.findall(line)
+            if cycles:
+                obs[current]["last"] = max(obs[current]["last"] or 0, int(cycles[-1]))
+    return obs
+
+
+def open_observation_numbers(obs: dict[int, dict]) -> list[int]:
+    """계상 대상(회부/후보 태그) 중 회부 이탈하지 않은 번호. **순수 함수**."""
+    return sorted(n for n, o in obs.items() if o["tagged"] and not o["exited"])
+
+
+_REINF_CYCLE = re.compile(r"보강 \(사이클 (\d+)")
+
+
+def reinforcement_counts(text: str) -> dict[int, int]:
+    """«보강 (사이클 N» **헤더**의 기재-사이클별 계수 (audit-270 R3 · c275 배선). **순수 함수**.
+
+    왜. 무주조 규율(기지 계열 재발은 새 번호를 주조하지 않는다 — P69 정신)이 자리잡은 뒤
+    frictions_logged 창 합계가 60→4→1로 붕괴했는데, 재발 표본은 «보강 (사이클 N)» 헤더로
+    계속 기재됐고 **어떤 계수기도 그 헤더를 세지 않았다** — 원장 헤드라인 (0, 0)이
+    «사건 흐름 0»으로 읽히는 채널이 열려 있었다(audit-270 §1-1). 이 함수가 그 자[尺]다.
+    분류 술어는 header_kind 단일 정본(㉻ 규율 — 규칙 두 벌 금지)이고, 이 정규식은
+    헤더로 판별된 행에서 기재-사이클 추출만 한다. 헤더 밖 산문의 같은 문자열은
+    계상하지 않는다(그 차이는 호출부가 느슨 탐침으로 병기 — 진단 전용, 관측 107 규율).
+    """
+    out: dict[int, int] = {}
+    for line in text.splitlines():
+        hk = header_kind(line)
+        if hk and hk[1] == "보강":
+            m = _REINF_CYCLE.search(line)
+            if m:
+                c = int(m.group(1))
+                out[c] = out.get(c, 0) + 1
+    return out
+
+
+# c123 정독(관측 69 수용 기준 ①)이 확정한 정직 재고 범위. **빈티지 상수**다 —
+# 자동 인쇄가 36이던 시점의 값이고, 이 범위의 무번호 성분(20/16 + 무태그 c41 1건
+# − 중복 후보 4)만이 상수의 몫이다. 자동 성분이 움직이면 범위도 그만큼 움직이므로,
+# 재정독 없이 갱신하지 않고 **빈티지를 병기해** 현재값으로 위장하지 않는다.
+C123_HONEST_RANGE = (48, 57)
+C123_AUTO_AT_VINTAGE = 36
+
+
+def unnumbered_blind_spot() -> tuple[int, int]:
+    """무번호 관측 절 수 · 그중 회부/후보 태그 수 (관측 69 ② 처치, c126).
+
+    c123 계수 규칙을 **재구현하지 않고 재사용**한다 — 규칙을 두 벌 두면 그것이 바로
+    관측 30·34(자[尺]가 선언 없이 갈라지면 시점 간 비교가 소멸)의 다음 표본이 된다.
+    """
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from c123_unnumbered_obs import NUMBERED, sections, tagged
+    with open(FRICTIONS, encoding="utf-8") as fh:
+        secs = sections(fh.read())
+    obs_secs = [s for s in secs if "관측" in s[0]]
+    unnum = [s for s in obs_secs if not NUMBERED.match(s[0])]
+    return len(unnum), sum(1 for s in unnum if tagged(s[0]))
+
+
+# 어휘 위반의 **기지(旣知)** 기지국 — 손 유지 상수 (파트 A의 CODE_QUEUE_PATHS와 같은 규율:
+# 바뀌면 이 줄을 고치고 보고에 선언한다). P39는 두 트랙 이중 주조(관측 77)이고 처치는
+# 개명 패킷(§6 서열 9) 게이트 대기다 — 신규 위반과 섞이면 이 인쇄가 늑대소년이 된다.
+KNOWN_VOCAB_OFFENDERS = ("P39",)
+
+
+def part_p() -> None:
+    """[P] 예측 대장 어휘 게이트 — **매 사이클** (c155 신설, 관측 83 처치).
+
+    왜. c125가 "어휘 밖 값은 하드 에러"라고 선언했고 그 검사는 c124_retro_prep에만
+    있었다. 그런데 **등록은 매 사이클 열리고 그 계기는 10사이클에 한 번 열린다** —
+    관측 82(상신 매 사이클 / 편입 10사이클)와 같은 주기 불일치이며, 실제로 c151이
+    어휘 밖 값 '미판정'을 발급하자 P42·P43이 그대로 베껴 **4사이클(c151~c154)간
+    7개 팔**이 무검출로 통과했다. 검사를 쓰기와 같은 주기의 채널로 옮긴다.
+
+    자[尺]는 옮기지 않는다 — 어휘의 정본은 여전히 c124_retro_prep.VOCAB 하나이며
+    여기서는 **import해서 쓴다**. 어휘를 복사하면 정본이 둘이 되고, 그것이 바로 이
+    처치가 진단한 병이다.
+    """
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from c124_retro_prep import VOCAB, predictions  # noqa: PLC0415
+        p = predictions()
+    except Exception as exc:  # 계기 고장이 step 0을 죽이지 않는다 — 강등 후 계속
+        print("\n[P. 예측 대장 어휘 게이트]")
+        print(f"  !! 게이트 자체가 돌지 않았다: {type(exc).__name__}: {exc}")
+        print("     → 이 사이클의 어휘 판정은 **미측정**이다. '위반 0'으로 읽지 말 것.")
+        return
+
+    errors = p["errors"]
+    total = len(p["records"])
+    fresh = [(pid, errs) for pid, errs in errors if pid not in KNOWN_VOCAB_OFFENDERS]
+    known = [(pid, errs) for pid, errs in errors if pid in KNOWN_VOCAB_OFFENDERS]
+
+    print("\n[P. 예측 대장 어휘 게이트 — 매 사이클 (c155 신설, 관측 83 처치)]")
+    print(f"  대장 {total}건 · 위반 절 {len(errors)}건 (신규 {len(fresh)} · 기지 {len(known)})")
+    print(f"  어휘 정본 = c124_retro_prep.VOCAB ({len(VOCAB)}값) — 이 파일은 사본을 갖지 않는다.")
+    if fresh:
+        print("  !! 신규 위반 — 등록한 사이클이 처치한다 (어휘 밖 값은 하드 에러):")
+        for pid, errs in fresh:
+            for e in errs:
+                print(f"       {pid}: {e}")
+        print("     ※ 판정 미도래를 뜻하려면 `시계-미시작`(창 미개시) 또는 `시계-가동`(창 개시)이다.")
+    else:
+        print("  신규 위반 0 — 어휘 클린.")
+    for pid, errs in known:
+        print(f"  [기지·게이트 대기] {pid}: {len(errs)}건 — 손 유지 상수 KNOWN_VOCAB_OFFENDERS 등재분")
+
+
+#: c171 신설 (관측 103 처치 (i)). 파트 X는 12사이클 동안 위반 4건을 **옳게** 인쇄했고
+#: c167·c169는 처치도 사유도 없이 이월했다 — P45의 판정문이 명명한 병("깨진 것은 인쇄를
+#: 읽는 손")이 판정 6사이클 뒤에 두 번 재발했다. 이 표는 «사유가 적혔다»를 판정하는
+#: 어휘이며 **손 유지 상수**다(파트 P의 VOCAB·`CODE_QUEUE_PATHS`와 같은 등급).
+#: 인쇄해서 어휘의 거짓 음성이 화면에 보이게 한다.
+VIOLATION_REASON_TERMS = ("파트 X", "probe_guard", "hasattr-삼항", "getattr-기본값",
+                          "except-pass", "except-빈리터럴", "일회용 프로브")
+
+
+def reason_recorded(row: dict, terms: tuple[str, ...] = VIOLATION_REASON_TERMS) -> list[str]:
+    """원장 행에 프로브 위반의 «사유 기재»로 볼 낱말이 있는가. **순수 함수** — 그래서 테스트된다.
+
+    거짓 방향을 **선언한다**: 어휘 밖 표현으로 적으면 이 눈은 «미기재»라고 과하게
+    고발한다. 과잉 고발은 루프에 **불리한** 방향이므로 그렇게 골랐다 — 관측 76·93·104가
+    잡은 병이 하나같이 «루프에 유리한 거짓 음성»이었고, 자[尺]를 만들 때 기울기의
+    방향을 고르는 것이 그 병의 유일한 예방이다.
+    """
+    got: list[str] = []
+    for value in row.values():
+        if isinstance(value, str):
+            got.extend(t for t in terms if t in value and t not in got)
+    return got
+
+
+def part_x() -> None:
+    """[X] 일회용 프로브 인구조사 — 매 사이클 (c158 신설, P45, c157 HAND 별건 3).
+
+    왜. c157의 프로브가 `hits = NC.scan(i) if hasattr(NC, "scan") else []`로 쓰였고
+    `scan`은 없었다. `[]`가 조용히 반환돼 "검출기 hit = 0건"으로 인쇄됐다(실제 35).
+    계기 본체는 전부 하드 가드를 갖췄고 **일회용 프로브만 갖추지 않았다**.
+
+    자[尺]는 옮기지 않는다 — 탐지 규칙의 정본은 `probe_guard.PATTERNS` 하나이며
+    여기서는 **import해서 쓴다**(파트 P의 VOCAB과 같은 규율).
+
+    위상 병기: 이 인쇄는 턴2에 열리므로 **직전 사이클까지의 프로브**만 본다.
+    당 사이클 프로브의 실시간 차단은 `probe_guard.need()`뿐이고 그것은 프로브가
+    import해야 작동한다 — 이 파트는 (a)의 집행자가 아니라 준수 계수기다(P45 한계 ①).
+    """
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from probe_guard import (  # noqa: PLC0415
+            PATTERNS, cycle_of, probe_paths, scan_probes,
+        )
+        rep = scan_probes(probe_paths(REPO))
+    except Exception as exc:  # 계기 고장이 step 0을 죽이지 않는다 — 강등 후 계속
+        print("\n[X. 일회용 프로브 인구조사]")
+        print(f"  !! 계기 자체가 돌지 않았다: {type(exc).__name__}: {exc}")
+        print("     → 이 사이클의 프로브 판정은 **미측정**이다. '위반 0'으로 읽지 말 것.")
+        print("     (P45 (c): 미측정이 2사이클 이상이면 (b)는 판정 불가가 아니라 반증이다.)")
+        return
+
+    viol, unparsed = rep["violations"], rep["unparsed"]
+    print("\n[X. 일회용 프로브 인구조사 — 매 사이클 (c158 신설, P45)]")
+    print(f"  tmp/*.py {len(rep['scanned'])}본 검사 · 위반 {len(viol)}건 ·"
+          f" **미검사 {len(unparsed)}본** · probe_guard 채택 {len(rep['guarded'])}본")
+    print(f"  탐지 규칙 정본 = probe_guard.PATTERNS ({len(PATTERNS)}종: {' · '.join(PATTERNS)})"
+          f" — 이 파일은 사본을 갖지 않는다.")
+    print("  ※ 침묵은 '이 4종이 없다'이지 '조용한 거짓이 없다'가 아니다 (P45 한계 ③).")
+    if unparsed:
+        print("  !! 미검사분 — 이 수는 '위반 0'에 섞이지 않는다:")
+        for u in unparsed:
+            print(f"       {os.path.relpath(u['path'], REPO)}  {u['why']}")
+    if viol:
+        print("  !! 위반 — 폴백이 실패를 값으로 위장할 수 있는 자리:")
+        for v in viol:
+            c = cycle_of(v["path"])
+            print(f"       c{c if c is not None else '??'}  "
+                  f"{os.path.relpath(v['path'], REPO)}:{v['line']}  [{v['kind']}]  {v['src']}")
+        print("     → 당 사이클 산출이면 처치하고, 과거분이면 **사유를 원장에 적을 것**")
+        print("       (P45 (b) 반증 조건 = 인쇄됐는데 처치도 사유 기재도 없이 이월).")
+
+        # ── 사유 기재 감시 (c171 신설, 관측 103 처치 (i)) ──
+        # 인쇄는 상태를 알리고 **행동을 요구하지 않는다**. 그래서 12사이클 중 2회
+        # (c167·c169) 무사유 이월이 났다. 이 줄이 요구를 문면에서 계기로 옮긴다.
+        recent = sorted(_ledger_rows(), key=lambda r: int(r["cycle"]))[-5:]
+        marks = [(int(r["cycle"]), reason_recorded(r)) for r in recent]
+        print(f"  [사유 기재 감시 — c171 신설 (관측 103 처치 (i))"
+              f" · 어휘 {len(VIOLATION_REASON_TERMS)}값]")
+        print("    최근 5행: "
+              + " · ".join(f"c{c} {'○' if hit else '**✗**'}" for c, hit in marks))
+        last_c, last_hit = marks[-1]
+        if last_hit:
+            print(f"    직전 행 c{last_c} = 기재 **있음** "
+                  f"(적중: {', '.join(f'`{t}`' for t in last_hit)})")
+        else:
+            print(f"    !! 직전 행 c{last_c}은 위반을 인쇄받고 **사유를 적지 않았다**"
+                  " — 관측 103의 이월 사건이 방금 하나 더 났다.")
+        print(f"    ★ 요구: 이 사이클 원장에 위반 {len(viol)}건의 **사유 또는 처치**를 적어라.")
+        print("       미기재는 다음 사이클 이 줄이 ✗로 검출한다(관측 103 수용 기준 (i)).")
+        print(f"    어휘(손 유지 상수) = {' · '.join(VIOLATION_REASON_TERMS)}")
+        print("       ※ 어휘 밖 표현으로 적으면 이 눈은 **과잉 고발**한다 — 거짓 음성이")
+        print("         루프에 유리하지 않은 방향으로 기울게 골랐다(관측 76·104의 교훈).")
+    else:
+        print("  위반 0 — 4패턴 클린.")
+
+
+# ── ㉠ 서수 1종 고정 (c161 집행, P46 · 관측 85 수용 기준 ③ / 처치 설계 = c153 별건 1) ──
+#: 자[尺]는 **하나**다: "N사이클째" = `N − start + 1` (당 사이클 **포함**).
+#: 이 표는 **손 유지 상수**다 — `CODE_QUEUE_PATHS`·`KNOWN_VOCAB_OFFENDERS`와 같은 등급.
+#: 값은 원장 계열의 최빈 앵커에서 역산했고(`tmp/c161_ordinal_series.py`), 파트 O가 매
+#: 사이클 그 역산을 다시 돌려 이 상수와 대조한다. 계열이 열리거나 닫히면 이 표를 고치고
+#: **보고에 선언**할 것. 기계가 된 것은 **산술**이고 앵커의 개시 판단은 아니다(P46 한계 ②).
+#:
+#: `A-106.1`은 **의도적으로 없다** — 그 라벨의 정규식이 40자 창 안의 원터치 값을 흡입해
+#: 계열이 오염됐다(c151 행 직독으로 확인, 관측 74와 같은 모양). 오염된 계열을 감시하는
+#: 것보다 감시하지 않는다고 **적는 것**이 정직하다.
+#: ★ c171 — 봉쇄 앵커 확장을 **시도했고 실측으로 물렀다.** 기록을 남기는 것이 이 주석의
+#: 일이다. 시도: `|봉쇄[^\n]{0,24}?(\d+)사이클째`를 합집합으로 더해 c170 미등재(관측 104)를
+#: 닫으려 했다. 사전 실측은 «창 안에 새로 드는 행 = c170 1본, 앵커 일치»여서 안전해
+#: 보였다 — **그 실측이 집합만 비교하고 값을 비교하지 않았다.**
+#:
+#: 실제 결과: 겹치는 행 **c161의 값이 35 → 34로 바뀌었고** 파트 O가 `처치 후 이탈 1본
+#: (c161) ← P46 (a) 반증`을 인쇄했다. c161 행 직독으로 정체 확정 —
+#: `restore_note`가 *"봉쇄 34사이클째[c160 기준] → 파트 O 인쇄 **35**[c161] 정합"*이라고
+#: **직전 프레임 값을 인용**하고 있었고, `_ordinal_series`는 필드 dict 순서의 **첫 매치**를
+#: 쓰므로 `restore_note`(인용)가 `tests`·`work`(자기 주장 35)를 앞질렀다.
+#: 즉 확장은 **인용된 과거 값을 이 행의 주장으로 읽는** 거짓 양성을 만들었다 —
+#: 관측 93의 유령과 같은 자리이며, 이번에는 유령을 내가 만들었다.
+#:
+#: 그래서 정규식은 **c166 판본으로 되돌린다**(확장 없음). 관측 104의 처치는 정규식이
+#: 아니라 **피복 인쇄**다: 못 보는 행을 «보이게» 하는 것과 «억지로 보는» 것은 다르고,
+#: 후자는 방금 값을 위조했다. 인용과 자기 주장을 가르는 처치(필드 화이트리스트 또는
+#: 인용 구간 배제)는 설계가 필요하므로 청구로 올린다 = `A-171.1`.
+#: 재현: `tmp/c171_c161_disambiguate.py` · `tmp/c171_loose_coverage.py`.
+ORDINAL_ANCHORS = (
+    ("봉쇄(타 트랙 미커밋 잔존)", 127, r"(?:미커밋|잔존|영토)[^\n]{0,80}?(\d+)사이클째"),
+    ("게이트 서비스율 0", 116, r"서비스율[^\n]{0,40}?(\d+)사이클째"),
+    ("인스턴스 원터치 대기", 142, r"원터치[^\n]{0,60}?(\d+)사이클째"),
+)
+
+#: c171 신설 (관측 104). 미등재의 원인은 둘이다: 그 행이 라벨을 **안 적었다**와, 적었는데
+#: **정규식이 못 봤다**. 파트 O는 둘을 같은 침묵으로 인쇄했고 그래서 c170의 무검출이
+#: 12사이클을 조용히 통과했다. 느슨 탐침은 앵커 낱말을 요구하지 않고 **라벨 핵 낱말 +
+#: 서수 문면**만 찾는다 — 그래서 "적혀 있었다"를 증명할 수 있다. 계열 계산에는 쓰지
+#: 않는다(정의역을 흐린다). **진단 전용**이며, 여기 걸리고 계열에 없으면 그것이 사각이다.
+LOOSE_ORDINAL_PROBES = {
+    "봉쇄(타 트랙 미커밋 잔존)": r"봉쇄[^\n]{0,24}?(\d+)사이클째",
+    "게이트 서비스율 0": r"서비스율[^\n]{0,40}?(\d+)사이클째",
+    "인스턴스 원터치 대기": r"원터치[^\n]{0,60}?(\d+)사이클째",
+}
+
+#: 계열이 같은 낱말을 다른 시기의 다른 사건에 재사용하면 한 라벨에 두 계열이 섞인다.
+#: 최근 창으로 잘라 **당대 에피소드**만 본다 — 창 밖 표본은 계열이 아니라 동음이의다.
+ORDINAL_WINDOW = 20
+
+#: ㉠ 집행 사이클. 이 경계 **이후**의 계열 이탈이 P46 (a)의 반증 사건이다 — 이전 이탈은
+#: 처치의 근거(기지)이고 반증이 아니다. 둘을 한 수로 합치면 처치가 자기 근거로 반증된다.
+ORDINAL_TREATMENT_CYCLE = 161
+
+#: c168 신설 (관측 96 처치 · P52). P46이 기계화한 것은 **산술형** 계수기 셋뿐이었다
+#: (`ORDINAL_ANCHORS` — 값 = `N − start + 1`). 원장 산문에는 **상태형** 계수기가 따로
+#: 살고 있었고 그 둘은 계기 밖에서 손이 증분했다. c168 실측: `fixed` 연속 0은 참값보다
+#: **3 적게**(주장 22 · 참 25), 캡슐 miss 연속은 **29 많게**(주장 77 · 참 48) 인쇄됐다.
+#: 방향이 반대라 한 사이클의 행만 보면 어느 쪽도 틀려 보이지 않는다 — P46이 산술형에서
+#: 잡은 보상 오류와 같은 모양이다.
+#:
+#: 상태형은 앵커 상수가 **필요 없다**: 원장 필드 자신이 개시 시점을 안다. 그래서 이 표에는
+#: `start`가 없고, 손이 유지할 값도 없다. 넷째 원소는 **손 인쇄 대조용** 정규식이다.
+#: c173 개정 (관측 109). 넷째 원소는 이제 **값 추출기가 아니라 어휘 식별자**다.
+#: 구판은 `fixed[^0-9]{0,14}?(\d+)\s*연속`처럼 이름에 값을 붙여 한 번에 뽑았고, 창 c169~c172
+#: 실측으로 **실제 손 인쇄 4건 중 0건을 잡고 이름값 1건을 오검**했다 — 검출률 0/4에
+#: 거짓 경보 1. 기전은 하나다: 이 계수기의 **이름이 `fixed 0`**이므로 그 이름 뒤의
+#: 숫자 슬롯이 **이름값 0에 먼저 먹힌다.** 그래서 c169 *"`frictions_fixed` 0 = 26연속"* ·
+#: c170 *"`fixed` 0을 또 적는다 — 27연속"* · c171 *"0 아니다. 28연속"*이 전부 침묵했고,
+#: c172 *"`fixed` 0연속은 이 행에서 1연속"*만 **0**으로 잡혔다.
+#: 즉 이름은 거짓 양성을 **공급**하면서 참 양성을 **가로막는다.**
+#: c191 편입 (관측 119 수용 기준 ③ · 계기 큐 ㉰). `rt`(restore_turns) 불변 계수기는
+#: c170~c189 **20사이클**을 손 증분으로 살았고 c189에 «50사이클 연속»을 적었다 — 참값
+#: 58. 씨앗이 «연속»이 아니라 그 감사가 쓰던 **창의 크기 30**이었고(관측 96의 정의
+#: 그대로), 이후 이중 증분 1회가 겹쳤다. 이 계수기는 A-106.1의 **유일한 정량 근거**로
+#: 매 사이클 인용되므로 표류가 청구의 증거를 오염시킨다(오차 방향은 자기 불리 — 과소).
+#:
+#: **어휘를 `` `rt` ``(백틱 포함)로 좁힌 이유.** 맨 `rt`는 «partial»의 부분문자열이고
+#: `restore_grade` 값이 그 낱말을 상시 인쇄한다 — 좁히지 않으면 남의 계수기가 후보로
+#: 섞인다(c172 `restore_note` 오고발과 같은 기전). **선언된 한계**: 백틱 없이 적은
+#: 사이클은 이 눈에 «무기재»로 보인다. 거짓 음성이며, 손을 면책하는 방향이 아니다.
+#:
+#: ★ **이 계수기는 오고발을 안고 태어난다 — c191 첫 실행 실측.** 대조 대상인 c190 행은
+#: 관측 119를 *주조한* 행이고, 그 절은 증상을 적기 위해 옛 표류값을 **인용**한다
+#: («`rt` 50사이클 연속»이 `frictions_note`·`work` 두 필드에). 이 눈은 인용과 자기
+#: 주장을 가르지 못하므로(A-171.1 = 게이트 대기, 파트 O가 산술형에 대해 선언한 바로 그
+#: 한계) 후보 집합에 50이 섞이고, 게다가 같은 필드의 «프레임 = 원장 최종 c189»는
+#: **`fixed` 계수기의 선언**이라 rt 주장과 짝지어진다(관측 99의 모양: 한 절의 팔과 다른
+#: 절의 기한이 짝지어진다). 결과 = `!!` 한 줄. **그것은 c190의 결함이 아니다** —
+#: c190의 자기 주장은 `restore_note`의 **59**이고 자기행 포함 프레임 계기값과 일치한다.
+#: 관측 36의 재현이다(관측 기록이 관측 대상을 바꾼다: 증상 인용이 계기의 입력이 된다).
+#: 처치는 인용∖주장 분별이며 **계기 큐 ㉱**로 상신한다 — 여기서 발명하지 않는다.
+STREAK_COUNTERS = (
+    ("`frictions_fixed` 0 연속", "frictions_fixed", 0, r"(?:frictions_)?fixed"),
+    ("캡슐 miss 연속", "restore_grade_capsule", "miss", r"캡슐"),
+    ("`rt` 불변 2 연속", "restore_turns", 2, r"`rt`"),
+)
+
+#: c286 신설 (계기 큐 ㉳ 집행 — P67 한계 ④ · c192·c230 표본). 캡슐 축 `restore_grade_capsule`의
+#: **셋째 값**: 파트 B에 **도달하지 못한** 사이클(SessionStart 훅 무발화·캡슐 채취 실패)의
+#: 원장 기재 어휘. 구판 정의역은 {miss, partial}뿐이라 «캡슐이 왔는데 무용»(miss)과 «캡슐이
+#: 오지 않았다»(비도달)가 한 값에 합쳐졌다 — c192는 1세션이 «판정 불가»를 산문에 적고
+#: 2세션이 miss로 대체했고, c230은 훅 무발화를 «어휘 4치 제약»으로 miss에 강제 기재했다
+#: (c286 재실측: 두 행 다 필드값 miss·산문만 «판정 불가»). 캡슐 축은 c91 원장 파생 필드이고
+#: 지시서 절차 0의 4치(full/partial/stale/miss)는 **종합 축** 어휘이므로 이 값의 추가는 지시서
+#: 개정 불요(c285 회고 확인). **소급 편집 0** — c192·c230은 miss인 채 남고, 이 값은 c286
+#: 이후 비도달 사이클만 쓴다. 계수기 쪽 처치는 `STREAK_EXCLUDE`: 이 값은 miss 연속을
+#: **끊지도 잇지도 않는다**(정의역 밖 = 미측정) — 비도달을 «무용»으로도 «유용»으로도 세지
+#: 않는 것이 ㉳의 전부다. 종합 축 `restore_grade`·A-106.1 무간섭.
+CAPSULE_UNDECIDABLE = "판정 불가"
+
+#: 필드별 **정의역 제외값**. 상태형 계수기가 «값 == 표적 / 아니면 중단»의 2분법으로 세므로
+#: 셋째 값은 등록하지 않으면 중단으로 읽혀 연속을 끊는다 — 비도달이 «캡슐이 유용했다»로
+#: 계상되는 방향이다(관측 87 부류: 눈 감김이 건강으로 읽힘). 여기 등록된 값의 행은
+#: `field_streak`가 정의역에서 빼고 `excluded`로 따로 돌려준다.
+STREAK_EXCLUDE: dict[str, tuple] = {
+    "restore_grade_capsule": (CAPSULE_UNDECIDABLE,),
+}
+
+#: 값 서식은 계수기와 무관하게 하나다. 어휘 식별과 값 추출을 **두 단계로 가르는** 것이
+#: 관측 109 처치의 전부다 — 한 정규식에 이름과 값을 함께 넣으면 둘이 서로를 먹는다.
+#:
+#: c191 확장 (관측 119). 구판은 `(\d+)\s*연속`이었고 `rt` 계수기의 실제 서식은
+#: **«N사이클 연속»**이다 — 즉 이 눈은 그 계수기를 **20사이클간 한 번도 못 봤다.**
+#: 계기화되지 않아 표류한 것이 첫 겹이고, 표류를 잡을 대조기가 서식을 몰랐던 것이
+#: 둘째 겹이다. 두 기존 계수기의 출력은 이 확장으로 바뀌지 않는다(c191 실측 대조).
+STREAK_VALUE_RX = re.compile(r"(\d+)\s*(?:사이클\s*)?연속")
+
+#: 어휘 언급 **뒤** 이 폭 안의 값만 후보로 본다. 필드 전체를 긁으면 남의 계수기가
+#: 섞인다 — c172 `restore_note`의 *"c167 이래 **6연속** 동일 증상"*은 «캡슐» 낱말과
+#: 같은 필드에 살지만 SessionStart 훅 계수기이고, 그것을 캡슐 후보로 세면 계기가
+#: **무기재를 «전량 불일치»로 오고발**한다. 실측 거리: 참 후보 c169~c172 4건 전부
+#: 30자 이내 · 남의 계수기 2건은 100자 초과. 60은 그 사이에서 골랐다.
+STREAK_CLAIM_WINDOW = 60
+
+
+def field_streak(rows: list[dict], field: str, value: object,
+                 exclude: tuple = ()) -> dict:
+    """원장 역순으로 `field == value`가 끊길 때까지 센다. **순수 함수.**
+
+    자[尺] 선언 (관측 85 · 96). 이 계수기의 프레임은 파트 O 산술형과 **다르다**:
+    산술형은 실행 사이클을 포함하지만(`N − start + 1`), 상태형이 세는 것은 **원장에
+    이미 쓰인 행**이고 실행 사이클의 행은 아직 없다. 두 자[尺]를 한 수로 합치면
+    그것이 관측 96이 잡은 병이므로, 값과 프레임을 **항상 같이** 인쇄한다.
+
+    `domain`(필드를 가진 행 수)을 함께 돌려주는 이유가 관측 96의 정중앙이다:
+    c161~c167 **7사이클** 동안 손이 *"캡슐 miss N연속"*으로 인쇄한 수는 실제로 이
+    `domain`이었다(c161 71·c163 73·…·c167 77 = 정의역과 매 사이클 정확히 일치, 참
+    연속값은 42·44·…·48). 라벨은 *연속*이라 말하고 값은 *정의역*을 말했다 — 두 수를
+    계기가 **나란히** 인쇄하면 그 갈라짐이 화면에서 드러난다(관행 ㊴).
+
+    `off_value`는 정의역 안에서 값이 다른 행이다. *"도입 이래 전부 miss"*류 주장은
+    이 목록이 비어야 참이며, c168 실측으로 **거짓**이었다(c91~c94·c119 = `partial` 5건).
+
+    `exclude` (c286, ㉳). 여기 든 값의 행은 **정의역 밖**이다 — 연속을 잇지도 끊지도
+    않으며 `excluded`에 사이클만 돌려준다. 캡슐 축의 «판정 불가»(비도달)가 첫 손님이다:
+    미측정을 중단으로 읽으면 비도달이 «캡슐 유용»으로 계상되고, 표적값으로 읽으면
+    «무용»으로 계상된다 — 어느 쪽도 그 사이클이 잰 것이 아니다. `frame_last`는 제외
+    행을 **포함**한 마지막 행이다(프레임 = 원장 행 cN까지 — 제외 행도 원장에 있다).
+    기본값 빈 튜플이면 구판과 결과가 같다(`excluded` 키만 추가).
+    """
+    present = sorted((r for r in rows if field in r), key=lambda r: int(r["cycle"]))
+    excluded = [int(r["cycle"]) for r in present if r.get(field) in exclude]
+    ordered = [r for r in present if r.get(field) not in exclude]
+    domain = [int(r["cycle"]) for r in ordered]
+    off_value = [int(r["cycle"]) for r in ordered if r.get(field) != value]
+    streak, brk = 0, None
+    for r in reversed(ordered):
+        if r.get(field) == value:
+            streak += 1
+        else:
+            brk = (int(r["cycle"]), r.get(field))
+            break
+    return {
+        "streak": streak,
+        "break": brk,
+        "domain": len(domain),
+        "span": (domain[0], domain[-1]) if domain else None,
+        "off_value": off_value,
+        "frame_last": int(present[-1]["cycle"]) if present else None,
+        "excluded": excluded,
+    }
+
+
+#: c173 신설 (관측 110 처치). 상태형 계수기의 **선언 프레임**. 서식 = `프레임 = 원장 최종 cN`.
+#: 산술형의 `[프레임 N=173]`과 서식이 달라야 두 자[尺]가 한 정규식에 섞이지 않는다.
+#: c283 확장 (계기 큐 ㉩ 집행 — 관측 110 사각 수리). 둘째 서식 `프레임 = 자기행 포함 cN`을
+#: 흡수한다. 정직한 행이 c265~c280 **16행 연속** 이 서식으로 프레임을 적었고 구판 정규식은
+#: 전부 `{}`로 읽어 «선언 프레임 무기재»를 인쇄했다 — 기재를 무기재로 접은 것이다.
+#: 두 서식 모두 «프레임 = 원장 행 cN까지»를 뜻하므로 값 의미는 같다(자기행 포함 = 그 행이
+#: 원장에 있는 프레임). 이 밖의 서식은 `FRAME_LOOSE_RX`가 «미해석»으로 따로 인쇄한다.
+FRAME_RX = re.compile(r"프레임\s*=\s*(?:원장\s*최종|자기행\s*포함)\s*c(\d+)")
+#: 느슨 탐침 — «프레임 =»이라고 적었는데 위 서식 어느 쪽도 아닌 경우. 무기재와 구별해
+#: «서식 미해석 — 판정 불가»로 인쇄한다(정직 기재를 침묵으로 접지 않는 쪽 — ㉩ 처치 방향).
+FRAME_LOOSE_RX = re.compile(r"프레임\s*=")
+#: c286 (계기 큐 ㉩′ 집행 — ㉩ 판정 채널의 인용문 거짓 양성). 서식 **이름을 인용**한 문면은
+#: 느슨 탐침의 정의역 밖이다. c284 실측은 리터럴 `cN`(«프레임 = 자기행 포함 cN») 1건이었으나
+#: c286 센서스(`tmp/c286_frame_next_census.py` — 정본 적중 136자리 · 비정본 4자리)는 인용의
+#: 모양이 **셋**임을 냈다: ① 리터럴 `cN` ② 토큰 자체를 따옴표로 닫음(«「프레임 =」 기재»)
+#: ③ 코드 식별자(«(직전 프레임 = old_n)»). 넷 다 «서식을 말하는 문장»이고 «서식을 쓰는 문장»
+#: 이 아니다 — 진짜 미지 서식은 실원장에 0. 판별 술어 = «=» 뒤가 닫는 따옴표이거나 `c+숫자`가
+#: 아닌 ASCII 식별자. 정본 서식(FRAME_RX)은 `c\d+`를 요구하므로 이 술어와 서로소다.
+#: **선언된 한계**: ASCII 식별자로 시작하는 미지 서식(예: «프레임 = N=286»)은 인용으로 오분류
+#: 된다 — 그런 행은 `quoted_frame_fields`에 잡히므로 실원장 항등식의 «인용» 계수가 뛰는 것으로
+#: 보인다(침묵 소멸이 아니라 계수 이동). 한글로 시작하는 미지 서식은 여전히 «미해석»이다.
+FRAME_LITERAL_RX = re.compile(
+    r"프레임\s*=\s*(?:원장\s*최종|자기행\s*포함)?\s*(?:[」»'\"”』]|`?(?!c\d)[A-Za-z_]\w*\b)")
+
+
+def streak_claim_matches(row: dict, vocab_rx: str) -> list[tuple[str, int]]:
+    """계수기 어휘를 언급한 필드에서 `N연속` **전량**을 (필드, 값)으로. 순수 함수 (c173, 관측 109).
+
+    두 단계다. ① 어휘(`vocab_rx`)로 **필드**를 고르고 ② 그 필드에서 값 서식을 전량
+    긁는다. 한 정규식에 이름과 값을 함께 넣던 구판은 창 c169~c172에서 **검출 0/4 ·
+    거짓 경보 1**을 냈다 — 이름이 `fixed 0`이라 숫자 슬롯을 이름값이 먼저 먹었고, 같은
+    이름이 참 양성도 가로막았다.
+
+    **첫 매치를 쓰지 않는 이유는 따로 있다**(관측 108·109 공통). c172는 한 문장에
+    *"`fixed` 0연속은 이 행에서 **1연속**이다"*를 적었다 — 앞의 0은 **계수기의 이름**이고
+    뒤의 1이 **자기 주장**이다. 순서로는 이름이 먼저 오므로 첫 매치는 언제나 이름을
+    집는다. 그래서 판정은 값 하나가 아니라 **집합**에서 내리고, 판정의 자[尺]는
+    `declared_frames`가 주는 **선언 프레임**이다.
+
+    범위는 **어휘 언급 뒤 `STREAK_CLAIM_WINDOW`자**로 좁힌다. 필드 전체를 긁던 첫
+    판본은 c172 `restore_note`의 훅 계수기(*"c167 이래 **6연속**"*)를 캡슐 후보로 세어
+    **무기재를 «전량 불일치»로 오고발**했다 — 눈먼 것을 고치다 없는 갈라짐을 만드는 것은
+    관측 108이 겨눈 바로 그 병이므로, 같은 사이클에 두 방향을 다 막는다.
+
+    선언된 한계 둘. ① **이름값이 프레임 값과 같으면 이 눈은 갈라짐을 못 본다** — c172가
+    정확히 그 자리다(이름값 0 = 선언 프레임 c171의 계기값 0). 그 행의 자기 주장이 1임을
+    아는 것은 *"이 행에서"* 같은 문면이고, 그것을 정규식으로 가르는 것은 다음 처치다.
+    **즉 이 처치는 P52 (a) 반증을 재현하지 못한다 — 진단이 아니라 재발 방지다.**
+    ② 창 안의 무관한 값은 여전히 후보다. 그래서 판정 문면은 «적중 있음»이지 «일치»가
+    아니다 — 이 눈은 손을 면책하지 않는다.
+    """
+    vrx = re.compile(vocab_rx)
+    out: list[tuple[str, int]] = []
+    for fld, v in row.items():
+        if not isinstance(v, str):
+            continue
+        seen: set[int] = set()  # 어휘가 여러 번 나오면 창이 겹친다 — 같은 값 매치를 한 번만 센다
+        for vm in vrx.finditer(v):
+            lo = vm.end()
+            for m in STREAK_VALUE_RX.finditer(v[lo:lo + STREAK_CLAIM_WINDOW]):
+                if (pos := lo + m.start()) not in seen:
+                    seen.add(pos)
+                    out.append((fld, int(m.group(1))))
+    return out
+
+
+def declared_frames(row: dict) -> dict[str, int]:
+    """**필드별** 상태형 프레임 선언. 순수 함수 (c173, 관측 110).
+
+    왜 필드별인가. 한 행이 두 계수기의 프레임을 따로 선언할 수 있고, 행 단위로 첫
+    매치 하나를 쓰면 한 계수기의 프레임이 다른 계수기의 값을 심판한다 — 관측
+    108·109의 공통 기전을 세 번째로 반복하는 셈이다. 그래서 같은 필드 안에서만
+    값과 프레임을 마주 세운다.
+
+    관측 110이 잡은 것: 계기는 값을 **자기가 고른 한 프레임**에서만 재고, 행이
+    스스로 선언한 프레임이 그 값의 프레임과 같은지는 묻지 않았다. c172는 값
+    **1**(자기행 포함 = 프레임 c172)에 라벨 **c171**(자기행 미포함)을 달았고 571
+    초록을 통과했다. 어느 쪽을 의도로 읽어도 그 행의 절반이 거짓이다.
+    """
+    out: dict[str, int] = {}
+    for fld, v in row.items():
+        if isinstance(v, str) and (m := FRAME_RX.search(v)):
+            out[fld] = int(m.group(1))
+    return out
+
+
+def unparsed_frame_fields(row: dict, width: int = 40) -> dict[str, str]:
+    """«프레임 =»을 적었으나 `FRAME_RX`가 못 읽는 **필드별** 원문 조각. 순수 함수 (c283, ㉩).
+
+    왜 있는가. 구판 파트 O는 `declared_frames() == {}`를 «선언 프레임 무기재»로 인쇄했다.
+    그런데 `{}`에는 두 경우가 섞여 있다 — 정말 안 적은 행과, 적었으나 정규식이 모르는
+    서식으로 적은 행. c265~c280 16행이 후자였고(«자기행 포함 cN»), 그 16사이클 동안 인쇄는
+    «무기재»였다. 정직한 기재를 무기재로 접는 것은 관측 108·109가 겨눈 병의 변종이다.
+
+    이 함수는 서식을 **해석하지 않는다** — 값을 추측해 프레임으로 쓰면 없는 프레임을
+    만드는 셈이다. 못 읽었다는 사실과 원문 조각만 돌려주고, 인쇄가 «판정 불가»로 말한다.
+    `FRAME_RX`가 이미 읽은 필드는 여기 오르지 않는다.
+
+    c286 (㉩′). 서식 이름을 **인용**한 자리(`FRAME_LITERAL_RX` — 리터럴 `cN`)는 건너뛴다.
+    한 필드에 인용과 진짜 미해석 서식이 함께 있으면 인용은 건너뛰고 미해석만 돌려준다 —
+    인용 하나가 같은 필드의 진짜 미해석을 가리면 관측 104의 침묵이 재발한다.
+    """
+    out: dict[str, str] = {}
+    for fld, v in row.items():
+        if not isinstance(v, str) or FRAME_RX.search(v):
+            continue
+        for m in FRAME_LOOSE_RX.finditer(v):
+            if FRAME_LITERAL_RX.match(v, m.start()):
+                continue
+            out[fld] = v[m.start():m.start() + width]
+            break
+    return out
+
+
+def quoted_frame_fields(row: dict) -> dict[str, int]:
+    """«프레임 =»을 **인용**한 자리 수, 정본 서식이 없는 필드만. 순수 함수 (c286, ㉩′).
+
+    왜 있는가. `unparsed_frame_fields`가 인용을 건너뛰기 시작하면 «프레임 =»을 적은
+    필드의 갈래가 셋이 된다 — 해석·미해석·인용. 셋째에 이름이 없으면 실원장 항등식
+    («기재는 해석 또는 미해석 어느 한쪽 — 침묵 소멸 금지»)이 인용 행에서 붉어지거나,
+    항등식을 느슨하게 풀어 침묵을 허용하게 된다. 이 함수가 그 셋째 갈래의 이름이다:
+    항등식은 «해석 ∨ 미해석 ∨ 인용»으로 닫히고 세 계수가 함께 인쇄된다.
+    """
+    out: dict[str, int] = {}
+    for fld, v in row.items():
+        if not isinstance(v, str) or FRAME_RX.search(v):
+            continue
+        n = sum(1 for m in FRAME_LOOSE_RX.finditer(v) if FRAME_LITERAL_RX.match(v, m.start()))
+        if n:
+            out[fld] = n
+    return out
+
+
+def streak_headline(claims: list[tuple[str, int]], frame_streaks: dict[str, int],
+                    self_streak: int, self_frame: object) -> list[str]:
+    """적중을 낸 자[尺]의 이름 목록. 빈 목록 = 전량 불일치. 순수 함수 (c173 세션2, 관측 111).
+
+    왜 이 함수가 있는가. 구판 헤드라인은 후보 집합을 **자기행 포함 프레임의 값** 하나로만
+    심판했다. 그런데 그 행이 값을 적은 시점에 파트 O가 인쇄한 값은 **프레임 N−1**의 것이고
+    규약은 *'아래 값을 원장에 **그대로** 전사할 것'*이다. 두 요구가 다르므로 **규약을 지킨
+    행은 구조적으로 언제나 «전량 불일치»가 된다.**
+
+    c173 실측이 그 대칭을 보였다: 전사한 c173 행은 «전량 불일치», 라벨이 틀린 c172 행은
+    «적중 있음»(이름값 0이 선언 프레임 c171의 값 0과 우연히 같아서). **헤드라인이 규약
+    준수를 벌하고 위반을 상찬했다** — 관측 106의 자물쇠가 회귀가 아니라 **인쇄**에 난 것이다.
+
+    처치는 «선언 프레임이 있으면 그 프레임의 값으로 심판»이다. 두 자[尺]를 **둘 다** 인정하고
+    어느 쪽이 적중을 냈는지 이름을 인쇄한다 — 어느 하나로 좁히면 다른 쪽을 적은 정직한 행이
+    벌을 받는다(c169는 두 프레임을 다 적었고 P52 판정에서 «정직한 서식»으로 계상됐다).
+
+    선언된 한계. 적중의 **존재**만 말하고 손을 면책하지 않는다 — 후보 집합은 과수집분
+    (이름값·인용값)을 포함하며 그 사실은 호출부가 계속 인쇄한다(관측 109의 선언된 한계).
+    """
+    matched: list[str] = []
+    if self_streak in {v for _, v in claims}:
+        matched.append(f"자기행 포함 프레임 c{self_frame}")
+    for fld, fv in sorted(frame_streaks.items()):
+        if fv in {v for f, v in claims if f == fld}:
+            matched.append(f"[{fld}] 선언 프레임의 값 {fv}")
+    return matched
+
+
+#: c191 신설 (관측 119 수용 기준 ④). 라벨 키 = 값 **바로 앞** 문맥의 꼬리 2토큰.
+STREAK_LABEL_WINDOW = 30
+STREAK_DECOR_RX = re.compile(r"[*`«»·\[\](){}:,．\.]+")
+#: 재발 문턱 — 자[尺]가 아니라 **분류 보조선**이다(한계 ③).
+STREAK_RECUR_MIN = 5
+#: 생존 창 — 최근 이 폭 안에 마지막 인쇄가 있어야 «지금 표류 중»이다. 죽은 계수기를
+#: 매 사이클 고발하면 이 눈이 소음기가 된다(관측 74 계열: 신호:소음이 처치의 전부).
+STREAK_LIVE_WINDOW = 5
+
+
+def _streak_label_key(context: str) -> str:
+    plain = STREAK_DECOR_RX.sub(" ", context)
+    toks = [t for t in re.sub(r"\d+", " ", plain).split() if t]
+    return " ".join(toks[-2:]) if toks else "(무문맥)"
+
+
+def uninstrumented_streaks(rows: list[dict]) -> list[dict]:
+    """원장 산문의 «N연속» 주장 중 **계기화되지 않은 채 살아 있는** 가족 (관측 119 ④).
+
+    왜 목록이 아니라 탐지기인가. 관측 119가 물은 것은 *"오늘 셋 중 하나가 밖이었다면
+    **넷째가 있는지 아무도 모른다**"*이다. 손이 유지하는 스냅샷 목록은 그 물음에
+    답하지 못한다 — 다섯째가 내일 태어나면 목록에 없으므로 영원히 안 보인다.
+    그래서 어휘를 선언하지 않고 원장에서 **긁어서 군집**한다.
+
+    **진단 전용이다 — 고발하지 않는다**(관측 107 규율). 라벨 키가 꼬리 2토큰이라
+    같은 계수기가 문면을 바꾸면 두 가족으로 갈린다(과분할). 과분할은 계수기를
+    **놓치는** 방향이 아니라 **중복 보고**하는 방향이며, 그쪽이 루프에 불리하므로
+    의도한 선택이다(관측 76·104의 교훈: 거짓 음성을 루프에 유리하게 기울이지 않는다).
+
+    선언된 한계 ① 값 서식은 `STREAK_VALUE_RX` 둘뿐이다 — «N회 연속»·«연속 N»은 이 눈
+    밖이고, 그것은 «그 서식이 없다»가 아니라 «안 쟀다»는 뜻이다. ② 계기화 판정은 어휘
+    정규식 적중이므로, 계기화된 계수기가 문면을 바꾸면 **X로 오분류**된다.
+
+    **판정은 라벨 키가 아니라 `raw` 문맥에 건다.** 키는 장식(백틱·괄호)을 지운 뒤의
+    문자열이고 `STREAK_COUNTERS`의 어휘 중 하나는 `` `rt` ``처럼 **장식이 곧 식별자**다
+    — 키에 걸면 그 계수기는 계기화한 그 사이클에도 «X»로 인쇄된다. c191 첫 실행이
+    정확히 그것을 냈고(자기 처치를 자기가 미처치로 고발), 이 줄이 그 수리다.
+    """
+    if not rows:
+        return []
+    last_cycle = max(int(r["cycle"]) for r in rows)
+    fam: dict[str, dict[int, list[tuple[str, int]]]] = {}
+    raws: dict[str, list[str]] = {}
+    for row in rows:
+        cyc = int(row["cycle"])
+        for fld, val in row.items():
+            if not isinstance(val, str):
+                continue
+            for m in STREAK_VALUE_RX.finditer(val):
+                lo = max(0, m.start() - STREAK_LABEL_WINDOW)
+                raw = val[lo:m.start()]
+                key = _streak_label_key(raw)
+                fam.setdefault(key, {}).setdefault(cyc, []).append((fld, int(m.group(1))))
+                raws.setdefault(key, []).append(raw)
+
+    vocab = [re.compile(v) for _, _, _, v in STREAK_COUNTERS]
+    out = []
+    for key, byc in fam.items():
+        cycles = sorted(byc)
+        if len(cycles) < STREAK_RECUR_MIN:
+            continue
+        if cycles[-1] < last_cycle - STREAK_LIVE_WINDOW + 1:
+            continue
+        if any(rx.search(r) for rx in vocab for r in raws[key]):
+            continue
+        series = [(c, byc[c][0][1]) for c in cycles]
+        out.append({
+            "key": key,
+            "cycles": cycles,
+            "series": series,
+            "fields": sorted({f for c in cycles for f, _ in byc[c]}),
+        })
+    return sorted(out, key=lambda d: (-len(d["cycles"]), d["key"]))
+
+
+def _ledger_rows() -> list[dict]:
+    rows = []
+    with open(os.path.join(REPO, "research", "devloop", "metrics.jsonl"), encoding="utf-8") as fh:
+        for line in fh:
+            if line.strip():
+                rows.append(json.loads(line))
+    if not rows:
+        raise SystemExit("[O] FATAL: 원장이 비었다 — 서수를 계산할 근거가 없다.")
+    return rows
+
+
+def _ordinal_series(rows: list[dict], pattern: str) -> list[tuple[int, int]]:
+    """원장 행에서 (cycle, 인쇄된 서수) 계열을 뽑는다.
+
+    어느 **필드**에 사는지는 묻지 않되, **필드 경계는 넘지 않는다.**
+
+    c166 수리 (관측 93). 이전 판은 `json.dumps(row)`를 스캔했다. 직렬화는 값 안의
+    개행을 `\\n` **2문자**로 이스케이프하므로 직렬화본에는 실개행이 **0개**다 —
+    그래서 앵커 패턴의 `[^\\n]{0,80}` 창이 종료 조건을 잃고 필드 경계를 자유롭게
+    넘었다. 실측 피해: c164 행에서 `predictions_note` 말미의 낱말 "영토"가 다음 필드
+    `gate_pending` 서두의 **서비스율 값 49**를 삼켜, 봉쇄 라벨에 유령 이탈 1건을
+    인쇄했다(함의 앵커 c116 = 서비스율 앵커). 그 유령이 c165 `task_state`를 거쳐
+    c166에게 *"P46 (a)는 반증"*으로 인계됐다 — 관측 74의 모양(파서 거짓 값이 손
+    판정을 통과해 사실로 굳는다)이며, 이번에는 판정 직전에 잡혔다.
+
+    파싱된 값을 **필드별로** 보면 `[^\\n]`이 본래 의도대로 다시 경계가 된다.
+    한 행에 여러 필드가 같은 라벨을 인쇄하면 **첫 매치만** 쓴다(구판과 동일한 계약 —
+    행당 1표본이어야 앵커 최빈값이 행 수로 정규화된다).
+
+    c171 수리 (관측 104). 구판은 `m.group(1)`을 박아 써서 **대안마다 그룹을 갖는 합집합
+    패턴에서 죽었다**(`TypeError: int() argument … not 'NoneType'`). 관측 104의 처치가
+    봉쇄 앵커를 합집합으로 넓히는 것이었으므로 이 자리가 먼저 열려야 했다. 값 그룹은
+    **첫 비-None**을 쓰고, 전부 None이면 **소리 내어 죽는다** — 조용히 넘기면 그 라벨의
+    계열이 0본이 되고, 0본은 '드리프트 없음'으로 오독된다(파트 O가 경고하는 그 모양).
+    """
+    rx = re.compile(pattern)
+    out = []
+    for r in rows:
+        for value in r.values():
+            if not isinstance(value, str):
+                continue
+            m = rx.search(value)
+            if m:
+                got = [g for g in m.groups() if g is not None]
+                if not got:
+                    raise ValueError(
+                        f"패턴이 매치했는데 값 그룹이 전부 None이다: {pattern!r} — "
+                        "합집합 패턴은 대안마다 값 그룹을 가져야 한다. 조용히 넘기지 않는다.")
+                out.append((int(r["cycle"]), int(got[0])))
+                break
+    return out
+
+
+def _ordinal_field_matches(row: dict, pattern: str) -> list[tuple[str, int]]:
+    """한 행에서 이 패턴이 맞는 **모든 필드**와 값을 dict 순서로 돌려준다. **순수 함수.**
+
+    c172 세션2 신설 (관측 108). `_ordinal_series`는 행당 **첫 매치**만 쓰고 나머지를 버린다
+    — 그 계약은 앵커 최빈값을 행 수로 정규화하기 위해 필요하지만, 버려진 매치가 바로
+    «이 행의 자기 주장»일 수 있다. c171(c161 행)과 c172(자기 행)에서 **두 번** 그랬다:
+    앞 필드가 다른 사이클의 값을 **인용**하고, 뒤 필드가 자[尺]대로 적은 자기 주장을 들고
+    있었다. 첫 매치만 보면 그 행이 틀린 값을 주장한 것처럼 보인다.
+
+    이 함수는 **판단하지 않는다.** 인용과 자기 주장을 가르는 규칙(필드 화이트리스트 대
+    인용 구간 배제)은 설계이고 게이트 대기다(`A-171.1`). 여기서 하는 일은 손이 어차피
+    해야 하는 판독 — «어느 필드가 무엇을 냈는가» — 를 화면에 올려 두는 것뿐이다.
+    c171은 이 판독을 손으로 했고(`tmp/c171_c161_disambiguate.py`), c172 세션2도 손으로
+    했다(`tmp/c172s2_ordinal_deviation.py`). 두 번 같은 프로브를 쓴 것이 계기화의 근거다.
+    """
+    rx = re.compile(pattern)
+    out: list[tuple[str, int]] = []
+    for field, value in row.items():
+        if not isinstance(value, str):
+            continue
+        m = rx.search(value)
+        if not m:
+            continue
+        got = [g for g in m.groups() if g is not None]
+        if not got:
+            raise ValueError(
+                f"패턴이 매치했는데 값 그룹이 전부 None이다: {pattern!r} — "
+                "합집합 패턴은 대안마다 값 그룹을 가져야 한다. 조용히 넘기지 않는다.")
+        out.append((field, int(got[0])))
+    return out
+
+
+def series_coverage(rows: list[dict], series: list[tuple[int, int]],
+                    window: int = ORDINAL_WINDOW) -> dict:
+    """계열이 **누구를** 보는가. c171 신설 (관측 104 처치 · P50 (b) 반증의 처치).
+
+    왜. 파트 O는 `계열 N본`이라는 **수**만 인쇄했다. 그래서 어떤 행이 라벨을 옳게
+    적어서 조용한 것과, 정규식이 그 행을 **아예 못 봐서** 조용한 것이 화면에서 같은
+    모양이었다. c171 실측: 봉쇄 계열은 창 구간 21사이클 중 16본(76%)만 보고 있었고
+    **미등재에 최신 행 c170이 들어 있었다** — 다음 손이 실제로 전사할 행이 그것이다.
+    합성 주입으로 확인: 계열에 보이는 행(c169)에 틀린 서수를 넣으면 검출하고, 최신
+    행(c170)에 넣으면 **침묵한다.** 기전은 살아 있고 정의역이 비어 있었다.
+
+    `absent`의 원인은 둘이고 이 함수는 **가르지 않는다**: 그 행이 라벨을 안 적었을
+    수도, 적었는데 정규식이 못 봤을 수도 있다. 가르는 것은 파트 O의 느슨 탐침
+    (`LOOSE_ORDINAL_PROBES`) 몫이다 — 여기서 섞으면 다시 한 침묵이 된다.
+    """
+    cycles = sorted(int(r["cycle"]) for r in rows)
+    seen = {c for c, _ in series}
+    if not cycles:
+        return {"span": [], "seen": [], "absent": [], "newest": None,
+                "newest_seen": False, "pct": None}
+    newest = cycles[-1]
+    if not seen:
+        return {"span": [], "seen": [], "absent": [], "newest": newest,
+                "newest_seen": False, "pct": None}
+    lo = max(seen) - window + 1
+    span = [c for c in cycles if c >= lo]
+    absent = [c for c in span if c not in seen]
+    return {
+        "span": span,
+        "seen": [c for c in span if c in seen],
+        "absent": absent,
+        "newest": newest,
+        "newest_seen": newest in seen,
+        "pct": (len(span) - len(absent)) / len(span) * 100 if span else None,
+    }
+
+
+def part_o() -> None:
+    """[O] 서수 — 자[尺] 1종 고정 + 계기 계산 (c161 ㉠ 집행, P46).
+
+    왜. 같은 낱말 "N사이클째"가 두 규약으로 쓰였다(관측 85 (A)): 계기는 `N − start`,
+    손은 `N − start + 1`. 차이는 정확히 1이고 **같은 원장 행에 동거**했다. c153 별건 1이
+    처치를 골랐고("서수 1종 고정 + 계기가 원장에서 직접 계산해 인쇄") c154~c160 **7회
+    이월**됐다. 관측 85 수용 기준 ③이 c161 미집행을 **회피**로 못박았다.
+
+    무엇이 실제로 바뀌는가. 손이 하던 **+1 산술**이 사라진다. 계열 실측이 그 산술의
+    실패를 보였다: 서비스율 계열은 c146~c150 **5사이클 연속** 앵커를 한 칸 놓쳤다가
+    c151에 **+2 점프**로 복귀했다 — 보상 오류여서 단일 행만 보면 어느 행도 틀려 보이지
+    않는다. 봉쇄 계열은 c152에 Δ−2. 관행 ㉖("산문에만 사는 수는 추세를 만들 수 없다")의
+    직접 처치이며, 이 파트가 그 수의 **기계 거처**다.
+    """
+    rows = _ledger_rows()
+    n_exec = max(int(r["cycle"]) for r in rows) + 1
+    print("\n[O. 서수 — 자[尺] 1종 고정 + 계기 계산 (c161 ㉠ 집행, P46 · 관측 85 수용 기준 ③)]")
+    print('  정의 = "N사이클째" = N − start + 1 (당 사이클 **포함**). 자[尺]는 하나다.')
+    print(f"  프레임 N={n_exec} (원장 cycle max {n_exec - 1} +1 = 실행 사이클, **append 전**).")
+    print("  ※ 절차 5에서 원장 append 후 재실행하면 프레임이 +1 옮겨가고 값도 +1 된다 —")
+    print("    전사 시 프레임을 값과 함께 옮기거나 이 파트를 재실행할 것 (P46 한계 ⑤).")
+    print("  [아래 값을 원장·task_state에 **그대로** 전사할 것. 손 증분 금지 = P46 (a).]")
+
+    for label, start, pattern in ORDINAL_ANCHORS:
+        val = n_exec - start + 1
+        series = _ordinal_series(rows, pattern)
+        recent = [(c, o) for c, o in series
+                  if series and c > max(x for x, _ in series) - ORDINAL_WINDOW]
+        print(f"    {label}  →  **{val}사이클째**  [start c{start} · 프레임 N={n_exec}]")
+        if not recent:
+            print("       !! 계열 0본 — 정규식이 원장 문면과 다르다. '드리프트 없음'으로"
+                  " 읽지 말 것(미측정이다).")
+            continue
+        anchors = [c - o + 1 for c, o in recent]
+        modal = max(set(anchors), key=anchors.count)
+        agree = "일치" if modal == start else f"**불일치** (선언 c{start})"
+        print(f"       계열 {len(recent)}본(최근 {ORDINAL_WINDOW}창) · 최빈 앵커 c{modal} = {agree}")
+
+        # ── 피복 (c171 신설, 관측 104 처치) — «몇 본»이 아니라 «누구를 보는가» ──
+        cov = series_coverage(rows, series)
+        if cov["pct"] is not None:
+            print(f"       피복 {len(cov['seen'])}/{len(cov['span'])}사이클"
+                  f" ({cov['pct']:.0f}%) · 미등재 "
+                  + ("없음" if not cov["absent"]
+                     else "c" + " c".join(str(c) for c in cov["absent"])))
+            if not cov["newest_seen"]:
+                print(f"       !! 최신 행 c{cov['newest']}이 **미등재**다 — 이 라벨의 다음"
+                      " 전사 오류는 무검출로 통과한다(관측 104의 실측 기전).")
+            loose = LOOSE_ORDINAL_PROBES.get(label)
+            if loose and cov["absent"]:
+                probed = dict(_ordinal_series([r for r in rows
+                                               if int(r["cycle"]) in set(cov["absent"])], loose))
+                if probed:
+                    print("       ↳ 미등재 중 **적혀 있었다**(느슨 탐침 적중 = 정규식 사각): "
+                          + " ".join(f"c{c}:{o}" for c, o in sorted(probed.items())))
+                silent = [c for c in cov["absent"] if c not in probed]
+                if silent:
+                    print("       ↳ 미등재 중 **안 적었다**(탐침도 침묵 = 그 행이 라벨 무기재): "
+                          + "c" + " c".join(str(c) for c in silent))
+                print("       ※ 이 두 줄이 갈라지는 것이 처치의 전부다 — 구판은 둘을 같은"
+                      " 침묵으로 인쇄했다.")
+        if modal != start:
+            print("       !! 선언 상수와 계열 최빈이 갈렸다 — 상수가 틀렸거나 계열이"
+                  " 표류했다. 둘 중 무엇인지 정하고 보고에 선언할 것.")
+        pre = [c for c, o in recent if c - o + 1 != modal and c < ORDINAL_TREATMENT_CYCLE]
+        post = [c for c, o in recent if c - o + 1 != modal and c >= ORDINAL_TREATMENT_CYCLE]
+        line = f"       계열 이탈 후보: 처치 전(기지) {len(pre)}본"
+        if pre:
+            line += f" (c{' c'.join(str(c) for c in pre)})"
+        line += f" · **처치 후 {len(post)}본**"
+        if post:
+            line += f" (c{' c'.join(str(c) for c in post)})"
+        print(line)
+        if post:
+            # c172 세션2 개정 (관측 108). 구판은 여기서 *"P46 (a)는 반증이다. 원장에
+            # 그대로 적을 것"*을 인쇄했다 — 이 검출기가 **정당화할 수 없는 판정**이다.
+            # 이탈의 원인은 둘이고(그 행이 틀린 값을 주장했다 / 앞 필드의 **인용값**이
+            # 첫 매치를 먹었다) 둘을 가르는 처치는 `A-171.1`이며 게이트 대기다.
+            # 실측 2/2가 거짓 양성이었으므로 기본 문면을 «반증»으로 두면 원장에 거짓
+            # 반증이 실린다 — c171은 손 판독으로 막았고 c172는 자기 행을 볼 수 없었다.
+            print("       !! 처치 후 이탈 **후보**가 있다 — **P46 (a) 반증으로 적기 전에**"
+                  " 인용과 자기 주장을 가를 것.")
+            print("          이 검출기는 둘을 분별하지 못한다(`A-171.1` 게이트 대기)."
+                  " 아래 필드별 매치를 읽어라:")
+            print("          · 앞 필드가 **다른 사이클의 값을 인용**하고 뒤 필드가 자[尺]대로"
+                  " 적었으면 → **거짓 양성**(반증 아님).")
+            print("          · 이 행의 **자기 주장**이 자[尺]와 갈리면 → 그때가 P46 (a) 반증이다.")
+            print("          선례 2건 모두 거짓 양성: c161(c171 손 판독) · c172(c172s2 손 판독).")
+            by_cycle_o = {int(r["cycle"]): r for r in rows}
+            for c in post:
+                exp = c - modal + 1
+                print(f"          c{c}: 자[尺] {exp} · 필드별 매치 —")
+                for i, (fld, got) in enumerate(_ordinal_field_matches(by_cycle_o[c], pattern)):
+                    tag = "  ← 계열이 쓰는 값(dict 순서 첫 매치)" if i == 0 else ""
+                    mark = "" if got == exp else "  [자[尺]와 다름]"
+                    print(f"             [{fld}] {got}{mark}{tag}")
+
+    print("  [상태형 계수기 — c168 신설 (관측 96 처치 · P52). 산술형과 **프레임이 다르다**:")
+    print("   원장에 이미 쓰인 행만 센다(실행 사이클 행은 아직 없다). 값과 프레임을 같이 전사할 것.]")
+    for label, field, value, vocab_rx in STREAK_COUNTERS:
+        exclude = STREAK_EXCLUDE.get(field, ())
+        st = field_streak(rows, field, value, exclude)
+        if st["frame_last"] is None or st["span"] is None:
+            print(f"    {label}  →  !! 필드 `{field}` 보유 행 0 — 미측정이다"
+                  " ('연속 0'으로 읽지 말 것).")
+            continue
+        span = st["span"]
+        print(f"    {label}  →  **{st['streak']}연속**"
+              f"  [프레임 = 원장 최종 c{st['frame_last']} · 실행 사이클 c{n_exec} **미포함**]")
+        print(f"       정의역 {st['domain']}행 (c{span[0]}~c{span[1]}) · "
+              f"중단 = {'c%d 값 %r' % st['break'] if st['break'] else '없음(정의역 전체가 연속)'}")
+        if exclude:
+            # c286 (㉳). 비도달(«판정 불가»)은 정의역 밖이다 — 연속을 잇지도 끊지도 않는다.
+            # 0행이어도 인쇄한다: «분리했는데 없다»와 «분리하지 않았다»는 다른 침묵이다.
+            ex = st["excluded"]
+            shown = " ".join(f"c{c}" for c in ex[:8]) + (" …" if len(ex) > 8 else "")
+            print(f"       정의역 밖 {'/'.join(map(str, exclude))}(비도달) = **{len(ex)}행**"
+                  f"{' [' + shown + ']' if ex else ''} — miss 연속을 잇지도 끊지도 않음(㉳ c286)."
+                  f"{' 어휘 도입 이전 비도달 표본 c192·c230은 miss인 채 — 소급 편집 0.' if not ex else ''}")
+        if st["off_value"] != []:
+            shown = " ".join(f"c{c}" for c in st["off_value"][:8])
+            print(f"       정의역 내 값 다른 행 {len(st['off_value'])}건: {shown}"
+                  f"{' …' if len(st['off_value']) > 8 else ''}"
+                  "  ← '도입 이래 전부'류 주장은 이 목록이 비어야 참이다")
+        if st["streak"] != st["domain"]:
+            print(f"       ※ **연속 {st['streak']} ≠ 정의역 {st['domain']}** — 라벨이"
+                  " '연속'인데 정의역을 적으면 관측 96 재발이다(P52 (a) 반증).")
+        last = max(rows, key=lambda r: int(r["cycle"]))
+        claims = streak_claim_matches(last, vocab_rx)
+        frames = declared_frames(last)
+        if not claims:
+            print(f"       직전 행(c{last['cycle']}) 손 인쇄 = 무기재 (대조 불가)")
+        else:
+            vals = sorted({v for _, v in claims})
+            # 관측 111 (c173 세션2). 선언 프레임의 값을 **헤드라인 심판에 먼저** 계산한다 —
+            # 아래 필드별 절이 쓰는 값과 같은 값이며, 구판은 이것을 헤드라인에 쓰지 않아
+            # 규약대로 전사한 행을 «전량 불일치»로 인쇄했다.
+            frame_streaks = {
+                fld: field_streak([r for r in rows if int(r["cycle"]) <= fr],
+                                  field, value, exclude)["streak"]
+                for fld, fr in frames.items() if any(f == fld for f, _ in claims)
+            }
+            matched = streak_headline(claims, frame_streaks, st["streak"], st["frame_last"])
+            print(f"       직전 행(c{last['cycle']}) 손 인쇄 후보 **{len(claims)}건**"
+                  f" · 값 집합 {vals} · 계기 {st['streak']}(자기행 포함 프레임)"
+                  f" → {'**적중 있음** — ' + ' · '.join(matched) if matched else '**전량 불일치**'}")
+            print("          ※ «적중 있음»은 «일치»가 아니다 — 후보는 과수집분을 포함하며"
+                  " 이 눈은 손을 면책하지 않는다(관측 109 처치의 선언된 한계).")
+            for fld, v in claims:
+                marks = []
+                if v == st["streak"]:
+                    marks.append("자기행 포함 프레임의 계기값")
+                if v == st["domain"]:
+                    marks.append("**정의역 = 관측 96 재발 조건**")
+                if isinstance(value, int) and v == value:
+                    marks.append("계수기의 **이름값** — 주장이 아닐 수 있다(관측 109)")
+                print(f"          [{fld}] {v}  {{{'·'.join(marks) or '어느 값과도 불일치'}}}")
+            # 관측 110. 값을 계기가 고른 한 프레임에서만 재던 것이 P52 (a) 반증의
+            # 기전이다 — 행이 **스스로 선언한** 프레임을 여기서 처음 심판에 쓴다.
+            # c283 (㉩). «무기재»와 «적었으나 못 읽음»을 가른다 — 후자를 전자로 인쇄한 것이
+            # c265~c280 16사이클의 사각이었다. 미해석은 판정 불가이지 무기재가 아니다.
+            unparsed = unparsed_frame_fields(last)
+            if not frames and unparsed:
+                for fld, frag in sorted(unparsed.items()):
+                    print(f"          !! [{fld}] **프레임 서식 미해석 — 판정 불가**"
+                          f" (적혀 있으나 FRAME_RX 정의역 밖): «{frag}…»"
+                          " — 서식을 정본(원장 최종 cN / 자기행 포함 cN)으로 맞추거나"
+                          " FRAME_RX를 확장할 것. 무기재로 계상하지 않는다(㉩ c283).")
+            elif not frames:
+                print("          ※ 선언 프레임 무기재 — 값의 프레임을 검증할 수 없다"
+                      "(관측 110의 사각: 갈라짐이 있어도 이 눈은 침묵한다).")
+            for fld, fr in sorted(frames.items()):
+                fld_vals = {v for f, v in claims if f == fld}
+                if not fld_vals:
+                    continue
+                at = {"streak": frame_streaks[fld]}  # 헤드라인과 같은 값 — 재계산하지 않는다
+                if at["streak"] in fld_vals:
+                    print(f"          [{fld}] 선언 프레임 c{fr} · 그 프레임 계기값"
+                          f" {at['streak']} = **후보에 있음**")
+                else:
+                    print(f"          !! [{fld}] **선언 프레임 c{fr}의 계기값"
+                          f" {at['streak']}이 후보 {sorted(fld_vals)}에 없다.**"
+                          f" 자기행 포함 프레임(c{st['frame_last']}) 값 {st['streak']}은"
+                          f" {'후보에 있다' if st['streak'] in fld_vals else '그것도 없다'}"
+                          " — 값과 선언 프레임이 갈렸고, 어느 쪽을 의도로 읽어도 이 행의"
+                          " 절반이 거짓이다(관측 110 · P52 (a) 반증 기전).")
+
+    # 관측 119 수용 기준 ④ — c191 신설. 위 표는 «계기화한 것»만 인쇄한다. 그 표의
+    # 침묵이 «밖에 아무도 없다»로 읽힌 것이 관측 119의 20사이클이었다.
+    loose = uninstrumented_streaks(rows)
+    print("  [미계기화 «N연속» 탐지 — c191 신설 (관측 119 수용 기준 ④ · 계기 큐 ㉰)]")
+    print(f"    재발(≥{STREAK_RECUR_MIN}사이클) · 생존(최근 {STREAK_LIVE_WINDOW}창) ·"
+          f" 계기화 **X** = **{len(loose)}가족**")
+    print("    ※ **진단 전용 — 고발하지 않는다**(관측 107). 라벨 키가 꼬리 2토큰이라"
+          " 과분할한다: 한 계수기가 두 가족으로 갈릴 수 있다(중복 보고 방향).")
+    for d in loose:
+        head, tail = d["series"][:3], d["series"][-3:]
+        print(f"    · «{d['key']}»  cycles={len(d['cycles'])}"
+              f"  c{d['cycles'][0]}~c{d['cycles'][-1]}  필드={d['fields']}")
+        print(f"        값 계열(첫 매치): {head} … {tail}")
+    if not loose:
+        print("    (없음 — 다만 이 침묵은 위 두 한계 안에서만 참이다.)")
+
+
+def part_f() -> None:
+    """[F] 미해소 관측 인덱스 — 대장 파생 (A-95.1 루프 몫, c108 배선 · P34, 관측 52 처치).
+
+    왜. open_observations는 c105 정의 후 세 사이클 연속 수기 재계수로만 산출됐고
+    (c107 자기 기재: "상설화 필요성 3번째 실례"), 절차 2의 1순위 입력(미해소 마찰)은
+    317KB 대장 통독 불가로 grep 절편으로만 접근됐다(관측 52). 이 인쇄가 A-95.1이
+    말한 "상수 크기 조망"이다 — 원문은 여전히 표적 조회로 연다.
+    """
+    with open(FRICTIONS, encoding="utf-8") as fh:
+        frictions_text = fh.read()
+    obs = parse_observations(frictions_text)
+    rows = []
+    with open(os.path.join(REPO, "research", "devloop", "metrics.jsonl"), encoding="utf-8") as fh:
+        for line in fh:
+            if line.strip():
+                rows.append(json.loads(line))
+    last = max(rows, key=lambda r: r["cycle"])
+    prev = last.get("open_observations")
+
+    opened = open_observation_numbers(obs)
+    untagged = sorted(n for n, o in obs.items() if not o["tagged"])
+    exited = sorted(n for n, o in obs.items() if o["exited"])
+    print("\n[F. 미해소 관측 인덱스 — 대장 파생 (A-95.1 루프 몫, c108 배선 · P34)]")
+    print("  정의 = 원본 헤더 회부/후보 태그 − 회부 이탈(처분 문단에 '종결'/'회부 상태를 벗').")
+    print("  부분 처분(이탈 마커 없음)은 존속이다. 대장에 주석 없는 처분은 이 눈에 보이지 않는다.")
+    if prev is None:
+        delta_txt = "직전 원장 행에 open_observations 필드 없음 — Δ 판정 불가"
+        delta = None
+    else:
+        delta = len(opened) - int(prev)
+        delta_txt = f"직전 원장 행 c{last['cycle']}={prev}, Δ{delta:+d}"
+    print(f"  open_observations={len(opened)}  (번호 있는 회부만 — {delta_txt})")
+    if delta:
+        print("  ★ Δ≠0 — 신규 관측 또는 처분이 있었다: 이번 원장 행 frictions_note에 귀속을 선언할 것.")
+
+    # 관측 69 ② 처치 (c126) — 인쇄가 자기 사각의 크기를 함께 말한다. 소급 배정은
+    # c125가 기각했으므로(참조 무결성), 없는 것은 숫자가 아니라 인쇄의 정직성이었다.
+    unnum_total, unnum_tagged = unnumbered_blind_spot()
+    lo, hi = C123_HONEST_RANGE
+    print(f"  ↳ 사각: 무번호 관측 절 {unnum_total}건 중 회부/후보 {unnum_tagged}건은 이 눈 밖"
+          f" (c123 계수 규칙 재사용, 소급 배정은 c125 기각).")
+    print(f"     c123 정독 기준 정직 재고 범위 {lo}~{hi} — **빈티지**: 그 시점 자동 인쇄는"
+          f" {C123_AUTO_AT_VINTAGE}, 지금 {len(opened)}이므로 자동 성분 이동분"
+          f"({len(opened) - C123_AUTO_AT_VINTAGE:+d})은 이 범위에 미반영이다.")
+
+    # audit-120 R2 (c126 이행) — 재고 회전의 크기. 권고 문면은 "처치 식별 완료·집행
+    # 대기" 부분집합을 요구하나, 대장에는 그 상태를 가리키는 기계가독 마커가 없다
+    # (그 부재 자체가 미등재 규약 공백이다). 여기서 부분문자열로 그 부분집합을 짐작하는
+    # 것은 지금 이 사이클이 고치고 있는 결함(관측 63)을 새 자리에 다시 심는 일이므로
+    # 하지 않는다 — 분모를 회부 존속 전체로 열고 **상한 근사임을 병기**한다.
+    n_now = int(last["cycle"]) + 1
+    if opened:
+        oldest = max(opened, key=lambda n: n_now - (obs[n]["opened"] or n_now))
+        stalest = max(opened, key=lambda n: n_now - (obs[n]["last"] or n_now))
+        print(f"  ↳ 처치 대기 (audit-120 R2) — 분모 = 회부 존속 {len(opened)}건 전체."
+              f" '처치 식별 완료·집행 대기' 부분집합은 기계가독 마커가 없어 **상한 근사**다.")
+        print(f"     최고 등재 경과: 관측 {oldest} c{obs[oldest]['opened']}"
+              f" → {n_now - obs[oldest]['opened'] + 1}사이클째 미해소  [프레임 N={n_now}]")
+        print(f"     최고 무갱신  : 관측 {stalest} c{obs[stalest]['last']} 마지막 갱신"
+              f" → {n_now - obs[stalest]['last'] + 1}사이클째 무갱신  [프레임 N={n_now}]")
+        # c161 ㉠: 이 두 값은 c160까지 `N − start`(개시 제외)로 인쇄됐다. 이제 파트 O와
+        # **같은 자[尺]**(당 사이클 포함)를 쓰므로 구 계열 대비 +1이다. 원장 소급 편집은
+        # 금지(c122)이므로 고치는 대신 경계를 선언한다 — P46 한계 ③의 유일한 거처.
+        print("     ※ 서수 = 당 사이클 포함(c161 ㉠ 통일, 파트 O와 동일 자[尺]).")
+        print("       c160까지의 인쇄는 개시 제외였으므로 구 계열보다 **+1**이다 —")
+        print("       추세를 읽는 손은 c161 경계에서 +1을 알 것(소급 편집 없음, P46 한계 ③).")
+
+    # audit-270 R3 (c275 배선) — 재발 표본 흐름. frictions_logged 무주조 규율 아래에서도
+    # 사건 흐름이 0으로 읽히지 않게 «보강 (사이클 N» 헤더를 기계 계수한다(§1-1).
+    reinf = reinforcement_counts(frictions_text)
+    total_r = sum(reinf.values())
+    loose_r = frictions_text.count("보강 (사이클")
+    recent_r = [(c, k) for c, k in sorted(reinf.items()) if c >= n_now - 30]
+    recent_txt = " ".join(f"c{c}×{k}" if k > 1 else f"c{c}" for c, k in recent_r) or "없음"
+    print(f"  [재발 표본 계수 — audit-270 R3 (c275 배선)] «보강 (사이클 N» 헤더 = 총 {total_r}건")
+    print(f"     최근 30창(c{n_now - 30}~): {len(recent_r)}사이클 {sum(k for _, k in recent_r)}건 — {recent_txt}")
+    print(f"     ↳ 느슨 탐침(헤더 외 산문 포함 부분문자열) = {loose_r}건 — 차이 {loose_r - total_r}건은"
+          f" 산문 인용분. **진단 전용·고발 없음**(관측 107) — 정본 계수는 header_kind 술어 쪽이다.")
+
+    print(f"  무태그(유형 기귀속, 계상 밖): {' '.join(str(n) for n in untagged)}"
+          f"   회부 이탈: {' '.join(str(n) for n in exited)}")
+    for n in opened:
+        o = obs[n]
+        mark = " ·처분文有(존속)" if o["partial_disposal"] else ""
+        print(f"    관측 {n:>2}  c{o['opened']}→c{o['last']}{mark}  {o['title'][:64]}")
+
+
+# ── 판정 기한 (파트 D, c164 신설 · P48 · 감사 R5 이관분 = 계기 큐 ㉦) ─────────
+#
+# 서식 변이는 **세어서** 인쇄한다. 어느 변이가 0일 때 그 0이 "그 서식이 없다"인지
+# "정규식이 못 본다"인지를 다음 손이 물을 수 있어야 한다 — P48 한계 ③의 거처.
+DEADLINE_VARIANTS = {
+    "판정.": re.compile(r"^-\s*\*\*판정\.\*\*\s*\**\s*c(\d+)"),
+    "판정 시한": re.compile(r"^-\s*\*\*판정 시한\.?\*\*\s*\**\s*c(\d+)"),
+    "판정 채널": re.compile(r"^-\s*\*\*판정 채널\.?\*\*\s*\**\s*c(\d+)"),
+}
+# 달력 기한 — P36의 `- 예측 (판정: **2026-09-10 마감**` 계열. 사이클 자[尺]와 **다른 축**
+# 이므로 따로 센다. 두 축을 한 칸에 합치면 그것이 관측 30·34(자[尺] 무선언 분기)다.
+CAL_DEADLINE_RE = re.compile(r"\*\*(\d{4}-\d{2}-\d{2})\s*마감\*\*")
+
+RUNNING_ARM = "시계-가동"
+UNSTARTED_ARM = "시계-미시작"
+OPEN_ARM_VALUES = (RUNNING_ARM, UNSTARTED_ARM)
+
+
+def _pred_spans(text: str) -> tuple[list[str], dict[str, tuple[int, int]], dict[str, list[int]]]:
+    """(줄 목록, {pid: (시작, 끝)}, {중복 pid: [줄 번호…]}) — 절 경계 계산의 **한 벌**.
+
+    c169 이전에는 이 12줄이 `parse_deadlines` 안에만 있었고, 같은 경계를 필요로 하는
+    두 번째 계기(상태줄↔판정문 정합)를 붙이는 순간 사본이 생길 자리였다. 관행 ㊷:
+    한 계기 안에서 같은 개념의 분류는 한 벌이어야 한다.
+
+    중복 pid는 **먼저 나온 절**이 이긴다 — `setdefault`의 계약이며 두 호출자가 같은
+    절을 보게 하는 것이 목적이다. **그 정책을 반환값으로 드러낸다**: `part_d`의
+    `recs = {r["id"]: r for r in …}`는 dict 컴프리헨션이라 **나중 절**이 이기고,
+    두 정책은 **정반대**다. 그래서 중복 pid에서는 «한 절의 팔»과 «다른 절의 기한»이
+    짝지어진다. c169 실측 = P39(기지, 관측 77) · **P7(신규 — 관측 99)**.
+    """
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from c124_retro_prep import PSEC_RE  # noqa: PLC0415
+
+    lines = text.splitlines()
+    starts = [(i, m.group(1)) for i, l in enumerate(lines) if (m := PSEC_RE.match(l))]
+    spans: dict[str, tuple[int, int]] = {}
+    occurrences: dict[str, list[int]] = {}
+    for k, (i, pid) in enumerate(starts):
+        end = starts[k + 1][0] if k + 1 < len(starts) else len(lines)
+        for j in range(i + 1, end):
+            if lines[j].startswith("## "):
+                end = j
+                break
+        spans.setdefault(pid, (i, end))
+        occurrences.setdefault(pid, []).append(i + 1)
+    dups = {pid: at for pid, at in occurrences.items() if len(at) > 1}
+    return lines, spans, dups
+
+
+def parse_deadlines(text: str) -> dict:
+    """절별 판정 기한을 뽑는다. **순수 함수** — 인자 텍스트만 본다(합성 표본 검증 가능).
+
+    절 경계는 `_pred_spans`(→ `c124_retro_prep.PSEC_RE`)에 위임한다. 복사하면 절
+    경계의 정본이 둘이 되고, 그것이 파트 P가 이미 피한 병이다.
+    """
+    lines, spans, _dups = _pred_spans(text)
+
+    hits = dict.fromkeys(DEADLINE_VARIANTS, 0)
+    cycle: dict[str, int] = {}
+    calendar: dict[str, str] = {}
+    for pid, (s, e) in spans.items():
+        for line in lines[s:e]:
+            for name, rx in DEADLINE_VARIANTS.items():
+                if (m := rx.match(line)):
+                    hits[name] += 1
+                    if name == "판정.":
+                        cycle.setdefault(pid, int(m.group(1)))
+            if (m := CAL_DEADLINE_RE.search(line)):
+                calendar.setdefault(pid, m.group(1))
+    return {"variant_hits": hits, "cycle": cycle, "calendar": calendar,
+            "sections": sorted(spans)}
+
+
+# ── 상태줄 ↔ 판정문 정합 (c169 신설 · 관측 90 처치 · 관측 98 · P54) ──────────
+#
+# 판정 표지의 **서식지**다. 서식지를 더할 때마다 고발이 줄고, 이 상수가 이 계기의 유일한
+# 정본이며 사본을 갖지 않는다 — 네 번째 서식지가 발견되면 고칠 곳은 여기 한 곳이다(P54 한계 ③).
+#
+# ★ 문면 정정 (c174, 관측 112 · 관행 ⓮ 표지). 이 주석은 c169~c173 동안 이렇게 적혀 있었다:
+#   *"순진한 자[尺](`MARK_RE` 단독)로 재면 시계 아래 38건 중 **23건**이 «판정문 부재»로
+#    나오고 그 23건은 전부 판정문을 갖고 있다 … 23 → 8 → 0"*
+# **«38»은 재현되고 «23»은 재현되지 않는다.** c174가 세 자[尺](이 계기·`tmp/c169_status_
+# stamp_baseline.py`·import 없는 독립 자[尺])로 4스냅샷을 재니 «표지 없음»은 **8**이고,
+# **23은 «도장 없음»의 수**다(같은 `MARK_RE`, 다른 술어). 즉 이 주석은 두 술어의 수를
+# 한 계열('23 → 8 → 0')로 이어 붙였다. 실제로는 «표지 없음» 8 → 0이 이 계기의 일이고
+# «도장 없음» 23은 c168·c169·HEAD 내내 23으로 **이 계기가 손대지 않은 축**이다.
+# 그래서 아래 인쇄는 상수를 버리고 **두 술어를 각각 계산해 라벨과 함께** 낸다.
+NAIVE_HABITAT = "불릿"   #: 순진한 자[尺] = 서식지 1종(= `MARK_RE` + 들여쓰기 둔감)
+VERDICT_HABITATS = (
+    ("불릿", re.compile(r"^\s*-\s*\*{0,2}(결과|판정|처분)")),
+    # P44: `- **★ 판정 (사이클 160 적대 감사 …)**` — `★`가 `\*{0,2}`를 넘긴다.
+    ("불릿-강조접두", re.compile(r"^\s*-\s*[\*★☆\s]+(결과|판정|처분)")),
+    # P15: `### P15 — 판정 (audit-70 위임 판정 …)` — 판정문이 **소제목**으로 산다.
+    # `###`는 절을 끊지 않으므로(끊는 것은 `## `) 이 줄은 그 절의 몸 안에 있다.
+    ("소제목", re.compile(r"^#{3,}\s.*(판정|처분|결과)")),
+)
+
+#: 손 유지 상수 — "도장 있는데 상태줄이 시계 위"가 **참 고발이 아닌** 절.
+#: 값은 사유이며, 사유 없는 등재는 면죄부다(P54 (c) 반증 조건). 파트 P의
+#: `KNOWN_VOCAB_OFFENDERS`와 같은 계열의 손 유지분 — 늘어나면 보고에 선언할 것.
+STAMP_ONLY_ADJUDICATED = {
+    "P4": "도장 줄 = `처분 (사이클 78): 집행 시작`이고 절 본문이 "
+          "*'이 처분은 판정이 아니라 착공 선언'*이라고 자기가 적는다 (c169 직독)",
+}
+
+_UNRECORDED = "무기재"
+
+
+def status_stamp_reconcile(text: str) -> dict:
+    """상태줄과 판정 표지를 마주 세운다. **순수 함수** — 인자 텍스트만 본다.
+
+    왜 (관측 90). 파트 D의 판별 입력은 각 절의 `- 상태:` **한 줄**이고, 그 줄을 쓰는 손과
+    판정문을 쓰는 손은 같은 손이되 **다른 줄**이다. 상태줄만 내려가고 판정문이 없으면
+    파트 D는 그 예측을 시계에서 내리고 **영원히 침묵한다** — 거짓 음성이며 그 침묵이
+    "판정 완료"로 읽힌다. 반대 방향(판정문만 있고 상태줄이 가동)은 `도과`를 불러 손을
+    부르므로 **안전한 쪽**이다. 두 실패는 대칭이 아니다.
+
+    고발의 문턱을 «도장 없음»이 아니라 «**표지 자체가 없음**»으로 낮춘 것은 의도다:
+    `_is_verdict_line`(도장 판별)은 도장 없는 진짜 처분 줄을 버린다는 것이 c124 손 판정
+    (P18·P26·P28·P29)으로 **이미 측정돼 있다.** 그 기지의 오류를 고발로 승격하면
+    계기는 첫날 늑대소년이 된다(관측 87의 종착지). 무도장 절은 **고발이 아니라 별도 칸**이다.
+    """
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from c124_retro_prep import STATUS_RE, _is_verdict_line, parse_status  # noqa: PLC0415
+
+    lines, spans, dups = _pred_spans(text)
+    sections: dict[str, dict] = {}
+    for pid, (s, e) in spans.items():
+        body = lines[s:e]
+        field = next((m.group(1) for l in body if (m := STATUS_RE.match(l.strip()))), None)
+        arms = parse_status(field)[0] if field is not None else []
+        vals = [v for _, v in arms]
+        habitat_hits = dict.fromkeys((n for n, _ in VERDICT_HABITATS), 0)
+        markers: list[str] = []
+        narrow: list[str] = []          # 순진한 자[尺](서식지 1종)만 걸린 줄 — 관측 112
+        for line in body:
+            hit = False
+            for name, rx in VERDICT_HABITATS:
+                if rx.match(line):
+                    habitat_hits[name] += 1
+                    hit = True
+                    if name == NAIVE_HABITAT:
+                        narrow.append(line.strip())
+            if hit:
+                markers.append(line.strip())
+        sections[pid] = {
+            "field": field,
+            "open": sum(1 for v in vals if v in OPEN_ARM_VALUES),
+            "closed": sum(1 for v in vals
+                          if v not in OPEN_ARM_VALUES and v != _UNRECORDED),
+            "habitat_hits": habitat_hits,
+            "markers": len(markers),
+            "stamped": sum(1 for m in markers if _is_verdict_line(m)),
+            # 관측 112 — 같은 자[尺]의 **두 술어**를 따로 들고 있는다. 하나로 뭉치면
+            # 어느 쪽 수인지 알 수 없고, 그 모호함이 대조군을 유령으로 만들었다.
+            "narrow_markers": len(narrow),
+            "narrow_stamped": sum(1 for m in narrow if _is_verdict_line(m)),
+        }
+
+    def _pick(pred) -> list[str]:
+        return [pid for pid, r in sections.items() if pred(r)]
+
+    down = _pick(lambda r: r["closed"] and not r["open"])
+    stamp_only = _pick(lambda r: r["open"] and not r["closed"] and r["stamped"])
+    return {
+        # 중복 pid — 이 계기는 **먼저**를, `part_d`의 `recs`는 **나중**을 택한다(정반대).
+        "duplicate_pids": dups,
+        # 손 유지 상수로 가른다 — 기지분을 매 사이클 고발하면 그 인쇄가 곧 소음이 되고,
+        # 소음이 된 인쇄는 다음 손이 읽지 않는다(관측 87). 사유는 상수가 들고 있다.
+        "stamp_only_new": [p for p in stamp_only if p not in STAMP_ONLY_ADJUDICATED],
+        "stamp_only_known": [p for p in stamp_only if p in STAMP_ONLY_ADJUDICATED],
+        "sections": sections,
+        "down": down,
+        # ★ 조용한 쪽 = 관측 90의 진짜 고발 대상. 상태줄은 내려갔는데 표지가 없다.
+        "silent_drop": [p for p in down if sections[p]["markers"] == 0],
+        # 팔 일부만 판정났는데 표지가 없다 — 같은 병의 약한 판본.
+        "partial_drop": _pick(lambda r: r["closed"] and r["open"] and r["markers"] == 0),
+        # 표지는 있으나 무도장 — c124가 이미 잰 v2의 거래. **고발 아님**.
+        "unstamped_down": [p for p in down if sections[p]["markers"]
+                           and sections[p]["stamped"] == 0],
+        "clean_down": [p for p in down if sections[p]["stamped"]],
+        # 안전한 쪽 = 도장 달린 판정 줄이 있는데 상태줄 전건이 시계 위.
+        "stamp_only": stamp_only,
+        # ── 관측 112 처치: 순진한 자[尺] 대조를 **술어별로** 계산한다 ──────────
+        # 왜 상수가 아니라 계산인가. c169 등록문은 이 자리에 «23»을 손으로 적었고
+        # 그 23은 **«도장 없음»의 수**였는데 표의 머리는 «표지 없음»이었다. c174가
+        # 세 자[尺]로 재니 «표지 없음»은 **8**이고 «도장 없음»은 **23**이며, 처치가
+        # 실제로 끈 것은 8→0이고 23은 창 전체(c168·c169·HEAD) 불변이다. 즉 처치의
+        # 가치를 광고한 수가 처치가 손대지 않은 축의 수였다. 상수로 두면 그 혼동이
+        # 매 사이클 인쇄되므로 **두 술어를 각각 계산해 라벨과 함께** 내보낸다.
+        "naive_silent": [p for p in down if sections[p]["narrow_markers"] == 0],
+        "naive_unstamped": [p for p in down if sections[p]["narrow_stamped"] == 0],
+    }
+
+
+# ── 상설 계기 인용·표본 칸 — ㉶+㉬ 병합 (c196 신설 · amendment-195 §4-① · P68) ──
+#
+# 왜. P64 (b)·P65 (b)가 **같은 두 사이클(c191·c192)**에서 동시 반증됐다 — 상설 계기
+# ㉮·㉭의 값이 원장에서 동시 무인용. 병은 계기 개별의 규율이 아니라 **그 사이클의
+# 원장 쓰기 규율**이다(관측 103 보강, c194). 이 눈은 직전 원장 행에서 계기별 어휘
+# 매치 후보를 인쇄한다. **진단 전용 — 고발하지 않는다**(관측 107): 질의 자동 판정의
+# 실측 거짓 양성 0/2(P65 (c))이므로 자동 판정 금지, 인쇄 + 손 판독.
+INSTRUMENT_QUEUE_PATH = os.path.join(REPO, "research", "devloop", "instrument-queue.md")
+
+#: 손 유지 상수 — 상설 계기별 인용 탐지 어휘(느슨 — 과잉 매치 방향, 거짓 음성이
+#: 루프에 유리하지 않게). 기원: ㉮ = tmp/c193_p64_citation.py · ㉭ = tmp/c194_p65_
+#: citation.py 의 TOKENS 각 9종 승격 — tmp는 승계가 보장되지 않는 거처다(am-195 §4-①).
+#: 명단 자체는 `permanent_instruments`가 instrument-queue.md에서 **직독**한다 —
+#: 어휘 없는 신입 상설 계기는 «어휘 미등록»으로 인쇄된다(침묵하지 않는다).
+PERMANENT_INSTRUMENT_VOCAB: dict[str, tuple[str, ...]] = {
+    "㉮": ("range_count", "㉮", "범위∖계수", "범위\\계수", "불일치",
+          "짝", "c188_", "검산", "동격"),
+    "㉭": ("declare_diff", "㉭", "선언∖", "선언\\", "프레임 이동뿐",
+          "c189_", "질의", "부기 선언", "정본 diff"),
+    # ㉺·㉷ = c271 등재 (audit-270 R2 — c269·c266 상설 승격 시 미등재로 ㉶절이
+    # «어휘 미등록»을 2사이클 인쇄한 실측의 소비. 등재 의무는 승격 사이클 몫이었다.)
+    "㉺": ("vocab_receipt", "㉺", "영수증 블록", "어휘 게이트", "신규 위반",
+          "c243_", "harvest_stat", "기지 P39", "재검"),
+    "㉷": ("queue_mover", "㉷", "이동기", "얇은 호출자", "드리프트",
+          "재계산", "상설 표", "queue_ages", "세대"),
+}
+
+#: 처분 문면이 «파트 N 상설»이면 step 0 내장 계기다 — 값은 그 파트의 전사 의무가
+#: 나르므로 이 인용 눈의 정의역 밖이다(예: ㉰ = 파트 O 상설).
+_EMBEDDED_RX = re.compile(r"파트\s*\S+\s*상설")
+
+#: 규율 3의 **부정 선언** — 처분 칸이 «상설 승격 아님/없음»을 명시한 항은 상설이 아니다.
+#: 왜 (㉶′ c287). 이 눈의 정의역 술어는 처분 칸의 «상설» 어휘 **존재**였는데, 자기 수리
+#: 규율 3(instrument-queue.md)은 집행 사이클에게 «상설 승격 아님»을 처분 칸에 **적으라**
+#: 요구한다 — 정직한 부정 선언이 긍정 술어의 미끼가 됐다(관측 124 모양: c285 3건 →
+#: c286 2건 → c287 4건 «어휘 미등록» 인쇄, 전건 ㉨·㉩·㉳·㉴ 해소 행). 부정이 적힌 항은
+#: «기존 상설 모듈 내 함수 추가»처럼 «상설»이 또 나와도 정의역 밖이다 — 규율 3 문면이
+#: 그 행의 자기 선언이고, 자기 선언이 산문 언급보다 우선한다. 제외분은 침묵하지 않고
+#: `rule3_negated_instruments`로 별도 인쇄된다(0항이어도).
+_RULE3_NEGATION_RX = re.compile(r"상설\s*승격\s*(?:아님|없음|없다|비해당|안\s*함)")
+
+_TEST_FN_RX = re.compile(r"^\s*def test_", re.M)
+
+
+def instrument_mass(scripts_dir: str, tests_dir: str) -> dict:
+    """계기 질량 — 상설 scripts 본수 + devloop 회귀 본수. **순수 함수**(인자 경로만 읽는다).
+
+    왜 (audit-270 F-A). 자기 수리 선례의 경계 감시는 계기 큐 계수(줄어드는 수)만
+    보았고, 그 감시 아래에서 계기 질량(상설 모듈·회귀 테스트 — 늘어나는 수)은
+    자[尺] 없이 자랐다(c266~c269 상설 2본·회귀 25본). 이 함수가 그 자[尺]다.
+    값만 잰다 — 문턱·판정은 손 몫(상수를 발명하면 규약이 된다, c174의 교훈).
+    """
+    scripts = [f for f in os.listdir(scripts_dir) if f.endswith(".py")]
+    test_files = [f for f in os.listdir(tests_dir)
+                  if f.startswith("test_devloop_") and f.endswith(".py")]
+    test_funcs = 0
+    for f in sorted(test_files):
+        with open(os.path.join(tests_dir, f), encoding="utf-8") as fh:
+            test_funcs += len(_TEST_FN_RX.findall(fh.read()))
+    return {"scripts": len(scripts), "test_files": len(test_files),
+            "test_funcs": test_funcs}
+
+
+def _history_rows(text: str):
+    """«집행·해소 이력» 표의 (항, 내용, 처분) 셀을 순서대로 낸다 — 두 정의역 함수의 공통 독자.
+
+    한 독자를 둘이 쓰는 이유: 포함 술어와 제외 술어가 다른 파서 위에 살면 «제외했는데
+    없다»와 «못 읽었다»가 같은 침묵이 된다(관측 100·106 부류).
+    """
+    in_history = False
+    for line in text.splitlines():
+        if line.startswith("## "):
+            in_history = line.startswith("## 집행·해소 이력")
+            continue
+        stripped = line.strip()
+        if not in_history or not stripped.startswith("|"):
+            continue
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        if len(cells) < 3 or cells[0] == "항" or set(cells[0]) <= set("-: "):
+            continue
+        yield cells[0], cells[1], cells[2]
+
+
+def rule3_negated(disposal: str) -> bool:
+    """처분 칸이 규율 3 부정(«상설 승격 아님/없음»)을 명시했는가 — 순수 술어."""
+    return bool(_RULE3_NEGATION_RX.search(disposal))
+
+
+def permanent_instruments(text: str) -> list[dict]:
+    """instrument-queue.md «집행·해소 이력» 표에서 처분에 «상설»이 든 항을 직독한다.
+
+    **순수 함수** — 인자 텍스트만 본다. 명단을 상수로 박지 않는 이유: 다음 상설
+    계기가 태어날 때 이 눈이 침묵하는 것이 정확히 관측 119(정의역 미선언)의
+    재발이기 때문이다(am-195 §4-① 정의역 조항).
+
+    ㉶′(c287): 규율 3 부정 선언이 적힌 항은 «상설»이 또 나와도 정의역 밖 —
+    `rule3_negated_instruments`가 그 제외분을 낸다(침묵 금지).
+    """
+    rows: list[dict] = []
+    for marker, content, disposal in _history_rows(text):
+        if "상설" not in disposal or rule3_negated(disposal):
+            continue
+        rows.append({"marker": marker, "content": content, "disposal": disposal,
+                     "embedded": bool(_EMBEDDED_RX.search(disposal))})
+    return rows
+
+
+def rule3_negated_instruments(text: str) -> list[dict]:
+    """«상설»이 적혀 있으나 규율 3 부정 선언으로 정의역 밖인 항 — 인쇄용. **순수 함수.**
+
+    0항이면 빈 리스트(None 아님) — «제외했는데 없다»는 인쇄할 값이다.
+    """
+    return [{"marker": m, "content": c, "disposal": d}
+            for m, c, d in _history_rows(text)
+            if "상설" in d and rule3_negated(d)]
+
+
+def instrument_citation(row: dict, roster: list[dict],
+                        vocab: dict[str, tuple[str, ...]] | None = None) -> list[dict]:
+    """직전 원장 행에서 상설 계기별 어휘 매치 **후보**를 뽑는다. **순수 함수.**
+
+    판정은 손 몫, 계기는 후보만 — tmp/c193·c194 citation 프로브의 계약 승계.
+    문맥 40자를 함께 담아 손이 과잉 매치를 가려낼 수 있게 한다.
+    """
+    if vocab is None:
+        vocab = PERMANENT_INSTRUMENT_VOCAB
+    blob = " ".join(str(v) for v in row.values())
+    out: list[dict] = []
+    for inst in roster:
+        rec = {**inst, "hits": [], "ctx": []}
+        if inst["embedded"]:
+            rec["status"] = "내장"
+        elif inst["marker"] not in vocab:
+            rec["status"] = "어휘 미등록"
+        else:
+            hits = [t for t in vocab[inst["marker"]] if t in blob]
+            rec["hits"] = hits
+            for t in hits:
+                i = blob.find(t)
+                rec["ctx"].append(f"{t!r}: …{blob[max(0, i - 20):i + 40]}…")
+            rec["status"] = "적혀 있었다" if hits else "안 적었다"
+        out.append(rec)
+    return out
+
+
+SAMPLE_CELL_RX = re.compile(r"표본\s*=\s*(\d+)\s*건")
+VERDICT_STAMP_CYCLE_RX = re.compile(r"판정\s*\(사이클\s*(\d+)")
+SAMPLE_CELL_SINCE = 196      #: 탈소음 — 소급 없음(am-195 §4-①). 구판은 집계 한 줄.
+SAMPLE_CELL_FORMAT_CYCLE = 185  #: 표본 칸 서식 도입(am-185 §4-⑥)
+
+
+def sample_cell_scan(text: str, since: int = SAMPLE_CELL_SINCE) -> dict:
+    """«지지» 절의 표본 칸 유무를 잰다. **순수 함수** — 질의 후보만, 고발 없음.
+
+    탈소음(am-195 §4-①): 표본 칸 의무는 판정 도장이 c{since} 이후인 절에만 적용.
+    구판(그 이전 착지)은 일괄 고발하지 않고 집계 한 줄 — 그 감사는 c200 몫이다.
+    도장 자[尺]는 «판정 (사이클 N» 1종뿐이다: 다른 서식(«판정 (c76» 등)의 절은
+    `unstamped`로 분류돼 신/구를 못 가른다 — 사각을 값으로 반환한다.
+    """
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from c124_retro_prep import STATUS_RE, parse_status  # noqa: PLC0415
+
+    lines, spans, _dups = _pred_spans(text)
+    new_ok, candidates, legacy, unstamped = [], [], [], []
+    for pid, (s, e) in spans.items():
+        body = lines[s:e]
+        field = next((m.group(1) for l in body if (m := STATUS_RE.match(l.strip()))), None)
+        arms = parse_status(field)[0] if field is not None else []
+        if not any(v == "지지" for _, v in arms):
+            continue
+        stamps = [int(m.group(1)) for l in body
+                  for m in VERDICT_STAMP_CYCLE_RX.finditer(l)]
+        if not stamps:
+            unstamped.append(pid)
+            continue
+        landing = max(stamps)
+        if landing < since:
+            legacy.append(pid)
+            continue
+        samples = [int(m.group(1)) for l in body for m in SAMPLE_CELL_RX.finditer(l)]
+        if any(n >= 1 for n in samples):
+            new_ok.append((pid, landing, max(samples)))
+        else:
+            candidates.append(
+                (pid, landing, "표본 칸 부재" if not samples else "표본 = 0건"))
+    return {"new_ok": new_ok, "candidates": candidates,
+            "legacy": sorted(legacy, key=_pid_key),
+            "unstamped": sorted(unstamped, key=_pid_key), "since": since}
+
+
+def part_d() -> None:
+    """[D] 예측 판정 기한 — 매 사이클 (c164 신설, P48, 감사 R5 이관분 = 계기 큐 ㉦).
+
+    왜. 판정 기한을 배달하는 채널이 **산문 하나**였다. c163의 P45 기한은 `task_state`
+    산문에만 실려 있었고 그 채널은 c161처럼 꼬리에서 죽으면 통째로 사라진다 —
+    c163이 P45를 제때 판정한 것은 규율이 아니라 운이며 c163 자신이 그렇게 적었다.
+    관행 ⑥의 적용: 처치를 규약 문면이 아니라 계기에 놓되, 그 계기가 열리는 주기(매
+    사이클 step 0)가 기한이 도래하는 주기와 같아야 한다.
+
+    이 파트는 인쇄하고 `exit 0`이다(P48 한계 ①). 강제는 다음 손의 몫이고, 그 몫을
+    안 하면 P48 (c)가 반증된다 — 함정을 미리 파 두었다.
+    """
+    print("\n[D. 예측 판정 기한 — 매 사이클 (c164 신설, P48 · 감사 R5 이관 = 계기 큐 ㉦)]")
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from c124_retro_prep import PRED, predictions  # noqa: PLC0415
+        parsed = parse_deadlines(PRED.read_text(encoding="utf-8"))
+        recs = {r["id"]: r for r in predictions()["records"] if r["habitat"] == "절"}
+    except Exception as exc:  # 계기 고장이 step 0을 죽이지 않는다 — 강등 후 계속
+        print(f"  !! 파트 자체가 돌지 않았다: {type(exc).__name__}: {exc}")
+        print("     → 이 사이클의 기한 판정은 **미측정**이다. '기한 없음'으로 읽지 말 것.")
+        return
+
+    rows = []
+    with open(os.path.join(REPO, "research", "devloop", "metrics.jsonl"), encoding="utf-8") as fh:
+        for line in fh:
+            if line.strip():
+                rows.append(json.loads(line))
+    n_now = max(int(r["cycle"]) for r in rows) + 1
+    today = time.strftime("%Y-%m-%d")
+
+    hits = parsed["variant_hits"]
+    print("  서식 변이별 적중: " + " · ".join(f"'{k}' {v}건" for k, v in hits.items())
+          + f"   달력 기한 {len(parsed['calendar'])}건")
+    print("  ※ 0인 변이는 '그 서식이 없다'와 '정규식이 못 본다'를 구별하지 않는다 —"
+          " P48 한계 ③.")
+
+    # 시계 위 = 팔에 미도래 어휘가 하나라도 있는 절. 가동/미시작을 **가르지 않으면**
+    # (a)의 표본 크기가 부풀려진다: 미시작은 기한 무기재가 정상이다.
+    open_arms = {pid: [(a, v) for a, v in r["arms"] if v in OPEN_ARM_VALUES]
+                 for pid, r in recs.items()}
+    pending = {pid: arms for pid, arms in open_arms.items() if arms}
+    running = {pid: arms for pid, arms in pending.items()
+               if any(v == RUNNING_ARM for _, v in arms)}
+    unstarted = sorted(set(pending) - set(running), key=_pid_key)
+
+    print(f"  시계 위 {len(pending)}건 = **가동 {len(running)}** · 미시작 {len(unstarted)}"
+          f"  [프레임 N={n_now}, 원장 cycle max +1]")
+
+    due, overdue, future, no_deadline = [], [], [], []
+    for pid in sorted(pending, key=_pid_key):
+        cyc = parsed["cycle"].get(pid)
+        cal = parsed["calendar"].get(pid)
+        is_running = pid in running
+        if cyc is not None:
+            (due if cyc == n_now else overdue if cyc < n_now else future).append(
+                (pid, f"c{cyc}", cyc - n_now, is_running))
+        elif cal is not None:
+            over = cal < today
+            (overdue if over else future).append((pid, cal, None, is_running))
+        else:
+            no_deadline.append((pid, is_running))
+
+    if due:
+        print("  ★★ 오늘이 기한이다 — 절차 2의 선택은 이 판정이다:")
+        for pid, d, _, is_run in due:
+            print(f"       {pid}  기한 {d}  ({'가동' if is_run else '미시작'})"
+                  f"  → predictions.md `## {pid}` 절의 팔 전건을 판정하고 상태줄을 갱신할 것")
+    else:
+        print("  오늘 기한인 예측 0건.")
+    for pid, d, gap, is_run in overdue:
+        tail = f" → {-gap}사이클 초과" if gap is not None else " → 달력 기한 도과"
+        print(f"  !! **도과** {pid} 기한 {d}{tail} ({'가동' if is_run else '미시작'})")
+        print("       → 판정하거나, 이월이면 **사유를 원장에 적을 것** (P48 (c) 반증 조건).")
+    if not overdue:
+        print("  도과 0건 — 다만 이 0은 '검출기가 돈다'의 증거가 아니다(관행 ㉕).")
+    for pid, d, gap, is_run in future:
+        when = f"{gap}사이클 뒤" if gap is not None else "달력 기한"
+        print(f"     예정 {pid} → {d} ({when})")
+    if no_deadline:
+        run_blind = [pid for pid, is_run in no_deadline if is_run]
+        print(f"  ↳ 사각: 기한 무기재 {len(no_deadline)}건 — 그중 **가동 {len(run_blind)}건**"
+              f"{' (' + ' '.join(run_blind) + ')' if run_blind else ''}"
+              f" · 미시작 {len(no_deadline) - len(run_blind)}건(무기재가 정상).")
+        print("     트리거형 예측은 원리적으로 이 눈 밖이다 — 정의역 선언(P48 한계 ②).")
+
+    # ── 상태줄 ↔ 판정문 정합 (c169 신설 · 관측 90 처치 · P54) ─────────────────
+    # 파트 D 안에 둔 것은 의도다: 이 파트의 판별 입력이 곧 상태줄이므로, 그 입력의
+    # 신뢰도는 판별 결과와 **같은 화면**에 있어야 한다(관행 ㉘).
+    try:
+        _print_status_stamp(status_stamp_reconcile(PRED.read_text(encoding="utf-8")))
+    except Exception as exc:
+        # 미측정을 **인쇄하고 계속한다** — 아래 문서 시계는 이 계기와 독립이므로
+        # 여기서 return하면 무관한 인쇄가 함께 죽는다(계기 고장의 전파).
+        print(f"\n  [상태줄↔판정문 정합] !! 미측정: {type(exc).__name__}: {exc}")
+        print("     → '정합 위반 0'으로 읽지 말 것.")
+
+    # ── 상설 계기 인용·표본 칸 — ㉶+㉬ 병합 (c196 신설 · am-195 §4-① · P68) ────
+    # 파트 D 안에 둔 것은 의도다: 이 눈의 정의역(판정문·도장)이 곧 이 파트의 입력이고,
+    # 배달 채널 ①(P68 등록문 명시)이 이 파트의 매 사이클 인쇄이기 때문이다.
+    try:
+        with open(INSTRUMENT_QUEUE_PATH, encoding="utf-8") as fh:
+            queue_text = fh.read()
+        _print_instrument_eyes(permanent_instruments(queue_text), rows[-1],
+                               sample_cell_scan(PRED.read_text(encoding="utf-8")),
+                               negated=rule3_negated_instruments(queue_text))
+    except Exception as exc:
+        print(f"\n  [상설 계기 인용·표본 칸 — ㉶+㉬] !! 미측정: {type(exc).__name__}: {exc}")
+        print("     → '무인용 0·질의 0'으로 읽지 말 것.")
+
+    # ── 계기 질량 계열 (c271 신설 · audit-270 R2 — F-A의 선언된 반증 조건) ────
+    # 파트 D 안에 둔 것은 의도다: 자기 수리 선례를 소비하는 손이 보는 화면(계기
+    # 큐·판정 기한)과 같은 화면에, 그 선례들이 쌓아 올리는 질량이 함께 있어야
+    # 단측 성장이 보인다. 값 인쇄 전용 — 추세·개선 주장은 원장 전사값 대조로만(원칙 1).
+    try:
+        mass = instrument_mass(os.path.dirname(os.path.abspath(__file__)),
+                               os.path.join(REPO, "tests"))
+        print(f"\n  [계기 질량 — 매 사이클 (c271 신설, audit-270 R2 · F-A 반증 조건)]")
+        print(f"    scripts *.py = {mass['scripts']}본 · tests/test_devloop_*.py ="
+              f" {mass['test_files']}파일 · test 함수 = {mass['test_funcs']}본"
+              f"  [프레임 N={n_now}]")
+        print("    ※ 이 세 수를 원장에 **그대로** 전사할 것 — 추세는 전사 계열에서만"
+              " 읽힌다(손 증분 금지, P46 (a)와 같은 규율).")
+    except Exception as exc:
+        print(f"\n  [계기 질량] !! 미측정: {type(exc).__name__}: {exc}")
+        print("     → '질량 불변'으로 읽지 말 것.")
+
+    # 회고·감사 시계는 예측 대장이 아니라 사이클 번호가 정한다. 같은 화면에 둔다 —
+    # 기한을 만나는 손이 "그 판정을 쓸 문서가 언제 열리는가"도 함께 알아야 한다(관행 ⑧).
+    try:
+        from c124_retro_prep import next_audit, next_retro  # noqa: PLC0415
+        print(f"  문서 시계: 다음 회고 c{next_retro(n_now)} · 다음 적대 감사 c{next_audit(n_now)}")
+    except Exception as exc:
+        print(f"  문서 시계 미측정: {type(exc).__name__}: {exc}")
+
+
+def _print_status_stamp(rec: dict) -> None:
+    """정합 인쇄 — 계산(`status_stamp_reconcile`)과 가른다.
+
+    가르는 이유: 계산은 순수 함수여서 합성 표본으로 회귀에 걸리고, 인쇄는 그렇지
+    않다. 둘을 한 함수에 두면 회귀가 인쇄 문자열에 묶여 서식 변경마다 깨진다.
+    """
+    down, silent = rec["down"], rec["silent_drop"]
+    print("\n  [상태줄↔판정문 정합 — c169 신설 (관측 90 처치 · 관측 98 · P54)]")
+    print(f"    시계 아래(전건 판정 선언) {len(down)}건"
+          f" — 도장 있음 {len(rec['clean_down'])}"
+          f" · 표지만(무도장) {len(rec['unstamped_down'])}"
+          f" · **표지 자체 없음 {len(silent)}**")
+    habitats = {n: sum(r["habitat_hits"][n] for r in rec["sections"].values())
+                for n, _ in VERDICT_HABITATS}
+    print("    표지 서식지별 적중: "
+          + " · ".join(f"'{k}' {v}건" for k, v in habitats.items()))
+    print("    ※ 서식지 목록은 **오늘 실측한 3종**이지 전수가 아니다 — 넷째가 있으면 이 눈은"
+          " 다시 오고발한다(P54 한계 ③).")
+    print("    [순진한 자[尺](서식지 1종) 대조 — **술어를 값과 함께** 인쇄한다"
+          " (c174 처치, 관측 112 · 98)]")
+    print(f"       «표지 없음» = **{len(rec['naive_silent'])}건**"
+          "   ← 이 계기가 끈 축(3서식지로 0이 된다)")
+    print(f"       «도장 없음» = **{len(rec['naive_unstamped'])}건**"
+          "   ← **별 축. 이 계기는 여기에 손대지 않았다**(한계 ④가 문턱을 여기서 내렸다)")
+    print("       ※ 두 수는 같은 자[尺]의 **다른 술어**다. P54 등록 표는 뒤의 수를 앞의"
+          " 열에 적었고 c174 처분이 그것을 정정했다 — **수를 인용하기 전에 술어를 물어라.**")
+    if silent:
+        print("    !! **상태줄 단독 하강(판정문 부재)** — 조용한 거짓 음성, 관측 90의 고발 대상:")
+        for pid in sorted(silent, key=_pid_key):
+            print(f"         {pid}  상태: {rec['sections'][pid]['field']}")
+        print("       → 판정문을 쓰거나, 상태줄을 되돌릴 것. 침묵이 '판정 완료'로 읽힌다.")
+    else:
+        print("    상태줄 단독 하강 0건 — 다만 이 0은 서식지 목록이 전수일 때만 참이다.")
+    if rec["partial_drop"]:
+        print("    !! 부분 하강(팔 일부 판정 + 표지 부재): "
+              + " ".join(sorted(rec["partial_drop"], key=_pid_key)))
+    if rec["stamp_only_new"]:
+        print("    !! **상태줄 미갱신(도장 단독)** — 안전한 쪽 거짓 양성 방향, 손을 부른다:")
+        for pid in sorted(rec["stamp_only_new"], key=_pid_key):
+            print(f"         {pid}  상태: {rec['sections'][pid]['field']}"
+                  f"  (도장 {rec['sections'][pid]['stamped']}건)")
+    for pid in sorted(rec["stamp_only_known"], key=_pid_key):
+        print(f"    [기지·손 유지 상수] {pid} — {STAMP_ONLY_ADJUDICATED[pid]}")
+    print("    ※ 두 갈래를 **둘 다** 인쇄한다 — 어느 쪽도 침묵이 아니다(관측 90 기대 동작).")
+    if rec["duplicate_pids"]:
+        print("    !! **중복 pid — 두 계기의 해소 정책이 정반대다** (관측 99 · 77 계열):")
+        for pid, at in sorted(rec["duplicate_pids"].items(), key=lambda kv: _pid_key(kv[0])):
+            where = " · ".join(f"L{n}" for n in at)
+            print(f"         {pid}  절 {len(at)}본 ({where})"
+                  f"  → 이 눈·기한 파서 = **먼저**(L{at[0]}) / 파트 D 팔 = **나중**(L{at[-1]})")
+        print("       → 한 절의 팔과 다른 절의 기한이 짝지어진다. 정책을 고르기 전에"
+              " 번호를 가르는 것이 정본 처치다(개명 패킷 = 게이트 대기).")
+
+
+def _print_instrument_eyes(roster: list[dict], last_row: dict, scan: dict,
+                           negated: list[dict] | None = None) -> None:
+    """㉶+㉬ 인쇄 — 계산과 가른다(`_print_status_stamp`와 같은 이유)."""
+    n_last = last_row.get("cycle")
+    print("\n  [상설 계기 인용·표본 칸 — ㉶+㉬ 병합 (c196 신설, am-195 §4-① · P68)"
+          " — **진단 전용·고발 없음**(관측 107)]")
+    standalone = [r for r in roster if not r["embedded"]]
+    embedded = [r for r in roster if r["embedded"]]
+    line = (f"    정의역(instrument-queue.md «집행·해소 이력» 직독)"
+            f" = 처분 «상설» {len(roster)}항 — 검사 대상 {len(standalone)}항")
+    if embedded:
+        line += (f" · 내장 {len(embedded)}항({' '.join(r['marker'] for r in embedded)}"
+                 " — 그 파트의 전사 의무 몫, 이 눈 밖)")
+    print(line)
+    # ㉶′(c287): 규율 3 부정 선언 제외분 — 0항이어도 인쇄(«제외했는데 없다» ≠ «제외하지 않았다»).
+    negated = negated or []
+    marks = " ".join(r["marker"] for r in negated) if negated else "—"
+    print(f"    규율 3 부정(«상설 승격 아님») 제외 = **{len(negated)}항**({marks})"
+          " — 처분 칸에 «상설»이 적혀 있으나 자기 선언이 부정이라 정의역 밖(㉶′ c287).")
+    print(f"    검사 = 직전 원장 행 c{n_last}의 계기별 어휘 매치"
+          "(느슨 — 과잉 매치 방향 · **후보만, 판정은 손**):")
+    for rec in instrument_citation(last_row, standalone):
+        if rec["status"] == "어휘 미등록":
+            print(f"      {rec['marker']} — **어휘 미등록** — 신입 상설 계기다:"
+                  " `PERMANENT_INSTRUMENT_VOCAB`에 어휘를 등재하라(침묵 방지 인쇄).")
+        elif rec["status"] == "적혀 있었다":
+            print(f"      {rec['marker']} «적혀 있었다»(후보) — 어휘 {rec['hits']}")
+            for c in rec["ctx"][:4]:
+                print(f"          {c}")
+        else:
+            print(f"      {rec['marker']} «안 적었다» — 어휘 무매치 → 손 판독:"
+                  " 규약 ⑬ 선언(수확 후 실행분)이면 다음 사이클 원장 전사 의무를 확인하라.")
+    print("    ※ «적혀 있었다»는 인용 확정이 아니다 — 어휘가 느슨해 일반 산문"
+          "(질의·검산·불일치)에 과잉 매치한다. 문맥을 손으로 가려라"
+          "(P65 (c) 거짓 양성 0/2가 자동 판정 금지의 근거).")
+    print("    ※ 사각(선언): 1세션 사망 사이클은 원장 행이 없어 이 눈 밖 —"
+          " A-156.1의 몫이며 이 눈은 그 대체가 아니다(c191이 그 실측).")
+    print(f"    [표본 칸 — ㉬ (탈소음: 판정 도장 c{scan['since']}+ 절만 · 소급 없음,"
+          " am-195 §4-①)]")
+    if scan["candidates"]:
+        for pid, landing, why in sorted(scan["candidates"], key=lambda t: _pid_key(t[0])):
+            print(f"      → 질의(고발 아님): {pid} — 판정 c{landing} «지지»인데 {why}."
+                  " 마감-표본부재로 적을 것을 지지로 포장한 자리인지 손으로 판독하라"
+                  "(am-185 §4-⑥).")
+    elif scan["new_ok"]:
+        cells = " ".join(f"{p}(판정 c{l} · 표본 {n}건)" for p, l, n in scan["new_ok"])
+        print(f"      신규(판정 c{scan['since']}+) 지지 절 질의 0건 — 표본 칸 보유"
+              f" {len(scan['new_ok'])}건: {cells}")
+    else:
+        print(f"      신규(판정 c{scan['since']}+) 지지 절 질의 0건 — 해당 절 자체가 아직 없다.")
+    print(f"      구판 지지 절 {len(scan['legacy'])}건 — 표본 칸 서식 도입"
+          f"(c{SAMPLE_CELL_FORMAT_CYCLE}) 이후에도 소급 없음 · 그 감사는 c200 몫"
+          "(am-195 부록 A-3).")
+    if scan["unstamped"]:
+        print(f"      ↳ 사각: 지지인데 «판정 (사이클 N» 도장 무표기 {len(scan['unstamped'])}건"
+              " — 착지 사이클을 못 읽어 신/구 분류 불가(도장 자[尺] 1종의 한계): "
+              + " ".join(scan["unstamped"]))
+
+
+def _pid_key(pid: str) -> tuple[int, str]:
+    return (int(re.sub(r"\D", "", pid) or 0), pid)
+
+
+def run_part(label: str, fn, deaths: list[tuple[str, str]]) -> None:
+    """파트 하나를 격리 실행한다. 사망은 **전파되지 않되 조용하지도 않다** (c192, 관측 121 ㉡).
+
+    구조 이전: `main()`이 11파트를 무보호로 순차 호출했다. c192 실측 — 6번째
+    `part_b`가 죽자 뒤의 **5파트(F·D·P·X·O)가 통째로 실행되지 않았고**, stdout에는
+    앞 5파트의 정상 출력만 남아 **정상 종료한 보고서와 구별되지 않았다.**
+    무기억으로 태어나는 손은 «파트 O가 없다»를 알아채려면 «파트 O가 있어야 한다»를
+    미리 알아야 하는데, 그것이 정확히 없는 것이다.
+
+    ★ 격리의 자기 위협(P67 한계 ①): 파트가 죽어도 보고서가 «대체로» 나오면 사망은
+    고쳐야 할 사건이 아니라 읽고 넘기는 배너가 된다. 그래서 셋을 **함께** 건다 —
+    자리마다 사망 배너 · 말미 사망 요약 · `exit 1`. 사망 0이면 이 함수는 문면을
+    **한 글자도** 더하지 않는다(P67 (c) 팔이 그것을 반증 대상으로 고정한다).
+    """
+    try:
+        fn()
+    except ForgetRpcError as exc:
+        # 남의 오류 — 계기가 고장난 것이 아니다. 그 구별을 화면에 적는다.
+        deaths.append((label, f"forget 서버 오류 [{exc.code}] {exc.message}"))
+        print(f"\n[!! 파트 {label} 사망 — **서버측**] {exc.tool}: [{exc.code}] {exc.message}")
+        print(f"    이 파트의 출력은 없다. 계기의 결함이 아니라 forget 서버가 돌려준 오류다.")
+        print(f"    → 뒤의 파트는 계속 실행된다(c192 처치). 사망 요약은 말미에 있다.")
+    except Exception as exc:  # noqa: BLE001 — 격리가 목적이므로 광폭 포획이 맞다
+        deaths.append((label, f"{type(exc).__name__}: {exc}"))
+        print(f"\n[!! 파트 {label} 사망 — **계기측**] {type(exc).__name__}: {exc}")
+        traceback.print_exc()
+        print(f"    → 뒤의 파트는 계속 실행된다(c192 처치). 사망 요약은 말미에 있다.")
 
 
 if __name__ == "__main__":
-    part_a()
-    part_b()
+    # c192(관측 121·P67): 순서와 그 이유는 아래 주석 그대로다 — 바뀐 것은 **호출
+    # 방식뿐**이다. 각 파트를 run_part로 감싸 한 파트의 사망이 나머지를 데려가지
+    # 못하게 한다. 사망 0이면 출력·종료 코드는 종전과 동일하다.
+    deaths: list[tuple[str, str]] = []
+    # part_n을 1행에 남긴다 — 그 배너가 F-절차0 처치이고 P16 (a)가 5/5로 성립한
+    # 작동 중인 처치다. 몸 지문은 그 **직후**(여전히 첫 화면)에 세운다.
+    # part_s는 그 바로 다음 — 복원의 신뢰성 판정이 몸 지문보다 앞선다(c93).
+    run_part("N", part_n, deaths)
+    run_part("S", part_s, deaths)
+    run_part("Body", part_body, deaths)
+    run_part("R", part_recall, deaths)
+    run_part("A", part_a, deaths)
+    run_part("B", part_b, deaths)
+    # part_f는 말미다 — part_n 배너 1행·Body 첫 화면(P21)의 기존 계약을 건드리지 않고,
+    # 인덱스는 절차 2(선택) 직전에 읽히는 마지막 화면이 된다.
+    run_part("F", part_f, deaths)
+    # part_d는 part_f 바로 뒤 — 기한이 오늘이면 그 판정이 **절차 2의 선택**이므로,
+    # 선택 입력(미해소 관측 조망)과 같은 화면에 인접해야 한다. 파트 F의 '조망 =
+    # 마지막' 계약은 c161에 파트 P·X가 아래에 붙어 실질 종료됐다(그 사실은 파트 O
+    # 주석에 이미 적혀 있다).
+    run_part("D", part_d, deaths)
+    # part_p는 part_f 뒤 — 대장 위생은 절차 2의 선택 입력이 아니라 절차 3의 등록
+    # 직전에 읽혀야 한다. 파트 F의 조망 계약(마지막 화면)을 깨지 않으려 그 아래 붙인다.
+    run_part("P", part_p, deaths)
+    # part_x는 말미 — 프로브 위생은 절차 3(수행) 직전에 읽히면 된다. 파트 P와 같은
+    # 이유로 파트 F의 조망 계약 아래에 둔다.
+    run_part("X", part_x, deaths)
+    # part_o는 맨 마지막 — 서수는 절차 5(수확)에서 쓰이므로 마지막 화면이 곧 그 자리에
+    # 가장 가까운 화면이다. 파트 F의 '조망 = 마지막' 계약은 c161에 파트 P·X가 이미
+    # 아래에 붙어 실질 종료됐고(그 사실을 여기 적는다), 서수는 F의 경과값과 **같은
+    # 자[尺]**를 쓰므로 둘이 인접해 대조되는 편이 낫다.
+    run_part("O", part_o, deaths)
+
+    # 말미 사망 요약 — 격리가 사망을 «읽고 넘기는 배너»로 만들지 않기 위한 셋 중 둘째.
+    # 사망 0이면 이 블록은 아무것도 인쇄하지 않는다(P67 (c) 팔).
+    if deaths:
+        print(f"\n[!] **사망 파트 {len(deaths)}건 / 전체 11** — 아래 파트의 출력은 이 화면에 없다.")
+        for label, why in deaths:
+            print(f"    - 파트 {label}: {why}")
+        print("    이 사이클의 step 0은 **부분 실행**이다. 없는 파트의 검산 의무를")
+        print("    «해당 없음»으로 적지 말 것 — 안 본 것과 없는 것은 다르다(관측 104·121).")
+        sys.exit(1)

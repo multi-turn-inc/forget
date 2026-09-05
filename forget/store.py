@@ -3,6 +3,7 @@ from __future__ import annotations
 import difflib
 import hashlib
 import hmac
+import math
 import importlib.util
 import os
 import re
@@ -11,6 +12,7 @@ import shutil
 import time
 from contextvars import ContextVar
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
 
@@ -21,17 +23,21 @@ from .ports import enforce_project_quota
 from . import hybrid_workspace, scope_guard
 from .db import get_db, json_dumps, json_loads
 from .memory_engine import (
+    anchor_applies,
     categorize,
     cosine_similarity,
     deterministic_embedding,
+    episode_anchor,
     extract_linked_entities,
     keyword_overlap_score,
     low_value_memory_reason,
+    message_content_text,
     normalize_entity,
     rerank_score,
     score_memory,
 )
 from .providers import (
+    effective_embedding_stack,
     embed_text,
     extract_facts,
     generate_action_hint_targets,
@@ -172,6 +178,7 @@ def require_auth(request: Request) -> str:
         "actor_type": "anonymous",
         "project_id": project_id,
         "org_id": requested_org_id or "org_local",
+        "scopes": [],
         "is_operator": False,
     }
     if header.startswith("Token ") or header.startswith("Bearer "):
@@ -183,17 +190,21 @@ def require_auth(request: Request) -> str:
                 "project_id": project_id,
                 "org_id": requested_org_id or project_org_id(project_id) or "org_local",
                 "role": "operator",
+                "scopes": ["*"],
                 "is_operator": True,
             }
         else:
             with get_db() as conn:
                 row = conn.execute(
                     """
-                    SELECT p.project_id, p.org_id, '' AS owner_user_id, 'project' AS credential_type
+                    SELECT p.project_id, p.org_id, '' AS owner_user_id,
+                           '' AS agent_principal, '["*"]' AS scopes,
+                           'project' AS credential_type
                       FROM projects p
                      WHERE p.api_key = ?
                     UNION ALL
-                    SELECT ak.project_id, p.org_id, ak.owner_user_id, 'api_key' AS credential_type
+                    SELECT ak.project_id, p.org_id, ak.owner_user_id,
+                           ak.agent_principal, ak.scopes, 'api_key' AS credential_type
                       FROM api_keys ak
                       JOIN projects p ON p.project_id = ak.project_id
                      WHERE ak.api_key = ?
@@ -214,7 +225,9 @@ def require_auth(request: Request) -> str:
                     "project_id": project_id,
                     "org_id": org_id,
                     "user_id": row["owner_user_id"] or None,
+                    "agent_principal": row["agent_principal"] or None,
                     "role": "api_key",
+                    "scopes": json_loads(row["scopes"], []),
                     "is_operator": False,
                 }
             else:
@@ -245,8 +258,10 @@ def require_auth(request: Request) -> str:
                 "actor_type": "anonymous",
                 "project_id": project_id,
                 "org_id": requested_org_id or project_org_id(project_id) or "org_local",
+                "scopes": [],
                 "is_operator": False,
             }
+    context.setdefault("scopes", [])
     set_current_project_id(project_id)
     set_current_auth_context(context)
     request.state.auth_context = context
@@ -262,6 +277,7 @@ def api_key_payload(row: Any, include_key: bool = False) -> dict[str, Any]:
         "id": row["id"],
         "project_id": row["project_id"],
         "owner_user_id": row["owner_user_id"] if "owner_user_id" in row.keys() else "",
+        "agent_principal": row["agent_principal"] if "agent_principal" in row.keys() else "",
         "name": row["name"],
         "label": row["name"],
         "key_prefix": row["key_prefix"],
@@ -301,10 +317,17 @@ def create_api_key(
     project_id = payload.get("project_id") or project_id or current_project_id()
     key = f"m0sk_{str(new_id()).replace('-', '')}"
     scopes = payload.get("scopes") if isinstance(payload.get("scopes"), list) else ["project:read", "memory:read", "memory:write"]
+    agent_principal = str(payload.get("agent_principal") or "").strip()
+    if agent_principal and (
+        len(agent_principal) > 64
+        or re.fullmatch(r"[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?", agent_principal) is None
+    ):
+        raise HTTPException(status_code=400, detail="agent_principal has an invalid format")
     item = {
         "id": str(new_id("key")),
         "project_id": project_id,
         "owner_user_id": owner_user_id or str(payload.get("owner_user_id") or ""),
+        "agent_principal": agent_principal,
         "name": str(payload.get("name") or payload.get("label") or "API key"),
         "api_key": key,
         "key_prefix": key[:12],
@@ -318,14 +341,15 @@ def create_api_key(
         conn.execute(
             """
             INSERT INTO api_keys (
-                id, project_id, owner_user_id, name, api_key, key_prefix, scopes,
-                created_by_role, is_active, created_at, revoked_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                id, project_id, owner_user_id, agent_principal, name, api_key,
+                key_prefix, scopes, created_by_role, is_active, created_at, revoked_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 item["id"],
                 item["project_id"],
                 item["owner_user_id"],
+                item["agent_principal"],
                 item["name"],
                 item["api_key"],
                 item["key_prefix"],
@@ -612,7 +636,7 @@ def list_memory_dicts(
 def _batch_cosine_scores(query_embedding: list[float], candidates: list[dict[str, Any]]) -> dict[str, float]:
     """Vectorized cosine over stored embeddings of the same dimension as the
     query. Produces bit-for-bit the same rounded score as cosine_similarity
-    ((cos + 1) / 2, rounded to 4, clamped); rows without a matching-dimension
+    (max(0, cos), rounded to 4, clamped); rows without a matching-dimension
     embedding are left out so the caller falls back to the scalar path."""
     try:
         import numpy as np
@@ -636,7 +660,7 @@ def _batch_cosine_scores(query_embedding: list[float], candidates: list[dict[str
     norms = np.linalg.norm(matrix, axis=1)
     norms[norms == 0.0] = 1.0
     cosines = (matrix @ query) / (norms * query_norm)
-    scores = np.clip(np.round((cosines + 1.0) / 2.0, 4), 0.0, 1.0)
+    scores = np.clip(np.round(cosines, 4), 0.0, 1.0)
     return dict(zip(ids, scores.tolist()))
 
 
@@ -790,13 +814,56 @@ def _action_completion(fact: str) -> bool:
     return bool(ACTION_COMPLETION_RE.search(str(fact or "")))
 
 
+# 행동급 사실 판별자 (2026-09-01 오염 사건 봉인 — tests/test_contamination_replay.py).
+# 일정·마감·시각·금액을 담은 사실은 읽는 즉시 행동을 부른다. 사건: 기계 녹취에서
+# 온 «8/31 자정 마감»이 yellow note 한 줄만 달고 1위로 돌아왔고, 읽는 쪽은 그 위에
+# 스프린트를 세웠다. 조언(note)은 읽는 자의 성실함에 기대고, 그 성실함은 마감
+# 앞에서 사라진다. 그래서 비-green 행동급 사실에는 구조(gate)를 단다.
+ACTION_GRADE_RE = re.compile(
+    r"(?<!\d)\d{1,2}/\d{1,2}(?!\d)|\d{4}-\d{2}-\d{2}|마감|까지|오후\s*\d|오전\s*\d"
+    r"|\d[\d,]*원|\$\d|\bdeadline\b|\bdue\b",
+    re.IGNORECASE,
+)
+# 기계 유래 유입원: 이 origin으로 들어온 비-green 사실은 본장부가 아니라 검역층
+# (metadata.quarantine.status == "pending")에 앉고, 확인(confirm_memory) 전에는
+# 기본 검색에서 보이지 않는다. 삭제가 아니라 격리 — include_quarantined로 열람.
+MACHINE_ORIGINS = frozenset({"transcript", "recording", "asr", "ocr", "crawl", "scrape"})
+ACTION_GATE_NOTE = (
+    "action-grade fact (date/deadline/amount) from an unconfirmed source — "
+    "do not plan on it; confirm with the user or an independent source first"
+)
+
+
+def _action_grade(fact: str) -> bool:
+    return bool(ACTION_GRADE_RE.search(str(fact or "")))
+
+
+def _provenance_gate(trust: dict[str, Any] | None, fact: str) -> dict[str, Any] | None:
+    """비-green 행동급 사실에 confirm_required 게이트를 단다 (읽기·쓰기 양쪽에서 호출)."""
+    if not _action_grade(fact):
+        return trust
+    gated = dict(trust or {"light": "yellow", "source": "unknown", "kind": "fact"})
+    if gated.get("light") == "green":
+        return gated
+    gated["gate"] = "confirm_required"
+    gated.setdefault("note", ACTION_GATE_NOTE)
+    return gated
+
+
+def _quarantine_stamp(metadata: dict[str, Any], source_role: str) -> dict[str, Any] | None:
+    origin = str((metadata or {}).get("origin") or "").strip().lower()
+    if origin in MACHINE_ORIGINS and source_role not in ("user", "tool"):
+        return {"status": "pending", "origin": origin, "since": utc_now()}
+    return None
+
+
 def _memory_trust(source_role: str, fact: str) -> dict[str, str]:
     light = "green" if source_role in ("user", "tool") else "yellow"
     kind = "action_report" if _action_completion(fact) else "fact"
     trust = {"light": light, "source": source_role, "kind": kind}
     if light == "yellow" and kind == "action_report":
         trust["note"] = "unverified action claim from an agent-side summary — confirm with the user before acting on it"
-    return trust
+    return _provenance_gate(trust, fact)
 
 
 def _fact_relation(text: str) -> dict[str, str] | None:
@@ -1260,6 +1327,7 @@ def _task_state_search_results(
     top_k: int,
     threshold: float,
     as_of: str = "",
+    include_breakdown: bool = False,
 ) -> list[dict[str, Any]]:
     params: list[Any] = [project_id]
     if as_of:
@@ -1299,10 +1367,19 @@ def _task_state_search_results(
         # off-topic active states ride free score over recall gates
         # (friction F2 — the Quant task shadowing devloop turns).
         # Activeness is the capsule's job; search ranks by topic.
-        score = score_memory(query, item, reference_date=as_of or None)
-        score = feedback_adjusted_score(score, feedbacks.get(str(item["id"])))
+        rule_score = score_memory(query, item, reference_date=as_of or None)
+        score = feedback_adjusted_score(rule_score, feedbacks.get(str(item["id"])))
         if score >= threshold:
             item["score"] = score
+            if include_breakdown:
+                # Claims never enter the rule×w + vector×w composition, so an
+                # empty breakdown reads as rule=vector=0 — indistinguishable
+                # from "no lexical/semantic match" on rows that scored well.
+                # Mark the bypass and carry the actual input (observation 33).
+                breakdown: dict[str, Any] = {"rule": rule_score, "task_state": True}
+                if score != rule_score:
+                    breakdown["feedback"] = round(score - rule_score, 4)
+                item["score_breakdown"] = breakdown
             results.append(item)
     results.sort(key=lambda item: (item.get("score", 0), item["updated_at"]), reverse=True)
     return results[:top_k]
@@ -1484,10 +1561,159 @@ def record_task_state(payload: dict[str, Any], project_id: str | None = None) ->
     return result
 
 
+def _requested_task_state_id(payload: dict[str, Any]) -> str | None:
+    """Resolve the task/goal id from the top level or from `filters`.
+
+    `task_id` and `goal_id` are valid filter vocabulary — validate_filters
+    accepts them and tests/test_filter_contract.py pins that — but
+    _task_state_scope keeps only ENTITY_FIELDS + project, so until 2026-08-10 a
+    filters-only task_id passed validation and was then dropped: the caller got
+    the whole cross-task list back, shaped exactly like a filtered answer.
+
+    That is the worse half of the contract validate_filters established. An
+    unknown key fails loud; a known-but-unapplied key taught callers to read
+    "accepted" as "applied". Observed by the devloop cycle 93 step 0, where a
+    stale task state could not be told apart from a missing one because the
+    filter used to investigate it did nothing.
+    """
+    for key in ("task_id", "goal_id"):
+        value = payload.get(key)
+        if value not in (None, ""):
+            return str(value)
+    filters = payload.get("filters")
+    if not isinstance(filters, dict):
+        return None
+    for key in ("task_id", "goal_id"):
+        value = filters.get(key)
+        if value in (None, ""):
+            continue
+        if isinstance(value, dict):
+            operators = ", ".join(sorted(str(name) for name in value))
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"filters.{key} on task state accepts an exact string only; "
+                    f"comparators ({operators}) are not applied here. "
+                    f"Pass the top-level {key} parameter instead."
+                ),
+            )
+        if isinstance(value, (list, tuple, set)):
+            raise HTTPException(
+                status_code=400,
+                detail=f"filters.{key} on task state accepts an exact string, not a list.",
+            )
+        return str(value)
+    return None
+
+
+def _flux_layer_stale_hours() -> float:
+    """TTL for the fast layer, in hours.
+
+    The capsule dial (MEM1_CAPSULE_STALE_HOURS) is the same concept applied to
+    the same data, so it is the fallback; MEM1_TASK_STATE_STALE_HOURS exists for
+    callers who want the tool stricter than the rendered capsule.
+    """
+    for name in ("MEM1_TASK_STATE_STALE_HOURS", "MEM1_CAPSULE_STALE_HOURS"):
+        raw = os.environ.get(name)
+        if raw is None or not str(raw).strip():
+            continue
+        try:
+            hours = float(raw)
+        except ValueError:
+            continue
+        if hours > 0:
+            return hours
+    return 24.0
+
+
+def _task_state_recorded_at(current: dict[str, Any] | None) -> str:
+    """When the returned generation was written, by the most specific stamp."""
+    if not isinstance(current, dict):
+        return ""
+    for key in ("valid_from", "updated_at", "recorded_at", "created_at"):
+        value = str(current.get(key) or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def task_state_freshness(current: dict[str, Any] | None, as_of: str = "") -> dict[str, Any]:
+    """Machine-readable freshness marker for a task-state response.
+
+    LOOP.md's persona model splits context by rate of change and puts task state
+    in the fast layer, whose contract is "hourly TTL, a stale marker is required
+    once exceeded". The rule existed; the wiring did not. Cycle 93 (field note,
+    observation 49) paid for the gap: two record_task_state calls left no
+    generation, and the next sessions were handed a two-cycle-old state as
+    "current" with nothing in the payload saying so. The failure was silent in
+    both directions -- a write that does not land raises nothing, and a read of
+    the older generation looks exactly like a read of the newest one.
+
+    `stale` means "not certified fresh", not merely "old": absence and an
+    unreadable timestamp set it too. An agent branches on one boolean or on
+    none, so the reasons live in `state` and the single flag stays decidable.
+
+    Absence is the case worth naming. `count: 0` already says no rows came back,
+    but silence reads as "nothing in progress" when it can equally mean the last
+    write failed -- exactly the sentence cycle 93 could not tell apart.
+
+    A point-in-time replay (`as_of`) is deliberately historical, so age against
+    now says nothing about it; flagging it would be a false alarm, and a marker
+    that cries wolf stops being read.
+
+    Not covered (see P33 (c)): whether the generation's *content* matches the
+    caller's own ledger. The server has no access to a domain ledger such as
+    devloop's metrics.jsonl, so a fresh generation carrying the wrong cycle
+    still reports `fresh`. That half stays with the caller's instrument.
+    """
+    ttl_hours = _flux_layer_stale_hours()
+    marker: dict[str, Any] = {
+        "schema_version": "mem1-task-state-freshness-v1",
+        "state": "fresh",
+        "stale": False,
+        "age_hours": None,
+        "ttl_hours": ttl_hours,
+        "recorded_at": "",
+        "checked_at": utc_now(),
+        "replay_as_of": as_of or "",
+        "advice": "",
+    }
+    if as_of:
+        marker["state"] = "replay"
+        marker["advice"] = "point-in-time replay: freshness is not evaluated against now."
+        return marker
+    if not isinstance(current, dict) or not current:
+        marker["state"] = "absent"
+        marker["stale"] = True
+        marker["advice"] = (
+            "no active task state for this scope. Absence is not evidence that nothing "
+            "is in progress -- the last record_task_state may have failed. Re-record "
+            "before treating this as a clean slate."
+        )
+        return marker
+    recorded_at = _task_state_recorded_at(current)
+    marker["recorded_at"] = recorded_at
+    age_hours = _state_age_hours(recorded_at)
+    if age_hours is None:
+        marker["state"] = "unknown"
+        marker["stale"] = True
+        marker["advice"] = "no readable write timestamp: freshness cannot be certified, treat as stale."
+        return marker
+    marker["age_hours"] = round(age_hours, 3)
+    if age_hours >= ttl_hours:
+        marker["state"] = "stale"
+        marker["stale"] = True
+        marker["advice"] = (
+            f"state was written {age_hours:.1f}h ago (TTL {ttl_hours:g}h). Re-verify before "
+            "acting on summary or next_actions; confirm the last cycle actually recorded."
+        )
+    return marker
+
+
 def get_task_state(payload: dict[str, Any] | None = None, project_id: str | None = None) -> dict[str, Any]:
     payload = dict(payload or {})
     project_id = payload.get("project_id") or project_id or current_project_id()
-    task_id = payload.get("task_id") or payload.get("goal_id")
+    task_id = _requested_task_state_id(payload)
     as_of = str(
         payload.get("as_of")
         or payload.get("asOf")
@@ -1559,6 +1785,7 @@ def get_task_state(payload: dict[str, Any] | None = None, project_id: str | None
             "count": len(epoch_results),
             "results": epoch_results,
             "current": epoch_results[0],
+            "freshness": task_state_freshness(epoch_results[0], as_of),
             "state_source": "workspace_epoch_as_of" if as_of else "workspace_epoch",
         }
     params: list[Any] = [project_id]
@@ -1628,6 +1855,7 @@ def get_task_state(payload: dict[str, Any] | None = None, project_id: str | None
         "count": len(results),
         "results": results,
         "current": results[0] if results else None,
+        "freshness": task_state_freshness(results[0] if results else None, as_of),
         "state_source": "claim_ledger_as_of" if as_of else "claim_ledger",
     }
 
@@ -1736,6 +1964,22 @@ def _float_or(value: Any, default: float) -> float:
         return float(value)
     except (TypeError, ValueError):
         return default
+
+
+def _memory_age_days(created_at: Any, now: datetime) -> float:
+    """P-F-1 감쇠용 나이 — 파싱 불가면 0(감쇠 없음, fail-open)."""
+    text = str(created_at or "").strip()
+    if not text:
+        return 0.0
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return 0.0
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return max(0.0, (now - parsed).total_seconds() / 86400.0)
 
 
 def _bool_or(value: Any, default: bool = False) -> bool:
@@ -3669,12 +3913,93 @@ def _merge_event_metadata(event_id: str, extra: dict[str, Any]) -> None:
         pass  # accounting must never block the write path
 
 
+_ANCHOR_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9._\-]{2,}|[가-힣]{2,}|\+?\d+\.\d+")
+_SERIES_ANCHOR_CAP = 48   # 앵커 토큰 총량 상한 — 승계 반복으로 무한 성장 방지
+
+
+def _harvest_series_anchor(old_text: str, canonical_text: str, existing: str) -> list[str]:
+    """P-R-6 앵커 유산: 침강하는 구본의 판별 토큰(정본·기존 앵커에 없는 것)을
+    수확한다 — 사슬의 어휘 유산이 어휘-빈곤 정본을 들어올린다 (inc-005)."""
+    base = f"{canonical_text} {existing}".lower()
+    out: list[str] = []
+    seen: set[str] = set()
+    for token in _ANCHOR_TOKEN_RE.findall(old_text or ""):
+        low = token.lower()
+        if low in seen or low in base:
+            continue
+        seen.add(low)
+        out.append(token)
+        if len(out) >= 12:
+            break
+    return out
+
+
+def _succeed_series(conn, project_id: str, record_metadata: dict[str, Any],
+                    new_memory_id: str, now: str) -> None:
+    """시계열 자동 승계 (2026-08-30 구조 수리) — metadata.series 보유 행의
+    신규 저장은 같은 series의 이전 현행 행을 supersede 링크로 침강시킨다.
+
+    실전 사고가 낳은 기관: LME-V2 LAFS 스냅샷(+2.211→+2.577→+3.732)이
+    승계 없이 공존해 낡은 수치(+2.577)가 현행으로 인용됐다 — 시변 계량의
+    정본은 하나여야 하고, 그 질서는 쓰기 시점에 세우는 게 회고 컴파일보다
+    싸다(컴파일러 stale-state는 다일 조건에 막혀 이 가족을 놓쳤다).
+    가역: superseded_by 링크만 — 삭제·텍스트 변형 없음, 억제 간선이 집행.
+    """
+    series = str((record_metadata or {}).get("series") or "").strip()
+    if not series:
+        return
+    try:
+        rows = conn.execute(
+            "SELECT id, metadata FROM memories WHERE project_id = ? AND deleted = 0"
+            " AND id != ? AND metadata LIKE ?",
+            (project_id, new_memory_id, f'%"series": "{series}"%'),
+        ).fetchall()
+        harvested: list[str] = []
+        canon = conn.execute("SELECT memory, metadata FROM memories WHERE id = ?",
+                             (new_memory_id,)).fetchone()
+        canon_text = (canon["memory"] if canon else "") or ""
+        canon_meta = json_loads((canon["metadata"] if canon else None) or "{}")
+        existing_anchor = str(((canon_meta.get("episode") or {}).get("anchor")) or "")
+        for row in rows:
+            meta = json_loads(row["metadata"] or "{}")
+            if meta.get("series") != series or meta.get("superseded_by"):
+                continue
+            old_text = conn.execute("SELECT memory FROM memories WHERE id = ?",
+                                    (row["id"],)).fetchone()
+            harvested += _harvest_series_anchor(
+                (old_text["memory"] if old_text else "") or "", canon_text,
+                existing_anchor + " " + " ".join(harvested))
+            meta.update(superseded_by=new_memory_id, superseded_at=now,
+                        sank_by=f"series:{series}")
+            conn.execute("UPDATE memories SET metadata = ?, updated_at = ? WHERE id = ?",
+                         (json_dumps(meta), now, row["id"]))
+        if harvested:
+            merged = (existing_anchor.split() + harvested)[:_SERIES_ANCHOR_CAP]
+            episode = canon_meta.get("episode") or {}
+            episode["anchor"] = " ".join(merged)
+            episode.setdefault("anchor_source", "series-inheritance")
+            canon_meta["episode"] = episode
+            conn.execute("UPDATE memories SET metadata = ? WHERE id = ?",
+                         (json_dumps(canon_meta), new_memory_id))
+    except sqlite3.Error:
+        pass  # 승계 실패가 저장을 막지 않는다 — 다음 쓰기가 다시 시도
+
+
 def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict[str, Any]:
     project_id = payload.get("project_id") or project_id or current_project_id()
     if not payload.get("messages") or not isinstance(payload["messages"], list):
         raise HTTPException(status_code=400, detail="messages is required")
     if not any(payload.get(field) for field in ENTITY_FIELDS):
         raise HTTPException(status_code=400, detail="At least one entity ID is required")
+    if (
+        str(payload.get("app_id") or "").strip() == scope_guard.TEAM_LEDGER_APP
+        and not payload.get("user_id")
+        and not scope_guard.team_ledger_write_principal()
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="ownerless team-ledger writes must use the authenticated team_note tool",
+        )
     # Every write path (MCP tools, REST /v1/memories) converges here — the one
     # place a foreign (user_id, app_id) pool cannot slip past (F4 class).
     scope_guard_warning = scope_guard.evaluate_write_scope(
@@ -3715,17 +4040,48 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
     _record_gate_drops(gate_drops, payload, project_id=project_id, event_id=event_id)
     created: list[dict[str, Any]] = []
     vector_upserts: list[tuple[dict[str, Any], list[float]]] = []
+    # Consensus items are append-only protocol records, not beliefs to merge.
+    # Even near-identical notes can carry distinct reply/idempotency links.
+    hebbian = (
+        _hebbian_enabled(payload)
+        and str(payload.get("app_id") or "").strip() != scope_guard.TEAM_LEDGER_APP
+    )
+    hebbian_merges: list[dict[str, Any]] = []
+    gate_merges: list[dict[str, Any]] = []
     # Normalize client-supplied timestamps (mem0 v3 clients send unix ints) to
     # ISO strings — stored timestamps are compared lexicographically elsewhere.
     now_raw = payload.get("created_at") or payload.get("timestamp") or payload.get("custom_timestamp") or utc_now()
     now_parsed = parse_datetime(now_raw)
     now = now_parsed.isoformat() if now_parsed else utc_now()
 
+    # 일화 결합 — 원자화가 벗겨낸 주제를 사실에 다시 묶는다. (2026-08-23, docs/episodic-binding.md)
+    # 실측된 병: "캐시 배치 실측 완료 …: 10턴 누적 A 3674 vs B 4601 = 20.1% 절감"이 원장에는
+    # 뒷토막만 남아 '캐시'도 '배치'도 사라진다(최근 40건 중 21건이 이런 조각). 앵커는 표시
+    # 텍스트와 hash를 건드리지 않고 임베딩 입력과 metadata에만 실린다 — 기존 소비자 불변.
+    episode_source = ""
+    for message in payload.get("messages") or []:
+        content = message_content_text(message.get("content")) if isinstance(message, dict) else str(message)
+        if content and len(content.strip()) > 20:
+            episode_source = content
+            break
+    if not episode_source:
+        episode_source = str(payload.get("text") or "")
+    # episode_binding=False는 대조군 팔이다 — 같은 원문을 결합 없이 써서 효과를 잰다.
+    anchor = episode_anchor(episode_source) if _bool_or(payload.get("episode_binding"), True) else ""
+    n_facts = len(fact_records)
+
     with get_db() as conn:
-        for record in fact_records:
+        for fact_idx, record in enumerate(fact_records):
             fact = record["fact"]
             source_role = _claim_source_role(record)
             record_metadata = {**metadata, "trust": _memory_trust(source_role, fact)}
+            quarantine = _quarantine_stamp(metadata, source_role)
+            if quarantine:
+                record_metadata["quarantine"] = quarantine
+            bind = anchor if anchor_applies(fact, anchor) else ""
+            if anchor:
+                record_metadata["episode"] = {"event_id": event_id, "anchor": anchor,
+                                              "idx": fact_idx, "n": n_facts, "bound": bool(bind)}
             categories = categorize(fact, metadata)
             for scope in record["scopes"]:
                 primary_type = next((field for field in ("user_id", "agent_id", "app_id", "run_id") if scope.get(field)), None)
@@ -3739,7 +4095,32 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
                     if existing:
                         skipped_duplicate += 1
                         continue
-                embedding = embed_text(fact, project_id=project_id)
+                if hebbian:
+                    merged_info = _hebbian_merge_near_duplicate(
+                        conn, project_id=project_id, scope=scope, fact=fact,
+                        record_metadata=record_metadata, record_input=record["input"], now=now,
+                    )
+                    if merged_info is not None:
+                        hebbian_merges.append({k: merged_info[k] for k in ("id", "overlap", "evidence_count", "text_changed")})
+                        if merged_info.get("vector") is not None:
+                            vector_upserts.append(merged_info["vector"])
+                        gate_merges.append({"text": fact[:300], "role": "fact",
+                                            "reason": f"hebbian_merge:{merged_info['id']}"})
+                        continue
+                # 부호화에만 결합을 싣는다 — hash는 bare fact 그대로이므로 중복 판정 의미 불변.
+                embedding = embed_text(f"{bind} — {fact}" if bind else fact, project_id=project_id)
+                # 에코 차단기 (컴파일러 헌장 4.4): 이미 컴파일된 상시 문면의
+                # 일화 에코는 저장하지 않는다 — 실측 병리(시각 규율 124행/5일,
+                # 매 기상 재저장)의 구조적 수리. 게이트 기록으로 관측 유지.
+                try:
+                    from .compiler import check_echo
+                    echo = check_echo(embedding, project_id)
+                except Exception:
+                    echo = None
+                if echo is not None:
+                    gate_merges.append({"text": fact[:300], "role": "fact",
+                                        "reason": f"compiled_echo:{echo['form'].get('id','?')}:{echo['sim']}"})
+                    continue
                 conn.execute(
                     """
                     INSERT INTO memories (
@@ -3790,6 +4171,7 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
                         now,
                     ),
                 )
+                _succeed_series(conn, project_id, record_metadata, memory_id, now)
                 _write_observation_and_claim(
                     conn,
                     project_id=project_id,
@@ -3821,7 +4203,10 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
     for memory_record, embedding in vector_upserts:
         vector_upsert_memory(memory_record, embedding, project_id)
     accounting["duplicate_skipped"] = skipped_duplicate
+    accounting["hebbian_merged"] = len(hebbian_merges)
     accounting["memories_created"] = len(created)
+    if gate_merges:
+        _record_gate_drops(gate_merges, payload, project_id=project_id, event_id=event_id)
     violations = add_accounting_violations(accounting)
     if violations:
         accounting["identity_violations"] = violations
@@ -3858,9 +4243,202 @@ def add_memories(payload: dict[str, Any], project_id: str | None = None) -> dict
             "junk_total": sum(skipped_junk.values()),
             "duplicate": skipped_duplicate,
         }
+    if hebbian_merges:
+        response["merged"] = hebbian_merges
     if scope_guard_warning:
         response["scope_guard"] = {"verdict": "foreign", "warning": scope_guard_warning}
     return response
+
+
+_HEBBIAN_WINDOW = 400      # 쓰기당 비교하는 최근 후보 수 (같은 스코프)
+_HEBBIAN_THRESHOLD = 0.62  # 읽기 필터(0.55)보다 엄격: 읽기는 시야만 가리지만 병합은 저장을 바꾼다
+
+
+def _hebbian_enabled(payload: dict[str, Any]) -> bool:
+    value = payload.get("hebbian")
+    if value is not None:
+        return bool(value)
+    return os.getenv("MEM1_HEBBIAN_MERGE", "1").lower() not in {"0", "false", "no"}
+
+
+_HEBBIAN_TOKEN_RE = re.compile(r"[0-9]+(?:\.[0-9]+)?|[A-Za-z가-힣]{2,}")
+_HEBBIAN_DIGIT_RE = re.compile(r"[0-9]+(?:\.[0-9]+)?")
+
+
+def _hebbian_token_matches(a: str, b: str) -> bool:
+    if a == b or a in b or b in a:
+        return True
+    # 공유 접두 ≥ 짧은 토큰의 60% — 한국어 활용형(마신다/마시는)을 이어붙이되
+    # 다른 내용어(커피/홍차)는 갈라놓는 가장 싼 선.
+    n = min(len(a), len(b))
+    k = 0
+    while k < n and a[k] == b[k]:
+        k += 1
+    return k >= max(2, int(0.6 * n))
+
+
+def _hebbian_safe_to_merge(a: str, b: str) -> bool:
+    """Near-duplicate surface is necessary but not sufficient to merge.
+
+    "target is staging" vs "target is production" is one word apart and trigram-
+    identical enough to fool any overlap score — yet it is a contradiction pair
+    that belongs to supersede, not merge. Merging it silently destroys the very
+    distinction the ledger exists to keep (caught by the supersede contract test,
+    2026-08-23). Three deterministic guards:
+      1. digit runs must agree exactly — numbers are never paraphrase,
+      2. negation polarity must agree — a denial is not a restatement,
+      3. every content token on BOTH sides must find a fuzzy match on the other —
+         merge only what is unmistakably the same statement said again.
+
+    Guard 3 is deliberately bidirectional. The one-directional version passed
+    "todo: publish X" ↔ "X is published" (the differing word sat in the longer
+    text) and thereby merged a *plan* into its *completion* — the exact
+    plan-vs-done distinction the trust system exists to keep (caught by the
+    consolidation cycle test, 2026-08-23). Expansions that add new content words
+    now append instead of merging; read-path dedup and gist distillation own
+    that redundancy. A destructive-leaning write op earns strictness.
+    """
+    if sorted(_HEBBIAN_DIGIT_RE.findall(a)) != sorted(_HEBBIAN_DIGIT_RE.findall(b)):
+        return False
+    if bool(NEGATION_RE.search(a)) != bool(NEGATION_RE.search(b)):
+        return False
+    tokens_a = [t for t in _HEBBIAN_TOKEN_RE.findall(a) if not _HEBBIAN_DIGIT_RE.fullmatch(t)]
+    tokens_b = [t for t in _HEBBIAN_TOKEN_RE.findall(b) if not _HEBBIAN_DIGIT_RE.fullmatch(t)]
+    for token in tokens_a:
+        if not any(_hebbian_token_matches(token, cand) for cand in tokens_b):
+            return False
+    for token in tokens_b:
+        if not any(_hebbian_token_matches(token, cand) for cand in tokens_a):
+            return False
+    return True
+
+
+def _hebbian_merge_near_duplicate(
+    conn: Any,
+    *,
+    project_id: str,
+    scope: dict[str, Any],
+    fact: str,
+    record_metadata: dict[str, Any],
+    record_input: Any,
+    now: str,
+) -> dict[str, Any] | None:
+    """Strengthen instead of append: a restated fact reinforces its original.
+
+    A brain does not allocate a second engram for a repetition — it potentiates
+    the first. Appending near-identical rows spends bounded L1 capacity on copies
+    and forces every reader to re-deduplicate (measured 2026-08-23: two facts
+    occupied four of five recall slots). Merging at write kills that at the source.
+
+    Rules: the richer text wins; ``evidence_count`` climbs; trust only upgrades
+    (green over yellow), never downgrades; history keeps the losing text; the
+    merge itself is gate-logged — forgetting a duplicate is still forgetting.
+    """
+    grams = _context_trigrams(fact)
+    if not grams:
+        return None
+    rows = conn.execute(
+        """
+        SELECT id, memory, metadata FROM memories
+        WHERE project_id = ? AND deleted = 0
+          AND COALESCE(user_id, '') = ? AND COALESCE(agent_id, '') = ?
+          AND COALESCE(app_id, '') = ? AND COALESCE(run_id, '') = ?
+        ORDER BY created_at DESC LIMIT ?
+        """,
+        (
+            project_id,
+            scope.get("user_id") or "",
+            scope.get("agent_id") or "",
+            scope.get("app_id") or "",
+            scope.get("run_id") or "",
+            _HEBBIAN_WINDOW,
+        ),
+    ).fetchall()
+    best = None
+    best_overlap = 0.0
+    for row in rows:
+        other = _context_trigrams(str(row[1] or ""))
+        if not other:
+            continue
+        overlap = len(grams & other) / min(len(grams), len(other))
+        if overlap > best_overlap and overlap > _HEBBIAN_THRESHOLD:
+            if not _hebbian_safe_to_merge(fact, str(row[1] or "")):
+                continue  # 표면은 닮았지만 내용어·숫자·부정이 갈린다 — supersede의 영역
+            best_overlap, best = overlap, row
+    if best is None or best_overlap <= _HEBBIAN_THRESHOLD:
+        return None
+
+    existing_id, existing_text, existing_meta_raw = str(best[0]), str(best[1] or ""), best[2]
+    try:
+        merged_meta = json_loads(existing_meta_raw) if existing_meta_raw else {}
+    except Exception:
+        merged_meta = {}
+    if not isinstance(merged_meta, dict):
+        merged_meta = {}
+    merged_meta["evidence_count"] = int(merged_meta.get("evidence_count") or 1) + 1
+    merged_meta["last_reinforced_at"] = now
+    trust_rank = {"green": 2, "yellow": 1, "red": 0}
+    new_trust = record_metadata.get("trust") if isinstance(record_metadata.get("trust"), dict) else {}
+    old_trust = merged_meta.get("trust") if isinstance(merged_meta.get("trust"), dict) else {}
+    if trust_rank.get(str(new_trust.get("light")), -1) > trust_rank.get(str(old_trust.get("light")), -1):
+        merged_meta["trust"] = new_trust  # 승격만 — 강한 출처의 재진술이 약한 출처를 끌어올린다
+
+    keep_text = fact if len(fact) > len(existing_text) else existing_text
+    text_changed = keep_text != existing_text
+    embedding = embed_text(keep_text, project_id=project_id) if text_changed else None
+    if text_changed:
+        conn.execute(
+            "UPDATE memories SET memory = ?, metadata = ?, embedding = ?, updated_at = ? WHERE id = ?",
+            (keep_text, json_dumps(merged_meta), encode_embedding(embedding), now, existing_id),
+        )
+    else:
+        conn.execute(
+            "UPDATE memories SET metadata = ?, updated_at = ? WHERE id = ?",
+            (json_dumps(merged_meta), now, existing_id),
+        )
+    conn.execute(
+        """
+        INSERT INTO memory_history (
+            id, memory_id, project_id, event, input, old_memory, new_memory,
+            user_id, agent_id, app_id, run_id, metadata, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            str(new_id()),
+            existing_id,
+            project_id,
+            "UPDATE",
+            json_dumps(record_input),
+            existing_text,
+            keep_text,
+            scope.get("user_id"),
+            scope.get("agent_id"),
+            scope.get("app_id"),
+            scope.get("run_id"),
+            json_dumps({**merged_meta, "hebbian_overlap": round(best_overlap, 3)}),
+            now,
+            now,
+        ),
+    )
+    result: dict[str, Any] = {
+        "id": existing_id,
+        "overlap": round(best_overlap, 3),
+        "evidence_count": merged_meta["evidence_count"],
+        "text_changed": text_changed,
+    }
+    if text_changed and embedding is not None:
+        result["vector"] = (
+            {
+                "id": existing_id,
+                "memory": keep_text,
+                "project_id": project_id,
+                **scope,
+                "metadata": merged_meta,
+                "updated_at": now,
+            },
+            embedding,
+        )
+    return result
 
 
 def _add_sanitize_enabled(payload: dict[str, Any]) -> bool:
@@ -4620,7 +5198,38 @@ def _resolve_recall_llm() -> dict[str, Any] | None:
     return _local_recall_llm() or _byo_recall_llm(settings) or _cloud_recall_llm(settings)
 
 
-def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_k: int = 40, snippet_chars: int = 280, layer: str = "gate-v2") -> dict[str, Any]:
+_GATE_WIDE_K = int(os.getenv("MEM1_GATE_WIDE_K", "16"))
+_GATE_SNIPPET_CHARS = int(os.getenv("MEM1_GATE_SNIPPET_CHARS", "160"))
+
+
+def _attach_search_instrument(
+    response: dict[str, Any], *, pool_size: int | None, top_k: int
+) -> dict[str, Any]:
+    # B-② G-신호 (2026-08-25): 더듬기 절제 최강(G 0.730)의 외부 신호를 검색
+    # 응답에 상시 노출 — 소비자는 에이전트의 반복 인출(자기사용 규약 3항).
+    # 추가 질의 0, 손에 있는 결과에서 계산. 강도 밴드는 신공간 실측(관련
+    # 0.40~0.46, 턴리콜 문턱 0.33) 유도. 모든 기어가 이 헬퍼를 지나야 한다 —
+    # 첫 배선은 v1 반환에만 붙어 기본 기어(gate-v2)의 조기 반환이 통째로
+    # 우회했다 (자기사용 마찰 #3, 라이브 검증이 적발). pool_size=None이면
+    # 소진 신호는 호출자가 아는 값으로 덮거나 None(미상)으로 남긴다.
+    results = list(response.get("results") or [])
+    top_score = max((float(m.get("score") or 0.0) for m in results), default=0.0)
+    strength = "strong" if top_score >= 0.45 else ("moderate" if top_score >= 0.33 else "weak")
+    span_days = len({str(m.get("created_at") or "")[:10] for m in results if m.get("created_at")})
+    response["instrument"] = {
+        "top_score": round(top_score, 4),
+        "strength": strength,
+        "evidence_span_days": span_days,
+        "result_count": len(results),
+        "pool_exhausted": (pool_size < top_k) if pool_size is not None else None,
+    }
+    return response
+
+
+def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_k: int = _GATE_WIDE_K, snippet_chars: int = _GATE_SNIPPET_CHARS, layer: str = "gate-v2") -> dict[str, Any]:
+    # 게이트 다이어트 (2026-08-12 실측): 40×280 프로필은 로컬 9B 프리필만
+    # ~9.5s — 훅 예산(≤7s) 밖이라 high 기어가 구조적으로 죽는다. 16×160이면
+    # ~2s. 연구용 광폭 프로필은 env로 복원 가능.
     """Recall v2 'high' gear: wide hybrid retrieval, then a small LLM reads
     the candidates and keeps only what the question actually needs —
     a selector's job, not a retriever's. Config via env (experimental):
@@ -4634,11 +5243,20 @@ def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_
     base = {key: value for key, value in payload.items() if key != "recall"}
     wide = search_memories({**base, "top_k": wide_k, "recall": "v1"}, project_id)
     candidates = list(wide.get("results") or [])
+    wide_exhausted = (wide.get("instrument") or {}).get("pool_exhausted")
+
+    def _finish(out: dict[str, Any]) -> dict[str, Any]:
+        # 소진 신호는 광폭 인출의 것 — 선별기가 적게 남긴 것(선별성)과 풀
+        # 바닥(소진)을 섞으면 더듬는 소비자가 조기 중단한다.
+        _attach_search_instrument(out, pool_size=None, top_k=top_k)
+        out["instrument"]["pool_exhausted"] = wide_exhausted
+        return out
+
     if len(candidates) <= top_k:
-        return {"results": candidates, "recall_layer": f"{layer}(passthrough)"}
+        return _finish({"results": candidates, "recall_layer": f"{layer}(passthrough)"})
     llm = _resolve_recall_llm()
     if not llm:
-        return {"results": candidates[:top_k], "recall_layer": f"{layer}(unconfigured→v1)"}
+        return _finish({"results": candidates[:top_k], "recall_layer": f"{layer}(unconfigured→v1)"})
     base_url, model, api_key = llm["base_url"], llm["model"], llm["api_key"]
     context_window = int(llm.get("context_window") or 131072)
     # Fit the candidate list to the model's window (chars ≈ tokens × ~3.4,
@@ -4671,6 +5289,9 @@ def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_
                     "messages": [{"role": "user", "content": prompt}],
                     "stream": False,
                     "think": False,
+                    # 상주 유지 — 콜드 로드 11s가 훅 한도(6~10s)를 넘겨 회상이
+                    # 통째로 버려지는 사고의 근본 원인 (2026-08-12 실측).
+                    "keep_alive": os.getenv("MEM1_GATE_KEEP_ALIVE", "24h"),
                     "options": {"num_predict": 256, "temperature": 0},
                 }).encode("utf-8"),
                 headers={"Content-Type": "application/json"},
@@ -4701,7 +5322,7 @@ def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_
     finally:
         _RECALL_ACTIVITY["active"] = max(0, int(_RECALL_ACTIVITY["active"]) - 1)
     if not indices:
-        return {"results": candidates[:top_k], "recall_layer": f"{layer}(fallback→v1)"}
+        return _finish({"results": candidates[:top_k], "recall_layer": f"{layer}(fallback→v1)"})
     seen: set[int] = set()
     ordered = [i for i in indices if not (i in seen or seen.add(i))][:top_k]
     for i in range(len(candidates)):
@@ -4710,7 +5331,275 @@ def _search_memories_gate(payload: dict[str, Any], project_id: str | None, wide_
         if i not in seen:
             ordered.append(i)
             seen.add(i)
-    return {"results": [candidates[i] for i in ordered], "recall_layer": layer}
+    return _finish({"results": [candidates[i] for i in ordered], "recall_layer": layer})
+
+
+def _expand_temporal_neighbors(
+    result: dict[str, Any],
+    project_id: str | None = None,
+    filters: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """EM-LLM 이식 (2026-08-11): 회상은 사실만이 아니라 장면을 데려온다.
+
+    유사도 검색은 '같은 작업 장면에서 태어난 옆 사실'을 놓친다 — 어휘가 다르면
+    이웃이어도 안 보인다. 최상위 히트의 생성 시각 ±20분 안에서 태어난 기억
+    1건을 이웃으로 동반한다(temporal contiguity buffer, arXiv:2407.09450).
+
+    표식: temporal_neighbor_of = 앵커 id. trust는 부착하지 않는다 — 소비자
+    기본값 yellow(행동 전 확인)가 이웃의 올바른 의미론이다. 점수는 앵커의
+    절반으로 강등해 정규 후보와 섞이지 않게 한다.
+    끄기: MEM1_RECALL_TEMPORAL=0. 판정: 2주 outcome 플라이휠(선등록 참조).
+    """
+    if str(os.getenv("MEM1_RECALL_TEMPORAL", "1")).strip().lower() in {"0", "false", "off"}:
+        return result
+    items = result.get("results") or []
+    if not items:
+        return result
+    anchor = items[0]
+    anchor_id = str(anchor.get("id") or "")
+    raw_created = str(anchor.get("created_at") or "")
+    if not anchor_id or not raw_created:
+        return result
+    try:
+        anchor_at = datetime.fromisoformat(raw_created.replace("Z", "+00:00"))
+    except ValueError:
+        return result
+    seen_ids = {str(item.get("id") or "") for item in items}
+    window = timedelta(minutes=20)
+    best: dict[str, Any] | None = None
+    best_gap: timedelta | None = None
+    for row in list_memory_dicts(project_id=project_id):
+        rid = str(row.get("id") or "")
+        if not rid or rid in seen_ids:
+            continue
+        # 이웃도 본검색과 같은 스코프를 통과해야 한다 — 시간 인접성은 점수
+        # 특례이지 경계 특례가 아니다. 필터 없이 돌면 타 사용자·타 프로젝트
+        # 기억이 이웃 자격으로 동승한다 (2026-08-13 검진에서 실측).
+        if filters and not matches_filters(row, filters):
+            continue
+        metadata = row.get("metadata") or {}
+        # 턴-회상과 같은 구조적 제외: 캡처 포인터·task_state·self 격언·정정된 구본.
+        if metadata.get("hook") or metadata.get("assertion_kind") == "task_state":
+            continue
+        if str(metadata.get("layer") or "").lower() == "self" or metadata.get("superseded_by"):
+            continue
+        try:
+            row_at = datetime.fromisoformat(str(row.get("created_at") or "").replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        gap = abs(row_at - anchor_at)
+        if gap > window:
+            continue
+        if best_gap is None or gap < best_gap:
+            best, best_gap = row, gap
+    if best is None or best_gap is None:
+        return result
+    neighbor = {
+        "id": best["id"],
+        "memory": best.get("memory"),
+        "metadata": best.get("metadata") or {},
+        "created_at": best.get("created_at"),
+        "updated_at": best.get("updated_at"),
+        "score": round(float(anchor.get("score") or 0.0) * 0.5, 4),
+        "temporal_neighbor_of": anchor_id,
+        "score_breakdown": {"temporal_gap_minutes": round(best_gap.total_seconds() / 60, 1)},
+    }
+    result["results"] = [*items, neighbor]
+    result["temporal_neighbors_added"] = 1
+    return result
+
+
+def _actr_replay(project_id: str, window: int = 50, as_of: str | None = None) -> dict[str, Any]:
+    """트레이스 재생 → 관성 상태 (actr 원값·최근 사용·공동선택·직전 선택).
+
+    실측 근거(P-M-1/P-M-2, 2026-08-29): 질의 없이 사용 통계만으로 다음 서빙
+    66% 예지, 유사도 풀 밖 관성 후보의 25.1%가 3턴 내 실사용 — 관성은
+    유사도에 포섭되지 않는 독립 채널. 상태 없는 순수 계산(테이블 없음).
+    P-M-4(§13)의 학습 결합기가 같은 상태를 소비하므로 재생은 여기 한 번만.
+    """
+    empty: dict[str, Any] = {"scores": {}, "last_used": {}, "co": {}, "current": set(), "steps": 0}
+    try:
+        with get_db() as conn:
+            # as_of 절단 (RECALL-BENCH 사이클 3 실측): 관성 창이 라이브로만
+            # 읽히면 시간여행 검색이 «미래의 사용 상태»로 부스트를 계산한다 —
+            # 문턱 가장자리 질의가 실세션 활동에 따라 뒤집히는 사인.
+            if as_of:
+                rows = conn.execute(
+                    "SELECT selected_ids FROM context_traces WHERE project_id = ?"
+                    " AND selected_ids != '[]' AND created_at <= ?"
+                    " ORDER BY created_at DESC LIMIT ?",
+                    (project_id, as_of, window),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT selected_ids FROM context_traces WHERE project_id = ?"
+                    " AND selected_ids != '[]' ORDER BY created_at DESC LIMIT ?",
+                    (project_id, window),
+                ).fetchall()
+    except sqlite3.Error:
+        return empty
+    scores: dict[str, float] = {}
+    last_used: dict[str, int] = {}
+    co: dict[str, dict[str, int]] = {}
+    events: dict[str, list[int]] = {}
+    chosen: set[str] = set()
+    step = -1
+    for step, row in enumerate(reversed(rows)):  # 오래된 것부터 — 감쇠가 시간 순서를 존중
+        try:
+            selected = json_loads(row["selected_ids"])
+        except (ValueError, TypeError):
+            # 좁은 except — 광역 except가 NameError(json 미임포트)까지 삼켜
+            # 전 행이 조용히 증발했던 실측 사고(2026-08-29)의 재발 방지.
+            continue
+        chosen = {s for s in selected if isinstance(s, str)}
+        for mid in chosen:
+            scores[mid] = scores.get(mid, 0.0) * 0.9 + 1.0
+            last_used[mid] = step
+            events.setdefault(mid, []).append(step)
+            bucket = co.setdefault(mid, {})
+            for other in chosen:
+                if other != mid:
+                    bucket[other] = bucket.get(other, 0) + 1
+        for mid in list(scores):
+            if mid not in chosen:
+                scores[mid] *= 0.97
+    return {"scores": scores, "last_used": last_used, "co": co,
+            "events": events, "current": chosen, "steps": step + 1}
+
+
+def _actr_inertia_scores(project_id: str, window: int = 50) -> dict[str, float]:
+    """정규화 관성 점수 (P-M-2 계약 유지) — 재생 상태에서 유도."""
+    return _actr_scores_from_state(_actr_replay(project_id, window))
+
+
+def _actr_scores_from_state(state: dict[str, Any]) -> dict[str, float]:
+    scores = state.get("scores") or {}
+    if not scores:
+        return {}
+    top = max(scores.values())
+    return {mid: value / top for mid, value in scores.items() if value / top > 0.05}
+
+
+_learned_ranker_cache: dict[str, Any] = {"key": None, "weights": None}
+
+
+def _load_learned_ranker() -> dict[str, Any] | None:
+    """증류 가중치 로드 (mtime 캐시) — 롤백 사다리가 계약.
+
+    v2(P-M-6 감쇠 은행) → v1(P-M-4 MLP) → None(손-공식) 순서로 탐색.
+    v2 파일 삭제 = v1 복귀, 둘 다 삭제 = 손-공식 — 파일 조작만으로 원복.
+    """
+    env = os.environ.get("FORGET_LEARNED_RANKER")
+    paths = [env] if env else [os.path.expanduser("~/.forget/learned_ranker_v2.json"),
+                               os.path.expanduser("~/.forget/learned_ranker_v1.json")]
+    for path in paths:
+        try:
+            mtime = os.stat(path).st_mtime
+        except OSError:
+            continue
+        key = (path, mtime)
+        if _learned_ranker_cache["key"] == key:
+            return _learned_ranker_cache["weights"]
+        try:
+            with open(path, encoding="utf-8") as fh:
+                weights = json_loads(fh.read())
+            if str(weights.get("version") or "").startswith("pm6-decay-bank"):
+                assert all(k in weights for k in ("a1", "a2", "w1", "b1", "w2", "b2"))
+            else:
+                assert all(k in weights for k in ("w1", "b1", "w2", "b2", "feature_mask"))
+        except (OSError, ValueError, TypeError, AssertionError):
+            continue
+        _learned_ranker_cache.update(key=key, weights=weights)
+        return weights
+    return None
+
+
+def _learned_inertia_boosts(state: dict[str, Any]) -> dict[str, float]:
+    """P-M-4 증류 결합기 — 통계 4피처 MLP, 후보 집합 내 min-max 정규화.
+
+    절제 실측(§13): 이득의 출처는 통계 피처의 학습된 비선형 결합
+    (purestats 0.6872 vs actr 0.6605 = +2.7pp) — 질의·임베딩 불요라
+    서빙 비용 0. 피처 정의는 훈련(/tmp/pm4_train.py build_steps)과
+    자구 일치가 계약: actr/amax · min(1,gap/20) · min(1,co/10) · in_current.
+    """
+    weights = _load_learned_ranker()
+    scores = state.get("scores") or {}
+    if not weights or not scores:
+        return {}
+    if str(weights.get("version") or "").startswith("pm6-decay-bank"):
+        return _decay_bank_boosts(weights, state)
+    amax = max(scores.values()) or 1.0
+    t_last = state["steps"] - 1
+    current = state["current"]
+    co = state["co"]
+    mask = weights["feature_mask"]
+    w1, b1, w2, b2 = weights["w1"], weights["b1"], weights["w2"], weights["b2"]
+    raw: dict[str, float] = {}
+    for mid, value in scores.items():
+        co_s = sum(co.get(c, {}).get(mid, 0) for c in current)
+        feats = [
+            value / amax,
+            min(1.0, (t_last - state["last_used"].get(mid, -20)) / 20.0),
+            min(1.0, co_s / 10.0),
+            0.0,  # cos(질의맥락) — purestats 절제로 무기여 확정, 미계산
+            0.0,  # cos(사용이력) — 상동
+            1.0 if mid in current else 0.0,
+        ]
+        feats = [f * m for f, m in zip(feats, mask)]
+        hidden = [max(0.0, sum(w * f for w, f in zip(row, feats)) + b)
+                  for row, b in zip(w1, b1)]
+        raw[mid] = sum(w * h for w, h in zip(w2[0], hidden)) + b2[0]
+    lo, hi = min(raw.values()), max(raw.values())
+    if hi - lo < 1e-9:
+        return {mid: 1.0 for mid in raw}
+    return {mid: (v - lo) / (hi - lo) for mid, v in raw.items()}
+
+
+def _decay_bank_boosts(weights: dict[str, Any], state: dict[str, Any]) -> dict[str, float]:
+    """P-M-6 감쇠 은행 (§15~16) — 학습된 다중 시간척도 감쇠의 닫힌꼴 forward.
+
+    기억별 상태_c = Σ_j a1_c^(이후 선택 수) · a2_c^(이후 부재 스텝 수) —
+    선택 이력만으로 계산(BPTT 불요). 훈련(pm6_arms.py DecayBank)과 자구
+    일치가 계약: 채널별 스텝-내 최대 정규화 + [co_norm, in_current] 부가
+    피처 + MLP 판독. 공시된 불일치: 훈련 정규화 분모는 top-40 풀,
+    서빙은 관성 전집합 (v1의 min-max와 같은 계급의 어긋남).
+    """
+    scores = state.get("scores") or {}
+    events = state.get("events") or {}
+    a1, a2 = weights["a1"], weights["a2"]
+    w1, b1, w2, b2 = weights["w1"], weights["b1"], weights["w2"], weights["b2"]
+    hist_window = int(weights.get("hist_window") or 20)
+    n_bank = len(a1)
+    t_last = state["steps"] - 1
+    current = state["current"]
+    co = state["co"]
+    log_a1 = [math.log(max(a, 1e-6)) for a in a1]
+    log_a2 = [math.log(max(a, 1e-6)) for a in a2]
+    bank: dict[str, list[float]] = {}
+    for mid in scores:
+        ev = (events.get(mid) or [])[-hist_window:]
+        k = len(ev)
+        states = [0.0] * n_bank
+        for j, tj in enumerate(ev):
+            p = k - 1 - j
+            q = max(0, (t_last - tj) - p)
+            for c in range(n_bank):
+                states[c] += math.exp(p * log_a1[c] + q * log_a2[c])
+        bank[mid] = states
+    ch_max = [max((bank[mid][c] for mid in bank), default=0.0) + 1e-6
+              for c in range(n_bank)]
+    raw: dict[str, float] = {}
+    for mid, states in bank.items():
+        co_s = sum(co.get(c, {}).get(mid, 0) for c in current)
+        feats = [s / m for s, m in zip(states, ch_max)]
+        feats += [min(1.0, co_s / 10.0), 1.0 if mid in current else 0.0]
+        hidden = [max(0.0, sum(w * f for w, f in zip(row, feats)) + b)
+                  for row, b in zip(w1, b1)]
+        raw[mid] = sum(w * h for w, h in zip(w2[0], hidden)) + b2[0]
+    lo, hi = min(raw.values()), max(raw.values())
+    if hi - lo < 1e-9:
+        return {mid: 1.0 for mid in raw}
+    return {mid: (v - lo) / (hi - lo) for mid, v in raw.items()}
 
 
 def search_memories(payload: dict[str, Any], project_id: str | None = None) -> dict[str, Any]:
@@ -4723,15 +5612,22 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
     # Dial names are the stable contract; mechanisms are disposable
     # incumbents, re-seated whenever the harness crowns a better one.
     recall_mode = {"low": "", "medium": "", "high": "gate", "extra": "reader"}.get(recall_mode, recall_mode)
-    if recall_mode == "reflex":
-        return _search_memories_reflex(payload, project_id)
-    if recall_mode == "gate":
-        return _search_memories_gate(payload, project_id)
-    if recall_mode == "reader":
-        # 'extra' gear: one decade up from gate — the LLM reads ~100
-        # candidates at near-full text instead of 40 keyhole snippets.
-        # Measured prize (2026-08-04): gold recall@100 = 0.992 vs @40 0.967.
-        return _search_memories_gate(payload, project_id, wide_k=100, snippet_chars=500, layer="reader-v2")
+    # 계층 기어는 내부 v1 검색을 부르므로 `trace`를 안쪽에 넘기지 않는다 —
+    # 넘기면 반사 기어가 각도마다 트레이스를 만들고(주소는 하나도 반환되지 않음)
+    # 게이트 기어는 광폭 후보의 주소를 최종 선택의 주소로 착각하게 만든다.
+    # 주소는 실제로 돌려준 선택에 대해 바깥에서 한 번 기록한다.
+    if recall_mode in {"reflex", "gate", "reader"}:
+        inner = {key: value for key, value in payload.items() if key != "trace"}
+        if recall_mode == "reflex":
+            result = _search_memories_reflex(inner, project_id)
+        elif recall_mode == "gate":
+            result = _search_memories_gate(inner, project_id)
+        else:
+            # 'extra' gear: one decade up from gate — the LLM reads ~100
+            # candidates at near-full text instead of 40 keyhole snippets.
+            # Measured prize (2026-08-04): gold recall@100 = 0.992 vs @40 0.967.
+            result = _search_memories_gate(inner, project_id, wide_k=100, snippet_chars=500, layer="reader-v2")
+        return _layered_recall_result(result, payload=payload, project_id=project_id)
     started_at = utc_now()
     start_time = time.perf_counter()
     query = str(payload.get("query") or "").strip()
@@ -4746,9 +5642,15 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
     threshold = _validated_search_threshold(payload)
     rerank = bool(payload.get("rerank", False))
     show_expired = bool(payload.get("show_expired", False))
+    include_session_captures = bool(payload.get("include_session_captures", False))
     keyword_search = bool(payload.get("keyword_search", False))
+    include_quarantined = bool(payload.get("include_quarantined", False))
     filter_memories_enabled = bool(payload.get("filter_memories", False))
+    time_decay_enabled = _bool_or(payload.get("time_decay"),
+                                  os.environ.get("MEM1_TIME_DECAY") == "1")
+    decay_now = datetime.now(timezone.utc)
     retrieval_criteria = _project_retrieval_criteria(project_id)
+    expose_breakdown = bool(keyword_search or filter_memories_enabled or retrieval_criteria or payload.get("score_breakdown"))
     memory_as_of = str(
         payload.get("memory_as_of")
         or payload.get("memoryAsOf")
@@ -4771,16 +5673,48 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
         include_expired=show_expired,
         entity_prefilter=_simple_entity_prefilter(filters),
     )
+    # 작업 관성 채널 (P-M-2): 유사도 prefilter가 못 데려온 관성 후보를 풀에
+    # 추가한다 — 스코프·문턱 검사는 아래 공용 채점 루프가 그대로 집행하므로
+    # 여기서는 풀 확장만 (누수 없음). 보너스는 채점부에서 가산.
+    actr_state = _actr_replay(project_id, as_of=memory_as_of or None)
+    actr_scores = _actr_scores_from_state(actr_state)
+    learned_boosts = _learned_inertia_boosts(actr_state) if actr_scores else {}
+    if actr_scores:
+        have = {memory["id"] for memory in candidates}
+        # 확장 서열: 학습 결합기가 있으면 그 랭킹(P-M-4 +2.7pp의 자리),
+        # 없으면 종전 actr 순 — 두 원천 모두 관성 집합 안이라 스코프 불변.
+        ranking = learned_boosts or actr_scores
+        missing = [mid for mid in sorted(ranking, key=ranking.get, reverse=True)[:10]
+                   if mid not in have and mid in actr_scores]
+        if missing:
+            placeholders = ",".join("?" for _ in missing)
+            with get_db() as conn:
+                extra_rows = conn.execute(
+                    f"SELECT * FROM memories WHERE id IN ({placeholders})"
+                    " AND deleted = 0 AND project_id = ?",
+                    (*missing, project_id),
+                ).fetchall()
+            candidates.extend(row_to_memory(row) for row in extra_rows)
     batch_vector_scores = _batch_cosine_scores(query_embedding, candidates)
     temporal_rerank = _temporal_rerank_enabled(payload, project_id)
     scored_embeddings: dict[str, list[float] | None] = {}
     superseded_ids: set[str] = set()
+    rule_weight, vector_weight = _search_score_weights(project_id)
     for memory in candidates:
         if memory_as_of and (
             str(memory.get("created_at") or "") > memory_as_of
             or str(memory.get("updated_at") or "") > memory_as_of
         ):
-            continue
+            # 재부상(renewal) 예외: supersede는 텍스트를 건드리지 않고 updated_at만
+            # 올린다(코드 확인 2026-08-23). 그 bump 때문에 "7월엔 뭐라고 믿었지"류
+            # 시점 질의가 당시 현행이던 사실을 통째로 잃었다 — 실측 재부상 0/14.
+            # supersede 주석이 유일한 갱신 사유로 보이는 행(superseded_at 보유,
+            # created ≤ as_of)은 살린다. supersede 이전에 텍스트 편집이 있었던
+            # 드문 행은 편집 후 문면이 보일 수 있다 — 수용하고 여기 적어둔다.
+            meta_as_of = memory.get("metadata") or {}
+            if not (meta_as_of.get("superseded_at")
+                    and str(memory.get("created_at") or "") <= memory_as_of):
+                continue
         in_primary_scope = matches_filters(memory, filters)
         if not in_primary_scope and not (scope_fallback and _scope_fallback_eligible(memory, filters)):
             continue
@@ -4791,9 +5725,18 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
         if vector_score is None:
             memory_embedding = memory.get("_embedding") or deterministic_embedding(memory.get("memory", ""))
             vector_score = cosine_similarity(query_embedding, memory_embedding)
-        rule_weight, vector_weight = _search_score_weights()
         score = round((rule_score * rule_weight) + (vector_score * vector_weight), 4)
         score_breakdown: dict[str, Any] = {"rule": rule_score, "vector": round(float(vector_score), 4)}
+        # 일화 앵커의 어휘 기여 — 조각은 주제어를 잃었지만 앵커는 갖고 있다.
+        # 더하기만 한다(상한 0.12): 문면 매칭을 깎으면 verbatim 질의가 후퇴하고, 그건
+        # 사전 등록된 후퇴 금지 가드다(docs/episodic-binding.md §판정 기준).
+        anchor_text = ((memory.get("metadata") or {}).get("episode") or {}).get("anchor") or ""
+        if anchor_text:
+            anchor_overlap = keyword_overlap_score(query, anchor_text)
+            if anchor_overlap:
+                bonus = min(0.12, round(0.3 * anchor_overlap, 4))
+                score = min(1.0, round(score + bonus, 4))
+                score_breakdown["episode_anchor"] = bonus
         entity_overlap = query_entities.intersection(entity_links.get(memory["id"], set()))
         if entity_overlap:
             score = min(1.0, round(score + min(0.14, 0.06 * len(entity_overlap)), 4))
@@ -4810,27 +5753,70 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
             score_breakdown["criteria"] = criteria_breakdown
         if rerank:
             score = rerank_score(query, memory, score, reference_date=reference_date)
-        score = feedback_adjusted_score(score, feedbacks.get(memory["id"]))
-        if (memory.get("metadata") or {}).get("superseded_at"):
-            # Supersession is a deterministic, agent-issued staleness signal
-            # (unlike the inferred harmful penalty), so demote hard — but
-            # never remove: "did X change?" questions still need the old
-            # fact retrievable, annotated as superseded.
-            score = round(score * _superseded_score_multiplier(), 4)
-            score_breakdown["superseded"] = True
+        adjusted = feedback_adjusted_score(score, feedbacks.get(memory["id"]))
+        if adjusted != score:
+            # Record the applied delta, not the nominal label weight: the
+            # [0, 1] clamp can shrink it, and only the applied value lets the
+            # breakdown reassemble the score (observation 33).
+            score_breakdown["feedback"] = round(adjusted - score, 4)
+        score = adjusted
+        memory_meta_early = memory.get("metadata") or {}
+        if not include_quarantined and (memory_meta_early.get("quarantine") or {}).get("status") == "pending":
+            continue  # 검역층: 확인 전 기계 유래 사실은 기본 검색에 없다 (격리, 삭제 아님)
+        if memory_meta_early.get("superseded_at"):
+            # 억제 간선 (본선 3, 2026-08-23): 억압은 저장된 상태가 아니라 인출 시점의
+            # 경쟁이다 — 대체본이 함께 인출될 때 그 대체본이 구본을 누른다. 링크가
+            # 있으면(superseded_by) 강등을 경쟁 패스(_apply_inhibition_edges)로 미룬다.
+            # 무조건 ×0.45는 신공간 점수 대역에서 전역 문턱(0.1) 아래로 가라앉아
+            # 구본을 사실상 삭제했다 — 실측: 계약 쌍 18개 전건 비가시, 재부상 0/14.
+            # 링크 없는 supersede(구식 주석)만 종전 강등을 유지한다 — 경쟁자를 모른다.
+            if memory_meta_early.get("superseded_by"):
+                score_breakdown["superseded"] = True    # 경쟁 패스가 질서를 정한다
+            else:
+                score = round(score * _superseded_score_multiplier(), 4)
+                score_breakdown["superseded"] = True
             superseded_ids.add(memory["id"])
+        actr_value = actr_scores.get(memory["id"]) if actr_scores else None
+        if actr_value:
+            # 관성 보너스 — 동률 재랭킹 수준(최대 +0.12). "힌트도 예산" 준수:
+            # 신규 주입 강제가 아니라 문턱·랭킹 경쟁에 관성 축을 더하는 것.
+            # 가중치 파일이 있으면 P-M-4 증류 결합기(+2.7pp)가 관성 집합 내
+            # 서열을 정하고, 없으면 종전 손-공식 — 캡 0.12는 동일.
+            learned_value = learned_boosts.get(memory["id"])
+            if learned_value is not None:
+                boost = round(0.12 * learned_value, 4)
+                score_breakdown["actr_learned"] = True
+            else:
+                boost = round(0.12 * actr_value, 4)
+            score = round(score + boost, 4)
+            score_breakdown["actr_boost"] = boost
         if (memory.get("metadata") or {}).get("hook"):
             # Session-capture entries are pointers for rehydration, not facts.
             # They quote user utterances verbatim (green/tool), so left at full
             # weight they outrank real memories for the very queries those
-            # utterances asked about. Demote; lexical match still surfaces
-            # them when the session itself is what's being hunted.
+            # utterances asked about.
+            # P-C-2 위생 레인 (P-C-1 실측: 포인터 2,928행 = 회상 소음 최대
+            # 질량, "컴파일보다 급하다"): 어휘 증거 없이 벡터 유사도만으로는
+            # 후보 경쟁에 서지 못한다 — 구조적 제외. 세션 자체를 사냥하는
+            # 질의(토큰 겹침)는 종전대로 ×0.5 강등으로 생존, 재수화 흐름은
+            # include_session_captures로 전면 opt-in.
+            if not include_session_captures and \
+                    keyword_overlap_score(query, memory.get("memory", "")) <= 0:
+                continue
             score = round(score * 0.5, 4)
             score_breakdown["session_capture"] = True
         if not in_primary_scope:
             # Shared-scope knowledge blends in slightly discounted, so a
             # strong primary-scope hit always outranks an equal fallback one.
             score = round(score * 0.88, 4)
+        if time_decay_enabled:
+            # P-F-1 감쇠 v0 (망각 헌장 L2-1: 침강이지 삭제 아님) — 반감기
+            # 90일, 바닥 0.7 (최대 30% 페널티). opt-in: MEM1_TIME_DECAY=1.
+            age_days = _memory_age_days(memory.get("created_at"), decay_now)
+            if age_days > 0:
+                decay = 0.7 + 0.3 * (0.5 ** (age_days / 90.0))
+                score = round(score * decay, 4)
+                score_breakdown["time_decay"] = round(decay, 3)
         if filter_memories_enabled and rule_score < 0.18 and keyword_score_value < 0.34 and not entity_overlap:
             continue
         if score >= threshold:
@@ -4840,6 +5826,7 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
             trust = memory_meta.get("trust")
             if memory_meta.get("superseded_at"):
                 trust = {**(trust or {}), "light": "red", "note": "superseded — reference only, prefer the newer fact"}
+            trust = _provenance_gate(trust, memory.get("memory", ""))  # 구본(라벨 이전 저장분)도 읽기 시점에 게이트
             if trust:
                 item["trust"] = trust
             if not in_primary_scope:
@@ -4848,15 +5835,30 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
                     (f"{field}:{memory.get(field)}" for field in ENTITY_FIELDS if memory.get(field)),
                     "project",
                 )
-            if keyword_search or filter_memories_enabled or retrieval_criteria:
+            if expose_breakdown:
+                # body A2: 호출자가 성분을 요청하면 노출 — 훅이 어휘 일치
+                # (rule)와 의미 일치(vector)를 구분해 소음을 거를 수 있게.
                 item["score_breakdown"] = score_breakdown
             if temporal_rerank:
                 scored_embeddings[memory["id"]] = memory.get("_embedding")
             scored.append(item)
-    scored.extend(_task_state_search_results(query, filters, project_id, top_k, threshold, as_of=memory_as_of))
+    scored.extend(
+        _task_state_search_results(
+            query, filters, project_id, top_k, threshold, as_of=memory_as_of, include_breakdown=expose_breakdown
+        )
+    )
     if rerank:
         scored = rerank_memory_results(query, scored, project_id=project_id, top_n=top_k)
+    scored = _apply_inhibition_edges(scored, project_id=project_id, as_of=memory_as_of)
+    scored = _apply_provenance_rank(scored)
     scored.sort(key=lambda item: (item["score"], item["updated_at"]), reverse=True)
+    if not memory_as_of:
+        # 시점 질의에는 확산 안 함 — 간선은 현재 원장의 것이라 과거를 오염시킨다.
+        # **정렬 뒤에 호출한다**: 확산은 "상위 적중을 씨앗으로" 흘리는데, 정렬 전
+        # scored[:8]은 DB 순회 순서의 임의 8건이다 (실측 2026-08-24: 표적이 씨앗의
+        # 1홉 이웃인데도 활성이 0). 본선 4의 첫 두 변형도 이 임의 씨앗으로 측정됐다.
+        scored = _apply_spreading_activation(scored, project_id, filters, top_k)
+        scored.sort(key=lambda item: (item["score"], item["updated_at"]), reverse=True)
     if temporal_rerank:
         adjusted = _promote_newer_siblings(scored, scored_embeddings, superseded_ids, project_id)
         adjusted += _demote_stale_siblings(scored, scored_embeddings, superseded_ids, project_id)
@@ -4873,7 +5875,102 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
         event_id=event_id,
         metadata={"top_k": top_k, "result_count": len(scored[:top_k])},
     )
-    return {"results": scored[:top_k]}
+    # B-② G-신호: 계기 계산은 _attach_search_instrument에 통일 — v1은 풀
+    # 전체(scored)를 알므로 소진 신호를 직접 잰다.
+    response: dict[str, Any] = _attach_search_instrument(
+        {"results": scored[:top_k]}, pool_size=len(scored), top_k=top_k
+    )
+    if payload.get("trace"):
+        # body A1 (one-person RFC): 턴 회상에도 피드백 주소를 준다.
+        # 지금까지 search 경로는 트레이스를 안 남겨서, 주입된 기억이
+        # 도움이었는지 소음이었는지 기록할 곳이 없었다 (실측 2026-08-06:
+        # 습관은 배선됐는데 "Context trace not found"). 경량 행 하나로
+        # record_context_outcome이 붙을 주소를 만든다.
+        response["trace_id"] = _record_search_trace(
+            project_id=project_id, query=query, filters=filters, top_k=top_k,
+            results=response["results"], source=payload.get("trace"),
+        )
+    return response
+
+
+def _record_search_trace(
+    *,
+    project_id: str,
+    query: str,
+    filters: dict[str, Any],
+    top_k: int,
+    results: list[dict[str, Any]],
+    source: Any,
+) -> str:
+    """Write the feedback address for one search and return its id.
+
+    Extracted 2026-08-23 because the layered recall gears (reflex, gate,
+    reader) call the v1 search internally and then **rebuild** their response
+    as {"results", "recall_layer"} — dropping trace_id. Measured consequence:
+    the row was written (the counter moved) but the caller never learned the
+    address, so the turn-recall hook could not print a feedback address and
+    could not attribute usage. 784 turn_recall traces, zero with labels.
+
+    The reflex gear was worse than lossy: it searched once per angle, so each
+    user-facing recall minted several traces and none of them was reachable.
+    Layers now strip `trace` from their inner calls and record one address for
+    the selection they actually returned.
+    """
+    trace_id = str(new_id())
+    selected_ids = [str(item.get("id")) for item in results if item.get("id")]
+    trace_scores = {str(item.get("id")): float(item.get("score") or 0.0) for item in results if item.get("id")}
+    with get_db() as conn:
+        conn.execute(
+            """
+            INSERT INTO context_traces (
+                trace_id, project_id, task_id, task_phase, policy_version, query,
+                filters, candidate_ids, selected_ids, rejected_ids, scores, roles,
+                decision_reasons, token_cost, payload, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                trace_id, project_id, "", "", _CONTEXT_SELECTOR_POLICY_VERSION, query,
+                json_dumps(filters), json_dumps(selected_ids), json_dumps(selected_ids),
+                json_dumps([]), json_dumps(trace_scores), json_dumps({}),
+                json_dumps({}), 0,
+                json_dumps({
+                    "schema_version": CONTEXT_TRACE_SCHEMA_VERSION,
+                    "trace_id": trace_id,
+                    "trace_query": query,
+                    "search_payload": {"query": query, "filters": filters, "top_k": top_k},
+                    "source": source if isinstance(source, str) else "search_memories",
+                }),
+                utc_now(),
+            ),
+        )
+    return trace_id
+
+
+def _layered_recall_result(
+    result: dict[str, Any],
+    *,
+    payload: dict[str, Any],
+    project_id: str,
+) -> dict[str, Any]:
+    """Give a layered gear's result the feedback address of its own selection."""
+    if "instrument" not in result:
+        # 안전망: 어떤 기어(reflex-v2 포함)도 계기 없이 나가지 않는다 —
+        # 풀 크기를 모르는 경로라 소진 신호만 None(미상)으로 남는다.
+        _attach_search_instrument(result, pool_size=None, top_k=int(payload.get("top_k") or 10))
+    if not payload.get("trace"):
+        return result
+    try:
+        result["trace_id"] = _record_search_trace(
+            project_id=project_id,
+            query=str(payload.get("query") or "").strip(),
+            filters=payload.get("filters") or {},
+            top_k=int(payload.get("top_k") or 10),
+            results=list(result.get("results") or []),
+            source=payload.get("trace"),
+        )
+    except Exception:
+        pass      # 주소를 못 만드는 것이 회상을 죽여선 안 된다
+    return result
 
 
 def _scope_fallback_enabled(payload: dict[str, Any]) -> bool:
@@ -4939,19 +6036,24 @@ def _scope_fallback_eligible(memory: dict[str, Any], filters: dict[str, Any] | N
     return matches_filters(memory, _strip_entity_conditions(filters))
 
 
-def _semantic_embedding_active() -> bool:
-    provider = (os.getenv("MEM1_EMBEDDING_PROVIDER") or "").strip().lower()
-    return bool(provider) and provider not in {"local", "deterministic"}
+def _semantic_embedding_active(project_id: str = "proj_local") -> bool:
+    # "Is semantic on" must share embed_text's resolution, not re-derive it
+    # from the env var: semantic-by-default promotes an unconfigured stack to
+    # fastembed with no env set, and settings-configured providers never touch
+    # the env either. Judging by env alone left exactly those users on the
+    # fallback weights (cycle 43).
+    return effective_embedding_stack(project_id).get("embedding_provider") not in ("", "local")
 
 
-def _search_score_weights() -> tuple[float, float]:
+def _search_score_weights(project_id: str = "proj_local") -> tuple[float, float]:
     # The legacy 0.72/0.28 rule/vector split dates from the deterministic
     # hash-bag fallback era, when the vector channel carried almost no
     # meaning. With a real semantic model the vector becomes the stronger
     # signal (2026-07-04 real-corpus eval: 3/6 queries ranked strictly
     # better in pure semantic order, 0/6 worse), so rebalance toward it —
-    # but only when a semantic provider is actually active.
-    if _semantic_embedding_active():
+    # but only when a semantic provider is actually active. Reads project
+    # settings — resolve once per search, not per candidate.
+    if _semantic_embedding_active(project_id):
         return 0.45, 0.55
     return 0.72, 0.28
 
@@ -4978,6 +6080,300 @@ def memory_feedback_map(project_id: str) -> dict[str, dict[str, Any]]:
 
 def _superseded_score_multiplier() -> float:
     return _float_or(os.getenv("MEM1_SUPERSEDED_SCORE_MULT"), 0.45)
+
+
+def _apply_inhibition_edges(
+    scored: list[dict[str, Any]],
+    project_id: str | None = None,
+    as_of: str = "",
+) -> list[dict[str, Any]]:
+    """supersede를 저장된 딱지가 아니라 인출 시점의 경쟁으로 집행한다. (본선 3)
+
+    신경 사양 (extinction/renewal · retrieval-induced suppression): 새 학습은 옛
+    기억을 지우지 않는다 — 함께 인출될 때 이긴다. 여기서의 번역:
+
+      대체본이 함께 인출됨   → 대체본이 구본 바로 위에 서고 구본은 그 아래로
+      대체본이 인출 안 됨    → 간선을 따라 대체본을 데려온다 (edge promotion —
+                              구본의 검색력을 후계자가 승계한다; 유사도 추측이
+                              아니라 원장이 아는 정확한 간선이다)
+      대체본이 죽음/부재     → 구본을 누르지 않는다 (주제의 유일한 담지자를
+                              누르면 주제가 통째로 사라진다 — renewal)
+      as_of < supersede 시점 → 경쟁 자체가 아직 없다 (그때는 구본이 현행이었다)
+    """
+    edges: list[tuple[int, str]] = []      # (구본의 scored 내 위치, 대체본 id)
+    for i, item in enumerate(scored):
+        meta = item.get("metadata") or {}
+        successor = meta.get("superseded_by")
+        if not meta.get("superseded_at") or not successor:
+            continue
+        if as_of and str(meta.get("superseded_at")) > str(as_of):
+            continue                        # 시점 질의: supersede 이전 — 구본이 현행
+        edges.append((i, str(successor)))
+    if not edges:
+        return scored
+
+    demote = _superseded_score_multiplier()
+    appended: list[dict[str, Any]] = []
+    # 인덱스가 아니라 객체를 든다: 아래에서 새 후계자를 append하면 인덱스는
+    # 미래의 연결 리스트를 가리키게 되고, 다음 순회의 조회가 범위를 벗어난다
+    # (IndexError 실측 2026-08-24, 확산이 목록을 늘린 뒤 재현).
+    obj_by_id: dict[str, dict[str, Any]] = {str(item.get("id")): item for item in scored}
+    for old_index, successor_id in edges:
+        old = scored[old_index]
+        old_score = float(old.get("score") or 0.0)
+        # 추이 승계 (recallbench 사이클 5, inc-005): 1홉 상속은 깊은 사슬에서
+        # 낡은 중간본만 소환한다(v5→v6, 그런데 v6도 구본). 머리까지 걷는다 —
+        # 흔적의 현행 담지자는 사슬의 끝이다.
+        hops = 0
+        while hops < 12:
+            probe = obj_by_id.get(successor_id)
+            probe_meta = (probe.get("metadata") if probe else None) or {}
+            if probe is not None and not probe_meta.get("superseded_by"):
+                break
+            if probe is not None:
+                successor_id = str(probe_meta.get("superseded_by") or "")
+                hops += 1
+                continue
+            row_probe = _memory_row_for_inhibition(successor_id, project_id)
+            if row_probe is None:
+                break
+            nxt = ((row_probe.get("metadata") or {}).get("superseded_by")
+                   if isinstance(row_probe.get("metadata"), dict) else None)
+            if not nxt:
+                break
+            successor_id = str(nxt)
+            hops += 1
+        successor = obj_by_id.get(successor_id)
+        if successor is None:
+            row = _memory_row_for_inhibition(successor_id, project_id)
+            if row is None:
+                # 후계자가 죽었다 — 구본이 주제의 유일한 담지자. 누르지 않는다.
+                (old.setdefault("score_breakdown", {}) if isinstance(old.get("score_breakdown"), dict)
+                 else old.setdefault("score_breakdown", {}))["renewal"] = True
+                continue
+            successor = strip_internal(row)
+            # 승계: 후계자는 구본의 검색력을 물려받아 바로 위에 선다.
+            successor["score"] = round(old_score, 4)
+            successor["score_breakdown"] = {"inherited_from": str(old.get("id"))}
+            trust = (row.get("metadata") or {}).get("trust")
+            if trust:
+                successor["trust"] = trust
+            appended.append(successor)
+            obj_by_id[successor_id] = successor
+        # 억압: 구본은 후계자 아래로 (곱 강등이되, 후계자보다 위로는 못 간다)
+        succ_score = float(successor.get("score") or 0.0)
+        old["score"] = round(min(old_score * demote if demote < 1 else old_score,
+                                 succ_score * 0.95), 4)
+        if isinstance(old.get("score_breakdown"), dict):
+            old["score_breakdown"]["inhibited_by"] = successor_id
+    return scored + appended
+
+
+_SPREADING_CACHE: dict[str, tuple[float, dict[str, list[tuple[str, float]]]]] = {}
+_SPREADING_TTL_S = 600.0
+_SPREADING_ENTITY_DEGREE_MAX = 50
+_SPREADING_ENTITY_RE = re.compile(r"^[a-z가-힣][\w가-힣 .\-]{2,40}$")
+_SPREADING_ENTITY_JUNK = frozenset(
+    "here users do this you can if the and for with from that not are was were "
+    "make add set get new old use used using user said tool observed session".split()
+)
+
+
+def _spreading_graph(project_id: str) -> dict[str, list[tuple[str, float]]]:
+    """확산 활성의 간선 지도 — ACT-R 둘째 항(Σ W·S)의 재료. (본선 4)
+
+    간선 세 종, 신뢰 순:
+      일화     같은 ADD 이벤트에서 태어난 조각들 (결정적 — 같은 선언의 형제)
+      supersede 원장이 아는 정확한 계승 간선
+      엔티티   공동 언급 (오염 실측: 추출기가 'Here'·'Do'를 person으로 뽑아 최대
+               허브가 정크다 — 유형·차수 2~50·문면 검사로 좁히고 1/√차수 감쇠)
+
+    프로세스 캐시 + TTL: 최신 쓰기 몇 건이 늦게 보이는 것은 수용한다 — 확산은
+    보너스 경로이지 정본 검색이 아니다.
+    """
+    import time as _time
+
+    cached = _SPREADING_CACHE.get(project_id)
+    if cached and _time.monotonic() - cached[0] < _SPREADING_TTL_S:
+        return cached[1]
+    adjacency: dict[str, list[tuple[str, float]]] = {}
+
+    def link(a: str, b: str, w: float) -> None:
+        adjacency.setdefault(a, []).append((b, w))
+        adjacency.setdefault(b, []).append((a, w))
+
+    with get_db() as conn:
+        alive = {str(r[0]) for r in conn.execute(
+            "SELECT id FROM memories WHERE project_id = ? AND deleted = 0", (project_id,))}
+        # 일화: 신규 쓰기 경로는 metadata.episode.event_id, 백필 행은 ADD input 동일성
+        groups: dict[str, list[str]] = {}
+        for mid, meta_raw in conn.execute(
+            "SELECT id, metadata FROM memories WHERE project_id = ? AND deleted = 0 "
+            "AND metadata LIKE '%episode%'", (project_id,)):
+            episode = (json_loads(meta_raw, {}) or {}).get("episode") or {}
+            if episode.get("event_id"):
+                groups.setdefault(f"ev:{episode['event_id']}", []).append(str(mid))
+        for mid, raw in conn.execute(
+            "SELECT memory_id, input FROM memory_history WHERE project_id = ? AND event='ADD' "
+            "AND input IS NOT NULL AND length(input) > 40", (project_id,)):
+            if str(mid) in alive:
+                groups.setdefault(f"in:{hash(str(raw))}", []).append(str(mid))
+        for members in groups.values():
+            members = [m for m in dict.fromkeys(members) if m in alive][:12]
+            for i, a in enumerate(members):
+                for b in members[i + 1:]:
+                    link(a, b, 1.0)
+        # supersede
+        for mid, meta_raw in conn.execute(
+            "SELECT id, metadata FROM memories WHERE project_id = ? AND deleted = 0 "
+            "AND metadata LIKE '%superseded_by%'", (project_id,)):
+            successor = (json_loads(meta_raw, {}) or {}).get("superseded_by")
+            if successor and str(successor) in alive:
+                link(str(mid), str(successor), 1.0)
+    # 술어 간선 기질 (R3, 2026-08-24) — LLM 추출 트리플 + 엔티티 해소의 파생 파일.
+    # co-mention(memory_entities)은 **완전히 배제**한다: 'Here'를 person으로 4,146건
+    # 뽑는 추출기가 본선 4 반증(도달 -22pp)의 원인이었고, 경로 제약의 첫 요구사항이
+    # "공허한 동거가 아니라 명시된 관계만"이다.
+    _link_substrate_edges(link, alive)
+    _SPREADING_CACHE[project_id] = (_time.monotonic(), adjacency)
+    return adjacency
+
+
+_SUBSTRATE_PATH = os.getenv("MEM1_GRAPH_SUBSTRATE") or str(
+    Path.home() / ".forget/graph_substrate.sqlite3")
+_SUBSTRATE_FANOUT_MAX = int(_float_or(os.getenv("MEM1_SPREADING_FANOUT_MAX"), 30))
+_SUBSTRATE_VACUOUS = frozenset({"RELATED_TO", "REFERENCES", "MENTIONS", "ASSOCIATED_WITH"})
+
+
+def _link_substrate_edges(link, alive: set[str]) -> None:
+    """기질의 술어 간선을 기억-기억 인접으로 접는다 (Cohen & Kjeldsen 제약 적용).
+
+    간선은 엔티티 사이에 있고 확산은 기억 사이에서 일어나므로, 같은 술어 간선의
+    양끝 엔티티를 언급한 기억들을 잇는다. 제약(전부 실측 분포에서 등록,
+    docs/graph-substrate-research.md §4.6):
+      팬아웃 — 차수 > 30 엔티티는 확산의 통로가 되지 않는다 (devloop 352 등
+               정당하지만 무판별한 머리 9개를 끊고 중간대 68개는 살린다)
+      경로   — 공허 술어(RELATED_TO 등) 배제, co-mention 완전 배제
+    """
+    if not os.path.exists(_SUBSTRATE_PATH):
+        return
+    try:
+        con = sqlite3.connect(f"file:{_SUBSTRATE_PATH}?mode=ro", uri=True)
+    except Exception:
+        return
+    try:
+        degree: dict[str, int] = {}
+        for src, dst in con.execute("SELECT src, dst FROM edges"):
+            degree[str(src)] = degree.get(str(src), 0) + 1
+            degree[str(dst)] = degree.get(str(dst), 0) + 1
+        mentions: dict[str, list[str]] = {}
+        for mid, entity in con.execute("SELECT memory_id, entity FROM mentions"):
+            if str(mid) in alive and degree.get(str(entity), 0) <= _SUBSTRATE_FANOUT_MAX:
+                mentions.setdefault(str(entity), []).append(str(mid))
+        for src, relation, dst in con.execute("SELECT src, relation, dst FROM edges"):
+            if str(relation).upper() in _SUBSTRATE_VACUOUS:
+                continue
+            left, right = mentions.get(str(src)) or [], mentions.get(str(dst)) or []
+            if not left or not right or len(left) * len(right) > 400:
+                continue          # 곱 폭발 방지 — 남은 머리도 여기서 다시 걸린다
+            weight = 1.0 / ((len(left) * len(right)) ** 0.5)
+            for a in dict.fromkeys(left):
+                for b in dict.fromkeys(right):
+                    if a != b:
+                        link(a, b, weight)
+    except Exception:
+        return
+    finally:
+        con.close()
+
+
+def _apply_spreading_activation(
+    scored: list[dict[str, Any]],
+    project_id: str,
+    filters: dict[str, Any],
+    top_k: int,
+) -> list[dict[str, Any]]:
+    """상위 적중을 씨앗으로 간선을 따라 활성을 흘려, 어휘·벡터가 못 데려온
+    이웃을 후보로 승급시킨다 (2홉 절단 확산 — ACT-R도 고정점까지 돌리지 않는다).
+
+    검색 천장을 올리는 유일한 로컬 후보 경로: 랭킹은 검색이 데려오지 않은 것을
+    구제할 수 없다(실측 2026-08-23, recency 스윕 무반응). 끄기: MEM1_SPREADING=0.
+    """
+    # 기본 끔 (2026-08-23 반증): 형제-도달 탐침에서 변형 1(추가만) Δ+0pp 불활성,
+    # 변형 2(가산 +0.25) Δ-22pp·자기 top-1 -32pp 유해 — 정크 엔티티 허브가
+    # 무관 조각을 직접 증거 위로 밀어 올렸다. 간선 질이 전제다. 재방문 조건:
+    # 엔티티 추출 정화 또는 라벨 학습 간선 가중치 (docs/neurocomputational-roadmap.md)
+    if str(os.getenv("MEM1_SPREADING", "0")).strip().lower() in {"0", "false", "off"}:
+        return scored
+    if not scored:
+        return scored
+    graph = _spreading_graph(project_id)
+    if not graph:
+        return scored
+    by_id = {str(item.get("id")): item for item in scored}
+    seed_ids = {str(item.get("id")) for item in scored[:8]}
+    seeds = [(str(item.get("id")), float(item.get("score") or 0.0)) for item in scored[:8]]
+    activation: dict[str, float] = {}
+    frontier = dict(seeds)
+    for _hop in range(2):
+        nxt: dict[str, float] = {}
+        for node, mass in frontier.items():
+            for neighbor, w in graph.get(node, ())[:24]:
+                gain = mass * w * 0.5
+                if gain < 0.01 or neighbor in seed_ids:
+                    continue
+                activation[neighbor] = activation.get(neighbor, 0.0) + gain
+                nxt[neighbor] = max(nxt.get(neighbor, 0.0), gain)
+        frontier = nxt
+    if not activation:
+        return scored
+    # ACT-R은 가산이다: A = B + Σ 확산. 이미 인출된 이웃(문턱은 넘었지만 top-k
+    # 밖)은 밀어 올리고, 아예 못 온 이웃은 확산 질량만으로 입장시킨다.
+    # 첫 판(추가만) 실측 Δ+0pp: 형제는 대개 하위권에 '이미 있어서' 추가 대상이
+    # 아니었고 보너스도 없었다 — 가산이 빠지면 확산은 아무것도 못 바꾼다.
+    # 직접 증거 불추월 (R3 등록 규칙): 확산은 씨앗 최저점 아래에서만 순서를 바꾼다.
+    # 본선 4 변형 2의 유해(자기 top-1 -32pp)가 정확히 이 클램프의 부재였다.
+    seed_floor = min((float(item.get("score") or 0.0) for item in scored[:8]), default=0.0)
+    ceiling = max(0.0, seed_floor - 0.001)
+    appended = []
+    for mid, mass in sorted(activation.items(), key=lambda kv: -kv[1])[:12]:
+        existing = by_id.get(mid)
+        if existing is not None:
+            base = float(existing.get("score") or 0.0)
+            bonus = round(min(0.25, mass, max(0.0, ceiling - base)), 4)
+            if bonus <= 0:
+                continue
+            existing["score"] = round(base + bonus, 4)
+            if isinstance(existing.get("score_breakdown"), dict):
+                existing["score_breakdown"]["spreading"] = bonus
+            continue
+        if len(appended) >= 5:
+            continue
+        row = _memory_row_for_inhibition(mid, project_id)
+        if row is None or not matches_filters(row, filters):
+            continue
+        item = strip_internal(row)
+        item["score"] = round(min(ceiling, mass), 4)
+        item["score_breakdown"] = {"spreading": round(mass, 4)}
+        trust = (row.get("metadata") or {}).get("trust")
+        if trust:
+            item["trust"] = trust
+        appended.append(item)
+    return scored + appended
+
+
+def _memory_row_for_inhibition(memory_id: str, project_id: str | None) -> dict[str, Any] | None:
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT * FROM memories WHERE id = ? AND deleted = 0", (memory_id,)
+        ).fetchone()
+    if row is None:
+        return None
+    item = dict(row)
+    for field in ("metadata", "categories"):
+        item[field] = json_loads(item.get(field), {}) if item.get(field) else {}
+    item.pop("embedding", None)
+    return item
 
 
 def _temporal_rerank_enabled(payload: dict[str, Any], project_id: str | None = None) -> bool:
@@ -6048,6 +7444,10 @@ def _claim_eval_matched(item: dict[str, Any], verification: dict[str, Any]) -> b
     expected_unsupported = item.get("expected_unsupported_count")
     if expected_unsupported is not None and int(expected_unsupported) != int(verification.get("unsupported_count") or 0):
         return False
+    if expected_supported is not None or expected_unsupported is not None:
+        # 개수 기대값을 명시한 항목은 그 일치가 곧 판정이다 — valid까지 요구하면
+        # expected_unsupported_count>0인 음성 케이스가 구조적으로 통과 불가능해진다.
+        return True
     return bool(verification.get("valid"))
 
 
@@ -6894,6 +8294,156 @@ def _context_diversity_tradeoffs(
         "diversity_tradeoff_max_score_gap": round(max_gap, 4),
         "diversity_tradeoff_samples": tradeoffs[:5],
     }
+
+
+_CONTEXT_TRUST_LIGHT_WEIGHTS = {"green": 1.15, "yellow": 1.0, "red": 0.30}
+_CONTEXT_TRUST_KIND_WEIGHTS = {"action_report": 0.85}
+
+
+def _context_recency_factor(memory: dict[str, Any]) -> float:
+    """A gentle tilt toward newer memories, never a cliff.
+
+    A ledger that has been written to for months answers "what did I decide last
+    night" and "who am I" from the same pool, and the second question must not be
+    starved to serve the first. The exponent is deliberately small.
+    """
+    if not _CONTEXT_RECENCY_EXP:
+        return 1.0
+    try:
+        born = parse_datetime(str(memory.get("created_at") or ""))
+        if born is None:
+            return 1.0
+        age_days = max((utc_now() - born).total_seconds() / 86400.0, 0.0)
+    except Exception:
+        return 1.0
+    return (age_days + 1.0) ** (-_CONTEXT_RECENCY_EXP)
+
+
+def _context_trust_rank(memory: dict[str, Any]) -> float:
+    """Relevance tempered by how the ledger learned this, and by how fresh it is.
+
+    Similarity alone treats "the user told me this" and "I inferred this" as the
+    same fact. They are not: acting on an unverified inference is the failure the
+    trust light exists to prevent, and an unverified completion claim
+    (``action_report``) is weaker still. Provenance therefore has to reach the
+    ranker, not just the reader.
+    """
+    trust = memory.get("trust") if isinstance(memory.get("trust"), dict) else {}
+    score = memory.get("score")
+    base = float(score) if isinstance(score, (int, float)) else 0.0
+    light = _CONTEXT_TRUST_LIGHT_WEIGHTS.get(str(trust.get("light") or ""), 1.0)
+    kind = _CONTEXT_TRUST_KIND_WEIGHTS.get(str(trust.get("kind") or ""), 1.0)
+    return base * light * kind * _context_recency_factor(memory)
+
+
+def _apply_provenance_rank(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """검색 경로에도 출처 가중치를 건다 (2026-09-01).
+
+    캡슐 랭커(_context_trust_rank)만 출처를 봤고 매일 쓰는 search_memories는
+    보지 않았다. 실측: «정훈 오디션 주최 프로그램» 질의에 기계 녹취 유래 yellow
+    (0.387)가 정훈 직접 진술 green(0.332) 위에 섰다 — 사고는 우연이 아니라 구조.
+    red(대체본)는 여기서 건드리지 않는다: 무조건 강등은 구본을 문턱 아래로
+    가라앉혀 사실상 삭제했던 전력이 있고, 그 경쟁은 _apply_inhibition_edges 몫이다.
+    """
+    for item in items:
+        trust = item.get("trust") if isinstance(item.get("trust"), dict) else None
+        if not trust or trust.get("light") == "red":
+            continue
+        weight = _CONTEXT_TRUST_LIGHT_WEIGHTS.get(str(trust.get("light") or ""), 1.0)
+        weight *= _CONTEXT_TRUST_KIND_WEIGHTS.get(str(trust.get("kind") or ""), 1.0)
+        if weight == 1.0:
+            continue
+        item["score"] = round(float(item.get("score") or 0.0) * weight, 4)
+        if isinstance(item.get("score_breakdown"), dict):
+            item["score_breakdown"]["provenance"] = round(weight, 4)
+    return items
+
+
+_CONTEXT_NEAR_DUPLICATE_THRESHOLD = 0.55
+# Recency exponent for context ranking. Swept against a held-out set of facts
+# (2026-08-23); 0.0 disables the tilt entirely.
+_CONTEXT_RECENCY_EXP = 0.0
+
+
+def _context_trigrams(text: str) -> set[str]:
+    return {text[i:i + 3] for i in range(max(0, len(text) - 2))}
+
+
+def _context_is_near_duplicate(text: str, kept: list[set[str]]) -> bool:
+    """Character-trigram overlap against what the budget already holds.
+
+    The retriever can return the same fact twice — restated, re-ingested, or
+    written by two different sessions — and the budget has no way to tell, so a
+    capsule silently spends half its room saying one thing twice. Cheap enough to
+    run inline; no embedding call, no second round trip.
+    """
+    grams = _context_trigrams(text)
+    if not grams:
+        return False
+    for prior in kept:
+        if not prior:
+            continue
+        overlap = len(grams & prior) / min(len(grams), len(prior))
+        if overlap > _CONTEXT_NEAR_DUPLICATE_THRESHOLD:
+            return True
+    return False
+
+
+def _context_spend_remaining_budget(
+    selected: list[dict[str, Any]],
+    budgeted: list[dict[str, Any]],
+    budget_tokens: int,
+    reserved_tokens: int = 0,
+) -> list[dict[str, Any]]:
+    """Fill leftover budget with the best candidates the slot pass did not take.
+
+    Slot capacity and token budget are separate limits, and the slot cap binds
+    first: a caller asking for 900 tokens was getting 269 of them spent while 17
+    ranked candidates were dropped (measured 2026-08-23). Structure is worth a
+    cap — leaving two thirds of the room a caller paid for empty is not.
+    Slot-selected memories keep their order and their priority; this only appends.
+
+    `reserved_tokens` is what the context already spends outside this list (the
+    resume-workspace line). Ignoring it overstated the room and could push the
+    assembled context past the budget the caller asked for.
+    """
+    used = reserved_tokens + sum(int(item.get("context_tokens") or 0) for item in selected)
+    room = budget_tokens - used
+    if room <= 0:
+        return selected
+    chosen_ids = {str(item.get("id")) for item in selected}
+    filled = list(selected)
+    for memory in budgeted:
+        if str(memory.get("id")) in chosen_ids:
+            continue
+        cost = int(memory.get("context_tokens") or 0)
+        if cost <= 0 or cost > room:
+            continue
+        filled.append(memory)
+        chosen_ids.add(str(memory.get("id")))
+        room -= cost
+    return filled
+
+
+def _context_bind_anchor(memory: dict[str, Any], text: str) -> str:
+    """조각 앞에 일화 앵커를 되붙여 단독 해독 가능하게 만든다 (렌더 전용).
+
+    앵커가 없거나 사실이 이미 주제어를 품고 있으면 그대로 둔다 — 중복은 예산 낭비다.
+    """
+    anchor = ((memory.get("metadata") or {}).get("episode") or {}).get("anchor") or ""
+    if anchor and anchor_applies(text, anchor):
+        return f"{anchor} — {text}"
+    return text
+
+
+def _context_rank_by_trust(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Order candidates before the budget consumes them.
+
+    The budget loop takes candidates in order and stops when full, so order *is*
+    selection. Sorting is stable: equal-ranked memories keep the retriever's own
+    ordering.
+    """
+    return sorted(candidates, key=_context_trust_rank, reverse=True)
 
 
 def _context_memory_is_superseded(memory: dict[str, Any]) -> bool:
@@ -9649,6 +11199,26 @@ def _stance_line(project_id: str, scope_filters: dict[str, Any] | None = None) -
     return ""
 
 
+def _self_line(project_id: str) -> str:
+    """자기 기억 슬롯 — 에이전트가 자신에 대해 검증해온 앎 (one-person RFC P0).
+
+    stance가 '지난 세션의 자세'라면 self는 '누적된 자기 교정'이다:
+    실측된 예측 편향, 규모 착시 같은 교훈. metadata.layer == "self"
+    관행으로 저장된다. stance와 달리 신선도 게이트가 없다 — 교정은
+    낡는 게 아니라 supersede로 대체된다. 새 인스턴스가 일만 아는 게
+    아니라 자신을 알고 깨어나게 하는 줄."""
+    try:
+        rows = [
+            m for m in list_memory_dicts(project_id=project_id)
+            if str((m.get("metadata") or {}).get("layer") or "") == "self"
+        ]
+    except Exception:
+        return ""
+    rows.sort(key=lambda m: str(m.get("updated_at") or m.get("created_at") or ""), reverse=True)
+    picks = [str(m.get("memory") or "").split("\n")[0][:120] for m in rows[:2]]
+    return " | ".join(p for p in picks if p)
+
+
 def _capsule_scope_filters(payload: dict[str, Any] | None) -> dict[str, Any]:
     """The requesting scope, for capsule layers that list task state.
 
@@ -9855,6 +11425,9 @@ def _render_context_capsule_text(capsule: dict[str, Any]) -> str:
     stance_line = str(capsule.get("stance_line") or "")
     if stance_line:
         lines.append("자세: " + stance_line)
+    self_line = str(capsule.get("self_line") or "")
+    if self_line:
+        lines.append("자기: " + self_line)
     parallel_tracks = [str(item) for item in capsule.get("parallel_tracks") or [] if str(item)]
     if parallel_tracks:
         # placed above the droppable tail: under budget pressure the render
@@ -10123,6 +11696,7 @@ def _attach_context_autopilot(
     capsule["parallel_tracks"] = _parallel_track_lines(capsule_project_id, current_task_id, capsule_scope)
     capsule["goal_lines"] = _goal_lines(capsule_project_id, capsule_scope)
     capsule["stance_line"] = _stance_line(capsule_project_id, capsule_scope)
+    capsule["self_line"] = _self_line(capsule_project_id)
     capsule_text = _render_context_capsule_text(capsule)
     final_model_context = str(result.get("context") or "")
     result["context_status"] = context_status
@@ -11416,6 +12990,30 @@ def _close_outcome_feedback_loop(
 
 
 def record_context_outcome(payload: dict[str, Any], project_id: str | None = None) -> dict[str, Any]:
+    # outcome 축약 라벨 (2026-08-10, 귀먹음 버그 수리): 훅과 CLAUDE.md가 광고해 온
+    # "helped|noise 한 번"의 실제 배선. 이전에는 스키마에 outcome이 없어 조용히
+    # 버려졌고, 신호 0인 채 추론기가 helped/noise 모두 reasoning_failure로 찍었다.
+    # helped → 명시적 failure_stage="none" (+ 첫 행동 생산적) — 양성 학습은
+    #   trace 단위 failure_stage='none' 조인이 이미 소비한다.
+    # noise → 명시적 selection_failure — 선별이 틀렸다는 뜻이며, 해악(harmful)이나
+    #   턴 실패(reasoning_failure)를 주장하지 않는다. id 자동 채움도 하지 않는다.
+    outcome_label = str(payload.get("outcome") or "").strip().lower()
+    if outcome_label in {"helped", "noise"}:
+        payload = dict(payload)
+        inferred_in = dict(payload.get("inferred")) if isinstance(payload.get("inferred"), dict) else {}
+        if outcome_label == "helped":
+            payload.setdefault("first_action_productive", True)
+            payload.setdefault("user_correction_required", False)
+            payload.setdefault("failure_stage", "none")
+            inferred_in.setdefault("reason", "caller labeled the injected recall as helpful (outcome=helped)")
+        else:
+            payload.setdefault("failure_stage", "selection_failure")
+            inferred_in.setdefault("reason", "caller labeled the injected recall as noise (outcome=noise)")
+        inferred_in.setdefault("source", "explicit_label")
+        payload["inferred"] = inferred_in
+        metadata_in = dict(payload.get("metadata")) if isinstance(payload.get("metadata"), dict) else {}
+        metadata_in.setdefault("outcome_label", outcome_label)
+        payload["metadata"] = metadata_in
     trace_id = str(payload.get("trace_id") or "").strip()
     if not trace_id:
         raise HTTPException(status_code=400, detail="trace_id is required")
@@ -11687,8 +13285,60 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
                     break
         except Exception:
             workspace_current = None
-    workspace_line = _workspace_context_line(workspace_current) if isinstance(workspace_current, dict) else ""
+    # disable_resume_workspace must also drop the workspace line, not just the
+    # resume_workspace object: the line is what actually reaches the model, so a
+    # half-honored flag leaked another agent's in-progress task into a caller that
+    # had explicitly asked for none (found while wiring a second adapter, 2026-08-23).
+    workspace_line = (
+        ""
+        if resume_workspace_disabled
+        else (_workspace_context_line(workspace_current) if isinstance(workspace_current, dict) else "")
+    )
     workspace_tokens = min(token_estimate(workspace_line), budget_tokens) if workspace_line else 0
+    # 전망 밴드 (기대 헤드 v0, 2026-08-24 — 탑다운 헌장 L2 "예측 기계"의 첫 배선):
+    # 세계모델의 열린-고리 기대를 캡슐에 소량 주입한다. 기본 꺼짐(opt-in) —
+    # include_prospection 페이로드 또는 MEM1_PROSPECTION=1. 파생 DB가 없으면
+    # 조용히 건너뛴다(fail-open): 캡슐은 세계모델 없이도 온전해야 하고,
+    # 읽기 경로가 파일을 만들어서도 안 된다.
+    prospection_items: list[dict[str, Any]] = []
+    prospection_lines: list[str] = []
+    if _bool_or(payload.get("include_prospection"), os.environ.get("MEM1_PROSPECTION") == "1"):
+        try:
+            from forget import worldmodel as _worldmodel
+            if os.path.exists(_worldmodel.DEFAULT_WORLD_DB):
+                # 경로는 모듈 속성에서 매 호출 읽는다 — 기본 인자는 정의 시점
+                # 바인딩이라 테스트 격리(monkeypatch)와 런타임 교체가 안 먹는다.
+                prospection_items = _worldmodel.expectations(
+                    _worldmodel.DEFAULT_WORLD_DB, limit=2)
+                # 밴드 확장 (2026-08-25, 마찰 #1 수리 직후): 비-고리 기대 1칸 —
+                # 무소식 우선, 없으면 루틴 부재. dismiss가 생기기 전엔 해소
+                # 불가능한 기대를 밴드에 싣는 것이 마찰 재생산이라 막아뒀었다.
+                # 총 ≤3줄 (힌트도 예산 — P-PM-2·H의 교훈). 경로 인자는 모두
+                # 호출 시점 모듈 속성으로 — 기본 인자는 정의 시점 바인딩.
+                extra_item: dict[str, Any] | None = None
+                try:
+                    quiet = _worldmodel.stale_entities(
+                        limit=1, substrate_db=_worldmodel.DEFAULT_SUBSTRATE_DB,
+                        ledger_db=_worldmodel.DEFAULT_LEDGER_DB,
+                        world_db=_worldmodel.DEFAULT_WORLD_DB)
+                    if quiet:
+                        extra_item = {"kind": "quiet_entity", **quiet[0]}
+                except Exception:
+                    extra_item = None
+                if extra_item is None:
+                    try:
+                        absent = _worldmodel.routine_expectations(_worldmodel.DEFAULT_WORLD_DB)
+                        if absent:
+                            extra_item = {"kind": "routine_absence", **absent[0]}
+                    except Exception:
+                        extra_item = None
+                if extra_item is not None:
+                    prospection_items = list(prospection_items) + [extra_item]
+                prospection_lines = [f"[전망] {item['expectation']}" for item in prospection_items]
+        except Exception:
+            prospection_items = []
+            prospection_lines = []
+    prospection_tokens = sum(token_estimate(line) for line in prospection_lines)
     search = search_memories({**search_payload, "recall": "low"}, project_id=project_id)
     search_candidates = search["results"]
     current_candidates = [memory for memory in search_candidates if not _context_memory_is_superseded(memory)]
@@ -11758,27 +13408,65 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
             max_backfill=min(max(working_memory_slots, 1), 3),
         )
         candidates.extend(backfill_candidates)
+    candidates = _context_rank_by_trust(candidates)
     budgeted: list[dict[str, Any]] = []
     budgeted_lines: list[str] = []
     budgeted_tokens = workspace_tokens
+    kept_grams: list[set[str]] = []
+    duplicate_filtered_memory_ids: list[str] = []
     for memory in candidates:
         text = str(memory.get("memory", "")).strip()
         if not text:
             continue
+        # 결합 복원 — 저장본은 bare fact이지만 모델이 읽는 줄에는 주제를 되붙인다.
+        # 회상돼도 해독 불가한 조각(최근 40건 중 52%)이 예산만 먹는 것을 막는다.
+        # 저장은 불변이고 렌더만 바뀐다: 이 줄이 곧 "요지로 단서, 문면으로 확인"이다.
+        text = _context_bind_anchor(memory, text)
+        if _context_is_near_duplicate(text, kept_grams):
+            duplicate_filtered_memory_ids.append(str(memory.get("id")))
+            continue
         cost = token_estimate(text)
-        if budgeted_tokens and budgeted_tokens + cost > budget_tokens:
-            break
-        if cost > budget_tokens:
-            words = text.split()
-            text = " ".join(words[:budget_tokens])
-            cost = token_estimate(text)
+        # 한 후보가 안 맞는다고 선택을 끝내지 않는다. 예전에는 여기서 break였고, 그래서
+        # 앞자리의 긴 후보 하나가 뒤의 짧은 후보 전부의 기회를 삼켰다 — 실측(2026-08-23,
+        # 평가셋 v1 machine_resume): 후보 10건이 있는데도 budgeted 0인 질의 3건, 1인 질의
+        # 3건으로 정직한 층의 21%가 빈 맥락을 받았다. 워크스페이스 줄이 800토큰 예산의
+        # 453~779를 먼저 먹은 뒤 첫 후보가 안 들어가면 그것으로 끝이었다.
+        if budgeted_tokens + cost > budget_tokens:
+            continue      # 안 맞으면 건너뛴다. 자르는 것은 아래 최후 수단의 몫이다
         budgeted_tokens += cost
+        kept_grams.append(_context_trigrams(text))
         item = dict(memory)
         item["reason"] = _context_reason(item)
         item["context_tokens"] = cost
         budgeted.append(item)
         budgeted_lines.append(f"- {text}")
+    # 기아 방지: 후보가 있는데 한 건도 못 담았다면 최상위 후보를 남은 자리에 맞춰 자른다.
+    # 자른 기억은 온전하지 않지만, 빈 맥락은 회상이 아니라 침묵이다.
+    if candidates and not budgeted:
+        head, room = candidates[0], max(0, budget_tokens - workspace_tokens)
+        text = _context_bind_anchor(head, str(head.get("memory", "")).strip())
+        if text and room > 0:
+            # 비례 추정으로 한 번에 줄이고, 남으면 몇 번만 더 깎는다. 단어를 하나씩
+            # 떼며 매번 재는 방식은 긴 기억에서 O(n²)이 된다 (수천 단어 × 수천 호출).
+            words = text.split()
+            total = token_estimate(text)
+            if total > room and total > 0:
+                words = words[: max(1, int(len(words) * room / total))]
+            while len(words) > 1 and token_estimate(" ".join(words)) > room:
+                words = words[: max(1, int(len(words) * 0.9))]
+            text = " ".join(words)
+            if text:
+                item = dict(head)
+                item["reason"] = _context_reason(item)
+                item["context_tokens"] = token_estimate(text)
+                item["context_truncated"] = True
+                budgeted.append(item)
+                budgeted_lines.append(f"- {text}")
+                kept_grams.append(_context_trigrams(text))
     selected = _select_working_memory_slots(budgeted, working_memory_slots, str(search_payload["query"] or ""))
+    selected = _context_spend_remaining_budget(
+        selected, budgeted, budget_tokens,
+        reserved_tokens=workspace_tokens + prospection_tokens)
     budgeted_line_by_id = {str(memory.get("id")): line for memory, line in zip(budgeted, budgeted_lines) if memory.get("id")}
     lines = [
         budgeted_line_by_id.get(str(memory.get("id")), f"- {str(memory.get('memory') or '').strip()}")
@@ -11788,13 +13476,15 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
     selected_ids = {item.get("id") for item in selected}
     omitted_memory_ids = [memory["id"] for memory in candidates if memory.get("id") not in selected_ids]
     context_lines = [workspace_line] if workspace_line else []
+    context_lines.extend(prospection_lines)
     context_lines.extend(lines)
     result = {
         "project_id": project_id,
         "query": search_payload["query"],
         "filters": search_payload["filters"],
         "budget_tokens": budget_tokens,
-        "used_tokens": used_tokens + workspace_tokens,
+        "used_tokens": used_tokens + workspace_tokens + prospection_tokens,
+        "prospection": prospection_items,
         "total_candidates": len(candidates),
         "raw_candidate_count": len(search_candidates),
         "task_scope_filtered_count": len(task_scope_filtered_memory_ids),
@@ -11905,23 +13595,28 @@ def assemble_context(payload: dict[str, Any], project_id: str | None = None) -> 
     result["evidence"] = _context_evidence(result)
     if _bool_or(payload.get("verify_evidence", payload.get("verify")), False):
         result["verification"] = verify_context_evidence({"context_result": result}, project_id=project_id)
-    trace_summary = _record_context_trace(
-        project_id=project_id,
-        payload=payload,
-        search_payload=search_payload,
-        raw_candidates=current_candidates,
-        candidates=candidates,
-        budgeted=budgeted,
-        selected=selected,
-        role_backfill=role_backfill,
-        task_scope_filtered_memory_ids=task_scope_filtered_memory_ids,
-        workspace_duplicate_filtered_memory_ids=workspace_duplicate_filtered_memory_ids,
-        result=result,
-        workspace_current=workspace_current if isinstance(workspace_current, dict) else None,
-    )
-    result["context_trace_id"] = trace_summary["trace_id"]
-    result["context_trace"] = trace_summary
-    result["evidence"]["context_trace_id"] = trace_summary["trace_id"]
+    # record_trace=False는 평가·회귀 실행용 건식 모드다. 트레이스 기록이 무조건이던 동안
+    # 조립기를 평가하려면 평가 대상인 신호(context_traces)를 오염시켜야 했다 — 평가 133회가
+    # 원장에 가짜 트레이스 133개를 남기고, 그것이 다음 평가셋으로 다시 채굴된다. 기본값은
+    # 켜짐이므로 실사용 계측은 그대로다. (2026-08-23)
+    if _bool_or(payload.get("record_trace"), True):
+        trace_summary = _record_context_trace(
+            project_id=project_id,
+            payload=payload,
+            search_payload=search_payload,
+            raw_candidates=current_candidates,
+            candidates=candidates,
+            budgeted=budgeted,
+            selected=selected,
+            role_backfill=role_backfill,
+            task_scope_filtered_memory_ids=task_scope_filtered_memory_ids,
+            workspace_duplicate_filtered_memory_ids=workspace_duplicate_filtered_memory_ids,
+            result=result,
+            workspace_current=workspace_current if isinstance(workspace_current, dict) else None,
+        )
+        result["context_trace_id"] = trace_summary["trace_id"]
+        result["context_trace"] = trace_summary
+        result["evidence"]["context_trace_id"] = trace_summary["trace_id"]
     record_usage(
         project_id,
         "context_assemble",
@@ -12234,6 +13929,17 @@ def get_memory(memory_id: str, project_id: str | None = None, include_expired: b
     return strip_internal(memory)
 
 
+def _reject_team_ledger_mutation(memory: dict[str, Any]) -> None:
+    if (
+        str(memory.get("app_id") or "").strip() == scope_guard.TEAM_LEDGER_APP
+        and not memory.get("user_id")
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="team-ledger items are append-only; use team_note links instead",
+        )
+
+
 def update_memory(memory_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     project_id = payload.get("project_id") or current_project_id()
     text = payload.get("text") or payload.get("memory") or payload.get("data")
@@ -12242,6 +13948,7 @@ def update_memory(memory_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     if text is None and metadata is None and expiration is None:
         raise HTTPException(status_code=400, detail="text, metadata, or expiration_date is required")
     current = get_memory(memory_id, project_id=project_id)
+    _reject_team_ledger_mutation(current)
     if isinstance(current.get("metadata"), dict) and current["metadata"].get("immutable") is True:
         raise HTTPException(status_code=409, detail="Memory is immutable and cannot be updated")
     new_text = str(text) if text is not None else current["memory"]
@@ -12312,12 +14019,15 @@ def supersede_memory(memory_id: str, payload: dict[str, Any] | None = None, proj
     successor_id = str(payload.get("superseded_by") or payload.get("new_memory_id") or "").strip() or None
     reason = str(payload.get("reason") or "").strip()
     current = get_memory(memory_id, project_id=project_id, include_expired=True)
+    _reject_team_ledger_mutation(current)
     metadata = dict(current.get("metadata") or {})
     if metadata.get("immutable") is True:
         raise HTTPException(status_code=409, detail="Memory is immutable and cannot be superseded")
     if successor_id == memory_id:
         raise HTTPException(status_code=400, detail="A memory cannot supersede itself")
     successor = get_memory(successor_id, project_id=project_id, include_expired=True) if successor_id else None
+    if successor is not None:
+        _reject_team_ledger_mutation(successor)
 
     now = utc_now()
     metadata["superseded_at"] = now
@@ -12401,6 +14111,7 @@ def confirm_memory(memory_id: str, payload: dict[str, Any] | None = None, projec
     if not evidence:
         raise HTTPException(status_code=400, detail="evidence is required — no receipt, no confirmation")
     current = get_memory(memory_id, project_id=project_id, include_expired=True)
+    _reject_team_ledger_mutation(current)
     metadata = dict(current.get("metadata") or {})
     if metadata.get("superseded_at"):
         raise HTTPException(status_code=409, detail="Memory is superseded — confirm its successor instead")
@@ -12415,7 +14126,10 @@ def confirm_memory(memory_id: str, payload: dict[str, Any] | None = None, projec
     trust.setdefault("source", "assistant")
     trust.setdefault("kind", "action_report")
     trust["note"] = f"verified {now[:10]}: {evidence[:120]}"
+    trust.pop("gate", None)  # 확인됐으니 게이트 해제
     metadata["trust"] = trust
+    if isinstance(metadata.get("quarantine"), dict):
+        metadata["quarantine"] = {**metadata["quarantine"], "status": "confirmed", "confirmed_at": now}
 
     with get_db() as conn:
         conn.execute(
@@ -12468,6 +14182,7 @@ def confirm_memory(memory_id: str, payload: dict[str, Any] | None = None, projec
 def delete_memory(memory_id: str, project_id: str | None = None) -> dict[str, str]:
     project_id = project_id or current_project_id()
     current = get_memory(memory_id, project_id=project_id, include_expired=True)
+    _reject_team_ledger_mutation(current)
     now = utc_now()
     with get_db() as conn:
         conn.execute("UPDATE memories SET deleted = 1, updated_at = ? WHERE id = ? AND project_id = ?", (now, memory_id, project_id))
@@ -12508,6 +14223,15 @@ def delete_memories(filters: dict[str, Any], project_id: str | None = None) -> d
     if not has_entity_filter(filters):
         raise HTTPException(status_code=400, detail="filters must include at least one entity ID")
     memories = [m for m in list_memory_dicts(project_id=project_id, include_expired=True) if matches_filters(m, filters)]
+    if any(
+        str(memory.get("app_id") or "").strip() == scope_guard.TEAM_LEDGER_APP
+        and not memory.get("user_id")
+        for memory in memories
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="bulk mutation includes append-only team-ledger items",
+        )
     for memory in memories:
         delete_memory(memory["id"], project_id=project_id)
     return {"message": "Memories deleted successfully!"}
@@ -12548,7 +14272,8 @@ def submit_memory_feedback(payload: dict[str, Any], project_id: str | None = Non
     if not memory_id:
         raise HTTPException(status_code=400, detail="memory_id is required")
     memory_id = str(memory_id)
-    get_memory(memory_id, project_id=project_id)
+    memory = get_memory(memory_id, project_id=project_id)
+    _reject_team_ledger_mutation(memory)
 
     feedback_keys = ("feedback", "rating", "value")
     feedback_present = any(key in payload for key in feedback_keys)

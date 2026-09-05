@@ -998,6 +998,7 @@ CREATE TABLE IF NOT EXISTS api_keys (
     id TEXT PRIMARY KEY,
     project_id TEXT DEFAULT 'proj_local',
     owner_user_id TEXT DEFAULT '',
+    agent_principal TEXT DEFAULT '',
     name TEXT NOT NULL,
     api_key TEXT UNIQUE NOT NULL,
     key_prefix TEXT NOT NULL,
@@ -1010,6 +1011,22 @@ CREATE TABLE IF NOT EXISTS api_keys (
 
 CREATE INDEX IF NOT EXISTS idx_api_keys_key ON api_keys(api_key);
 CREATE INDEX IF NOT EXISTS idx_api_keys_project ON api_keys(project_id);
+
+CREATE TABLE IF NOT EXISTS team_note_requests (
+    project_id TEXT NOT NULL,
+    ledger_app TEXT NOT NULL,
+    principal TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    payload_sha256 TEXT NOT NULL,
+    event_id TEXT,
+    memory_id TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (project_id, ledger_app, principal, idempotency_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_team_note_requests_memory
+    ON team_note_requests(project_id, memory_id);
 
 CREATE TABLE IF NOT EXISTS app_onboard_requests (
     request_id TEXT PRIMARY KEY,
@@ -1027,6 +1044,152 @@ CREATE TABLE IF NOT EXISTS app_onboard_requests (
 
 CREATE INDEX IF NOT EXISTS idx_app_onboard_token ON app_onboard_requests(magic_token_hash);
 CREATE INDEX IF NOT EXISTS idx_app_onboard_email ON app_onboard_requests(email_normalized);
+
+CREATE TABLE IF NOT EXISTS access_grants (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    owner_user_id TEXT,
+    grantee_pattern TEXT NOT NULL,
+    principal_mode TEXT NOT NULL DEFAULT 'exact',
+    scope_app TEXT NOT NULL,
+    deny_pii TEXT NOT NULL DEFAULT '[]',
+    quota INTEGER NOT NULL DEFAULT 100,
+    used INTEGER NOT NULL DEFAULT 0,
+    answer_mode TEXT NOT NULL DEFAULT 'passage',
+    expires_at TEXT,
+    revoked_at TEXT,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_access_grants_scope ON access_grants(project_id, scope_app);
+
+CREATE TABLE IF NOT EXISTS access_receipts (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    grant_id TEXT,
+    grantee TEXT NOT NULL,
+    scope_app TEXT NOT NULL,
+    allowed INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    query_hash TEXT NOT NULL,
+    query_commitment TEXT NOT NULL DEFAULT '',
+    request_id TEXT,
+    items_served INTEGER NOT NULL DEFAULT 0,
+    redactions INTEGER NOT NULL DEFAULT 0,
+    receipt_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_access_receipts_grantee ON access_receipts(project_id, grantee, created_at);
+
+CREATE TABLE IF NOT EXISTS team_confirmations (
+    item_id TEXT NOT NULL,
+    project_id TEXT NOT NULL,
+    confirmed_by TEXT NOT NULL,
+    receipt_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (project_id, item_id)
+);
+
+-- Memory Agent marketplace (local/free prototype).  Product rows never point
+-- the serving path at the owner's live vault.  Explicitly reviewed,
+-- ownerless source rows are copied into memory_agent_items and that immutable
+-- snapshot is the only corpus an external consultation can read.
+CREATE TABLE IF NOT EXISTS memory_agent_products (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    publisher_principal TEXT NOT NULL,
+    publisher_vault_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    capability TEXT NOT NULL,
+    source_app TEXT NOT NULL,
+    answer_mode TEXT NOT NULL DEFAULT 'pointer',
+    max_items INTEGER NOT NULL DEFAULT 3,
+    price_units INTEGER NOT NULL DEFAULT 0,
+    terms_version TEXT NOT NULL DEFAULT 'memory-agent-terms-v1',
+    status TEXT NOT NULL DEFAULT 'draft',
+    publish_receipt_json TEXT,
+    created_at TEXT NOT NULL,
+    published_at TEXT,
+    retired_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_memory_agent_catalog
+    ON memory_agent_products(project_id, status, capability, published_at);
+
+CREATE TABLE IF NOT EXISTS memory_agent_items (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    source_memory_id TEXT NOT NULL,
+    source_hash TEXT NOT NULL,
+    curated_text TEXT NOT NULL,
+    reviewed_by TEXT NOT NULL,
+    reviewed_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (project_id, product_id, source_memory_id),
+    FOREIGN KEY (product_id) REFERENCES memory_agent_products(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_memory_agent_items_product
+    ON memory_agent_items(project_id, product_id, reviewed_at);
+
+CREATE TABLE IF NOT EXISTS memory_agent_quotes (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    buyer_principal TEXT NOT NULL,
+    buyer_vault_id TEXT NOT NULL,
+    client_id TEXT NOT NULL,
+    purpose TEXT NOT NULL,
+    quote_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    FOREIGN KEY (product_id) REFERENCES memory_agent_products(id)
+);
+CREATE INDEX IF NOT EXISTS idx_memory_agent_quotes_buyer
+    ON memory_agent_quotes(project_id, buyer_principal, created_at);
+
+CREATE TABLE IF NOT EXISTS memory_agent_grants (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    quote_id TEXT NOT NULL UNIQUE,
+    product_id TEXT NOT NULL,
+    buyer_principal TEXT NOT NULL,
+    buyer_vault_id TEXT NOT NULL,
+    client_id TEXT NOT NULL,
+    purpose TEXT NOT NULL,
+    quota INTEGER NOT NULL DEFAULT 10,
+    used INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    revoked_at TEXT,
+    FOREIGN KEY (product_id) REFERENCES memory_agent_products(id),
+    FOREIGN KEY (quote_id) REFERENCES memory_agent_quotes(id)
+);
+CREATE INDEX IF NOT EXISTS idx_memory_agent_grants_buyer
+    ON memory_agent_grants(project_id, buyer_principal, client_id, created_at);
+
+CREATE TABLE IF NOT EXISTS memory_agent_receipts (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    grant_id TEXT,
+    product_id TEXT,
+    buyer_principal TEXT NOT NULL,
+    buyer_vault_id TEXT NOT NULL,
+    client_id TEXT NOT NULL,
+    allowed INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    query_commitment TEXT NOT NULL,
+    request_id TEXT,
+    items_served INTEGER NOT NULL DEFAULT 0,
+    redactions INTEGER NOT NULL DEFAULT 0,
+    charged_units INTEGER NOT NULL DEFAULT 0,
+    receipt_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_memory_agent_receipts_buyer
+    ON memory_agent_receipts(project_id, buyer_principal, created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_memory_agent_receipts_request
+    ON memory_agent_receipts(project_id, buyer_principal, request_id)
+    WHERE request_id IS NOT NULL;
 """
 
 
@@ -1230,6 +1393,34 @@ def init_db() -> None:
             conn.execute("ALTER TABLE memory_history ADD COLUMN project_id TEXT DEFAULT 'proj_local'")
         if "project_id" not in existing_event_columns:
             conn.execute("ALTER TABLE events ADD COLUMN project_id TEXT DEFAULT 'proj_local'")
+        # 기억 경제 증분 (2026-08-28, gpt-live 인계 5건): 기존 DB에 컬럼 승계
+        existing_grant_columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(access_grants)").fetchall()
+        }
+        if existing_grant_columns and "answer_mode" not in existing_grant_columns:
+            conn.execute("ALTER TABLE access_grants ADD COLUMN answer_mode TEXT NOT NULL DEFAULT 'passage'")
+        if existing_grant_columns and "principal_mode" not in existing_grant_columns:
+            conn.execute("ALTER TABLE access_grants ADD COLUMN principal_mode TEXT NOT NULL DEFAULT 'exact'")
+        if existing_grant_columns:
+            conn.execute(
+                "UPDATE access_grants SET principal_mode = 'pattern'"
+                " WHERE principal_mode = 'exact' AND ("
+                " instr(grantee_pattern, '*') > 0 OR instr(grantee_pattern, '?') > 0"
+                " OR instr(grantee_pattern, '[') > 0)"
+            )
+        existing_access_receipt_columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(access_receipts)").fetchall()
+        }
+        if existing_access_receipt_columns and "request_id" not in existing_access_receipt_columns:
+            conn.execute("ALTER TABLE access_receipts ADD COLUMN request_id TEXT")
+        if existing_access_receipt_columns and "query_commitment" not in existing_access_receipt_columns:
+            conn.execute("ALTER TABLE access_receipts ADD COLUMN query_commitment TEXT NOT NULL DEFAULT ''")
+        # 마이그레이션 컬럼 위 인덱스는 ALTER 이후에만 — SCHEMA에 넣으면 구버전
+        # 테이블에서 executescript가 즉사한다 (2026-08-28 실측).
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_access_receipts_request"
+            " ON access_receipts(project_id, grantee, request_id)"
+        )
         if "project_id" not in existing_export_columns:
             conn.execute("ALTER TABLE exports ADD COLUMN project_id TEXT DEFAULT 'proj_local'")
         if "project_id" not in existing_delivery_columns:
@@ -1244,6 +1435,8 @@ def init_db() -> None:
             conn.execute("ALTER TABLE api_keys ADD COLUMN project_id TEXT DEFAULT 'proj_local'")
         if existing_api_key_columns and "owner_user_id" not in existing_api_key_columns:
             conn.execute("ALTER TABLE api_keys ADD COLUMN owner_user_id TEXT DEFAULT ''")
+        if existing_api_key_columns and "agent_principal" not in existing_api_key_columns:
+            conn.execute("ALTER TABLE api_keys ADD COLUMN agent_principal TEXT DEFAULT ''")
         if existing_api_key_columns and "scopes" not in existing_api_key_columns:
             conn.execute("ALTER TABLE api_keys ADD COLUMN scopes TEXT DEFAULT '[]'")
         if existing_api_key_columns and "created_by_role" not in existing_api_key_columns:

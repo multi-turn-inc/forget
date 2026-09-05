@@ -1,0 +1,21 @@
+{
+  "built_at_db": "/Users/junghunkim/.forget/forget.sqlite3",
+  "n_items": 133,
+  "strata": {
+    "machine_resume": 28,
+    "machine_helped": 35,
+    "human_helped": 12,
+    "human_noise": 51,
+    "machine_noise": 7
+  },
+  "dev": 93,
+  "test": 40,
+  "dropped": {
+    "short": 0,
+    "no_label": 23,
+    "all_dead": 0,
+    "reasoning": 2911
+  },
+  "gold_channel_note": "사람 턴의 used_memory_ids는 원장에 0건이다 — 사람 층의 양성 gold는 관측되지 않았고 human_helped(트레이스 단위 약한 양성)로만 대리된다. 사람 층 양성을 재려면 정훈이 서명한 문항이나 새 포착 채널이 필요하다.",
+  "label_bias_note": "결과 라벨은 무작위 표본이 아니다 — 기록할 만한 턴에 편향된다. 따라서 소음 비율은 기저율이 아니라 '라벨된 것 중의 비율'로만 읽는다."
+}

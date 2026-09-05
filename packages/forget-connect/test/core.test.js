@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  CODEX_MEMORY_RULES,
   ConfigError,
   MEMORY_RULES,
   RULES_START,
@@ -389,6 +390,19 @@ test("exported rule text teaches the required first-memory behavior", () => {
   assert.match(MEMORY_RULES, /`supersede_memory` and always pass `superseded_by`/);
   assert.match(MEMORY_RULES, /`confirm_memory` with evidence/);
   assert.match(MEMORY_RULES, /Never record a planned action as completed/);
+  assert.match(CODEX_MEMORY_RULES, /call `prepare_codex_context` once/);
+  assert.match(CODEX_MEMORY_RULES, /exact current working directory/);
+  assert.match(CODEX_MEMORY_RULES, /do not fall back to generic autopilot/);
+  assert.doesNotMatch(CODEX_MEMORY_RULES, /call `get_task_state`/);
+});
+
+test("Codex receives its own managed instruction block", async (t) => {
+  const home = await mkdtemp(path.join(os.tmpdir(), "forget-connect-codex-rules-"));
+  t.after(() => rm(home, { recursive: true, force: true }));
+  const codex = getClients({ home, platform: "darwin", env: {} })
+    .find((client) => client.id === "codex");
+  await applyPlan(await buildPlan("connect", [codex], { url: URL }));
+  assert.equal((await readFile(codex.rulesPath, "utf8")).trim(), CODEX_MEMORY_RULES);
 });
 
 test("scopeFromUrl recovers the scope a connect wrote, and rejects non-scoped URLs", async () => {

@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 470" font-family="-apple-system, Helvetica, Arial, sans-serif" font-size="13">
-<rect width="760" height="470" fill="white"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 520" font-family="-apple-system, Helvetica, Arial, sans-serif" font-size="13">
+<rect width="760" height="520" fill="white"/>
 <text x="64" y="28" font-size="17" font-weight="600" fill="#1f2430">Memory as compression: fewer tokens, better answers</text>
 <text x="64" y="48" fill="#6b7280">LongMemEval accuracy vs context tokens read per question (log scale)</text>
 <line x1="64" y1="374.0" x2="732" y2="374.0" stroke="#e5e7eb"/>
@@ -36,15 +36,18 @@
 <circle cx="662.2" cy="301.0" r="6" fill="#6b7280"/>
 <text x="662.2" y="325.0" text-anchor="end" fill="#1f2430">GPT-4o, full context</text>
 <text x="662.2" y="341.0" text-anchor="end" fill="#6b7280">~115k tok → 60.6%</text>
-<line x1="87.0" y1="178.4" x2="151.4" y2="178.4" stroke="#2563eb" stroke-width="2"/>
-<line x1="87.0" y1="173.4" x2="87.0" y2="183.4" stroke="#2563eb" stroke-width="2"/>
-<line x1="151.4" y1="173.4" x2="151.4" y2="183.4" stroke="#2563eb" stroke-width="2"/>
-<line x1="119.2" y1="181.1" x2="119.2" y2="175.6" stroke="#2563eb" stroke-width="2"/>
-<circle cx="119.2" cy="178.4" r="6" fill="#2563eb"/>
-<text x="119.2" y="148.4" text-anchor="start" font-weight="600" fill="#2563eb">forget</text>
-<text x="119.2" y="164.4" text-anchor="start" fill="#1f2430">~1.2–2k tok → 78.4% ± 0.4</text>
-<text x="390.7" y="231.7" text-anchor="middle" fill="#1f2430">+17.8pp with ~1/57 of the tokens</text>
-<text x="64" y="430" font-size="11" fill="#6b7280">Sources: GPT-4o full-context 60.6% and oracle 87.0% — LongMemEval paper (ICLR 2025, arXiv:2410.10813).</text>
-<text x="64" y="445" font-size="11" fill="#6b7280">forget 78.4% ± 0.4 — 3 seeds (exp №0003); payload tokens are a documented 1.2–2k estimate, drawn as a range.</text>
-<text x="64" y="460" font-size="11" fill="#6b7280">Excluded: forget best-config 81.8% (runs/full-v3-500) — its payload tokens were never measured, so it has no honest x.</text>
+<line x1="350.3" y1="178.4" x2="405.3" y2="178.4" stroke="#2563eb" stroke-width="2"/>
+<line x1="350.3" y1="173.4" x2="350.3" y2="183.4" stroke="#2563eb" stroke-width="2"/>
+<line x1="405.3" y1="173.4" x2="405.3" y2="183.4" stroke="#2563eb" stroke-width="2"/>
+<line x1="381.0" y1="181.1" x2="381.0" y2="175.6" stroke="#2563eb" stroke-width="2"/>
+<circle cx="381.0" cy="178.4" r="6" fill="#2563eb"/>
+<text x="381.0" y="148.4" text-anchor="start" font-weight="600" fill="#2563eb">forget</text>
+<text x="381.0" y="164.4" text-anchor="start" fill="#1f2430">12.4k tok (median) → 78.4% ± 0.4</text>
+<text x="521.6" y="231.7" text-anchor="middle" fill="#1f2430">+17.8pp with ~1/9 of the tokens</text>
+<text x="64" y="434" font-size="11" fill="#6b7280">Sources: GPT-4o full-context 60.6% and oracle 87.0% — LongMemEval paper (ICLR 2025, arXiv:2410.10813).</text>
+<text x="64" y="449" font-size="11" fill="#6b7280">forget 78.4% ± 0.4 — 3 seeds (exp №0003). x measured cycle 89 on dev-42, anchor config (obs 60 + raw 42 = 102 items);</text>
+<text x="64" y="464" font-size="11" fill="#6b7280">whiskers are p10–p90 across questions (quantile convention: statistics.quantiles n=10, exclusive).</text>
+<text x="64" y="479" font-size="11" fill="#6b7280">Correction: x was previously a 1.2–2k estimate, 6.2× below measurement.</text>
+<text x="64" y="494" font-size="11" fill="#6b7280">Caveat: y is from the July run (old arithmetic); x was measured on the current body. Same config, different body.</text>
+<text x="64" y="509" font-size="11" fill="#6b7280">Excluded: forget best-config 81.8% (runs/full-v3-500) — its payload tokens were never measured, so it has no honest x.</text>
 </svg>

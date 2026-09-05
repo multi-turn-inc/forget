@@ -1,0 +1,15 @@
+{
+  "name": "memory-agent",
+  "version": "0.1.0",
+  "description": "Safely consult privacy-gated Forget Memory Agent products with explicit grants and verifiable receipts.",
+  "author": {
+    "name": "multi-turn"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "memory",
+    "privacy",
+    "agent",
+    "mcp"
+  ]
+}

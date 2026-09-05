@@ -1,0 +1,29 @@
+{
+  "name": "memory-agent",
+  "version": "0.1.0",
+  "description": "Safely consult privacy-gated Forget Memory Agent products with explicit grants and verifiable receipts.",
+  "author": {
+    "name": "multi-turn"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "memory",
+    "privacy",
+    "agent",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Memory Agent",
+    "shortDescription": "Consult privacy-gated memory products",
+    "longDescription": "Search a minimal public catalog, approve an exact zero-price grant, consult reviewed memory snapshots, verify the signed receipt, and revoke access.",
+    "developerName": "multi-turn",
+    "category": "Productivity",
+    "capabilities": [
+      "Read"
+    ],
+    "defaultPrompt": [
+      "Find a Memory Agent for this task and show me the exact grant before using it."
+    ]
+  }
+}

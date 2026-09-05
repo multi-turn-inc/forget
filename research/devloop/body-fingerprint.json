@@ -1,0 +1,23 @@
+{
+  "_": "도그푸드 :8000의 '몸' 기준 지문 (P21 처치, c67 배선). step 0이 매 사이클 이것과 대조한다.",
+  "_why_git_tracked": "자기 갱신 캐시로 만들지 않는다 — 변경을 조용히 흡수하는 것이 관측 30의 병리 자체였다. 갱신은 커밋으로만 이뤄지고, 그 커밋이 감사 흔적이다.",
+  "_how_to_update": "지문이 바뀌어 step 0이 '재교정 필요'를 띄우면: ① 왜 바뀐 몸인지 1차 증거로 확정 ② 게이트 상수 의존 계기(oracle replay 계열·gate_audit·score_weight_*)를 재교정 필요로 표시 ③ 그 사이클의 노트에 적고 나서 이 파일을 갱신한다. 순서를 뒤집지 말 것.",
+  "_recorded_cycle": 197,
+  "_recorded_date": "2026-08-24",
+  "fingerprint": {
+    "dist_info": "forget_ai-0.4.0",
+    "installed_vs_repo": "editable:/Users/junghunkim/orca/workspaces/forget/내-프롬프트를-공유하기-싫어",
+    "effective_embedding": "fastembed:sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
+    "embedding_resolution": "auto-default (unconfigured + fastembed importable)",
+    "checks_embedding": "local:sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
+    "store_vec": "MEB1:768"
+  },
+  "_field_notes": {
+    "_c197_recalibration": "**c197 재교정 (3차) — 계보상 처음으로 «승인된 몸 교체»의 재교정이다.** ① 원인 1차 증거: 다국어 임베딩 전환 + 앵커 소급 = 정훈 승인 2단계(2026-08-23 저녁, «다국어 임베딩 전환을 승인할게» → «적용하자» — 기억 74adee62 trust=green·source=user), 커밋 5c8760f(scripts/migrate_embeddings_v2.py + research/eval/mig/ 전/후 평가 영수증), 생존 기억 6,119건을 mpnet(768d)으로 재임베딩. 원칙 3의 «사람 게이트 + 재임베딩 영수증» 요건 충족 — c95·c111은 둘 다 무공지 배포였다. ② 재교정 표시: oracle replay 계열·gate_audit·score_weight_* — 구몸(bge-small-en 384d) 공간의 상수·라벨과 신몸(mpnet 768d) 산출의 산술 비교 금지, 신몸 기준선 런 전까지 판정 없음(스토어 교훈 b0239fc3: «임베딩 공간을 갈면 그 공간이 만든 라벨로 채점하는 모든 자가 순환으로 무효»). 동반 훅 재보정: turnrecall SCORE_THRESHOLD 0.45→0.33 · capture SEMANTIC_THETA 0.613(기억 0eef022b, green). ③ 노트 = notes/cycle-197-body-recalibration.md, 이 갱신은 그 노트 이후에 집행됐다(순서 규약 준수). 채취 값은 tmp/c197_body_live.py 기계 출력을 그대로 옮겼다 — 손 옮겨적기 0.",
+    "installed_vs_repo": "editable:<워크트리 경로> — **c197부터 값의 종류가 바뀌었다.** 설치가 site-packages 복사본에서 editable install(_editable_impl_forget_ai.pth + direct_url.json {dir_info.editable: true})로 바뀌어 «설치본 vs 저장소본» 해시 대조가 구조적으로 소멸했다: 설치본이 곧 워크트리다. 프로브는 c197 확장(c48 editable_target — 순수 함수·회귀 테스트)으로 대상 경로를 지문으로 채취한다: 대상이 다른 체크아웃으로 바뀌거나 복사본 설치로 회귀하면 문자열이 갈려 «재교정 필요»가 뜬다. ★ 무공지 배포 감시의 축 이동: 파일 해시 편차 → **프로세스 적재 시점 편차**(적재된 데몬은 재기동 전까지 구 모듈을 든다 — A-192.1 «데몬 배포 편차»의 실측, c192에서 pid 48382가 디스크에 없는 코드로 죽었다). 이하 구본(c111, 24/24 — 무공지 배포 2건)·구구본(c95, 22/22)의 서술은 git 이력이 보존한다.",
+    "checks_embedding": "get_provider_health의 checks.embeddings — **저장된 설정**의 거울이고 실행 중인 것이 아니다. c111 시점엔 폴백 이름(deterministic-128)을 들고 스토어와 모순했으나, c197 재교정 시점엔 mpnet으로 effective와 **모델이 일치**한다(제공자 표기는 local vs fastembed로 여전히 다르다 — 거울의 층이 다름은 유지). effective_embedding이 진실 채널이다(provider_runtime.py: 'what actually runs, not what was stored — the LME-V2 run-1 lesson'). 두 필드를 **함께** 싣는 이유는 일치/불일치 자체가 지문의 일부이기 때문이다.",
+    "embedding_resolution": "'auto-default'는 임베딩 공간이 **설정이 아니라 fastembed import 가능성**으로 결정된다는 뜻이다. 따라서 설정 변경 0 · 재임베딩 0으로도 공간이 뒤집힐 수 있다 — 관측 30의 기전과 동류다. 이 필드가 뒤집히면 그것만으로 재교정 사유다. ※ c197 실측 긴장 1건(정직 병기): checks가 mpnet(명시 설정의 거울)인데 resolution 괄호는 여전히 'unconfigured'를 말한다 — 어느 층이 낡은 자기 보고인지는 제품 조사 몫이며 봉쇄 중 미착수, 지문은 원문 문자열을 그대로 보존한다.",
+    "store_vec": "행 수는 **일부러 넣지 않았다**(매 사이클 증가 = 위양성 기계). 형식과 우세 차원만 싣는다. dim = (byte_len - 4) // 4, MEB1 = 4바이트 매직 + float32. c197: 384 → 768(mpnet) — 위 재임베딩 사건의 스토어 측 증거.",
+    "_omitted_process_start": "P21 등록본 ②는 ':8000 보유 프로세스 기동 시각'이었다. **의도적으로 빼고 배선했다** — lsof/ps가 이 샌드박스에서 승인 없이는 실행되지 않으므로 지문이 승인에 의존하면 승인 없는 런에서 조용히 미지로 내려앉는다(거짓 음성 기계 9종째). 대체 채널은 살아 있는 몸에게 HTTP로 직접 묻는 것이고, 이는 디스크가 아니라 **적재된 런타임**을 반영하므로 원리상 더 강하다. 이 이탈은 predictions.md P21에 선언했다. ※ editable 전환(c197)으로 이 축의 중요도가 올라갔다 — 디스크와 적재본의 편차가 이제 배포 감시의 주축이다."
+  }
+}

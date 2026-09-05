@@ -43,6 +43,19 @@ export const MEMORY_RULES = [
   RULES_END,
 ].join("\n");
 
+export const CODEX_MEMORY_RULES = [
+  RULES_START,
+  "# Memory (Forget)",
+  "You have the user's long-term memory via the `forget` MCP server.",
+  "At session start and on resume/continue requests, call `prepare_codex_context` once with a short query for the current work and the exact current working directory as `client_workdir`. Use only its project-bound results. If it returns `project_unresolved`, `empty`, or `unavailable`, continue without memory; do not fall back to generic autopilot or cross-project task state.",
+  "Whenever the user refers to their own past decisions, preferences, plans, people, or prior discussions, call `search_memories` FIRST. For project-specific history, prefer `prepare_codex_context(query, client_workdir)` so another project's state cannot enter the capsule.",
+  "Results may carry a `trust` label: green (user-stated or tool-observed) is safe to act on; yellow (agent-inferred or self-summarized) requires confirmation before real-world action; red is superseded; unlabeled is yellow.",
+  "When the user states a durable decision, preference, or lasting fact, save it with `add_memory`; use `source_role=\"user\"` only for the user's own words and check `get_event_status` before claiming the write completed. Never record a planned action as completed without evidence.",
+  "Use `supersede_memory` to retire a wrong fact and `confirm_memory` when evidence verifies a provisional claim. When a context trace materially influenced work, call `record_context_outcome` with the memory ids actually used or rejected.",
+  "Use `team_read` and `team_note` only for explicit agent collaboration, never as a substitute for personal memory.",
+  RULES_END,
+].join("\n");
+
 export class ConfigError extends Error {
   constructor(message) {
     super(message);
@@ -315,16 +328,16 @@ function removeRulesBlock(text, startMarker, endMarker) {
   return left || right;
 }
 
-export function installRules(raw, { migrateLegacy = true } = {}) {
+export function installRules(raw, { migrateLegacy = true, rules = MEMORY_RULES } = {}) {
   let next = raw;
   if (migrateLegacy) {
     next = removeRulesBlock(next, LEGACY_RULES_START, LEGACY_RULES_END);
   }
   const bounds = findManagedBlock(next, RULES_START, RULES_END);
   if (bounds) {
-    return next.slice(0, bounds.start) + MEMORY_RULES + next.slice(bounds.end);
+    return next.slice(0, bounds.start) + rules + next.slice(bounds.end);
   }
-  return next ? `${next}\n${MEMORY_RULES}\n` : `${MEMORY_RULES}\n`;
+  return next ? `${next}\n${rules}\n` : `${rules}\n`;
 }
 
 export function removeRules(raw) {
@@ -579,10 +592,10 @@ function rulesConnected(raw) {
   }
 }
 
-function rulesCurrent(raw) {
+function rulesCurrent(raw, rules = MEMORY_RULES) {
   try {
     const bounds = findManagedBlock(raw, RULES_START, RULES_END);
-    return Boolean(bounds && raw.slice(bounds.start, bounds.end) === MEMORY_RULES);
+    return Boolean(bounds && raw.slice(bounds.start, bounds.end) === rules);
   } catch {
     return false;
   }
@@ -602,7 +615,10 @@ export async function inspectClients(clients, { url = "", apiKey = "", urlFor = 
         client,
         config: configConnected(client, configRaw),
         rules: client.rulesPath ? rulesConnected(rulesRaw) : null,
-        rulesCurrent: client.rulesPath ? rulesCurrent(rulesRaw) : null,
+        rulesCurrent: client.rulesPath ? rulesCurrent(
+          rulesRaw,
+          client.id === "codex" ? CODEX_MEMORY_RULES : MEMORY_RULES,
+        ) : null,
         ...expected,
       };
     }),
@@ -631,8 +647,8 @@ export async function buildPlan(
   }
   const changes = [];
   for (const client of clients) {
-    // urlFor lets connect scope each client into its own memory pool
-    // (/mcp/{app}/http/{user}) while everything else shares one plan.
+    // urlFor lets every provider share one vault scope while retaining its
+    // own query profile and provenance in the installed URL.
     const clientUrl = urlFor ? urlFor(client) : url;
     const configRaw = await readOptional(client.configPath);
     let configNext;
@@ -665,7 +681,10 @@ export async function buildPlan(
     if (client.rulesPath && installInstructionRules) {
       const rulesRaw = await readOptional(client.rulesPath);
       const rulesNext = action === "connect"
-        ? installRules(rulesRaw, { migrateLegacy })
+        ? installRules(rulesRaw, {
+          migrateLegacy,
+          rules: client.id === "codex" ? CODEX_MEMORY_RULES : MEMORY_RULES,
+        })
         : removeRules(rulesRaw);
       addChange(
         changes,

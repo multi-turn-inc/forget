@@ -80,6 +80,9 @@ def test_version_compare_and_line():
 
 def _capsule_output(monkeypatch, tmp_path, capsys, result_payload: dict) -> str:
     module = _load("forget_sessionstart")
+    # hermetic: the hook reads FORGET_HOME/update-check.json — without this pin,
+    # the real machine's cache leaks in and a product release flips the test
+    monkeypatch.setenv("FORGET_HOME", str(tmp_path))
     monkeypatch.setattr(module, "STATE_DIR", str(tmp_path))
     monkeypatch.setattr(module, "project_key_for_path", lambda path: None)
 
@@ -105,6 +108,20 @@ def test_current_server_is_quiet(monkeypatch, tmp_path, capsys):
         {"capsule_text": "현재 목표: x", "server_version": module.REQUIRED_SERVER_VERSION},
     )
     assert "⚠" not in out and "[forget 버전]" not in out
+
+
+def test_newer_release_banner_reads_forget_home_cache(monkeypatch, tmp_path, capsys):
+    # pins the FORGET_HOME resolution itself: a hardcoded ~/.forget would miss
+    # this tmp cache and the banner would vanish (or carry the wrong version)
+    module = _load("forget_sessionstart")
+    (tmp_path / "update-check.json").write_text(
+        json.dumps({"latest": "9.9.9", "checked_at": time.time()}), encoding="utf-8"
+    )
+    out = _capsule_output(
+        monkeypatch, tmp_path, capsys,
+        {"capsule_text": "현재 목표: x", "server_version": module.REQUIRED_SERVER_VERSION},
+    )
+    assert "새 버전 9.9.9" in out
 
 
 def test_version_nag_never_earns_a_lone_injection(monkeypatch, tmp_path, capsys):

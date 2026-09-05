@@ -27,7 +27,7 @@ HANDOFF_MAX_AGE_SECONDS = 48 * 3600  # a stale shift-note is worse than none
 # The server capability these hooks are built against. The capsule response
 # carries server_version from 0.3.9 on; older servers silently drop arguments
 # these hooks send (project layering) — that mismatch must never be silent.
-REQUIRED_SERVER_VERSION = "0.3.9"
+REQUIRED_SERVER_VERSION = "0.5.0"
 
 
 def _version_tuple(value: str) -> tuple:
@@ -53,7 +53,8 @@ def _version_notice(server_version: str) -> str:
             "프로젝트 층 등이 조용히 무시됨. 처방: forget-server upgrade"
         )
     try:
-        with open(os.path.expanduser("~/.forget/update-check.json"), encoding="utf-8") as fh:
+        forget_home = os.environ.get("FORGET_HOME") or os.path.expanduser("~/.forget")
+        with open(os.path.join(forget_home, "update-check.json"), encoding="utf-8") as fh:
             latest = str(json.load(fh).get("latest") or "")
         if latest and _version_tuple(server_version) < _version_tuple(latest):
             return f"새 버전 {latest} 나옴 (현재 {server_version}) — forget-server upgrade"
@@ -92,6 +93,18 @@ def _consume_handoff() -> str:
     if note.get("transcript_path"):
         lines.append(f"원문: {note['transcript_path']} (recall_episode로 열람 가능)")
     return "\n".join(lines)
+
+
+def _bstate_block(project: str | None) -> str:
+    """B층 파일 직독 — 회상 경합·캡슐 슬롯 경쟁 없음 (P39 처분)."""
+    try:
+        import forget_bstate
+        state = forget_bstate.load_state(project or "global")
+        if not state:
+            return ""
+        return forget_bstate.render_block(state)
+    except Exception:
+        return ""
 
 
 def main() -> None:
@@ -134,12 +147,17 @@ def main() -> None:
             capsule = "\n".join(f"- {item}" for item in items[:6] if isinstance(item, str))
     handoff = _consume_handoff()
     notice = _version_notice(str(result.get("server_version") or ""))
-    if not capsule and not handoff:
+    bstate = _bstate_block(project)
+    if not capsule and not handoff and not bstate:
         return  # low confidence → silence (version nags don't earn a lone injection)
     shown = capsule[:CAPSULE_CHAR_BUDGET]
     parts = []
     if notice:
         parts.append(f"[forget 버전] {notice}")
+    # B층이 캡슐보다 먼저 — 인간이 깨어날 때 "무엇의 한가운데였나"가
+    # 백과사전보다 먼저 오듯이 (P39: 구조화 상태가 예측 정보 +62%).
+    if bstate:
+        parts.append(bstate)
     if handoff:
         parts.append(handoff)
     if shown:

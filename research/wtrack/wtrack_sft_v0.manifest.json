@@ -1,0 +1,12 @@
+{
+  "approval_id": "trace_approval_844ebd9e-8c63-4f15-98fe-ca668cf0a4c9",
+  "dataset_version": "training-trace-v1",
+  "source_counts": {
+    "evaluation_misses": 2,
+    "feedback": 19
+  },
+  "record_count": 21,
+  "schema_version": "mem1-policy-sft-v1",
+  "created": "2026-08-13",
+  "provenance": "trace_export_approval + build_sft_dataset, redact=true"
+}

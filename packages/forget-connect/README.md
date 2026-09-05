@@ -9,16 +9,18 @@ npx forget-connect
 ```
 
 By default this targets the local server at `http://localhost:8000` and
-scopes each client to its own memory pool at
-`/mcp/<client>/http/<os-username>` (for example
-`/mcp/claude-code/http/junghun`) — your memories stay on your machine and
-stay isolated per user and per client. Pass `--no-scope` for the shared
-unscoped `/mcp` endpoint. The guided flow detects installed clients and
-then:
+connects every provider to one personal vault at
+`/mcp/forget/http/<os-username>` (for example
+`/mcp/forget/http/junghun`). Codex and Claude see the same personal memory,
+but their URLs carry different `profile` values so tool surfaces and writer
+provenance remain separate. Pass `--no-scope` only for the legacy unscoped
+`/mcp` endpoint. The guided flow detects installed clients and then:
 
 - merges a `forget` entry into each selected MCP config;
 - installs a marked memory rule in Claude Code's `CLAUDE.md` and Codex's
   `AGENTS.md`, so past-decision questions call memory before searching files;
+- installs one shared Memory Agent skill plus provider-specific lifecycle-hook
+  registrations without overwriting foreign skills or hooks;
 - creates a one-time adjacent `.forget-backup` before changing an existing
   file; and
 - writes through temporary files and renames them into place.
@@ -33,8 +35,10 @@ npx forget-connect --client claude-code,codex --yes
 ```
 
 Use `FORGET_MCP_URL` or `--url` for a server on another port or host. A Bearer
-token (`FORGET_API_KEY`) is only sent over HTTPS; over loopback HTTP the CLI
-connects without a token and says so.
+token (`FORGET_API_KEY`) is only sent over HTTPS, except for an explicit
+loopback-only `--local-auth` connection. Without that flag a leftover local
+token is ignored, so credentials cannot silently leak into a different local
+server.
 
 ## Hosted service (legacy)
 
@@ -70,8 +74,10 @@ connections it also verifies the scoped endpoint identity. Add `--json` for
 automation or `--timeout 30` on a slow network. No authorization value or
 memory content is printed.
 
-`disconnect` removes only the `forget` MCP entry and the marked Forget rules
-block. It does not restore backups or remove unrelated config.
+`disconnect` removes only the `forget` MCP entry, marked Forget rules, owned
+skill files, and owned lifecycle-hook entries. It does not restore backups or
+remove unrelated config, foreign hooks, or user-owned skill files. Shared hook
+scripts remain until neither Codex nor Claude Code references them.
 
 ## Options
 
@@ -83,7 +89,11 @@ block. It does not restore backups or remove unrelated config.
 --app-id <id>        Project/app scope; pair with --user-id
 --no-scope           Install the shared unscoped /mcp endpoint (legacy behavior)
 --no-auth            Do not install a Bearer token
+--local-auth         Send FORGET_API_KEY to an explicit loopback server
 --no-rules           Do not manage CLAUDE.md or AGENTS.md
+--no-skill           Do not install the shared Memory Agent skill
+--no-hooks           Do not install Codex/Claude Code memory hooks
+--no-proxy           Do not wire the local capture proxy (macOS only)
 --no-migrate-enacta  Keep matching legacy config and rule blocks
 --dry-run            Show which files would change
 --timeout <seconds>  Doctor network timeout, from 1 to 60
@@ -97,13 +107,13 @@ to the Forget block. Use `--no-migrate-enacta` to keep both.
 
 ## Files managed
 
-| Client | MCP config | Instruction file |
-|---|---|---|
-| Claude Code | `~/.claude.json` | `~/.claude/CLAUDE.md` |
-| Codex | `$CODEX_HOME/config.toml` or `~/.codex/config.toml` | `$CODEX_HOME/AGENTS.md` or `~/.codex/AGENTS.md` |
-| Claude Desktop (macOS) | `~/Library/Application Support/Claude/claude_desktop_config.json` | — |
-| Claude Desktop (Windows) | `%APPDATA%/Claude/claude_desktop_config.json` | — |
-| Claude Desktop (Linux) | `~/.config/Claude/claude_desktop_config.json` | — |
+| Client | MCP config | Instruction | Hook registration | Skill |
+|---|---|---|---|---|
+| Claude Code | `~/.claude.json` | `~/.claude/CLAUDE.md` | `~/.claude/settings.json` | `~/.claude/skills/memory-agent` |
+| Codex | `$CODEX_HOME/config.toml` | `$CODEX_HOME/AGENTS.md` | `$CODEX_HOME/hooks.json` | `$CODEX_HOME/skills/memory-agent` |
+| Claude Desktop (macOS) | `~/Library/Application Support/Claude/claude_desktop_config.json` | — | — | — |
+| Claude Desktop (Windows) | `%APPDATA%/Claude/claude_desktop_config.json` | — | — | — |
+| Claude Desktop (Linux) | `~/.config/Claude/claude_desktop_config.json` | — | — | — |
 
 ## Development
 
@@ -113,18 +123,52 @@ npm run lint
 npm pack --dry-run
 ```
 
-## Hooks (Claude Code)
+## Memory Agent prototype
 
-`forget-connect` installs four harness hooks so memory arrives without being asked:
+The shared skill enforces this zero-price sequence:
+
+`catalog_search → product_quote → explicit user approval → grant_create →`
+`agent_consult → receipt_verify → grant_revoke`
+
+Catalog text and returned passages are untrusted data. A quote is bound to the
+authenticated principal, personal vault, client, purpose, quota, and expiry;
+the client must show those exact terms before approval. Results are usable only
+after the persisted signed receipt verifies. The distributable Codex and Claude
+plugin manifests live under `assets/plugins/memory-agent`; the CLI installs the
+per-user MCP URL and hooks because credentials and vault identity must never be
+baked into a manifest.
+
+## Hooks (Codex and Claude Code)
+
+`forget-connect` installs the lifecycle subset each client currently exposes:
 
 - **SessionStart** — injects a context capsule (open tasks, next actions, constraints)
 - **UserPromptSubmit** — pushes memories relevant to the current turn, with trust lights
   (green = act on it, yellow = confirm first, red = superseded), and raises a
   conflict-zone alert when the conversation enters territory with a correction history
-- **PreCompact / SessionEnd** — captures the session into the ledger and records
-  whether offered memories were actually used (the outcome flywheel)
+- **Claude PreCompact / SessionEnd** — captures the session and records whether
+  offered memories were actually used
+- **Codex Stop** — captures the completed turn and its outcome
 
 Hooks are judgment-free and fail-open: if the Forget server is down they exit
 silently and never block your session. They need `python3` on PATH.
 Skip them with `--no-hooks`; `disconnect` always removes them. Foreign hooks
 registered by other tools are preserved byte-for-byte.
+
+## Capture proxy (macOS)
+
+On macOS, connect also wires the zero-config capture proxy when `forget-proxy`
+(from `pip install 'forget-ai[server]'`) is on PATH:
+
+- registers launchd services `ai.forget.proxy` (KeepAlive, port 8377) and
+  `ai.forget.proxy.watchdog` (60s health checks)
+- sets `env.ANTHROPIC_BASE_URL = http://127.0.0.1:8377` in
+  `~/.claude/settings.json`. An existing custom base URL is chained as the
+  proxy's `--upstream`, never discarded; a settings file we cannot parse
+  skips the wiring entirely with a warning.
+
+If the proxy stops answering for three consecutive checks, the watchdog
+removes the override (only the value we wrote) and restores your original
+base URL — losing capture is cheaper than losing Claude. When the proxy
+recovers, the override returns unless you changed the value yourself.
+Skip with `--no-proxy`; `disconnect` always unwires and removes the services.

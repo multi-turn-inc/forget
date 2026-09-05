@@ -1,0 +1,4 @@
+# 인격 코퍼스 원시 데이터는 리포 밖 ("전 인공물 로컬" — persona-pivot.md 금지선).
+# 정확한 파일명이 아니라 글롭으로 — v1·v2가 생겼을 때 조용히 추적되는 사고를 막는다.
+persona_pairs_*.jsonl
+persona_holdout_*.json

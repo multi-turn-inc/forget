@@ -55,6 +55,8 @@ def _search_results(arguments: dict) -> list[dict]:
 
 def test_search_memories_accepts_limit_as_top_k_alias(monkeypatch) -> None:
     monkeypatch.delenv("MEM1_REQUIRE_AUTH", raising=False)
+    # 캡 계약은 시간 이웃(7f3039f, 표식부 +1 동반)과 직교 — 킬스위치로 격리해 잰다.
+    monkeypatch.setenv("MEM1_RECALL_TEMPORAL", "0")
     _fresh_db()
     _seed("alias-user")
     results = _search_results({"query": "결제 Paddle", "user_id": "alias-user", "limit": 1})
@@ -63,10 +65,27 @@ def test_search_memories_accepts_limit_as_top_k_alias(monkeypatch) -> None:
 
 def test_search_memories_top_k_wins_over_limit(monkeypatch) -> None:
     monkeypatch.delenv("MEM1_REQUIRE_AUTH", raising=False)
+    monkeypatch.setenv("MEM1_RECALL_TEMPORAL", "0")
     _fresh_db()
     _seed("precedence-user")
     results = _search_results({"query": "결제 Paddle", "user_id": "precedence-user", "top_k": 2, "limit": 1})
     assert len(results) == 2, "explicit top_k must take precedence over the limit alias"
+
+
+def test_temporal_neighbor_is_marked_and_supernumerary(monkeypatch) -> None:
+    # 시간 이웃의 신계약: 캡을 늘리는 게 아니라 캡 '밖에' 표식을 달고 최대 1건 동반한다.
+    # 소비자는 temporal_neighbor_of로 정규 결과와 가른다 — 무표식 초과는 계약 위반.
+    monkeypatch.delenv("MEM1_REQUIRE_AUTH", raising=False)
+    monkeypatch.delenv("MEM1_RECALL_TEMPORAL", raising=False)
+    _fresh_db()
+    _seed("neighbor-user")
+    results = _search_results({"query": "결제 Paddle", "user_id": "neighbor-user", "limit": 1})
+    regular = [row for row in results if not row.get("temporal_neighbor_of")]
+    neighbors = [row for row in results if row.get("temporal_neighbor_of")]
+    assert len(regular) == 1, "cap still binds the regular results"
+    assert len(neighbors) <= 1, "at most one temporal neighbor may accompany the hits"
+    for row in neighbors:
+        assert row["temporal_neighbor_of"] == regular[0]["id"]
 
 
 def test_search_memories_declares_limit_in_schema() -> None:

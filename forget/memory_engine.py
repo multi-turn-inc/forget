@@ -11,7 +11,10 @@ from typing import Any
 from .utils import CJK_CHAR_RE, STOPWORDS, parse_datetime, tokenize
 
 
-SENTENCE_RE = re.compile(r"(?<=[.!?])\s+|\n+")
+# 경계는 '단어에 붙은' 문장부호 뒤에서만 연다. 홀로 선 마침표(` . `)는 문장 끝이
+# 아니라 토큰이다 — 실사례: "pip install -e . --no-deps"가 여기서 잘려
+# "--no-deps) → launchctl …"라는 머리 없는 조각이 원장에 남았다 (2026-08-23).
+SENTENCE_RE = re.compile(r"(?<=[.!?])(?<!\s[.!?])\s+|\n+")
 COMPOUND_USER_CLAUSE_RE = re.compile(
     r"\s+(?:and|but)\s+(?=I\s+(?:am|work|teach|have|moved|just moved|live|prefer|like|love|avoid|use|want|need)\b)",
     re.IGNORECASE,
@@ -255,6 +258,72 @@ def split_sentences(text: str) -> list[str]:
     return [p for p in parts if len(p) > 1]
 
 
+EPISODE_ANCHOR_MAX = 100
+_ANCHOR_MIN = 12          # 이보다 짧으면 주제가 아니라 머리말이다 ("결과", "메모")
+_ANCHOR_SCAN = 160        # 이 앞에서 경계를 못 찾으면 앵커 없음 — 긴 서두는 주제문이 아니다
+
+
+def _anchor_boundary(text: str, marks: str) -> int:
+    """괄호·따옴표 밖에서 나오는 첫 경계 위치. 없으면 -1.
+
+    괄호 깊이를 세는 이유는 원장 문체다: "…쓰지 않는다 (정훈 지시: "…")"에서 첫 콜론은
+    괄호 안에 있고, 그걸 경계로 잡으면 앵커가 문장 거의 전체가 된다.
+    """
+    depth = 0
+    for i, ch in enumerate(text[:_ANCHOR_SCAN]):
+        if ch in "([{（《":
+            depth += 1
+        elif ch in ")]}）》":
+            depth = max(0, depth - 1)
+        elif depth == 0 and ch in marks:
+            return i
+    return -1
+
+
+def episode_anchor(text: str) -> str:
+    """일화의 주제문(앵커)을 원문에서 결정적으로 유도한다. LLM 없음.
+
+    쓰기 경로는 안전 최우선 지점이라 환각을 들일 수 없고, 결정적이어야 게이트 로그·
+    회계와 정합한다. 규칙은 원장 문체를 실측해서 정했다(2026-08-23, ADD 이벤트 표본):
+    항목 대부분이 "주제 선언 (날짜·맥락): 상세…" 구조라 콜론 앞이 곧 주제다.
+    콜론이 없으면 줄표(—), 그다음 문장 끝을 쓴다.
+
+    한 문장짜리 원문은 이미 자족적이므로 앵커를 만들지 않는다("" 반환).
+    """
+    body = re.sub(r"\s+", " ", str(text or "")).strip()
+    if not body:
+        return ""
+    for marks in (":", "—–", ".!?"):
+        cut = _anchor_boundary(body, marks)
+        if cut < 0:
+            continue
+        head = body[:cut].strip(" \t-–—:;,")
+        if _ANCHOR_MIN <= len(head) <= EPISODE_ANCHOR_MAX and head != body:
+            return head
+    sentences = split_sentences(body)
+    if len(sentences) <= 1:
+        return ""                                  # 자족적 — 결합할 맥락이 따로 없다
+    head = sentences[0].strip()
+    return head[:EPISODE_ANCHOR_MAX].strip() if len(head) >= _ANCHOR_MIN else ""
+
+
+def anchor_applies(fact: str, anchor: str) -> bool:
+    """앵커를 이 사실에 실을지. 이미 주제를 품은 조각에 또 붙이면 중복만 늘린다.
+
+    한 단어 겹침으로 결합을 포기하지 않는다 — "재현은 슬롯 캐시로 확인했다"가 우연히
+    '캐시'를 품었다는 이유로 주제문을 못 받는 일이 실제로 있었다(2026-08-23). 주제는
+    단어 하나가 아니므로 머리 토큰 둘 이상이 이미 있을 때만 자족적으로 본다.
+    """
+    if not anchor or not fact:
+        return False
+    words = [w for w in re.split(r"[\s,()·—–:\"']+", anchor) if len(w) >= 2][:4]
+    if not words:
+        return False
+    lowered = fact.lower()
+    hits = sum(1 for w in words if w.lower() in lowered)
+    return hits < (2 if len(words) >= 2 else 1)
+
+
 def normalize_fact(sentence: str, role: str = "user", speaker: str | None = None) -> str:
     text = re.sub(r"\s+", " ", sentence.strip())
     if not text:
@@ -421,6 +490,15 @@ _SESSION_SHARD_RE = re.compile(
     r'"(phase|rolloutIds|memory_citation|final_answer|turn_id|output_text|input_text'
     r'|model_context_window|total_tokens|rate_limits?)"\s*[:\]}]'
 )
+# Agent tool-call markup captured as if it were speech. Measured in the dogfood
+# corpus 2026-08-23: 123 of 6,097 live memories (2.0%) carried it, including
+# three identical copies of `User said: <parameter name="source_role">assistant`
+# — the agent's own invocation arguments stored as durable facts about the user.
+# Same family as the already-blocked "User said: {" JSON prefix; only the syntax
+# differs. A real durable fact does not contain an invocation tag.
+_TOOL_CALL_MARKUP_RE = re.compile(
+    r'</?(parameter|invoke|function_calls|function_results)\b|<[a-z_]*:?(invoke|parameter)\b|\bantml:'
+)
 
 # Default ceiling for an auto-captured "memory". A durable fact is a
 # sentence, not a transcript page; anything longer is almost always a raw
@@ -445,6 +523,8 @@ def low_value_memory_reason(text: str, max_chars: int = LOW_VALUE_MAX_CHARS) -> 
         return "transcript_or_raw"
     if '"payload"' in stripped or _RAW_EVENT_RE.search(stripped):
         return "raw_json_event"
+    if _TOOL_CALL_MARKUP_RE.search(stripped):
+        return "tool_call_markup"
     if _SESSION_SHARD_RE.search(stripped):
         return "session_shard"
     if _SECRET_RUN_RE.search(stripped):
@@ -683,7 +763,10 @@ def score_memory(query: str, memory: dict[str, Any], reference_date: Any = None)
     lowered_memory = str(memory.get("memory", "")).lower()
     lowered_query = query.lower()
     for token in q_tokens:
-        if token in lowered_memory:
+        # Single-char particles (조사) and bare numbers substring-match almost
+        # any long text, farming a topic-free score floor (F2/C1, cycle 18) —
+        # only tokens that can carry topical signal earn the phrase bonus.
+        if len(token) >= 2 and not token.isdigit() and token in lowered_memory:
             phrase_bonus += 0.02
     if lowered_query and lowered_query in lowered_memory:
         phrase_bonus += 0.25
@@ -780,11 +863,22 @@ def deterministic_embedding(text: str, dimensions: int = 128) -> list[float]:
 def cosine_similarity(left: list[float], right: list[float]) -> float:
     if not left or not right:
         return 0.0
-    size = min(len(left), len(right))
+    if len(left) != len(right):
+        # Vectors from different embedding spaces carry no comparable signal,
+        # so mismatches are rejected outright instead of silently scored
+        # (on the old (cos+1)/2 scale truncation noise even cleared the 0.45
+        # recall gate; on max(0,cos) it would merely hover near 0).
+        return 0.0
+    size = len(left)
     dot = sum(left[i] * right[i] for i in range(size))
-    left_norm = math.sqrt(sum(value * value for value in left[:size])) or 1.0
-    right_norm = math.sqrt(sum(value * value for value in right[:size])) or 1.0
-    return max(0.0, min(1.0, round((dot / (left_norm * right_norm) + 1.0) / 2.0, 4)))
+    left_norm = math.sqrt(sum(value * value for value in left)) or 1.0
+    right_norm = math.sqrt(sum(value * value for value in right)) or 1.0
+    # max(0, cos), not (cos+1)/2: the affine rescale paid every pair a
+    # topic-free constant (0.275 of the final score after the 0.55 weight),
+    # so zero-signal rows cleared the recall gate on the constant alone
+    # (c68 FPR=1.00; P23). Negative cosine carries no retrieval signal here
+    # and clamps to 0.
+    return max(0.0, min(1.0, round(dot / (left_norm * right_norm), 4)))
 
 
 def normalize_entity(value: str) -> str:

@@ -1,0 +1,46 @@
+{
+  "built_at": "2026-08-14T11:02:51+0900",
+  "source_files": [
+    "2026-08-12.jsonl",
+    "2026-08-13.jsonl"
+  ],
+  "train_n": 11346,
+  "holdout_n": 60,
+  "response_chars": {
+    "median": 148,
+    "p10": 41,
+    "p90": 1211
+  },
+  "filters": {
+    "min_chars": 20,
+    "max_chars": 6000,
+    "target_contam": "\\[Request interrupted|\\[SUGGESTION MODE|SIMULATION|<system-reminder|API Error|no content yet"
+  },
+  "dedup_key": "md5(전체 응답) — 접두 해시는 습관을 오인 삭제했다 (결함 ⑥)",
+  "stats": {
+    "rows": 1211,
+    "assistant_turns": 21141,
+    "dropped_short": 508,
+    "dropped_long": 8,
+    "dropped_contam": 61,
+    "dropped_dup": 9151,
+    "transcript_files": 2638
+  },
+  "gate_prereg": {
+    "왜": "결함 ⑦ — 길이 다음의 공짜 단서는 언어다. 게이트 전에 등재한다.",
+    "언어쌍 분포": {
+      "ko→ko": 7407,
+      "ko→en": 1718,
+      "en→ko": 1637,
+      "en→en": 339,
+      "mixed→ko": 205,
+      "ko→mixed": 78,
+      "en→mixed": 15,
+      "mixed→en": 5,
+      "mixed→mixed": 2
+    },
+    "언어_불일치_비율": 0.2941,
+    "검사 규칙": "인격 게이트는 널 기준선과 함께 양측의 P(응답 언어 != 문맥 언어)를 먼저 잰다. 두 값이 다르면 그 게이트는 목소리가 아니라 언어를 재고 있다."
+  },
+  "gate_constraint": "원점 판별기는 보강판(길이-통제/묶음, n>=40, 널 선등재)으로만"
+}

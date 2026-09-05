@@ -1,5 +1,99 @@
 # Changelog
 
+## 0.5.0 — 2026-09-05
+
+The honesty release. A month after the dial, the engine learned three
+things the dial could not teach it: where a fact came from, when a fact
+should not be acted on, and how to forget on purpose. The trigger was a
+real incident — one mis-ingested lecture transcript put a false deadline
+and a false affiliation into the vault and they came back ranked first.
+Every change below either closes that hole or was already in the tree
+waiting for a release.
+
+### Provenance is structural, not advisory
+- **Action-grade gate.** A non-green fact that carries a date, deadline,
+  time or amount now returns `trust.gate = "confirm_required"` at read
+  time. Readers planning on it must confirm first. Labels used to be a note;
+  now they are a lock.
+- **Machine-origin quarantine.** Facts whose `metadata.origin` is a
+  transcript, recording, ASR, OCR, crawl or scrape — and whose speaker is
+  not the user or a tool — enter `quarantine.status = "pending"`.
+  `search_memories` hides them by default; pass `include_quarantined: true`
+  to see them. `confirm_memory` releases both the gate and the quarantine.
+- **Provenance-weighted search.** The everyday search ranker now applies
+  the same source weights the capsule ranker already did (green ×1.15,
+  action reports ×0.85, superseded excluded). `score_breakdown.provenance`
+  shows the factor. Sealed by a replay test of the original contamination.
+
+### Learned forgetting
+- **Decay bank** (P-M-6): a learned forgetting spectrum feeds the v2 ranker.
+- **Series supersede**: writes carrying a `series` key retire the previous
+  point in the series at write time — time series stop piling up.
+- **Capture hygiene lane** (P-C-2): vectors with no lexical evidence can no
+  longer surface from capture pointers.
+- **Task-inertia channel** (P-M-2/4/5): the active task warms recall
+  candidates and the distilled combiner orders them.
+- **Situation seat** (P-M-8): `situation_recall` recognises the one active
+  track a query points at and returns its state line — hook-only,
+  deterministic candidates, local reader.
+- **Temporal neighbours**: recall brings the scene, not just the sentence
+  (EM-LLM port).
+
+### Consolidation as a daily organ
+- Nightly consolidation is a launchd heartbeat (05:23): automatic backup,
+  three-day cap, tunnel-skip, handle-preservation gauge (a day is held back
+  if fewer than 70% of handles survive), and `--restore DAY` to reverse it.
+- Compiler ladder v0 with echo breaker; gate redesign with stale-state
+  vocabulary; track routing made deterministic (gate calls 62 → 12).
+
+### Absence answer (v0)
+- `GET/POST /ask/{handle}` — a public page that answers on the owner's
+  behalf from the owner's memory, in the owner's first person, and says
+  "I don't know" when the basis is missing. Basis selection respects
+  share scope, quarantine, gates, project scope and score; every answer
+  carries a signed receipt; 20 questions per hour per IP. Shops live in
+  `~/.forget/absence.json`. Composer chain: recall LLM → local `claude`
+  CLI in an isolated profile.
+
+### Memory Agent market (prototype, locked by default)
+- Products, items, quotes, grants and receipts, with Ed25519-signed
+  receipts, 30-day default grant expiry, statement endpoint
+  (`GET /v1/receipts/statement/`) and an indefinite lock on `b3o.*` grants.
+- MCP tools `catalog_search`, `product_quote`, `grant_create`,
+  `grant_revoke`, `agent_consult`, `receipt_verify`. All fail closed:
+  an agent-bound Bearer credential whose vault matches the URL and a
+  `profile` of `codex` or `claude` are required, or the call is 403.
+- Team consensus ledger: `team_read` (enumerated, newest first) and
+  `team_note` (fail-closed attribution from the credential row).
+
+### Codex
+- `prepare_codex_context` returns a small project-bound capsule derived
+  from the client's real working directory.
+- Codex tool profile and writer attribution; the capture hook labels
+  outcomes on Codex `Stop` as well as Claude `SessionEnd`.
+
+### Proxy
+- `forget-proxy` gained `/healthz`, timestamped diagnostics, and relays
+  upstream error statuses verbatim.
+
+### forget-connect 0.6.0
+- Zero-config proxy wiring on macOS: registers `ai.forget.proxy` and a
+  60-second watchdog alongside the server, points
+  `~/.claude/settings.json` at the proxy, chains an existing gateway with
+  `--upstream`, and withdraws its own override after three failed health
+  checks. `disconnect` restores exactly what it changed.
+- Skills and plugin assets installer; `forget_bstate` hook; progress
+  recall on Bash failure signatures (PostToolUse, no LLM, once per session).
+- Requires server 0.5.0.
+
+### Numbers
+- LongMemEval (S, n=500): best config **81.8%** reproduced three times
+  (81.8 / 82.4 / 81.8); fully-local pipeline **76.2%** (76.8 / 76.4 / 75.2).
+  Harness and every run file in `research/longmemeval/`.
+- Handoff error across a forced compaction: **0.8% vs 20%** for
+  consolidation vs whole-context summarisation — a synthetic relay task,
+  n=10, single compaction. Stated as measured, not generalised.
+
 ## 0.4.0 — 2026-08-04
 
 The dial release. Recall stops being one behavior and becomes a measured

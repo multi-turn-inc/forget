@@ -1,0 +1,100 @@
+{"qid": "c7dc5443", "type": "knowledge-update", "n_mem": 478, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.9166666666666666, "sess_min": {"answer_0cdbca92_2": 3, "answer_0cdbca92_1": 0}}
+{"qid": "0e4e4c46", "type": "knowledge-update", "n_mem": 481, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.5, "sess_min": {"answer_f2f998c7_2": 3, "answer_f2f998c7_1": 0}}
+{"qid": "945e3d21", "type": "knowledge-update", "n_mem": 489, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.75, "sess_min": {"answer_6a4f8626_1": 0, "answer_6a4f8626_2": 4}}
+{"qid": "0ddfec37", "type": "knowledge-update", "n_mem": 483, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.7272727272727273, "sess_min": {"answer_a22b654d_2": 0, "answer_a22b654d_1": 1}}
+{"qid": "184da446", "type": "knowledge-update", "n_mem": 473, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.2916666666666667, "sess_min": {"answer_e2f4f947_2": 1, "answer_e2f4f947_1": 0}}
+{"qid": "a2f3aa27", "type": "knowledge-update", "n_mem": 448, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.9, "sess_min": {"answer_5126c02d_1": 0, "answer_5126c02d_2": 2}}
+{"qid": "9bbe84a2", "type": "knowledge-update", "n_mem": 459, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.8181818181818182, "sess_min": {"answer_c6a0c6c2_2": 0, "answer_c6a0c6c2_1": 2}}
+{"qid": "852ce960", "type": "knowledge-update", "n_mem": 396, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.9166666666666666, "sess_min": {"answer_3a6f1e82_1": 0, "answer_3a6f1e82_2": 2}}
+{"qid": "5a4f22c0", "type": "knowledge-update", "n_mem": 487, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.875, "sess_min": {"answer_b0f3dfff_1": 0, "answer_b0f3dfff_2": 1}}
+{"qid": "c4ea545c", "type": "knowledge-update", "n_mem": 490, "needle": 1, "cov84": 1.0, "cov10": 1.0, "turn84": 0.5, "sess_min": {"answer_d3bf812b_2": 9, "answer_d3bf812b_1": 1}}
+{"qid": "6a27ffc2", "type": "knowledge-update", "n_mem": 493, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.6666666666666666, "sess_min": {"answer_77f32504_2": 0, "answer_77f32504_1": 1}}
+{"qid": "031748ae", "type": "knowledge-update", "n_mem": 494, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.75, "sess_min": {"answer_8748f791_1": 0, "answer_8748f791_2": 3}}
+{"qid": "ba61f0b9", "type": "knowledge-update", "n_mem": 454, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_f377cda7_1": 0, "answer_f377cda7_2": 5}}
+{"qid": "8fb83627", "type": "knowledge-update", "n_mem": 485, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.9583333333333334, "sess_min": {"answer_966cecbb_2": 3, "answer_966cecbb_1": 0}}
+{"qid": "b6019101", "type": "knowledge-update", "n_mem": 510, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.8636363636363636, "sess_min": {"answer_67074b4b_2": 1, "answer_67074b4b_1": 0}}
+{"qid": "a11281a2", "type": "multi-session", "n_mem": 457, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_c69ee1f9_2": 0, "answer_c69ee1f9_1": 2}}
+{"qid": "157a136e", "type": "multi-session", "n_mem": 503, "needle": 1, "cov84": 1.0, "cov10": 0.5, "turn84": 0.5909090909090909, "sess_min": {"answer_8de18468_1": 13, "answer_8de18468_2": 1}}
+{"qid": "2311e44b", "type": "multi-session", "n_mem": 493, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.9444444444444444, "sess_min": {"answer_bf633415_1": 2, "answer_bf633415_2": 0}}
+{"qid": "21d02d0d", "type": "multi-session", "n_mem": 497, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.36363636363636365, "sess_min": {"answer_2c637141_2": 1, "answer_2c637141_1": 0}}
+{"qid": "d682f1a2", "type": "multi-session", "n_mem": 469, "needle": 1, "cov84": 1.0, "cov10": 1.0, "turn84": 0.8055555555555556, "sess_min": {"answer_c008e5df_1": 1, "answer_c008e5df_2": 3, "answer_c008e5df_3": 2}}
+{"qid": "a4996e51", "type": "multi-session", "n_mem": 512, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.9166666666666666, "sess_min": {"answer_feb5f98a_2": 0, "answer_feb5f98a_1": 4}}
+{"qid": "2788b940", "type": "multi-session", "n_mem": 475, "needle": 1, "cov84": 1.0, "cov10": 1.0, "turn84": 0.9285714285714286, "sess_min": {"answer_8f6b938d_4": 6, "answer_8f6b938d_3": 1, "answer_8f6b938d_1": 5, "answer_8f6b938d_2": 2}}
+{"qid": "81507db6", "type": "multi-session", "n_mem": 510, "needle": 1, "cov84": 1.0, "cov10": 0.6, "turn84": 0.4482758620689655, "sess_min": {"answer_da3c1266_1": 1, "answer_da3c1266_5": 7, "answer_da3c1266_4": 15, "answer_da3c1266_2": 3, "answer_da3c1266_3": 28}}
+{"qid": "00ca467f", "type": "multi-session", "n_mem": 486, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.5555555555555556, "sess_min": {"answer_39900a0a_1": 1, "answer_39900a0a_3": 2, "answer_39900a0a_2": 0}}
+{"qid": "a96c20ee", "type": "multi-session", "n_mem": 489, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.9090909090909091, "sess_min": {"answer_ef84b994_1": 0, "answer_ef84b994_2": 2}}
+{"qid": "51c32626", "type": "multi-session", "n_mem": 490, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.95, "sess_min": {"answer_58820c75_2": 0, "answer_58820c75_1": 2}}
+{"qid": "c4a1ceb8", "type": "multi-session", "n_mem": 488, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.9347826086956522, "sess_min": {"answer_56d02cab_4": 0, "answer_56d02cab_2": 7, "answer_56d02cab_3": 2, "answer_56d02cab_1": 1}}
+{"qid": "2b8f3739", "type": "multi-session", "n_mem": 491, "needle": 1, "cov84": 1.0, "cov10": 0.6666666666666666, "turn84": 0.75, "sess_min": {"answer_23759615_1": 2, "answer_23759615_2": 11, "answer_23759615_3": 1}}
+{"qid": "3c1045c8", "type": "multi-session", "n_mem": 542, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.4166666666666667, "sess_min": {"answer_c8cc60d6_1": 6, "answer_c8cc60d6_2": 0}}
+{"qid": "55241a1f", "type": "multi-session", "n_mem": 514, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.95, "sess_min": {"answer_fa08bf49_1": 0, "answer_fa08bf49_2": 7}}
+{"qid": "73d42213", "type": "multi-session", "n_mem": 516, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.9166666666666666, "sess_min": {"answer_1881e7db_1": 2, "answer_1881e7db_2": 0}}
+{"qid": "87f22b4a", "type": "multi-session", "n_mem": 474, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.75, "sess_min": {"answer_f56e6152_2": 0, "answer_f56e6152_1": 3}}
+{"qid": "gpt4_5501fe77", "type": "multi-session", "n_mem": 516, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_203bf3fa_1": 0, "answer_203bf3fa_2": 5, "answer_203bf3fa_3": 1}}
+{"qid": "2ce6a0f2", "type": "multi-session", "n_mem": 480, "needle": 0, "cov84": 1.0, "cov10": 0.75, "turn84": 0.8695652173913043, "sess_min": {"answer_901a6763_2": 3, "answer_901a6763_4": 6, "answer_901a6763_3": 15, "answer_901a6763_1": 0}}
+{"qid": "3fe836c9", "type": "multi-session", "n_mem": 449, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_1bb63ea5_2": 0, "answer_1bb63ea5_1": 1}}
+{"qid": "a9f6b44c", "type": "multi-session", "n_mem": 476, "needle": 0, "cov84": 1.0, "cov10": 0.6666666666666666, "turn84": 0.7777777777777778, "sess_min": {"answer_cc021f81_3": 0, "answer_cc021f81_2": 18, "answer_cc021f81_1": 2}}
+{"qid": "e6041065", "type": "multi-session", "n_mem": 493, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_4eb6d671_1": 1, "answer_4eb6d671_2": 0}}
+{"qid": "edced276", "type": "multi-session", "n_mem": 482, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.9444444444444444, "sess_min": {"answer_60e8941a_2": 0, "answer_60e8941a_1": 2}}
+{"qid": "ba358f49", "type": "multi-session", "n_mem": 409, "needle": 0, "cov84": 1.0, "cov10": 0.5, "turn84": 0.375, "sess_min": {"answer_cbd08e3c_1": 0, "answer_cbd08e3c_2": 17}}
+{"qid": "85fa3a3f", "type": "multi-session", "n_mem": 493, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_dcb18b9b_2": 1, "answer_dcb18b9b_1": 0}}
+{"qid": "720133ac", "type": "multi-session", "n_mem": 466, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_c9dfeaea_1": 1, "answer_c9dfeaea_2": 0}}
+{"qid": "e48988bc", "type": "single-session-assistant", "n_mem": 530, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_ultrachat_174360": 0}}
+{"qid": "8752c811", "type": "single-session-assistant", "n_mem": 493, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.5, "sess_min": {"answer_sharegpt_6pWK9yx_0": 0}}
+{"qid": "3249768e", "type": "single-session-assistant", "n_mem": 475, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_sharegpt_CaxTGYP_0": 0}}
+{"qid": "1568498a", "type": "single-session-assistant", "n_mem": 478, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.4583333333333333, "sess_min": {"answer_sharegpt_d6JJiqH_76": 0}}
+{"qid": "5809eb10", "type": "single-session-assistant", "n_mem": 606, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.75, "sess_min": {"answer_sharegpt_4aJsGCH_0": 0}}
+{"qid": "41275add", "type": "single-session-assistant", "n_mem": 531, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_sharegpt_81riySf_0": 0}}
+{"qid": "58470ed2", "type": "single-session-assistant", "n_mem": 471, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_sharegpt_U4oCSfU_7": 0}}
+{"qid": "e3fc4d6e", "type": "single-session-assistant", "n_mem": 519, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_sharegpt_5m7gg5F_0": 0}}
+{"qid": "dc439ea3", "type": "single-session-assistant", "n_mem": 476, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_ultrachat_459954": 0}}
+{"qid": "65240037", "type": "single-session-assistant", "n_mem": 489, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_ultrachat_403752": 0}}
+{"qid": "352ab8bd", "type": "single-session-assistant", "n_mem": 539, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.4666666666666667, "sess_min": {"answer_sharegpt_NoDZzot_7": 0}}
+{"qid": "0e5e2d1a", "type": "single-session-assistant", "n_mem": 450, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_ultrachat_113156": 0}}
+{"qid": "b6025781", "type": "single-session-preference", "n_mem": 460, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.75, "sess_min": {"answer_8414cc57": 0}}
+{"qid": "35a27287", "type": "single-session-preference", "n_mem": 519, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.8571428571428571, "sess_min": {"answer_9b182436": 0}}
+{"qid": "75f70248", "type": "single-session-preference", "n_mem": 466, "needle": 1, "cov84": 1.0, "cov10": 1.0, "turn84": 0.4166666666666667, "sess_min": {"answer_8ee04a2e": 1}}
+{"qid": "8a2466db", "type": "single-session-preference", "n_mem": 508, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.7777777777777778, "sess_min": {"answer_edb03329": 0}}
+{"qid": "b0479f84", "type": "single-session-preference", "n_mem": 502, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.25, "sess_min": {"answer_30f63ddb": 0}}
+{"qid": "32260d93", "type": "single-session-preference", "n_mem": 524, "needle": 4, "cov84": 1.0, "cov10": 1.0, "turn84": 0.3333333333333333, "sess_min": {"answer_0250ae1c": 4}}
+{"qid": "58bf7951", "type": "single-session-user", "n_mem": 616, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.8333333333333334, "sess_min": {"answer_355c48bb": 0}}
+{"qid": "ad7109d1", "type": "single-session-user", "n_mem": 466, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.25, "sess_min": {"answer_679840f8": 0}}
+{"qid": "c5e8278d", "type": "single-session-user", "n_mem": 469, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_f6168136": 0}}
+{"qid": "577d4d32", "type": "single-session-user", "n_mem": 487, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.3, "sess_min": {"answer_0dd4d99a": 0}}
+{"qid": "1faac195", "type": "single-session-user", "n_mem": 494, "needle": 2, "cov84": 1.0, "cov10": 1.0, "turn84": 0.5833333333333334, "sess_min": {"answer_d01949bf": 2}}
+{"qid": "36580ce8", "type": "single-session-user", "n_mem": 545, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.75, "sess_min": {"answer_93e1bd22": 0}}
+{"qid": "86f00804", "type": "single-session-user", "n_mem": 503, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_96b8c9ee": 0}}
+{"qid": "dccbc061", "type": "single-session-user", "n_mem": 505, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.8333333333333334, "sess_min": {"answer_8f276838": 0}}
+{"qid": "19b5f2b3", "type": "single-session-user", "n_mem": 482, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.8333333333333334, "sess_min": {"answer_5ff494b9": 0}}
+{"qid": "b86304ba", "type": "single-session-user", "n_mem": 456, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_645b0329": 0}}
+{"qid": "75499fd8", "type": "single-session-user", "n_mem": 491, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_723bf11f": 0}}
+{"qid": "66f24dbb", "type": "single-session-user", "n_mem": 507, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.9166666666666666, "sess_min": {"answer_fea2e4d3": 0}}
+{"qid": "15745da0", "type": "single-session-user", "n_mem": 474, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.75, "sess_min": {"answer_586de428": 0}}
+{"qid": "6ade9755", "type": "single-session-user", "n_mem": 513, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.9166666666666666, "sess_min": {"answer_9398da02": 0}}
+{"qid": "gpt4_385a5000", "type": "temporal-reasoning", "n_mem": 493, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.7894736842105263, "sess_min": {"answer_7a4a93f1_1": 8, "answer_7a4a93f1_2": 0}}
+{"qid": "gpt4_7de946e7", "type": "temporal-reasoning", "n_mem": 533, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.8333333333333334, "sess_min": {"answer_6a78e959_2": 0, "answer_6a78e959_1": 3}}
+{"qid": "gpt4_4ef30696", "type": "temporal-reasoning", "n_mem": 520, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.6363636363636364, "sess_min": {"answer_f964cea3_2": 0, "answer_f964cea3_1": 1}}
+{"qid": "gpt4_b5700ca9", "type": "temporal-reasoning", "n_mem": 537, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_a17423e7_1": 0}}
+{"qid": "6e984302", "type": "temporal-reasoning", "n_mem": 460, "needle": 2, "cov84": 1.0, "cov10": 1.0, "turn84": 0.16666666666666666, "sess_min": {"answer_88841f27_2": 7, "answer_88841f27_1": 2}}
+{"qid": "gpt4_93f6379c", "type": "temporal-reasoning", "n_mem": 445, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.8055555555555556, "sess_min": {"answer_544fe66c_3": 0, "answer_544fe66c_2": 2, "answer_544fe66c_1": 9}}
+{"qid": "gpt4_8e165409", "type": "temporal-reasoning", "n_mem": 480, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.8636363636363636, "sess_min": {"answer_d97db962_2": 0, "answer_d97db962_1": 1}}
+{"qid": "gpt4_7f6b06db", "type": "temporal-reasoning", "n_mem": 558, "needle": 5, "cov84": 1.0, "cov10": 0.3333333333333333, "turn84": 0.5277777777777778, "sess_min": {"answer_5d8c99d3_3": 33, "answer_5d8c99d3_2": 18, "answer_5d8c99d3_1": 5}}
+{"qid": "gpt4_18c2b244", "type": "temporal-reasoning", "n_mem": 495, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_c862f65a_1": 8, "answer_c862f65a_3": 0, "answer_c862f65a_2": 1}}
+{"qid": "gpt4_74aed68e", "type": "temporal-reasoning", "n_mem": 480, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.7272727272727273, "sess_min": {"answer_aed8cf17_1": 1, "answer_aed8cf17_2": 0}}
+{"qid": "gpt4_45189cb4", "type": "temporal-reasoning", "n_mem": 501, "needle": 0, "cov84": 1.0, "cov10": 0.3333333333333333, "turn84": 0.875, "sess_min": {"answer_e6c20e52_3": 0, "answer_e6c20e52_1": 13, "answer_e6c20e52_2": 18}}
+{"qid": "993da5e2", "type": "temporal-reasoning", "n_mem": 486, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.625, "sess_min": {"answer_54f0d6f9_2": 0, "answer_54f0d6f9_1": 3}}
+{"qid": "d01c6aa8", "type": "temporal-reasoning", "n_mem": 429, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.7727272727272727, "sess_min": {"answer_991d55e5_1": 0, "answer_991d55e5_2": 1}}
+{"qid": "gpt4_1e4a8aec", "type": "temporal-reasoning", "n_mem": 498, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.6666666666666666, "sess_min": {"answer_16bd5ea6_2": 2, "answer_16bd5ea6_1": 0}}
+{"qid": "b46e15ee", "type": "temporal-reasoning", "n_mem": 457, "needle": 0, "cov84": 1.0, "cov10": 0.75, "turn84": 0.3333333333333333, "sess_min": {"answer_4bfcc251_2": 11, "answer_4bfcc251_4": 6, "answer_4bfcc251_3": 0, "answer_4bfcc251_1": 1}}
+{"qid": "gpt4_4929293b", "type": "temporal-reasoning", "n_mem": 469, "needle": 23, "cov84": 1.0, "cov10": 0.0, "turn84": 0.20833333333333334, "sess_min": {"answer_add9b013_1": 23, "answer_add9b013_2": 73}}
+{"qid": "gpt4_1916e0ea", "type": "temporal-reasoning", "n_mem": 533, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.6363636363636364, "sess_min": {"answer_447052a5_1": 1, "answer_447052a5_2": 0}}
+{"qid": "gpt4_93159ced", "type": "temporal-reasoning", "n_mem": 444, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.6666666666666666, "sess_min": {"answer_e5131a1b_1": 4, "answer_e5131a1b_2": 0}}
+{"qid": "gpt4_fa19884d", "type": "temporal-reasoning", "n_mem": 556, "needle": 1, "cov84": 1.0, "cov10": 1.0, "turn84": 0.5833333333333334, "sess_min": {"answer_ff201787_1": 4, "answer_ff201787_2": 1}}
+{"qid": "gpt4_b4a80587", "type": "temporal-reasoning", "n_mem": 542, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.7083333333333334, "sess_min": {"answer_b9d9150e_2": 0, "answer_b9d9150e_1": 3}}
+{"qid": "gpt4_7bc6cf22", "type": "temporal-reasoning", "n_mem": 519, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.9166666666666666, "sess_min": {"answer_e22d6aef_1": 0}}
+{"qid": "gpt4_e061b84f", "type": "temporal-reasoning", "n_mem": 467, "needle": 0, "cov84": 1.0, "cov10": 0.3333333333333333, "turn84": 0.4444444444444444, "sess_min": {"answer_8c64ce25_2": 26, "answer_8c64ce25_3": 0, "answer_8c64ce25_1": 28}}
+{"qid": "e4e14d04", "type": "temporal-reasoning", "n_mem": 461, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.875, "sess_min": {"answer_cf425855_1": 0, "answer_cf425855_2": 1}}
+{"qid": "4dfccbf8", "type": "temporal-reasoning", "n_mem": 455, "needle": 2, "cov84": 0.5, "cov10": 0.5, "turn84": 0.125, "sess_min": {"answer_4bebc783_2": 133, "answer_4bebc783_1": 2}}
+{"qid": "gpt4_fa19884c", "type": "temporal-reasoning", "n_mem": 507, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_ff201786_1": 1, "answer_ff201786_2": 0}}
+{"qid": "gpt4_d9af6064", "type": "temporal-reasoning", "n_mem": 534, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 1.0, "sess_min": {"answer_da704e79_2": 4, "answer_da704e79_1": 0}}
+{"qid": "08f4fc43", "type": "temporal-reasoning", "n_mem": 480, "needle": 0, "cov84": 1.0, "cov10": 1.0, "turn84": 0.8636363636363636, "sess_min": {"answer_6ea1541e_2": 1, "answer_6ea1541e_1": 0}}

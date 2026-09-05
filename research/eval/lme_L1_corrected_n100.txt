@@ -1,0 +1,110 @@
+  [0] knowledge-update     needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.92
+  [1] knowledge-update     needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.50
+  [2] knowledge-update     needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.75
+  [3] knowledge-update     needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.73
+  [4] knowledge-update     needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.29
+  [5] knowledge-update     needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.90
+  [6] knowledge-update     needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.82
+  [7] knowledge-update     needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.92
+  [8] knowledge-update     needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.88
+  [9] knowledge-update     needle    1 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.50
+  [10] knowledge-update     needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.67
+  [11] knowledge-update     needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.75
+  [12] knowledge-update     needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [13] knowledge-update     needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.96
+  [14] knowledge-update     needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.86
+  [15] multi-session        needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [16] multi-session        needle    1 · 세션커버@84 1.00 @10 0.50 · 턴회수 0.59
+  [17] multi-session        needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.94
+  [18] multi-session        needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.36
+  [19] multi-session        needle    1 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.81
+  [20] multi-session        needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.92
+  [21] multi-session        needle    1 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.93
+  [22] multi-session        needle    1 · 세션커버@84 1.00 @10 0.60 · 턴회수 0.45
+  [23] multi-session        needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.56
+  [24] multi-session        needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.91
+  [25] multi-session        needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.95
+  [26] multi-session        needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.93
+  [27] multi-session        needle    1 · 세션커버@84 1.00 @10 0.67 · 턴회수 0.75
+  [28] multi-session        needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.42
+  [29] multi-session        needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.95
+  [30] multi-session        needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.92
+  [31] multi-session        needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.75
+  [32] multi-session        needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [33] multi-session        needle    0 · 세션커버@84 1.00 @10 0.75 · 턴회수 0.87
+  [34] multi-session        needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [35] multi-session        needle    0 · 세션커버@84 1.00 @10 0.67 · 턴회수 0.78
+  [36] multi-session        needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [37] multi-session        needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.94
+  [38] multi-session        needle    0 · 세션커버@84 1.00 @10 0.50 · 턴회수 0.38
+  [39] multi-session        needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [40] multi-session        needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [41] single-session-assis needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [42] single-session-assis needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.50
+  [43] single-session-assis needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [44] single-session-assis needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.46
+  [45] single-session-assis needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.75
+  [46] single-session-assis needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [47] single-session-assis needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [48] single-session-assis needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [49] single-session-assis needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [50] single-session-assis needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [51] single-session-assis needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.47
+  [52] single-session-assis needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [53] single-session-prefe needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.75
+  [54] single-session-prefe needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.86
+  [55] single-session-prefe needle    1 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.42
+  [56] single-session-prefe needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.78
+  [57] single-session-prefe needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.25
+  [58] single-session-prefe needle    4 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.33
+  [59] single-session-user  needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.83
+  [60] single-session-user  needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.25
+  [61] single-session-user  needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [62] single-session-user  needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.30
+  [63] single-session-user  needle    2 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.58
+  [64] single-session-user  needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.75
+  [65] single-session-user  needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [66] single-session-user  needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.83
+  [67] single-session-user  needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.83
+  [68] single-session-user  needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [69] single-session-user  needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [70] single-session-user  needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.92
+  [71] single-session-user  needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.75
+  [72] single-session-user  needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.92
+  [73] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.79
+  [74] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.83
+  [75] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.64
+  [76] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [77] temporal-reasoning   needle    2 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.17
+  [78] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.81
+  [79] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.86
+  [80] temporal-reasoning   needle    5 · 세션커버@84 1.00 @10 0.33 · 턴회수 0.53
+  [81] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [82] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.73
+  [83] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 0.33 · 턴회수 0.88
+  [84] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.62
+  [85] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.77
+  [86] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.67
+  [87] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 0.75 · 턴회수 0.33
+  [88] temporal-reasoning   needle   23 · 세션커버@84 1.00 @10 0.00 · 턴회수 0.21
+  [89] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.64
+  [90] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.67
+  [91] temporal-reasoning   needle    1 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.58
+  [92] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.71
+  [93] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.92
+  [94] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 0.33 · 턴회수 0.44
+  [95] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.88
+  [96] temporal-reasoning   needle    2 · 세션커버@84 0.50 @10 0.50 · 턴회수 0.12
+  [97] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [98] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 1.00
+  [99] temporal-reasoning   needle    0 · 세션커버@84 1.00 @10 1.00 · 턴회수 0.86
+
+100문항 · 42s · 세분성 turn
+유형                           n   바늘@10   바늘@84    MRR   커버@84   커버@10   턴@84
+knowledge-update            15    1.00    1.00  0.967    1.00    1.00   0.76
+multi-session               26    1.00    1.00  0.904    1.00    0.91   0.81
+single-session-assistant    12    1.00    1.00  1.000    1.00    1.00   0.85
+single-session-preference    6    1.00    1.00  0.783    1.00    1.00   0.56
+single-session-user         14    1.00    1.00  0.952    1.00    1.00   0.78
+temporal-reasoning          27    0.96    1.00  0.866    0.98    0.86   0.69
+전체                         100    0.99    1.00  0.914    0.99    0.94   0.76
