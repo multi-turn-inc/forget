@@ -82,5 +82,8 @@
 4. **정정:** 낮의 «Astra엔 사용자별 영구 기억 없음»은 틀렸다. Codex Memories가 있다. 다만 출처·정정·범위·소유가 없고 MCP 채팅은 제외한다 — **외부 컨텍스트를 오염원으로 보는 그 자리에, 출처를 붙여 들여오는 것이 forget의 자리.**
 5. **사이클 1 재조정:** 피검체를 ①에서 **②(도구 출력·실패 색인)**로 옮길지 정훈 판단. ①은 pi에 절반 있고, ②는 0이며, Astra가 «29시간»을 가능케 한 것이 ②일 가능성이 높다(발표 문면: «과거 실패 원인·테스트 결과 재검색»).
 
+## 실물 관찰 (같은 날 22:30 추가)
+정훈 머신 `~/.codex/memories/`를 직접 열어 §A3의 공백을 채웠다 → `codex-memories-field-2026-09-05.md`. 요지: 648 세션 중 12만 기억(1.9%), MCP 쓴 세션 제외로 forget 세션은 Codex 기억에서 빠짐, 기억 형태는 Preference signals·Reusable knowledge·Failures(증상→원인→처방)·References, 출처·정정·supersede·만료 구조 없음, rollout_path가 영수증 반쪽. 주입 형식은 미확인.
+
 ## 미열람
 openai.com 발표문·시스템 카드 후반(403/절단) · `features/context-management` 페이지(404) · Codex 소스(config.rs 404). 노트 저장 위치·검색 방식은 실측(Plus 계정으로 `experimental_mode` 켜고 `~/.codex/` 관찰)으로만 확인 가능 — 사이클 1에 30분 배정 권장.
