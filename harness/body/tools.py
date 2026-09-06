@@ -10,6 +10,8 @@ from typing import Any
 
 REPO = Path(os.getenv("FORGET_REPO", Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(REPO))
+# 원장은 실DB다 — 기본 경로가 cwd의 mem1.sqlite3로 새지 않게 못 박는다 (2026-09-07 실측: 빈 검색의 원인)
+os.environ.setdefault("MEM1_DB_PATH", str(Path.home() / ".forget" / "forget.sqlite3"))
 from forget import activation as _A  # noqa: E402
 from forget import store as _store  # noqa: E402
 
