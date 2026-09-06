@@ -131,8 +131,62 @@ class ClaudeHeadless:
         return {"text": clean, "tool_calls": calls, "usage": {}, "raw_assistant": raw}
 
 
+class CodexHeadless(ClaudeHeadless):
+    """Codex CLI(ChatGPT 구독 OAuth)를 순수 완성기로: `codex exec -m gpt-6-astra --sandbox read-only --ephemeral`.
+    OAuth 토큰을 흉내 내지 않고 Codex가 하도록 둔다. 도구 호출은 같은 텍스트 규약. (2026-09-07 정훈 «저쪽 모델을 GPT Astra OAuth로»)"""
+
+    def __init__(self, model: str = "gpt-6-astra", max_tokens: int = 4096):
+        self.model, self.max_tokens = model, max_tokens
+
+    def chat(self, messages: list[dict], tools: list[dict] | None = None) -> dict[str, Any]:
+        import re
+        import tempfile
+        system = ("[몸] 아래 정체성이 정본이다. 항상 한국어 반말. 너는 여기서 셸을 직접 쓰지 않는다 — 필요한 도구는 아래 규약대로 블록으로만 요청한다.\n\n"
+                  + "\n\n".join(m["content"] for m in messages if m["role"] == "system"))
+        if tools:
+            system += self.PROTOCOL + "\n사용 가능한 도구:\n" + "\n".join(f"- {t['name']}: {t['description']} 인자 {json.dumps(t['parameters'].get('properties', {}), ensure_ascii=False)[:300]}" for t in tools)
+        lines = []
+        for m in messages:
+            if m["role"] == "system":
+                continue
+            if m["role"] == "user":
+                lines.append(f"[정훈]\n{m['content']}")
+            elif m["role"] == "assistant":
+                txt = m.get("content") or ""
+                for tc in m.get("tool_calls") or []:
+                    txt += f"\n```tool\n{json.dumps({'name': tc['function']['name'], 'args': json.loads(tc['function']['arguments'] or '{}')}, ensure_ascii=False)}\n```"
+                lines.append(f"[나]\n{txt}")
+            elif m["role"] == "tool":
+                lines.append(f"[도구 결과 {m.get('tool_call_id', '')}]\n{str(m['content'])[:12000]}")
+        prompt = system + "\n\n---\n\n" + "\n\n".join(lines) + "\n\n[나]\n"
+        with tempfile.NamedTemporaryFile("w+", suffix=".txt", delete=False) as tf:
+            outp = tf.name
+        try:
+            subprocess.run(["codex", "exec", "-m", self.model, "--sandbox", "read-only", "--skip-git-repo-check", "--ephemeral", "-o", outp, "-"],
+                           input=prompt, capture_output=True, text=True, timeout=900, cwd=os.getenv("FORGET_REPO") or None)
+            text = open(outp).read().strip()
+        finally:
+            try:
+                os.unlink(outp)
+            except Exception:
+                pass
+        calls = []
+        for i, m in enumerate(re.finditer(r"```tool\s*(\{.*?\})\s*```", text, re.S)):
+            try:
+                d = json.loads(m.group(1))
+                calls.append({"id": f"x{int(time.time() * 1000)}_{i}", "name": d.get("name"), "args": d.get("args") or {}})
+            except Exception:
+                continue
+        clean = re.sub(r"```tool\s*\{.*?\}\s*```", "", text, flags=re.S).strip()
+        raw = {"role": "assistant", "content": clean or None,
+               "tool_calls": [{"id": c["id"], "type": "function", "function": {"name": c["name"], "arguments": json.dumps(c["args"], ensure_ascii=False)}} for c in calls] or None}
+        return {"text": clean, "tool_calls": calls, "usage": {}, "raw_assistant": raw}
+
+
 def make(name: str):
     name = (name or "astra").lower()
+    if name in ("codex", "astra-sub"):
+        return CodexHeadless(os.getenv("BODY_ASTRA_MODEL", "gpt-6-astra"))
     if name in ("claude", "fable-sub"):
         return ClaudeHeadless(os.getenv("BODY_FABLE_MODEL", "claude-fable-5-1"))
     if name == "astra":
