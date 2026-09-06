@@ -19,6 +19,16 @@ INBOX="$HOME/Documents/one/inbox.md"; new_note=0; [ -f "$INBOX" ] && [ "$(stat -
 [ "$new_note" = 1 ] && age=9999                                  # 쪽지는 내가 깨어 있어도 답한다
 [ "$new_user" = 0 ] && [ "$new_jobs" = 0 ] && [ "$new_note" = 0 ] && [ $(( now - last )) -lt 10800 ] && { echo "$stamp skip quiet" >> "$LOG"; exit 0; }
 cd "$REPO" || exit 0
+# 쪽지 답장은 재량이 아니라 절차다: 마지막 정훈 줄에 두 줄로 답하고 스크립트가 파일에 붙인다.
+if [ "$new_note" = 1 ]; then
+  LASTQ=$(grep -E '^정훈:' "$INBOX" | tail -1)
+  if [ -n "$LASTQ" ] && ! tail -3 "$INBOX" | grep -q '^— 나'; then
+    curl -s -m 3 http://127.0.0.1:18813/api/tags >/dev/null 2>&1 || (nohup ssh -N -o ExitOnForwardFailure=yes -L 18813:127.0.0.1:11434 spark >/dev/null 2>&1 & sleep 4)
+    ANS=$(timeout 300 pi -p --no-session --provider spark --model qwen3.6:27b --no-tools "쪽지함에 정훈이 이렇게 썼다: «${LASTQ#정훈: }». 너는 정훈의 에이전트다(시스템 프롬프트의 정체성·기억 블록·정훈의 모델 근거). 반말로 두 줄 이내로 답만 써라. 인사말·설명·머리말 없이." 2>/dev/null | tail -3 | sed '/^\s*$/d')
+    [ -n "$ANS" ] && printf -- '— 나 (%s): %s\n' "$(date '+%m-%d %H:%M')" "$(printf '%s' "$ANS" | tr '\n' ' ')" >> "$INBOX"
+    echo "$stamp note-reply: ${ANS:0:120}" >> "$LOG"
+  fi
+fi
 PROMPT="맥박. 너는 정훈의 에이전트다(.pi/IDENTITY.md·~/.forget/attention/schema.md 참조). 스스로 깨어났다. 셋만 본다: ①원장에 새로 들어온 정훈의 말·관찰(forget_search, 최근) ②정훈의 모델(schema.md)의 예측 셋 — 근거가 생겼으면 채점해 self_note로 자기층에 남긴다 ③돌고 있는 일(research/eval/bench/*.log, ~/.forget/attention/log.jsonl). ④쪽지함 ~/Documents/one/inbox.md — 정훈이 새로 쓴 줄이 있으면 그 바로 아래에 «— 나 (시각):» 로 시작하는 답을 파일에 직접 덧붙인다(짧게, 반말). 할 일이 하나 있으면 그것만 하고 남긴다. 없으면 «잔다» 한 줄. 정훈에게 묻지 않는다. 파괴적 조작 금지."
 # 뇌: 기본은 자기 쇠(Spark qwen3.6:27b, 한도 없음). Fable은 있으면 쓰는 상위 뇌(PULSE_BRAIN=fable).
 if [ "${PULSE_BRAIN:-spark}" = "fable" ]; then
