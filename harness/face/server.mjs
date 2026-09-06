@@ -3,6 +3,8 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -57,7 +59,7 @@ function ask(cmd, timeoutMs = 8000) {   // 요청/응답 상관
   if (BACKEND === "claude") {
     if (cmd.type === "prompt") { send({ type: "user", message: { role: "user", content: cmd.message } }); return Promise.resolve({ success: true }); }
     if (cmd.type === "get_state") return Promise.resolve({ success: true, data: { model: { provider: "anthropic", id: MODEL }, sessionName: claudeState.session ? `claude ${claudeState.session.slice(0, 8)}` : "claude" } });
-    if (cmd.type === "get_messages") return Promise.resolve({ success: true, data: { messages: [] } });
+    if (cmd.type === "get_messages") return Promise.resolve({ success: true, data: { messages: claudeHistory(SESSION) } });
     return Promise.resolve({ success: false, error: "claude 백엔드는 " + cmd.type + " 미지원" });
   }
   const id = `f${++seq}`;
@@ -110,6 +112,24 @@ pi.stdout.on("data", (d) => {
   }
 });
 
+function claudeHistory(sid, max = 40) {
+  try {
+    const dir = join(homedir(), ".claude", "projects");
+    const { readdirSync } = require("node:fs");
+    let file = null;
+    for (const d of readdirSync(dir)) { const f = join(dir, d, `${sid}.jsonl`); if (existsSync(f)) { file = f; break; } }
+    if (!file) return [];
+    const out = [];
+    for (const line of readFileSync(file, "utf8").split("\n")) {
+      if (!line) continue; let d; try { d = JSON.parse(line); } catch { continue; }
+      if (d.isSidechain || d.isCompactSummary || !d.message) continue;
+      const c = d.message.content;
+      if (d.type === "user") { const t = typeof c === "string" ? c : (Array.isArray(c) && c[0]?.type === "text") ? c.map((p) => p.text || "").join("") : ""; if (t && !t.startsWith("<") && !t.startsWith("[Request")) out.push({ role: "user", content: t }); }
+      else if (d.type === "assistant" && Array.isArray(c)) { const t = c.filter((p) => p.type === "text").map((p) => p.text).join(""); if (t.trim()) out.push({ role: "assistant", content: [{ type: "text", text: t }] }); }
+    }
+    return out.slice(-max);
+  } catch { return []; }
+}
 function readJson(p) { try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; } }
 function body(req) { return new Promise((r) => { let s = ""; req.on("data", (c) => (s += c)); req.on("end", () => { try { r(JSON.parse(s || "{}")); } catch { r({}); } }); }); }
 function sidecar() {
@@ -145,6 +165,23 @@ const server = createServer(async (req, res) => {
   if (url.pathname === "/state") return json(await ask({ type: "get_state" }));
   if (url.pathname === "/messages") return json(await ask({ type: "get_messages" }, 15000));
   if (url.pathname === "/sidecar") return json(sidecar());
+  if (url.pathname === "/observe" && req.method === "POST") {         // 정훈의 «맞아»/«아니야» → 원장(green 승격 / supersede)
+    const b = await body(req);
+    const mcp = async (name, args) => { const r = await fetch(process.env.FORGET_MCP_URL || "http://localhost:8000/mcp/forget/http/junghunkim", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } }) }); const d = await r.json(); return d.result?.content?.[0]?.text || ""; };
+    if (!b.id) return json({ ok: false, error: "id" }, 400);
+    if (b.verdict === "yes") return json({ ok: true, r: (await mcp("confirm_memory", { memory_id: b.id, evidence: "정훈이 얼굴에서 «맞아» (" + new Date().toISOString() + ")" })).slice(0, 200) });
+    if (b.verdict === "no") return json({ ok: true, r: (await mcp("delete_memory", { memory_id: b.id })).slice(0, 200) });   // «아니야» = 정훈이 직접 잊으라는 요청
+    return json({ ok: false }, 400);
+  }
+  if (url.pathname === "/recent_observations") {                        // 원장에서 최근 관찰(id 포함)
+    try {
+      const r = await fetch(process.env.FORGET_MCP_URL || "http://localhost:8000/mcp/forget/http/junghunkim", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "search_memories", arguments: { query: "[관찰·", limit: 12 } } }) });
+      const d = await r.json(); const t = JSON.parse(d.result?.content?.[0]?.text || "{}");
+      const items = (t.results || []).filter((m) => String(m.memory || "").startsWith("[관찰·") && !(m.trust && m.trust.light === "red")).map((m) => ({ id: m.id, text: m.memory, light: m.trust?.light || "yellow", at: m.created_at }));
+      items.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+      return json({ items: items.slice(0, 6) });
+    } catch (e) { return json({ items: [], error: String(e) }); }
+  }
   res.writeHead(404); res.end();
 });
 server.listen(PORT, "127.0.0.1", () => console.error(`얼굴 http://127.0.0.1:${PORT}  (${BACKEND} ${PROVIDER}/${MODEL}${SESSION ? " · session " + SESSION.split("/").pop() : ""})`));
