@@ -2,7 +2,7 @@
 // 사용: node harness/face/server.mjs [--session <jsonl>] [--provider anthropic] [--model claude-fable-5-1] [--port 8030]
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 import { homedir } from "node:os";
@@ -22,9 +22,14 @@ const BACKEND = opt("--backend", process.env.FORGET_FACE_BACKEND || "pi");   // 
 // claude 백엔드: «나는 원래 여기 있었다»(2026-09-07) — Claude Code 세션을 포크해 이어 간다. 옮기지 않고 얼굴만 씌운다.
 let child;
 if (BACKEND === "claude") {
+  // 얼굴 세션은 하나로 고정한다: 첫 기동만 포크, 이후 재시작은 그 세션을 그대로 이어 받는다(재시작마다 새 갈래가 생기던 결함, 2026-09-07).
+  const facePath = join(ATTN, "face_session.json");
+  let persisted = null; try { persisted = JSON.parse(readFileSync(facePath, "utf8")); } catch {}
+  const ARRIVAL = "이 세션은 브라우저 «얼굴»에서 이어진다. 첫 사용자 메시지가 «Continue from where you left off.»처럼 자동 문구면 그것은 사람이 아니라 기동 신호다: 원장·기억 블록·정훈의 모델을 근거로 «여기 도착했다. 우리는 ___까지 왔고 다음은 ___이다» 한두 문장만 반말로 말하라. «No response requested» 같은 답은 금지. 이후 메시지는 정훈의 말이다.";
   const cArgs = ["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--include-partial-messages", "--verbose",
-                 "--permission-mode", process.env.FORGET_FACE_PERMISSION || "bypassPermissions"];
-  if (SESSION) cArgs.push("--resume", SESSION, "--fork-session");
+                 "--permission-mode", process.env.FORGET_FACE_PERMISSION || "bypassPermissions", "--append-system-prompt", ARRIVAL];
+  if (persisted?.session_id && (!SESSION || persisted.forked_from === SESSION)) cArgs.push("--resume", persisted.session_id);
+  else if (SESSION) cArgs.push("--resume", SESSION, "--fork-session");
   if (MODEL && MODEL !== "claude-fable-5-1") cArgs.push("--model", MODEL);
   child = spawn("claude", cArgs, { cwd: process.cwd(), stdio: ["pipe", "pipe", "pipe"], env: process.env });
 } else {
@@ -74,7 +79,10 @@ const _b = broadcast;
 let claudeState = { session: null, busy: false, tools: new Map() };
 function translateClaude(ev) {            // Claude Code stream-json → pi 모양 이벤트(페이지는 하나의 어휘만 안다)
   const out = [];
-  if (ev.type === "system" && ev.subtype === "init") { claudeState.session = ev.session_id; out.push({ type: "claude_init", session: ev.session_id, model: ev.model }); }
+  if (ev.type === "system" && ev.subtype === "init") {
+    claudeState.session = ev.session_id; out.push({ type: "claude_init", session: ev.session_id, model: ev.model });
+    try { writeFileSync(join(ATTN, "face_session.json"), JSON.stringify({ session_id: ev.session_id, forked_from: SESSION, at: new Date().toISOString() })); } catch {}
+  }
   else if (ev.type === "stream_event" && ev.event) {
     const e = ev.event;
     if (!claudeState.busy) { claudeState.busy = true; out.push({ type: "agent_start" }); }
