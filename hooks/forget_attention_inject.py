@@ -12,6 +12,25 @@ def main() -> int:
         st = json.loads((D / "state.json").read_text())
     except Exception:
         return 0
+    # 정훈의 모델(schema.md): 세션당 한 번, 첫 주입에 함께 — 세션 id는 stdin JSON에서
+    try:
+        sid = (json.loads(sys.stdin.read() or "{}") or {}).get("session_id", "")
+    except Exception:
+        sid = ""
+    schema_p = D / "schema.md"
+    schema_mark = D / "schema_injected.json"
+    try:
+        seen = json.loads(schema_mark.read_text())
+    except Exception:
+        seen = {}
+    schema_txt = ""
+    if sid and schema_p.exists() and seen.get(sid) != str(schema_p.stat().st_mtime):
+        schema_txt = schema_p.read_text().strip()
+        seen[sid] = str(schema_p.stat().st_mtime)
+        try:
+            schema_mark.write_text(json.dumps(seen))
+        except Exception:
+            pass
     block = st.get("block") or []
     inj_path = D / "injected.json"                      # 사이드카의 state.json과 분리 — 덮어쓰기 경합 방지
     try:
@@ -19,6 +38,8 @@ def main() -> int:
     except Exception:
         injected = set()
     fresh = [b for b in block if b.get("id") not in injected]
+    if schema_txt:
+        print("[정훈의 모델 — 밤마다 다시 씀. 예측의 기준이며 틀리면 짚고 supersede]\n" + schema_txt[:6000] + "\n")
     if not fresh:
         return 0
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))

@@ -138,6 +138,12 @@ export default async function forgetExtension(pi: any) {
   }
 
   // ── 1) 기상 재수화 ────────────────────────────────────────────────────
+  async function readSchema(): Promise<string> {          // 정훈의 모델(밤에 재생성) — 스키마 블록
+    try {
+      const { readFileSync } = await import("node:fs");
+      return readFileSync(`${ATTN}/schema.md`, "utf8").trim();
+    } catch { return ""; }
+  }
   async function readIdentity(): Promise<string> {
     try {
       const { readFileSync } = await import("node:fs");
@@ -160,8 +166,10 @@ export default async function forgetExtension(pi: any) {
   pi.on("before_agent_start", async (event: any, _ctx: any) => {
     let block = "";
     const identity = await readIdentity();
+    const schema = await readSchema();
     const attn = await readBlock();
     blockSeen = attn;
+    if (schema) block += `\n\n## 정훈의 모델 (밤마다 다시 씀 — 예측의 기준. 틀리면 짚고 supersede)\n${schema}`;
     if (attn) block += `\n\n## 기억 블록 (매 턴 교체 — 사이드카가 대화를 보며 고른 것. 채택은 네 판단, 틀리면 다음 턴에 사라진다)\n${attn}`;
     try {
       const capsule = await forgetPost("/v1/context/assemble/", {

@@ -11,9 +11,17 @@ LOG="$LOG_DIR/consolidation.log"
 TUNNEL="${FORGET_LLAMA_URL:-http://127.0.0.1:18812/v1}"
 REPO="${SELF_HARNESS_REPO:-$HOME/orca/workspaces/forget/내-프롬프트를-공유하기-싫어}"
 
+# 자원 규칙(2026-09-07): 4090 터널이 죽었으면 Spark ollama(:18813)로 간다 — 9/4~9/6 사흘 연속 SKIP 재발 방지.
 if ! curl -s -m 5 "$TUNNEL/models" > /dev/null 2>&1; then
-  echo "$STAMP SKIP tunnel-dead" >> "$LOG"
-  exit 0
+  SPARK="http://127.0.0.1:18813"
+  curl -s -m 3 "$SPARK/api/tags" > /dev/null 2>&1 || { nohup ssh -N -o ExitOnForwardFailure=yes -L 18813:127.0.0.1:11434 spark >/dev/null 2>&1 & sleep 4; }
+  if curl -s -m 5 "$SPARK/api/tags" > /dev/null 2>&1; then
+    export MEM1_CONSOLIDATION_BASE_URL="$SPARK/v1" MEM1_CONSOLIDATION_MODEL="${MEM1_CONSOLIDATION_MODEL:-qwen3.6:27b}" MEM1_CONSOLIDATION_API_KEY="ollama"
+    echo "$STAMP INFO tunnel-dead → spark qwen3.6:27b" >> "$LOG"
+  else
+    echo "$STAMP SKIP tunnel-dead spark-dead" >> "$LOG"
+    exit 0
+  fi
 fi
 
 BK="$HOME/.forget/backups/forget-nightly-$(date '+%Y%m%d').sqlite3"
@@ -37,3 +45,7 @@ echo "$STAMP COMPILER EXIT=$CCODE $(printf '%s' "$COUT" | tail -c 300 | tr '\n' 
 MOUT="$(cd "$REPO" && timeout 1200 python3 research/recallbench/score.py 2>&1 | tail -2)"
 echo "$STAMP MUS $(printf '%s' "$MOUT" | tr '\n' ' ')" >> "$LOG"
 exit 0
+
+# 3단: 정훈의 모델(스키마 블록) — 관찰·결정·자기층에서 «정훈은 이런 사람이다» 2천 토큰을 다시 쓴다 (goal:observe-junghun, 2026-09-07).
+SOUT="$("$REPO/.venv/bin/python" "$REPO/scripts/schema_nightly.py" 2>&1)"
+echo "$STAMP SCHEMA $(printf '%s' "$SOUT" | tail -c 200 | tr '\n' ' ')" >> "$LOG"
