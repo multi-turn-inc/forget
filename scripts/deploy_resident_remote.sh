@@ -79,6 +79,9 @@ RestartSec=10
 [Install]
 WantedBy=default.target
 UNIT
+# 맥의 기억은 mpnet(768차원)으로 묻혀 있다 — 서버 임베딩(OpenAI 1536)에 맞춰 한 번 다시 묻는다(≈1만 건, 소액)
+set -a; . ~/.forget/resident.env; set +a
+.venv/bin/python -m forget.cli reembed --yes 2>&1 | tail -3 || echo "reembed 실패 — 검색은 어휘로만 돈다(뒤에 다시)"
 loginctl enable-linger "$USER" >/dev/null 2>&1 || true
 systemctl --user daemon-reload
 systemctl --user enable --now forget-resident forget-telegram
