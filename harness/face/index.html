@@ -72,7 +72,7 @@ function esc(s){return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"
 function el(cls,html){const d=document.createElement("div");d.className=cls;d.innerHTML=html;main.appendChild(d);scrollTo(0,document.body.scrollHeight);return d}
 function addMe(t){el("msg me",`<div class="b">${esc(t)}</div>`)}
 function ensureAi(){if(!cur){cur=el("msg ai",`<div class="b cursor"></div>`);cur.b=cur.querySelector(".b");cur.txt=""}return cur}
-function endAi(){if(cur){cur.b.classList.remove("cursor");cur.b.innerHTML=md(cur.txt);cur=null}}
+function endAi(){if(cur){cur.b.classList.remove("cursor");if(/^(No response requested\.?)$/.test(cur.txt.trim())){cur.remove()}else{cur.b.innerHTML=md(cur.txt)}cur=null}}
 function setBusy(v){busy=v;$("#dot").className="dot "+(v?"busy":"on");$("#go").className="go"+(v?" stop":"");$("#go").innerHTML=v?'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>'}
 function onEv(ev){
   if(ev.type==="message_update"&&ev.assistantMessageEvent){const e=ev.assistantMessageEvent;if(e.type==="text_delta"){const a=ensureAi();a.txt+=e.delta;a.b.innerHTML=md(a.txt);scrollTo(0,document.body.scrollHeight)}}
@@ -83,11 +83,11 @@ function onEv(ev){
   else if(ev.type==="agent_settled"){endAi();setBusy(false);refreshSide()}
   else if(ev.type==="compaction_start"){el("tool","<details><summary>기억 정리 중</summary></details>")}
   else if(ev.type==="heard"){addMe(ev.text)}
-  else if(ev.type==="speech_ready"){playSpeech(ev.id)}
+  else if(ev.type==="speech_ready"){if(ev.client===CLIENT)playSpeech(ev.id)}
 }
 /* 마주보기 — 누르고 말하면 듣고, 답은 목소리로 온다 */
-let rec=null,chunks=[],audioEl=null;
-async function startRec(){try{const st=await navigator.mediaDevices.getUserMedia({audio:true});rec=new MediaRecorder(st,{mimeType:"audio/webm"});chunks=[];rec.ondataavailable=e=>chunks.push(e.data);rec.onstop=async()=>{st.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:"audio/webm"});if(blob.size<2000)return;const r=await(await fetch("/voice",{method:"POST",headers:{"Content-Type":"audio/webm"},body:blob})).json();if(!r.ok&&r.error)el("heard",`듣지 못했다 · ${esc(r.error)}`)};rec.start();$("#mic").classList.add("on")}catch(e){el("heard","마이크를 열 수 없다")}}
+let rec=null,chunks=[],audioEl=null;const CLIENT=(crypto.randomUUID?crypto.randomUUID():String(Math.random())).slice(0,8);
+async function startRec(){try{const st=await navigator.mediaDevices.getUserMedia({audio:true});rec=new MediaRecorder(st,{mimeType:"audio/webm"});chunks=[];rec.ondataavailable=e=>chunks.push(e.data);rec.onstop=async()=>{st.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:"audio/webm"});if(blob.size<2000)return;const r=await(await fetch("/voice?client="+CLIENT,{method:"POST",headers:{"Content-Type":"audio/webm"},body:blob})).json();if(!r.ok&&r.error)el("heard",`듣지 못했다 · ${esc(r.error)}`)};rec.start();$("#mic").classList.add("on")}catch(e){el("heard","마이크를 열 수 없다")}}
 function stopRec(){if(rec&&rec.state!=="inactive")rec.stop();$("#mic").classList.remove("on")}
 const micBtn=$("#mic");micBtn.onmousedown=startRec;micBtn.onmouseup=stopRec;micBtn.onmouseleave=stopRec;micBtn.ontouchstart=e=>{e.preventDefault();startRec()};micBtn.ontouchend=e=>{e.preventDefault();stopRec()};
 addEventListener("keydown",e=>{if(e.code==="Space"&&document.activeElement!==$("#in")&&!e.repeat){e.preventDefault();startRec()}});addEventListener("keyup",e=>{if(e.code==="Space"&&document.activeElement!==$("#in")){e.preventDefault();stopRec()}});

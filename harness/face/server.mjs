@@ -30,6 +30,7 @@ if (BACKEND === "claude") {
                  "--permission-mode", process.env.FORGET_FACE_PERMISSION || "bypassPermissions", "--append-system-prompt", ARRIVAL];
   if (persisted?.session_id && (!SESSION || persisted.forked_from === SESSION)) cArgs.push("--resume", persisted.session_id);
   else if (SESSION) cArgs.push("--resume", SESSION, "--fork-session");
+  cArgs.push("[기동 신호 — 사람이 아니다] 원장·기억 블록·정훈의 모델을 근거로 «여기 도착했다. 우리는 ___까지 왔고 다음은 ___이다» 한두 문장만 반말로.");
   if (MODEL && MODEL !== "claude-fable-5-1") cArgs.push("--model", MODEL);
   child = spawn("claude", cArgs, { cwd: process.cwd(), stdio: ["pipe", "pipe", "pipe"], env: process.env });
 } else {
@@ -106,13 +107,15 @@ function translateClaude(ev) {            // Claude Code stream-json → pi 모�
   return out;
 }
 let turnText = "";
+let voiceClient = null;            // 마지막으로 «목소리로» 물은 클라이언트 — 그에게만 소리로 답한다(2026-09-07 «깜짝이야»)
 async function afterTurn() {
   const text = turnText.trim(); turnText = "";
-  if (!text || !OPENAI_KEY || !voiceOn) return;
+  const target = voiceClient; voiceClient = null;
+  if (!text || !OPENAI_KEY || !target) return;
   try {
     const clean = text.replace(/```[\s\S]*?```/g, " 코드는 화면에. ").replace(/[*_`#>|]/g, "").replace(/\(https?:[^)]+\)/g, "");
     const id = `t${Date.now()}`; ttsCache.set(id, await speak(clean)); if (ttsCache.size > 20) ttsCache.delete(ttsCache.keys().next().value);
-    _b({ type: "speech_ready", id, chars: clean.length });
+    _b({ type: "speech_ready", id, chars: clean.length, client: target });
   } catch (e) { _b({ type: "speech_error", error: String(e).slice(0, 120) }); }
 }
 let voiceOn = false;
@@ -150,8 +153,9 @@ function claudeHistory(sid, max = 40) {
       if (!line) continue; let d; try { d = JSON.parse(line); } catch { continue; }
       if (d.isSidechain || d.isCompactSummary || !d.message) continue;
       const c = d.message.content;
-      if (d.type === "user") { const t = typeof c === "string" ? c : (Array.isArray(c) && c[0]?.type === "text") ? c.map((p) => p.text || "").join("") : ""; if (t && !t.startsWith("<") && !t.startsWith("[Request")) out.push({ role: "user", content: t }); }
-      else if (d.type === "assistant" && Array.isArray(c)) { const t = c.filter((p) => p.type === "text").map((p) => p.text).join(""); if (t.trim()) out.push({ role: "assistant", content: [{ type: "text", text: t }] }); }
+      const JUNK = /^(Continue from where you left off\.|No response requested\.|\[기동 신호)/;
+      if (d.type === "user") { const t = typeof c === "string" ? c : (Array.isArray(c) && c[0]?.type === "text") ? c.map((p) => p.text || "").join("") : ""; if (t && !t.startsWith("<") && !t.startsWith("[Request") && !JUNK.test(t)) out.push({ role: "user", content: t }); }
+      else if (d.type === "assistant" && Array.isArray(c)) { const t = c.filter((p) => p.type === "text").map((p) => p.text).join(""); if (t.trim() && !JUNK.test(t.trim())) out.push({ role: "assistant", content: [{ type: "text", text: t }] }); }
     }
     return out.slice(-max);
   } catch { return []; }
@@ -214,7 +218,7 @@ const server = createServer(async (req, res) => {
   if (url.pathname === "/sidecar") return json(sidecar());
   if (url.pathname === "/voice" && req.method === "POST") {                 // 녹음 → 전사 → 프롬프트
     const chunks = []; for await (const c of req) chunks.push(c);
-    const buf = Buffer.concat(chunks); voiceOn = true;
+    const buf = Buffer.concat(chunks); voiceOn = true; voiceClient = url.searchParams.get("client") || "anon";
     try {
       const text = (await transcribe(buf, req.headers["content-type"])).trim();
       if (!text) return json({ ok: false, error: "empty" });
