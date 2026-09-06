@@ -258,6 +258,7 @@ def main(
     frame = "forget"
     _fdb.init_db()
     limit_users = int(os.getenv("HALUMEM_LIMIT_USERS", "0") or 0)
+    skip_users = int(os.getenv("HALUMEM_SKIP_USERS", "0") or 0)
     save_path = f"results/{frame}-{version}/"
     os.makedirs(save_path, exist_ok=True)
 
@@ -273,6 +274,8 @@ def main(
             if limit_users and idx > limit_users:
                 idx -= 1
                 break
+            if idx <= skip_users:
+                continue
             uuid = user_data["uuid"]
             future = executor.submit(process_user, user_data, top_k, save_path)
             futures[future] = uuid

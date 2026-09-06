@@ -11,7 +11,8 @@ export MEM1_DB_PATH="$PWD/research/eval/bench/db/halumem-$VER.sqlite3"
 export MEM1_ALLOWED_SCOPES='*:*' MEM1_RECALL_TEMPORAL=0 FORGET_TRACE_VERBOSE=0
 export OPENAI_API_KEY="$(pi auth print-api-key --provider openai)"
 export OPENAI_MODEL="${OPENAI_MODEL:-gpt-4o}" OPENAI_TEMPERATURE=0 OPENAI_TIMEOUT=120
-export HALUMEM_LIMIT_USERS="$USERS" RETRY_TIMES=3 WAIT_TIME_LOWER=2 WAIT_TIME_UPPER=6 OPENAI_MAX_TOKENS=1024
+export LLM_USAGE_LOG="$PWD/research/eval/bench/usage-$VER.jsonl"
+export HALUMEM_LIMIT_USERS="$USERS" HALUMEM_SKIP_USERS="${SKIP:-0}" RETRY_TIMES=3 WAIT_TIME_LOWER=2 WAIT_TIME_UPPER=6 OPENAI_MAX_TOKENS=1024
 PY="$HOME/.forget/venv/bin/python"
 cd research/eval/bench/HaluMem/eval
 echo "== 수집: users=$USERS version=$VER db=$MEM1_DB_PATH model=$OPENAI_MODEL"
