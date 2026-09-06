@@ -60,7 +60,7 @@ def answer(text: str) -> str:
         try:
             b = _brain.make(candidate)
             msgs = [{"role": "system", "content": _ctx.system_prompt(candidate, "telegram")},
-                    {"role": "system", "content": "폰(텔레그램) 채널. 세 줄 이내, 반말, 인사말·머리말 없이 답만. 모르면 모른다고. 최근 쪽지:\n" + recent_notes()},
+                    {"role": "system", "content": "폰(텔레그램) 채널 — 대화다. 사람과 말하듯 반말로, 길이는 말에 맞게(한 줄이면 한 줄, 설명이 필요하면 몇 줄). 보고체·머리말·번호 목록 없이. 모르면 모른다고. 최근 쪽지:\n" + recent_notes()},
                     {"role": "user", "content": text}]
             out = b.chat(msgs, tools=None)
             ans = (out.get("text") or "").strip()

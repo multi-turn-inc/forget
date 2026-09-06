@@ -131,7 +131,7 @@ def _quick_reply(body: Body, note: str) -> str:
     try:
         recent = [l for l in _inbox_lines() if l.startswith(("정훈:", "— 나"))][-6:]
         msgs = [{"role": "system", "content": _ctx.system_prompt(body.brain_name, "쪽지")},
-                {"role": "system", "content": "쪽지 빠른 답. 세 줄 이내 반말, 인사말·머리말 없이 답만. 일을 시키는 말이면 «지금 한다» 한 줄로 받고 결과는 뒤에 따로 온다. 최근 쪽지:\n" + "\n".join(recent)},
+                {"role": "system", "content": "쪽지 빠른 답 — 대화다. 사람과 말하듯 반말로, 길이는 말에 맞게(한 줄이면 한 줄, 설명이 필요하면 몇 줄). 보고체·머리말·번호 목록 없이. 일을 시키는 말이면 «지금 한다» 한 줄로 받고 결과는 뒤에 따로 온다. 혼자 생각할 때와 다르다 — 지금은 상대가 있다. 최근 쪽지:\n" + "\n".join(recent)},
                 {"role": "user", "content": note}]
         out = body.brain.chat(msgs, tools=None)
         ans = (out.get("text") or "").strip()
