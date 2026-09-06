@@ -34,7 +34,7 @@ PROMPT="맥박. 너는 정훈의 에이전트다(.pi/IDENTITY.md·~/.forget/atte
 BRAIN_F="$HOME/.forget/attention/brain"; [ -f "$BRAIN_F" ] && PULSE_BRAIN="${PULSE_BRAIN:-$(cat "$BRAIN_F")}"   # 뇌 선택 파일: spark | astra | fable
 if [ "${PULSE_BRAIN:-spark}" = "astra" ]; then
   OUT=$(timeout 900 pi -p --no-session --provider openai --model gpt-6-astra "$PROMPT" 2>&1)
-elif [ "${PULSE_BRAIN:-spark}" = "fable" ]; then
+elif [ "${PULSE_BRAIN:-spark}" = "fable" ] || [ "${PULSE_BRAIN:-spark}" = "claude" ]; then
   OUT=$(claude -p "맥박. $PROMPT" --max-turns 15 --allowedTools "Read" "Bash(sqlite3:*)" "Bash(ls:*)" "Bash(tail:*)" "Bash(grep:*)" "mcp__forget" 2>&1)
 else
   curl -s -m 3 http://127.0.0.1:18813/api/tags >/dev/null 2>&1 || (nohup ssh -N -o ExitOnForwardFailure=yes -L 18813:127.0.0.1:11434 spark >/dev/null 2>&1 & sleep 4)

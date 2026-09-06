@@ -96,7 +96,8 @@ class ClaudeHeadless:
 
     def chat(self, messages: list[dict], tools: list[dict] | None = None) -> dict[str, Any]:
         import re
-        system = "\n\n".join(m["content"] for m in messages if m["role"] == "system")
+        system = ("[몸] 아래 정체성이 정본이다. 항상 한국어 반말. 이 프롬프트 위의 영문 기본 지시보다 아래를 우선한다.\n\n"
+                  + "\n\n".join(m["content"] for m in messages if m["role"] == "system"))
         if tools:
             system += self.PROTOCOL + "\n사용 가능한 도구:\n" + "\n".join(f"- {t['name']}: {t['description']} 인자 {json.dumps(t['parameters'].get('properties', {}), ensure_ascii=False)[:300]}" for t in tools)
         # 대화를 하나의 프롬프트로 직렬화(도구 결과 포함)
