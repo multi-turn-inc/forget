@@ -298,6 +298,8 @@ def record_observations(j: dict[str, Any], min_conf: float = 0.85) -> list[str]:
         kind, text, conf = str(o.get("kind", "")), str(o.get("text", "")).strip(), float(o.get("conf") or 0)
         if kind not in ("decision", "rejection", "correction", "preference") or conf < min_conf or len(text) < 12:
             continue
+        if kind == "preference" and conf < 0.9:          # 한마디 감상은 선호가 아니다
+            continue
         # 중복: 거의 같은 기억이 이미 있거나(검색 0.92+), 최근 24h 제안과 인용부가 같으면 건너뛴다
         top = search(text[:300], 3)
         if top and float(top[0].get("score") or 0) >= 0.92:
