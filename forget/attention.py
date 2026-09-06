@@ -138,7 +138,8 @@ def load_state() -> dict[str, Any]:
 
 def save_state(st: dict[str, Any]) -> None:
     (ATTN_DIR / "state.json").write_text(json.dumps(st, ensure_ascii=False))
-    (ATTN_DIR / "block.md").write_text(render_block(st["block"]))
+    st["updated_at"] = now_iso()
+    (ATTN_DIR / "block.md").write_text(render_block(st["block"], st["updated_at"]))
 
 
 def log(kind: str, **kw: Any) -> None:
@@ -146,12 +147,34 @@ def log(kind: str, **kw: Any) -> None:
         f.write(json.dumps({"at": now_iso(), "kind": kind, **kw}, ensure_ascii=False) + "\n")
 
 
-def render_block(block: list[dict[str, Any]]) -> str:
+LIGHT_GLYPH = {"green": "●", "yellow": "◐", "red": "○"}
+_NOISE_PREFIX = re.compile(r"^(Task [^ ]+ is [a-z_]+\.\s*|\[관찰·[a-z]+\]\s*)")
+
+
+def clean_text(text: str, limit: int = 160) -> str:
+    """사람이 읽을 한 줄: 기계 접두어를 떼고 첫 문장 단위로 자른다."""
+    t = _NOISE_PREFIX.sub("", str(text or "")).strip().replace("\n", " ")
+    if len(t) > limit:
+        cut = t[:limit]
+        for sep in ("。", ". ", "다.", "다 —", " — ", "; "):
+            i = cut.rfind(sep)
+            if i > limit // 2:
+                cut = cut[: i + len(sep.rstrip())]
+                break
+        t = cut.rstrip() + "…"
+    return t
+
+
+def render_block(block: list[dict[str, Any]], updated_at: str | None = None) -> str:
+    """블록의 사람용 서식. 훅·pi 둘 다 이 파일(block.md)을 그대로 쓴다.
+    ● green 행동 근거 / ◐ yellow 행동 전 확인 / ○ red 참고. 줄 끝 ⟨tag⟩는 피드백용 짧은 손잡이."""
     if not block:
         return ""
-    lines = ["[forget 주의 블록 — 사이드카가 대화를 보며 유지. 등불: green 행동 근거 / yellow 확인 / red 참고]"]
+    when = f" · 갱신 {updated_at[11:16]}Z" if updated_at else ""
+    lines = [f"[기억 블록 {len(block)}줄{when} — 사이드카가 대화를 보며 고른 것. ● 근거 ◐ 확인 ○ 참고]"]
     for b in block:
-        lines.append(f"- ({b.get('light', 'yellow')}) {b['text'][:220]}  ⟨{b['id'][:8]}⟩")
+        g = LIGHT_GLYPH.get(str(b.get("light", "yellow")), "◐")
+        lines.append(f"{g} {clean_text(b['text'])} ⟨{b['id'].split(':')[-1][:4]}⟩")
     return "\n".join(lines)
 
 
@@ -208,7 +231,7 @@ def judge(tail: list[dict[str, Any]], block: list[dict[str, Any]], cands: list[d
     prompt = (
         "너는 에이전트의 기억 주의 프로세스다. 목표는 **정훈을 관찰하는 것**이다. 대화 꼬리, 현재 작업 블록, 후보 기억을 읽고 JSON만 답하라.\n"
         "규칙: 블록은 8줄 상한. 이미 대화에 나온 것·뻔한 것은 넣지 않는다. 지어내지 않는다 — add는 후보 번호(n)로만, drop은 현재 블록의 B번호로만(후보 번호를 drop에 쓰지 마라; 후보는 add하지 않으면 자동으로 버려진다). "
-        "observe는 정훈이 이번 꼬리에서 **직접 말한** 결정·거부·정정·선호·사실만, 원문을 짧게 인용해 쓴다(에이전트 말은 관찰이 아니다). 확신 없으면 비운다.\n"
+        "observe는 정훈이 이번 꼬리에서 **직접 말한** 것만: decision(정훈이 정한 것), rejection(정훈이 거부한 것), correction(정훈이 **에이전트를** 고친 것 — 에이전트가 정훈 말을 고친 건 아니다), preference(반복될 지속적 선호 — 순간 반응·감탄·«엥» 같은 건 아니다), fact(정훈이 알려준 사실). 원문을 짧게 인용하고 맥락 한 줄. 이미 블록·후보에 같은 관찰이 있으면 다시 쓰지 않는다. 확신 없으면 비운다.\n"
         "출력: {\"add\":[{\"n\":후보번호,\"why\":\"…\"}], \"drop\":[\"B번호\"], \"gap\":\"에이전트가 모르는데 알아야 할 것 한 문장 또는 빈 문자열\", "
         "\"surprise\":0~1, \"observe\":[{\"kind\":\"decision|rejection|correction|preference|fact\",\"text\":\"정훈 원문 인용 + 맥락 한 줄\",\"conf\":0~1}]}\n\n"
         f"대화 꼬리:\n{_tail_text(tail)}\n\n현재 블록:\n{block_txt}\n\n후보 기억:\n{_cands_text(cands)}"
@@ -259,7 +282,7 @@ def _recent_proposal_quotes(hours: int = 24) -> set[str]:
     return out
 
 
-def record_observations(j: dict[str, Any], min_conf: float = 0.7) -> list[str]:
+def record_observations(j: dict[str, Any], min_conf: float = 0.85) -> list[str]:
     """정훈의 결정·거부·정정만 원장에 남긴다. 에이전트 추론이므로 시스템이 yellow를 붙인다."""
     saved = []
     for o in j.get("observe") or []:

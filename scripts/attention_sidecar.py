@@ -14,10 +14,48 @@ from forget import attention as T
 HARNESS_GLOBS = {"claude": ["~/.claude/projects/*/*.jsonl"], "pi": ["~/.pi/agent/sessions/*/*.jsonl"]}
 
 
+def _last_user_ts(path: str) -> float:
+    """전사 꼬리 96KB에서 마지막 «사람 발화»의 시각. 도구 결과·자동 세션은 0에 가깝다."""
+    try:
+        size = os.path.getsize(path)
+        with open(path, "rb") as f:
+            f.seek(max(0, size - 96 * 1024)); data = f.read().decode("utf-8", "ignore")
+    except Exception:
+        return 0.0
+    best = 0.0
+    for line in data.splitlines():
+        if '"role":"user"' not in line and '"role": "user"' not in line:
+            continue
+        try:
+            d = json.loads(line)
+        except Exception:
+            continue
+        m = d.get("message") or {}
+        c = m.get("content")
+        if d.get("isSidechain") or d.get("isCompactSummary") or d.get("isMeta"):
+            continue
+        if isinstance(c, list) and c and isinstance(c[0], dict) and c[0].get("type") in ("tool_result",):
+            continue
+        txt = c if isinstance(c, str) else "".join(p.get("text", "") for p in c if isinstance(p, dict))
+        if not txt.strip() or txt.startswith("<") or txt.startswith("[Request interrupted"):
+            continue
+        ts = d.get("timestamp") or ""
+        try:
+            from datetime import datetime
+            t = datetime.fromisoformat(str(ts).replace("Z", "+00:00")).timestamp()
+        except Exception:
+            t = os.path.getmtime(path)
+        best = max(best, t)
+    return best
+
+
 def latest_transcript(harness: str = "auto") -> Path:
+    """여러 세션이 동시에 살아 있을 때는 mtime이 아니라 «사람이 마지막으로 말한» 전사를 따른다
+    (자동 세션·다른 창의 도구 소음에 끌려가지 않게)."""
     keys = list(HARNESS_GLOBS) if harness == "auto" else [harness]
     files = [f for k in keys for g in HARNESS_GLOBS[k] for f in glob.glob(os.path.expanduser(g))]
-    return Path(max(files, key=os.path.getmtime))
+    recent = sorted(files, key=os.path.getmtime, reverse=True)[:8]
+    return Path(max(recent, key=lambda f: (_last_user_ts(f), os.path.getmtime(f))))
 
 
 def ensure_tunnel() -> None:
@@ -34,13 +72,34 @@ def ensure_tunnel() -> None:
     time.sleep(3)
 
 
+def status() -> int:
+    st = T.load_state()
+    print(T.render_block(st.get("block", []), st.get("updated_at")) or "(블록 비어 있음)")
+    log = T.ATTN_DIR / "log.jsonl"
+    if log.exists():
+        last = [json.loads(l) for l in log.read_text().splitlines()[-30:]]
+        judges = [l for l in last if l.get("kind") == "judge"]
+        if judges:
+            j = judges[-1]
+            print(f"마지막 판정 {j['at'][11:16]}Z · 빠름 {j.get('fast_s')}s · 게이트 {j.get('gate_s')}s · 판정 {j.get('judge_s')}s · 놀람 {j.get('judge', {}).get('surprise')}")
+        sil = sum(1 for l in last if l.get("kind") == "silence")
+        print(f"최근 30틱 중 침묵 {sil}")
+    prop = T.ATTN_DIR / "proposals.jsonl"
+    n = len(prop.read_text().splitlines()) if prop.exists() else 0
+    print(f"관찰 저장 {n}건 · 소스 {st.get('source', '?')}")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--source"); ap.add_argument("--once", action="store_true"); ap.add_argument("--force", action="store_true")
     ap.add_argument("--dry", action="store_true"); ap.add_argument("--interval", type=float, default=2.0); ap.add_argument("--k", type=int, default=3)
     ap.add_argument("--harness", choices=["auto", "claude", "pi"], default=os.getenv("FORGET_ATTENTION_HARNESS", "auto"),
                     help="따라갈 전사의 하네스. 두 하네스를 번갈아 쓰는 동안은 하나를 못 박는다")
+    ap.add_argument("--status", action="store_true", help="지금 들고 있는 블록·마지막 틱·관찰 수를 보여주고 끝낸다")
     a = ap.parse_args()
+    if a.status:
+        return status()
     src = Path(a.source) if a.source else latest_transcript(a.harness)
     ensure_tunnel()
     st = T.load_state()

@@ -21,10 +21,16 @@ def main() -> int:
     fresh = [b for b in block if b.get("id") not in injected]
     if not fresh:
         return 0
-    lines = ["[forget 주의 블록 — 사이드카가 대화를 보며 고른 것. 등불: green 행동 근거 / yellow 확인 / red 참고. 채택은 네 판단]"]
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    try:
+        from forget.attention import clean_text, LIGHT_GLYPH   # 설치본 훅은 저장소 밖일 수 있다 → 폴백
+    except Exception:
+        LIGHT_GLYPH = {"green": "●", "yellow": "◐", "red": "○"}
+        clean_text = lambda t, limit=160: str(t).replace("\n", " ")[:limit]
+    lines = [f"[기억 블록 — 새 줄 {len(fresh)} (전체 {len(block)}). ● 근거 ◐ 확인 ○ 참고. 채택은 네 판단]"]
     for b in fresh:
-        why = f" — {b['why']}" if b.get("why") else ""
-        lines.append(f"- ({b.get('light', 'yellow')}) {b['text'][:240]}{why}")
+        g = LIGHT_GLYPH.get(str(b.get("light", "yellow")), "◐")
+        lines.append(f"{g} {clean_text(b['text'])}")
     print("\n".join(lines))
     try:
         inj_path.write_text(json.dumps(sorted(injected | {b["id"] for b in fresh})))

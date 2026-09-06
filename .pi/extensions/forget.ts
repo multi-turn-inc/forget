@@ -141,7 +141,7 @@ export default async function forgetExtension(pi: any) {
   pi.on("before_agent_start", async (event: any, _ctx: any) => {
     let block = "";
     const attn = await readBlock();
-    if (attn) block += `\n\n## Working block (forget attention — 사이드카가 대화를 보며 고른 것, 매 턴 교체)\n${attn}`;
+    if (attn) block += `\n\n## 기억 블록 (매 턴 교체 — 사이드카가 대화를 보며 고른 것. 채택은 네 판단, 틀리면 다음 턴에 사라진다)\n${attn}`;
     try {
       const capsule = await forgetPost("/v1/context/assemble/", {
         query: "현재 작업 맥락", filters: { user_id: USER },
