@@ -1,6 +1,7 @@
 <!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>얼굴</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <style>
 :root{--paper:#F6F5F2;--ink:#1C1B19;--mute:#6B6863;--line:#DDD9D2;--card:#FFFFFF;--me:#EFEBE3;--accent:#2F6F6B;--g:#2E8B57;--y:#C9A227;--r:#B3453E;--mono:"SF Mono",Menlo,monospace}
 @media(prefers-color-scheme:dark){:root{--paper:#161513;--ink:#EAE7E1;--mute:#9A968F;--line:#2C2A26;--card:#1E1D1A;--me:#26241F;--accent:#5FB3AE}}
@@ -11,7 +12,7 @@ header select{margin-left:auto;background:transparent;color:var(--ink);border:1p
 main{overflow-y:auto;padding:22px 0 28px}
 .msg{max-width:72ch;margin:0 auto 18px;padding:0 24px}
 .msg.me{}.msg.me .b{background:var(--me);border-radius:14px 14px 4px 14px;padding:10px 14px;display:inline-block;max-width:100%;white-space:pre-wrap}
-.msg.ai .b{white-space:pre-wrap}
+.msg.ai .b{white-space:normal}.msg.ai .b p{margin:0 0 10px}.msg.ai .b ul,.msg.ai .b ol{margin:0 0 10px;padding-left:22px}.msg.ai .b code{font-family:var(--mono);font-size:13px;background:var(--me);padding:1px 5px;border-radius:4px}.msg.ai .b pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow:auto}.msg.ai .b pre code{background:none;padding:0}.msg.ai .b table{border-collapse:collapse;font-size:14px}.msg.ai .b td,.msg.ai .b th{border-bottom:1px solid var(--line);padding:4px 10px;text-align:left}
 .tool{max-width:72ch;margin:-8px auto 14px;padding:0 24px;font-size:12.5px;color:var(--mute);font-family:var(--mono)}
 .tool summary{cursor:pointer;list-style:none;display:inline-flex;gap:6px;align-items:center}.tool summary::before{content:"›";color:var(--accent)}
 .tool pre{margin:6px 0 0;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:8px;max-height:220px;overflow:auto;white-space:pre-wrap;font-size:12px}
@@ -34,13 +35,14 @@ button{border:0;border-radius:999px;padding:11px 18px;background:var(--ink);colo
 <script>
 const $=s=>document.querySelector(s);const main=$("#main");let cur=null,busy=false,seq=0;
 function el(cls,html){const d=document.createElement("div");d.className=cls;d.innerHTML=html;main.appendChild(d);main.scrollTop=main.scrollHeight;return d}
+function md(t){try{return marked.parse(t,{breaks:true})}catch{return esc(t)}}
 function esc(s){return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}
 function addMe(t){el("msg me",`<div class="b">${esc(t)}</div>`)}
 function ensureAi(){if(!cur){cur=el("msg ai",`<div class="b cursor"></div>`);cur.b=cur.querySelector(".b");cur.txt=""}return cur}
-function endAi(){if(cur){cur.b.classList.remove("cursor");cur=null}}
+function endAi(){if(cur){cur.b.classList.remove("cursor");cur.b.innerHTML=md(cur.txt);cur=null}}
 function setBusy(v){busy=v;$("#dot").className="dot "+(v?"busy":"on");$("#go").textContent=v?"멈춰":"보내기";$("#go").className=v?"stop":""}
 function onEv(ev){
-  if(ev.type==="message_update"&&ev.assistantMessageEvent){const e=ev.assistantMessageEvent;if(e.type==="text_delta"){const a=ensureAi();a.txt+=e.delta;a.b.textContent=a.txt;main.scrollTop=main.scrollHeight}if(e.type==="toolcall_end"||e.type==="text_end"){}}
+  if(ev.type==="message_update"&&ev.assistantMessageEvent){const e=ev.assistantMessageEvent;if(e.type==="text_delta"){const a=ensureAi();a.txt+=e.delta;a.b.innerHTML=md(a.txt);main.scrollTop=main.scrollHeight}if(e.type==="toolcall_end"||e.type==="text_end"){}}
   else if(ev.type==="tool_execution_start"){endAi();const d=el("tool",`<details><summary>${esc(ev.toolName||"도구")} <span class="a">${esc((ev.args&&(ev.args.command||ev.args.path||ev.args.query||""))+"").slice(0,90)}</span></summary><pre>…</pre></details>`);d.id="t-"+ev.toolCallId}
   else if(ev.type==="tool_execution_end"){const d=document.getElementById("t-"+ev.toolCallId);if(d){const out=(ev.result&&ev.result.content||[]).map(c=>c.text||"").join("\n");d.querySelector("pre").textContent=out.slice(0,4000)||"(출력 없음)"}}
   else if(ev.type==="message_end"&&ev.message&&ev.message.role==="assistant"){endAi()}
@@ -54,9 +56,9 @@ $("#go").onclick=()=>busy?fetch("/abort",{method:"POST"}):sendMsg();
 $("#in").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMsg()}});
 $("#in").addEventListener("input",e=>{e.target.style.height="auto";e.target.style.height=Math.min(200,e.target.scrollHeight)+"px"});
 $("#pick").onchange=async e=>{const [p,m]=e.target.value.split("|");await fetch("/model",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({provider:p,modelId:m})});refreshState()};
-async function refreshState(){try{const s=await(await fetch("/state")).json();const d=s.data||{};$("#model").textContent=(d.model&&(d.model.id||d.model.modelId))||(d.provider?`${d.provider}/${d.modelId||""}`:"");$("#sess").textContent=d.sessionName||d.sessionFile?.split("/").pop()||"";$("#sinfo").textContent=[d.sessionName,d.sessionFile?.split("/").pop(),d.messageCount?`${d.messageCount} 메시지`:""].filter(Boolean).join(" · ");const v=`${d.provider}|${d.modelId}`;if([...$("#pick").options].some(o=>o.value===v))$("#pick").value=v;$("#dot").classList.add("on")}catch{}}
+async function refreshState(){try{const s=await(await fetch("/state")).json();const d=s.data||{};const mp=d.model?.provider||d.provider||"",mi=d.model?.id||d.modelId||"";$("#model").textContent=mi;$("#sess").textContent=d.sessionName||d.sessionFile?.split("/").pop()||"";$("#sinfo").textContent=[d.sessionName,d.sessionFile?.split("/").pop(),d.messageCount?`${d.messageCount} 메시지`:""].filter(Boolean).join(" · ");const v=`${mp}|${mi}`;if([...$("#pick").options].some(o=>o.value===v))$("#pick").value=v;else{const o=document.createElement("option");o.value=v;o.textContent=mi;$("#pick").appendChild(o);$("#pick").value=v}$("#dot").classList.add("on")}catch{}}
 function clean(t){return t.replace(/^(Task \S+ is \w+\.\s*|\[관찰·\w+\]\s*)/,"").replace(/\s+/g," ").slice(0,170)}
 async function refreshSide(){try{const s=await(await fetch("/sidecar")).json();$("#block").innerHTML=s.block.length?s.block.map(b=>`<div class="blk"><span class="l ${b.light||"yellow"}"></span>${esc(clean(b.text))}</div>`).join(""):'<div class="meta">블록 비어 있음</div>';const j=s.last;$("#side").textContent=[s.updated_at?`갱신 ${s.updated_at.slice(11,16)}Z`:"",j?`판정 ${j.judge_s}s · 놀람 ${j.judge?.surprise??"-"}`:"",s.silence?`침묵 ${s.silence}/30`:"",s.source?`← ${s.source.slice(0,8)}`:""].filter(Boolean).join(" · ")}catch{}}
-async function loadHistory(){try{const r=await(await fetch("/messages")).json();for(const m of (r.data?.messages||[]).slice(-40)){if(m.role==="user"){const c=typeof m.content==="string"?m.content:(m.content||[]).map(p=>p.text||"").join("");if(c&&!c.startsWith("[Request"))addMe(c)}else if(m.role==="assistant"){const t=(m.content||[]).filter(p=>p.type==="text").map(p=>p.text).join("");if(t){const a=el("msg ai",`<div class="b"></div>`);a.querySelector(".b").textContent=t}}}}catch{}}
+async function loadHistory(){try{const r=await(await fetch("/messages")).json();for(const m of (r.data?.messages||[]).slice(-40)){if(m.role==="user"){const c=typeof m.content==="string"?m.content:(m.content||[]).map(p=>p.text||"").join("");if(c&&!c.startsWith("[Request"))addMe(c)}else if(m.role==="assistant"){const t=(m.content||[]).filter(p=>p.type==="text").map(p=>p.text).join("");if(t){const a=el("msg ai",`<div class="b"></div>`);a.querySelector(".b").innerHTML=md(t)}}}}catch{}}
 loadHistory().then(()=>{connect();refreshState();refreshSide();setInterval(refreshSide,4000)});
 </script></body></html>
