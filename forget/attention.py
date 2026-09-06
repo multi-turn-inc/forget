@@ -103,6 +103,15 @@ def read_turns(path: Path, offset: int = 0) -> tuple[list[dict[str, Any]], int]:
         except Exception:
             continue
         m = d.get("message") if isinstance(d.get("message"), dict) else None
+        if not m and d.get("type") == "response_item":            # Codex rollout(~/.codex/sessions)
+            pl = d.get("payload") or {}
+            if pl.get("type") == "message" and pl.get("role") in ("user", "assistant"):
+                txt = "".join(str(c.get("text", "")) for c in pl.get("content", []) if isinstance(c, dict)).strip()
+                if txt and not txt.startswith("<"):                 # <environment_context> 등 주입 블록 제외
+                    turns.append({"role": pl["role"], "text": txt[:3000], "ts": d.get("timestamp") or now_iso()})
+            elif pl.get("type") in ("custom_tool_call", "function_call"):
+                turns.append({"role": "action", "text": f"[도구 {pl.get('name', '')}]", "ts": d.get("timestamp") or now_iso()})
+            continue
         if not m:
             continue
         role = m.get("role")
