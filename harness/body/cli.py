@@ -16,10 +16,21 @@ from pathlib import Path
 from .loop import BODY_DIR, Body
 
 
+VERBOSE = False
+
+
 def _printer(ev: dict) -> None:
     t = ev.get("type")
     if t == "text":
         print(ev["text"], flush=True)
+    elif t == "turn_start":
+        print("…", end="", file=sys.stderr, flush=True)
+    elif t == "turn_end":
+        print("\r  ", file=sys.stderr, flush=True)
+    elif not VERBOSE and t in ("tool_start", "tool_end", "steer"):
+        if t == "tool_start":
+            print(".", end="", file=sys.stderr, flush=True)   # 도구 한 번 = 점 하나. 내용은 세션 파일에.
+        return
     elif t == "tool_start":
         a = ev.get("args") or {}
         head = a.get("command") or a.get("path") or a.get("query") or a.get("pattern") or ""
@@ -73,7 +84,10 @@ def main() -> int:
     ap.add_argument("--resume")
     ap.add_argument("--transplant")
     ap.add_argument("-p", "--prompt")
+    ap.add_argument("-v", "--verbose", action="store_true", help="도구 호출과 결과를 다 보여준다(기본은 점 하나)")
     a = ap.parse_args()
+    global VERBOSE
+    VERBOSE = a.verbose
     sid = a.resume
     if a.transplant:
         sid = transplant_claude(a.transplant)
