@@ -15,11 +15,12 @@ HARNESS_GLOBS = {"claude": ["~/.claude/projects/*/*.jsonl"], "pi": ["~/.pi/agent
 
 
 def _last_user_ts(path: str) -> float:
-    """전사 꼬리 96KB에서 마지막 «사람 발화»의 시각. 도구 결과·자동 세션은 0에 가깝다."""
+    """전사 꼬리에서 마지막 «사람 발화»의 시각. 도구 결과·자동 세션은 0에 가깝다.
+    꼬리는 8MB까지 본다 — 도구 출력이 큰 세션은 마지막 사람 말이 수 MB 위에 있다(2026-09-07 실측)."""
     try:
         size = os.path.getsize(path)
         with open(path, "rb") as f:
-            f.seek(max(0, size - 96 * 1024)); data = f.read().decode("utf-8", "ignore")
+            f.seek(max(0, size - 8 * 1024 * 1024)); data = f.read().decode("utf-8", "ignore")
     except Exception:
         return 0.0
     best = 0.0
