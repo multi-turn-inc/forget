@@ -347,5 +347,5 @@ def tick(st: dict[str, Any], source: Path, force: bool = False, k_actions: int =
     else:
         res["observe_preview"] = j.get("observe")
     st["actions_since_judge"] = 0
-    log("judge", **{k: v for k, v in res.items() if k != "gate"})
+    log("judge", block_ids=[b["id"] for b in st["block"]], **{k: v for k, v in res.items() if k != "gate"})
     return res

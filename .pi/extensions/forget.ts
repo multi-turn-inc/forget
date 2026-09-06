@@ -145,10 +145,23 @@ export default async function forgetExtension(pi: any) {
     } catch { return ""; }
   }
 
+  // 턴 중간 갱신: 도구 결과가 돌아올 때마다 블록이 바뀌었으면 그 결과 끝에 새 블록을 덧붙인다.
+  // (시스템 프롬프트는 턴 시작에만 다시 만들어지므로, 사이드카가 턴 도중 고른 기억은 이 통로로 온다 — 2026-09-07 «턴 사이에만 온다»는 답답함의 처치)
+  let blockSeen = "";
+  pi.on("tool_result", async (event: any, _ctx: any) => {
+    const attn = await readBlock();
+    if (!attn || attn === blockSeen) return;
+    blockSeen = attn;
+    const content = Array.isArray(event.content) ? [...event.content] : [];
+    content.push({ type: "text", text: `\n\n[기억 블록 갱신 — 사이드카가 이 턴 도중 고른 것. 채택은 네 판단]\n${attn}` });
+    return { content };
+  });
+
   pi.on("before_agent_start", async (event: any, _ctx: any) => {
     let block = "";
     const identity = await readIdentity();
     const attn = await readBlock();
+    blockSeen = attn;
     if (attn) block += `\n\n## 기억 블록 (매 턴 교체 — 사이드카가 대화를 보며 고른 것. 채택은 네 판단, 틀리면 다음 턴에 사라진다)\n${attn}`;
     try {
       const capsule = await forgetPost("/v1/context/assemble/", {

@@ -73,7 +73,10 @@ function sidecar() {
     const lines = readFileSync(logp, "utf8").trim().split("\n").slice(-30).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
     last = lines.filter((l) => l.kind === "judge").pop() || null; silence = lines.filter((l) => l.kind === "silence").length;
   }
-  return { block: st.block || [], updated_at: st.updated_at || null, source: (st.source || "").split("/").pop(), last, silence };
+  const pp = join(ATTN, "proposals.jsonl");
+  let observed = [];
+  if (existsSync(pp)) observed = readFileSync(pp, "utf8").trim().split("\n").slice(-3).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+  return { block: st.block || [], updated_at: st.updated_at || null, source: (st.source || "").split("/").pop(), last, silence, observed };
 }
 
 const server = createServer(async (req, res) => {
