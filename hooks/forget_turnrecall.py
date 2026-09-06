@@ -587,7 +587,7 @@ def main() -> None:
     # claim)만 0.9172 vs 1.0000으로 갈려 주입 0 vs 3이 됐다 — 방금 쓴 claim은
     # 1.0으로 포화하므로 푸시 회상의 on/off가 장부 신선도에 결합돼 있었다.
     results = result.get("results") or []
-    results = _activation_filter(results)   # 2026-09-07: 허브·기계 기록은 푸시 회상 후보에서 뺀다(활성 엔진, FORGET_TURNRECALL_ACTIVATION=off로 끔)
+    results = _activation_filter(results, prompt)   # 2026-09-07: 허브·기계 기록은 푸시 회상 후보에서 뺀다(devloop 프롬프트는 예외, FORGET_TURNRECALL_ACTIVATION=off로 끔)
     # 창은 자격 후보 상위 FLATNESS_WINDOW개 — 인출을 깊게 해도 자[尺]는 그대로다
     # (c63: 자격 4개였던 질의의 spread 0.0454가 창 5에서도 0.0454, 중앙값 위치 보존).
     scores_all = sorted(
@@ -730,10 +730,14 @@ def main() -> None:
         _extend_offer_ledger(session_id, ledger_picks, trace_id)
 
 
-def _activation_filter(results: list) -> list:
+_DEVLOOP_PROMPT = re.compile(r"devloop|사이클|적대 감사|회고|\bc\d{2,3}\b|restore_turns")
+
+
+def _activation_filter(results: list, prompt: str = "") -> list:
     """활성 엔진(forget.activation)으로 허브(노출만 많고 안 쓰인 기억)·devloop 기계 기록을 걸러낸다.
-    점수는 건드리지 않는다 — 평탄도 자[尺]는 그대로. 엔진이 없으면 그대로 통과(fail-open)."""
-    if os.getenv("FORGET_TURNRECALL_ACTIVATION", "on").lower() == "off" or not results:
+    점수는 건드리지 않는다 — 평탄도 자[尺]는 그대로. devloop 프롬프트(자동 세션)는 그 기록이 필요하므로 예외.
+    엔진이 없으면 그대로 통과(fail-open). 전부 걸러지면 빈 목록(침묵) — 되돌리지 않는다(깊이 불변 계약)."""
+    if os.getenv("FORGET_TURNRECALL_ACTIVATION", "on").lower() == "off" or not results or _DEVLOOP_PROMPT.search(prompt or ""):
         return results
     try:
         import importlib.util
@@ -748,8 +752,7 @@ def _activation_filter(results: list) -> list:
             return results
         ranked = _A.rerank(results, exclude_machine=True)
         keep = {r["id"] for r in ranked if r["activation_breakdown"].get("hub", 0) > -0.2}
-        out = [r for r in results if r.get("id") in keep]
-        return out or results
+        return [r for r in results if r.get("id") in keep]
     except Exception:
         return results
 
