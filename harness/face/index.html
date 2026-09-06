@@ -1,0 +1,62 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>얼굴</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{--paper:#F6F5F2;--ink:#1C1B19;--mute:#6B6863;--line:#DDD9D2;--card:#FFFFFF;--me:#EFEBE3;--accent:#2F6F6B;--g:#2E8B57;--y:#C9A227;--r:#B3453E;--mono:"SF Mono",Menlo,monospace}
+@media(prefers-color-scheme:dark){:root{--paper:#161513;--ink:#EAE7E1;--mute:#9A968F;--line:#2C2A26;--card:#1E1D1A;--me:#26241F;--accent:#5FB3AE}}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo",sans-serif;font-size:15.5px;line-height:1.6;height:100vh;display:grid;grid-template-columns:1fr 320px;grid-template-rows:auto 1fr auto}
+header{grid-column:1/3;display:flex;align-items:center;gap:14px;padding:10px 18px;border-bottom:1px solid var(--line);font-size:13px;color:var(--mute)}
+header b{color:var(--ink);font-weight:600;font-size:14px}header .dot{width:8px;height:8px;border-radius:4px;background:var(--mute)}header .dot.on{background:var(--g)}header .dot.busy{background:var(--y)}
+header select{margin-left:auto;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 8px;font:inherit;font-size:12.5px}
+main{overflow-y:auto;padding:22px 0 28px}
+.msg{max-width:72ch;margin:0 auto 18px;padding:0 24px}
+.msg.me{}.msg.me .b{background:var(--me);border-radius:14px 14px 4px 14px;padding:10px 14px;display:inline-block;max-width:100%;white-space:pre-wrap}
+.msg.ai .b{white-space:pre-wrap}
+.tool{max-width:72ch;margin:-8px auto 14px;padding:0 24px;font-size:12.5px;color:var(--mute);font-family:var(--mono)}
+.tool summary{cursor:pointer;list-style:none;display:inline-flex;gap:6px;align-items:center}.tool summary::before{content:"›";color:var(--accent)}
+.tool pre{margin:6px 0 0;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:8px;max-height:220px;overflow:auto;white-space:pre-wrap;font-size:12px}
+aside{border-left:1px solid var(--line);padding:16px 16px;overflow-y:auto;font-size:13px}
+aside h3{margin:0 0 8px;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);font-weight:600}
+.blk{margin:0 0 8px;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:8px;line-height:1.5}
+.blk .l{display:inline-block;width:8px;height:8px;border-radius:4px;margin-right:7px;vertical-align:1px;background:var(--y)}.blk .l.green{background:var(--g)}.blk .l.red{background:var(--r)}
+.meta{color:var(--mute);font-size:12px;margin:6px 0 18px}
+footer{grid-column:1/2;padding:12px 24px 18px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:flex-end;max-width:calc(72ch + 48px);width:100%;margin:0 auto}
+textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:12px;padding:11px 14px;font:inherit;background:var(--card);color:var(--ink);min-height:46px;max-height:200px;outline:none}textarea:focus{border-color:var(--accent)}
+button{border:0;border-radius:999px;padding:11px 18px;background:var(--ink);color:var(--paper);font:inherit;font-weight:600;cursor:pointer}button.stop{background:var(--r)}
+.cursor::after{content:"▍";color:var(--accent);animation:b 1s infinite}@keyframes b{50%{opacity:0}}
+@media(max-width:900px){body{grid-template-columns:1fr}aside{display:none}}
+</style></head><body>
+<header><span class="dot" id="dot"></span><b>얼굴</b><span id="model">…</span><span id="sess"></span>
+<select id="pick"><option value="anthropic|claude-fable-5-1">Fable 5.1</option><option value="anthropic|claude-opus-5">Opus 5</option><option value="openai|gpt-5.5">GPT-5.5</option><option value="spark|qwen3.6:27b">Spark Qwen 27B</option></select></header>
+<main id="main"></main>
+<aside><h3>기억 블록</h3><div id="block"><div class="meta">사이드카 대기</div></div><div class="meta" id="side"></div><h3>세션</h3><div class="meta" id="sinfo"></div></aside>
+<footer><textarea id="in" placeholder="말해" rows="1"></textarea><button id="go">보내기</button></footer>
+<script>
+const $=s=>document.querySelector(s);const main=$("#main");let cur=null,busy=false,seq=0;
+function el(cls,html){const d=document.createElement("div");d.className=cls;d.innerHTML=html;main.appendChild(d);main.scrollTop=main.scrollHeight;return d}
+function esc(s){return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}
+function addMe(t){el("msg me",`<div class="b">${esc(t)}</div>`)}
+function ensureAi(){if(!cur){cur=el("msg ai",`<div class="b cursor"></div>`);cur.b=cur.querySelector(".b");cur.txt=""}return cur}
+function endAi(){if(cur){cur.b.classList.remove("cursor");cur=null}}
+function setBusy(v){busy=v;$("#dot").className="dot "+(v?"busy":"on");$("#go").textContent=v?"멈춰":"보내기";$("#go").className=v?"stop":""}
+function onEv(ev){
+  if(ev.type==="message_update"&&ev.assistantMessageEvent){const e=ev.assistantMessageEvent;if(e.type==="text_delta"){const a=ensureAi();a.txt+=e.delta;a.b.textContent=a.txt;main.scrollTop=main.scrollHeight}if(e.type==="toolcall_end"||e.type==="text_end"){}}
+  else if(ev.type==="tool_execution_start"){endAi();const d=el("tool",`<details><summary>${esc(ev.toolName||"도구")} <span class="a">${esc((ev.args&&(ev.args.command||ev.args.path||ev.args.query||""))+"").slice(0,90)}</span></summary><pre>…</pre></details>`);d.id="t-"+ev.toolCallId}
+  else if(ev.type==="tool_execution_end"){const d=document.getElementById("t-"+ev.toolCallId);if(d){const out=(ev.result&&ev.result.content||[]).map(c=>c.text||"").join("\n");d.querySelector("pre").textContent=out.slice(0,4000)||"(출력 없음)"}}
+  else if(ev.type==="message_end"&&ev.message&&ev.message.role==="assistant"){endAi()}
+  else if(ev.type==="agent_start"){setBusy(true)}
+  else if(ev.type==="agent_settled"){endAi();setBusy(false);refreshSide()}
+  else if(ev.type==="compaction_start"){el("tool","<details><summary>기억 정리 중(압축)</summary></details>")}
+}
+function connect(){const es=new EventSource("/events?since="+seq);es.onmessage=m=>{const ev=JSON.parse(m.data);seq=ev._seq||seq;onEv(ev)};es.onerror=()=>{es.close();setTimeout(connect,1500)}}
+async function sendMsg(){const t=$("#in").value.trim();if(!t)return;$("#in").value="";$("#in").style.height="auto";addMe(t);await fetch("/prompt",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(busy?{message:t,streaming:"steer"}:{message:t})})}
+$("#go").onclick=()=>busy?fetch("/abort",{method:"POST"}):sendMsg();
+$("#in").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMsg()}});
+$("#in").addEventListener("input",e=>{e.target.style.height="auto";e.target.style.height=Math.min(200,e.target.scrollHeight)+"px"});
+$("#pick").onchange=async e=>{const [p,m]=e.target.value.split("|");await fetch("/model",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({provider:p,modelId:m})});refreshState()};
+async function refreshState(){try{const s=await(await fetch("/state")).json();const d=s.data||{};$("#model").textContent=(d.model&&(d.model.id||d.model.modelId))||(d.provider?`${d.provider}/${d.modelId||""}`:"");$("#sess").textContent=d.sessionName||d.sessionFile?.split("/").pop()||"";$("#sinfo").textContent=[d.sessionName,d.sessionFile?.split("/").pop(),d.messageCount?`${d.messageCount} 메시지`:""].filter(Boolean).join(" · ");const v=`${d.provider}|${d.modelId}`;if([...$("#pick").options].some(o=>o.value===v))$("#pick").value=v;$("#dot").classList.add("on")}catch{}}
+function clean(t){return t.replace(/^(Task \S+ is \w+\.\s*|\[관찰·\w+\]\s*)/,"").replace(/\s+/g," ").slice(0,170)}
+async function refreshSide(){try{const s=await(await fetch("/sidecar")).json();$("#block").innerHTML=s.block.length?s.block.map(b=>`<div class="blk"><span class="l ${b.light||"yellow"}"></span>${esc(clean(b.text))}</div>`).join(""):'<div class="meta">블록 비어 있음</div>';const j=s.last;$("#side").textContent=[s.updated_at?`갱신 ${s.updated_at.slice(11,16)}Z`:"",j?`판정 ${j.judge_s}s · 놀람 ${j.judge?.surprise??"-"}`:"",s.silence?`침묵 ${s.silence}/30`:"",s.source?`← ${s.source.slice(0,8)}`:""].filter(Boolean).join(" · ")}catch{}}
+async function loadHistory(){try{const r=await(await fetch("/messages")).json();for(const m of (r.data?.messages||[]).slice(-40)){if(m.role==="user"){const c=typeof m.content==="string"?m.content:(m.content||[]).map(p=>p.text||"").join("");if(c&&!c.startsWith("[Request"))addMe(c)}else if(m.role==="assistant"){const t=(m.content||[]).filter(p=>p.type==="text").map(p=>p.text).join("");if(t){const a=el("msg ai",`<div class="b"></div>`);a.querySelector(".b").textContent=t}}}}catch{}}
+loadHistory().then(()=>{connect();refreshState();refreshSide();setInterval(refreshSide,4000)});
+</script></body></html>
