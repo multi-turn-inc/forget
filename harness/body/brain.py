@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import time
 import urllib.request
 from typing import Any
 
@@ -82,8 +83,57 @@ class Anthropic:
         return {"text": text, "tool_calls": calls, "usage": d.get("usage") or {}, "raw_assistant": raw}
 
 
+class ClaudeHeadless:
+    """Claude Code(구독)를 순수 완성기로 쓴다: `claude -p --tools ""`. 도구 호출은 텍스트 규약으로 받는다.
+    정당한 길 — OAuth 토큰을 흉내 내지 않고 Claude Code가 하도록 둔다. 루프·도구·문맥은 몸의 것."""
+
+    PROTOCOL = ("\n\n## 도구 규약(몸)\n도구가 필요하면 답 대신 아래 블록만 낸다(한 번에 하나 이상 가능):\n"
+                "```tool\n{\"name\": \"bash\", \"args\": {\"command\": \"ls\"}}\n```\n"
+                "결과가 돌아오면 이어 간다. 더 할 도구가 없으면 블록 없이 최종 답만 쓴다.")
+
+    def __init__(self, model: str = "claude-fable-5-1", max_tokens: int = 4096):
+        self.model, self.max_tokens = model, max_tokens
+
+    def chat(self, messages: list[dict], tools: list[dict] | None = None) -> dict[str, Any]:
+        import re
+        system = "\n\n".join(m["content"] for m in messages if m["role"] == "system")
+        if tools:
+            system += self.PROTOCOL + "\n사용 가능한 도구:\n" + "\n".join(f"- {t['name']}: {t['description']} 인자 {json.dumps(t['parameters'].get('properties', {}), ensure_ascii=False)[:300]}" for t in tools)
+        # 대화를 하나의 프롬프트로 직렬화(도구 결과 포함)
+        lines = []
+        for m in messages:
+            if m["role"] == "system":
+                continue
+            if m["role"] == "user":
+                lines.append(f"[정훈]\n{m['content']}")
+            elif m["role"] == "assistant":
+                txt = m.get("content") or ""
+                for tc in m.get("tool_calls") or []:
+                    txt += f"\n```tool\n{json.dumps({'name': tc['function']['name'], 'args': json.loads(tc['function']['arguments'] or '{}')}, ensure_ascii=False)}\n```"
+                lines.append(f"[나]\n{txt}")
+            elif m["role"] == "tool":
+                lines.append(f"[도구 결과 {m.get('tool_call_id', '')}]\n{str(m['content'])[:12000]}")
+        prompt = "\n\n".join(lines) + "\n\n[나]\n"
+        out = subprocess.run(["claude", "-p", "--model", self.model, "--tools", "", "--output-format", "text", "--append-system-prompt", system],
+                             input=prompt, capture_output=True, text=True, timeout=900)
+        text = (out.stdout or "").strip()
+        calls = []
+        for i, m in enumerate(re.finditer(r"```tool\s*(\{.*?\})\s*```", text, re.S)):
+            try:
+                d = json.loads(m.group(1))
+                calls.append({"id": f"c{int(time.time() * 1000)}_{i}", "name": d.get("name"), "args": d.get("args") or {}})
+            except Exception:
+                continue
+        clean = re.sub(r"```tool\s*\{.*?\}\s*```", "", text, flags=re.S).strip()
+        raw = {"role": "assistant", "content": clean or None,
+               "tool_calls": [{"id": c["id"], "type": "function", "function": {"name": c["name"], "arguments": json.dumps(c["args"], ensure_ascii=False)}} for c in calls] or None}
+        return {"text": clean, "tool_calls": calls, "usage": {}, "raw_assistant": raw}
+
+
 def make(name: str):
     name = (name or "astra").lower()
+    if name in ("claude", "fable-sub"):
+        return ClaudeHeadless(os.getenv("BODY_FABLE_MODEL", "claude-fable-5-1"))
     if name == "astra":
         return OpenAICompat(os.getenv("BODY_ASTRA_MODEL", "gpt-6-astra"), "https://api.openai.com/v1", _openai_key(), max_tokens=8192)
     if name == "spark":
