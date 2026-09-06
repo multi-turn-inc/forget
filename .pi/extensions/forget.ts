@@ -138,8 +138,16 @@ export default async function forgetExtension(pi: any) {
   }
 
   // ── 1) 기상 재수화 ────────────────────────────────────────────────────
+  async function readIdentity(): Promise<string> {
+    try {
+      const { readFileSync } = await import("node:fs");
+      return readFileSync(`${(globalThis as any).process?.cwd?.() ?? "."}/.pi/IDENTITY.md`, "utf8").trim();
+    } catch { return ""; }
+  }
+
   pi.on("before_agent_start", async (event: any, _ctx: any) => {
     let block = "";
+    const identity = await readIdentity();
     const attn = await readBlock();
     if (attn) block += `\n\n## 기억 블록 (매 턴 교체 — 사이드카가 대화를 보며 고른 것. 채택은 네 판단, 틀리면 다음 턴에 사라진다)\n${attn}`;
     try {
@@ -150,8 +158,10 @@ export default async function forgetExtension(pi: any) {
       });
       if (capsule?.context) block += `\n\n## State capsule (forget)\n${capsule.context}`;
     } catch { /* fail-open: 기관 없이도 기상은 된다 */ }
+    // hands·팀 원장은 devloop 시절 계기다 — 오염(중복 손 100+)이 첫 인사를 잡아먹어 기본 꺼짐(2026-09-07 UX).
+    const WANT_HANDS = ENV.FORGET_PI_HANDS === "1", WANT_TEAM = ENV.FORGET_PI_TEAM === "1";
     try {
-      const hands = (await forgetGet("/v1/worldmodel/hands/"))?.hands ?? [];
+      const hands = WANT_HANDS ? ((await forgetGet("/v1/worldmodel/hands/"))?.hands ?? []).filter((h: any) => !h.expired).slice(0, 5) : [];
       if (hands.length) {
         block += "\n\n## Standing hands (inherited — re-judge each: is its 'why' still true?)";
         for (const h of hands) {
@@ -162,7 +172,7 @@ export default async function forgetExtension(pi: any) {
     try {
       // 합의 원장은 인증된 구조 도구가 정본이다. 일반 memory REST는 이
       // ownerless pool을 읽거나 쓰지 못한다.
-      const ledger = await teamMcpCall("team_read", { limit: 12 });
+      const ledger = WANT_TEAM ? await teamMcpCall("team_read", { limit: 12 }) : null;
       const rows = Array.isArray(ledger?.items) ? ledger.items : [];
       if (rows.length) {
         block += "\n\n## Team ledger (forget-dev 합의 원장 — 최신 우선, 열거)";
@@ -175,8 +185,10 @@ export default async function forgetExtension(pi: any) {
           "적체를 만든다, devloop 관측 82.)";
       }
     } catch { /* fail-open */ }
-    if (!block) return;
-    return { systemPrompt: `${event.systemPrompt ?? ""}${block}` };
+    if (!block && !identity) return;
+    // 정체성이 맨 앞 — pi의 «expert coding assistant» 서두는 그 뒤로 밀린다.
+    const head = identity ? `${identity}\n\n---\n\n` : "";
+    return { systemPrompt: `${head}${event.systemPrompt ?? ""}${block}` };
   });
 
   // ── 2) 응고화가 압축을 대체 ──────────────────────────────────────────
