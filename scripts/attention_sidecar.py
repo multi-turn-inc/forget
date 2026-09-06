@@ -48,7 +48,7 @@ def _last_user_ts(path: str) -> float:
                 continue
             m = {"role": "user", "content": pl.get("content", [])}
         c = m.get("content")
-        if d.get("isSidechain") or d.get("isCompactSummary") or d.get("isMeta"):
+        if c is None or d.get("isSidechain") or d.get("isCompactSummary") or d.get("isMeta"):
             continue
         if isinstance(c, list) and c and isinstance(c[0], dict) and c[0].get("type") in ("tool_result",):
             continue

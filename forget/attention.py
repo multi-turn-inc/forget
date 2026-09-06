@@ -120,6 +120,8 @@ def read_turns(path: Path, offset: int = 0) -> tuple[list[dict[str, Any]], int]:
         if role == "toolResult":
             continue
         content = m.get("content")
+        if content is None:
+            continue
         if role == "user" and isinstance(content, list) and content and isinstance(content[0], dict) and content[0].get("type") == "tool_result":
             continue
         txt = _text(content).strip()
