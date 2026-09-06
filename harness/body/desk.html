@@ -1,0 +1,92 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>책상</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+/* 책상 — 물건 넷: 빛 · 지금 한 줄 · 예측 카드 셋 · 입력 하나. 로그는 접혀 있다. (도란 v3 시각 언어) */
+:root{--bg:#FBF8F3;--ink:#17161A;--soft:#5B5760;--faint:#9A96A0;--line:rgba(23,22,26,.08);--glass:rgba(255,255,255,.62);--glass-b:rgba(255,255,255,.75);--ok:#2C9A5B;--warn:#D8562E;--r:26px;
+ --l1:#FFC9A3;--l2:#FFE7B8;--l3:#CFE0F7}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;color:var(--ink);font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo",-apple-system,"Noto Sans KR",sans-serif;font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;word-break:keep-all}
+body{background:var(--bg) radial-gradient(60% 50% at 20% 30%,var(--l1) 0%,rgba(255,255,255,0) 100%),radial-gradient(50% 45% at 85% 15%,var(--l2) 0%,rgba(255,255,255,0) 100%),radial-gradient(55% 50% at 60% 90%,var(--l3) 0%,rgba(255,255,255,0) 100%);background-attachment:fixed;transition:background 2s}
+body.sleep{--l1:#E6E0D4;--l2:#D8D3CA;--l3:#CFD3D8}
+body.work{--l1:#FFB98A;--l2:#FFD9A8;--l3:#DCE9FF}
+body.dead{--l1:#E8E4DE;--l2:#E8E4DE;--l3:#E8E4DE}
+.wrap{max-width:640px;margin:0 auto;padding:44px 22px 140px}
+.orb{width:92px;height:92px;border-radius:50%;margin:0 auto 18px;background:radial-gradient(circle at 40% 35%,#fff 0%,#FFE7B8 35%,rgba(255,201,163,.55) 70%,rgba(255,255,255,0) 100%);box-shadow:0 0 60px rgba(255,201,163,.6);animation:breathe 4s ease-in-out infinite}
+.sleep .orb{background:radial-gradient(circle at 40% 35%,#fff 0%,#E6E0D4 40%,rgba(207,211,216,.5) 70%,rgba(255,255,255,0) 100%);box-shadow:0 0 40px rgba(207,211,216,.6);animation-duration:9s}
+.work .orb{animation-duration:1.6s;box-shadow:0 0 80px rgba(255,185,138,.75)}
+.dead .orb{background:radial-gradient(circle,#ddd 0%,rgba(255,255,255,0) 70%);box-shadow:none;animation:none;opacity:.5}
+@keyframes breathe{0%,100%{transform:scale(1);opacity:.92}50%{transform:scale(1.08);opacity:1}}
+@media(prefers-reduced-motion:reduce){.orb{animation:none}}
+.now{text-align:center;font-size:22px;font-weight:600;letter-spacing:-.01em;text-wrap:balance;margin:0}
+.sub{text-align:center;color:var(--faint);font-size:13.5px;margin:6px 0 34px}
+.sub b{color:var(--soft);font-weight:500}
+h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:600;margin:0 0 10px}
+.card{background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--glass-b);border-radius:var(--r);padding:18px 20px;margin:0 0 12px;box-shadow:0 12px 40px rgba(60,40,30,.07)}
+.pred{display:flex;gap:14px;align-items:flex-start}
+.pred p{margin:0;flex:1;font-size:15.5px}
+.pred p small{display:block;color:var(--faint);font-size:12.5px;margin-top:4px}
+.pred .v{display:flex;gap:6px;flex:none}
+.pred button{border:1px solid var(--line);background:rgba(255,255,255,.5);border-radius:999px;font:inherit;font-size:12.5px;padding:5px 11px;cursor:pointer;color:var(--soft)}
+.pred button:hover{background:#fff}.pred.done{opacity:.4}
+.did{color:var(--soft);font-size:14.5px}
+.did summary{cursor:pointer;list-style:none;display:flex;gap:10px;align-items:baseline}
+.did summary::before{content:"›";color:var(--faint)}
+.did summary b{font-weight:500;color:var(--ink)}
+.did .log{margin-top:10px;font-size:12.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace;max-height:220px;overflow:auto;white-space:pre-wrap}
+.talk{margin-top:26px}
+.n{padding:8px 0;border-top:1px solid var(--line);font-size:15px}
+.n:first-child{border-top:0}
+.n .w{color:var(--faint);font-size:12.5px;margin-right:8px}
+.n.me{color:var(--ink)}.n.you{color:var(--soft)}
+.bar{position:fixed;left:0;right:0;bottom:0;padding:16px 22px 26px;background:linear-gradient(rgba(251,248,243,0),rgba(251,248,243,.85) 40%)}
+.bar form{max-width:640px;margin:0 auto;display:flex;gap:8px;background:var(--glass);backdrop-filter:blur(18px);border:1px solid var(--glass-b);border-radius:30px;padding:8px 8px 8px 20px;box-shadow:0 12px 40px rgba(60,40,30,.09)}
+.bar input{flex:1;border:0;background:transparent;font:inherit;font-size:16px;outline:none;color:var(--ink)}
+.bar input::placeholder{color:var(--faint)}
+.bar button{border:0;border-radius:999px;width:42px;height:42px;background:var(--ink);color:#fff;cursor:pointer;font-size:18px}
+.empty{color:var(--faint);font-size:14px}
+</style></head><body>
+<div class="wrap">
+  <div class="orb" id="orb"></div>
+  <p class="now" id="now">…</p>
+  <p class="sub" id="sub"></p>
+
+  <h2>너에 대한 내 예측</h2>
+  <div id="pred"></div>
+
+  <details class="card did" id="did">
+    <summary><b id="didline">…</b><span id="didmeta"></span></summary>
+    <div class="log" id="log"></div>
+  </details>
+
+  <div class="talk"><h2>쪽지</h2><div id="inbox"></div></div>
+</div>
+<div class="bar"><form id="f"><input id="t" placeholder="말해" autocomplete="off"><button type="submit" aria-label="보내기">↑</button></form></div>
+<script>
+const $=id=>document.getElementById(id);const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function rel(t,now){if(!t)return '';const d=now-t,a=Math.abs(d),s=d<0?' 뒤':' 전';if(a<60)return Math.round(a)+'초'+s;if(a<3600)return Math.round(a/60)+'분'+s;return (a/3600).toFixed(1)+'시간'+s}
+let judged={};
+async function tick(){try{
+  const s=await(await fetch('/api/state',{cache:'no-store'})).json();const now=s.now||Date.now()/1000;const st=s.state||{};
+  const phase=s.phase||'';const sleeping=/잔다|대기/.test(phase);const working=/중|턴/.test(phase)&&!sleeping;
+  document.body.className=!s.alive?'dead':sleeping?'sleep':working?'work':'';
+  $('now').textContent=!s.alive?'상주가 없다':phase||'있다';
+  const wake=st.wake_at&&st.wake_at>now?'다음 생각 '+rel(st.wake_at,now):'';
+  $('sub').innerHTML=[s.alive?'살아 있음':'', s.brain?'뇌 <b>'+esc(s.brain)+'</b>':'', st.last_turn?'마지막 턴 '+rel(st.last_turn,now):'', wake].filter(Boolean).join(' · ');
+  // 예측 카드 셋
+  const preds=(s.predictions||[]).slice(0,3);
+  $('pred').innerHTML=preds.length?preds.map((p,i)=>{const [head,tail]=p.split(/틀리면[:：]?/);return `<div class="card pred${judged[i]?' done':''}" data-i="${i}"><p>${esc(head.trim())}${tail?`<small>틀리면: ${esc(tail.trim())}</small>`:''}</p><div class="v"><button data-v="맞아">맞아</button><button data-v="아니야">아니야</button></div></div>`}).join(''):'<p class="empty">아직 예측이 없다. 밤에 생긴다.</p>';
+  $('pred').querySelectorAll('button').forEach(b=>b.onclick=async()=>{const card=b.closest('.pred');const i=card.dataset.i;judged[i]=1;card.classList.add('done');await say(`예측 ${Number(i)+1} ${b.dataset.v}: ${preds[i].slice(0,80)}`)});
+  // 한 일 한 줄 + 접힌 로그
+  const items=s.turn||[];const says=items.filter(x=>x.k==='say');const tools=items.filter(x=>x.k==='tool').length;
+  const last=says.length?says[says.length-1].t.replace(/\s+/g,' '):'';
+  $('didline').textContent=last?last.slice(0,110)+(last.length>110?'…':''):(s.alive?'아직 한 말이 없다':'');
+  $('didmeta').textContent=(tools?`도구 ${tools}번`:'')+(items.length&&items[items.length-1].ts?' · '+items[items.length-1].ts:'');
+  $('log').textContent=items.map(x=>x.k==='tool'?`› ${x.name} ${x.head||''}`:x.k==='result'?`  ↳ ${x.t}`:x.k==='prompt'?`[말] ${x.t}`:`${x.t}`).join('\n')||'';
+  // 쪽지: 최근 6, 연속 중복 제거
+  const notes=(s.inbox||[]);const dd=[];for(const n of notes){const p=dd[dd.length-1];if(p&&p.who===n.who&&p.t===n.t)continue;dd.push(n)}
+  $('inbox').innerHTML=dd.slice(-6).map(n=>`<div class="n ${n.who==='나'?'me':'you'}"><span class="w">${esc(n.who)}</span>${esc(n.t)}</div>`).join('')||'<p class="empty">아직 없다</p>';
+}catch(e){document.body.className='dead';$('now').textContent='책상이 상주를 못 본다'}}
+async function say(t){await fetch('/api/say',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t})});setTimeout(tick,800)}
+$('f').onsubmit=e=>{e.preventDefault();const t=$('t').value.trim();if(!t)return;$('t').value='';say(t)};
+tick();setInterval(tick,4000);
+</script></body></html>

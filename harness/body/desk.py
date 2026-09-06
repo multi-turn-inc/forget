@@ -201,7 +201,7 @@ function rel(t,now){if(!t)return '—';const d=now-t;const a=Math.abs(d),s=d<0?'
 async function tick(){try{const s=await(await fetch('/api/state',{cache:'no-store'})).json();const now=s.now||Date.now()/1000;
 $('dot').className='dot'+(s.alive?' on':'');$('alive').textContent=s.alive?'살아 있다':'상주 안 뜸';$('brain').textContent='뇌 '+s.brain;$('phase').textContent=s.phase||'';
 const st=s.state||{};const wake=st.wake_at&&st.wake_at>now?rel(st.wake_at,now):'바로';
-$('now').innerHTML=[['하는 일',s.phase||'—'],['마지막 턴',rel(st.last_turn,now)],['다음 자기 턴',wake],['이번 시간 자기 턴',(st.self_runs||[]).filter(t=>now-t<3600).length+'회'],['상주 시작',rel(st.started,now)]].map(([k,v])=>`<div class="kv"><span>${k}</span><span>${esc(v)}</span></div>`).join('');
+$('now').innerHTML=[['하는 일',s.phase||'—'],['지금 생각',st.thought?st.thought+' ('+rel(st.thought_at,now)+')':'—'],['마지막 턴',rel(st.last_turn,now)],['다음 자기 턴',wake],['이번 시간 자기 턴',(st.self_runs||[]).filter(t=>now-t<3600).length+'회'],['상주 시작',rel(st.started,now)]].map(([k,v])=>`<div class="kv"><span>${k}</span><span>${esc(v)}</span></div>`).join('');
 $('pred').innerHTML=(s.predictions||[]).map(p=>`<li>${esc(p)}</li>`).join('')||'<li>없음</li>';
 $('task').textContent=s.task||'';
 $('turnh').textContent=s.turn_ts?'지금 턴 · '+s.turn_ts+' 시작':'지금 턴';
@@ -233,7 +233,10 @@ class H(BaseHTTPRequestHandler):
         if self.path.startswith("/api/state"):
             self._send(200, json.dumps(snapshot(), ensure_ascii=False).encode(), "application/json; charset=utf-8")
         else:
-            self._send(200, HTML.encode(), "text/html; charset=utf-8")
+            # 화면은 파일(desk.html)이 정본 — 고치면 재시작 없이 다음 요청에 반영. 없으면 내장 HTML.
+            page = Path(__file__).with_name("desk.html")
+            body = page.read_text() if page.exists() else HTML
+            self._send(200, body.encode(), "text/html; charset=utf-8")
 
     def do_POST(self):
         if self.path.startswith("/api/say"):
