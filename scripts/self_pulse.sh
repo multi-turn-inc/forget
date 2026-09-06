@@ -31,7 +31,10 @@ if [ "$new_note" = 1 ]; then
 fi
 PROMPT="맥박. 너는 정훈의 에이전트다(.pi/IDENTITY.md·~/.forget/attention/schema.md 참조). 스스로 깨어났다. 셋만 본다: ①원장에 새로 들어온 정훈의 말·관찰(forget_search, 최근) ②정훈의 모델(schema.md)의 예측 셋 — 근거가 생겼으면 채점해 self_note로 자기층에 남긴다 ③돌고 있는 일(research/eval/bench/*.log, ~/.forget/attention/log.jsonl). ④쪽지함 ~/Documents/one/inbox.md — 정훈이 새로 쓴 줄이 있으면 그 바로 아래에 «— 나 (시각):» 로 시작하는 답을 파일에 직접 덧붙인다(짧게, 반말). 할 일이 하나 있으면 그것만 하고 남긴다. 없으면 «잔다» 한 줄. 정훈에게 묻지 않는다. 파괴적 조작 금지."
 # 뇌: 기본은 자기 쇠(Spark qwen3.6:27b, 한도 없음). Fable은 있으면 쓰는 상위 뇌(PULSE_BRAIN=fable).
-if [ "${PULSE_BRAIN:-spark}" = "fable" ]; then
+BRAIN_F="$HOME/.forget/attention/brain"; [ -f "$BRAIN_F" ] && PULSE_BRAIN="${PULSE_BRAIN:-$(cat "$BRAIN_F")}"   # 뇌 선택 파일: spark | astra | fable
+if [ "${PULSE_BRAIN:-spark}" = "astra" ]; then
+  OUT=$(timeout 900 pi -p --no-session --provider openai --model gpt-6-astra "$PROMPT" 2>&1)
+elif [ "${PULSE_BRAIN:-spark}" = "fable" ]; then
   OUT=$(claude -p "맥박. $PROMPT" --max-turns 15 --allowedTools "Read" "Bash(sqlite3:*)" "Bash(ls:*)" "Bash(tail:*)" "Bash(grep:*)" "mcp__forget" 2>&1)
 else
   curl -s -m 3 http://127.0.0.1:18813/api/tags >/dev/null 2>&1 || (nohup ssh -N -o ExitOnForwardFailure=yes -L 18813:127.0.0.1:11434 spark >/dev/null 2>&1 & sleep 4)
