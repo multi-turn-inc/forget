@@ -13,7 +13,11 @@ def main() -> int:
     except Exception:
         return 0
     block = st.get("block") or []
-    injected = set(st.get("injected") or [])
+    inj_path = D / "injected.json"                      # 사이드카의 state.json과 분리 — 덮어쓰기 경합 방지
+    try:
+        injected = set(json.loads(inj_path.read_text()))
+    except Exception:
+        injected = set()
     fresh = [b for b in block if b.get("id") not in injected]
     if not fresh:
         return 0
@@ -22,9 +26,8 @@ def main() -> int:
         why = f" — {b['why']}" if b.get("why") else ""
         lines.append(f"- ({b.get('light', 'yellow')}) {b['text'][:240]}{why}")
     print("\n".join(lines))
-    st["injected"] = sorted(injected | {b["id"] for b in fresh})
     try:
-        (D / "state.json").write_text(json.dumps(st, ensure_ascii=False))
+        inj_path.write_text(json.dumps(sorted(injected | {b["id"] for b in fresh})))
     except Exception:
         pass
     return 0

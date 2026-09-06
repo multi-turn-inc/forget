@@ -173,7 +173,10 @@ def candidates(tail: list[dict[str, Any]], st: dict[str, Any], stats: dict[str, 
         for r in search(q, 40):
             if r.get("id") and r["id"] not in seen_ids:
                 pool.setdefault(r["id"], r)
-    ranked = A.rerank(list(pool.values()), stats, exclude_machine=True)
+    def _own(r: dict[str, Any]) -> bool:                 # 자기 메아리 차단: 사이드카가 쓴 관찰은 후보가 아니다
+        md = r.get("metadata") or {}
+        return (isinstance(md, dict) and md.get("source") == "attention-sidecar") or str(r.get("memory", "")).startswith("[관찰·")
+    ranked = A.rerank([r for r in pool.values() if not _own(r)], stats, exclude_machine=True)
     return ranked[:CANDIDATES]
 
 
