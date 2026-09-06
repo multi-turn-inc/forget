@@ -1320,6 +1320,26 @@ for _tool in TOOLS:
     _tool.setdefault("annotations", {}).update(_tool_annotations(str(_tool.get("name") or "")))
 
 
+def _activation_rerank(result: dict) -> dict:
+    """검색 결과를 활성(ACT-R 기저 활성·허브 벌점·기계 기록·확산)으로 다시 줄 세운다. 점수 필드는 보존.
+    실패하면 원래 순서(fail-open). MEM1_ACTIVATION=0으로 끔. (2026-09-07)"""
+    if os.getenv("MEM1_ACTIVATION", "1") == "0":
+        return result
+    try:
+        from . import activation as _A
+        rows = result.get("results") if isinstance(result, dict) else None
+        if not rows or len(rows) < 2:
+            return result
+        ranked = _A.rerank(rows)
+        for r in ranked:
+            r.pop("activation_breakdown", None)
+        result["results"] = ranked
+        result["ranking"] = "activation-v1"
+    except Exception:
+        pass
+    return result
+
+
 def _text_result(value: Any) -> dict[str, Any]:
     result = {"content": [{"type": "text", "text": value if isinstance(value, str) else _json(value)}]}
     if not isinstance(value, str):
