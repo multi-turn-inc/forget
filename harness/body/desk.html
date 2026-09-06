@@ -77,7 +77,8 @@ async function tick(){try{
   $('pred').innerHTML=preds.length?preds.map((p,i)=>{const [head,tail]=p.split(/틀리면[:：]?/);return `<div class="card pred${judged[i]?' done':''}" data-i="${i}"><p>${esc(head.trim())}${tail?`<small>틀리면: ${esc(tail.trim())}</small>`:''}</p><div class="v"><button data-v="맞아">맞아</button><button data-v="아니야">아니야</button></div></div>`}).join(''):'<p class="empty">아직 예측이 없다. 밤에 생긴다.</p>';
   $('pred').querySelectorAll('button').forEach(b=>b.onclick=async()=>{const card=b.closest('.pred');const i=card.dataset.i;judged[i]=1;card.classList.add('done');await say(`예측 ${Number(i)+1} ${b.dataset.v}: ${preds[i].slice(0,80)}`)});
   // 한 일 한 줄 + 접힌 로그
-  const items=s.turn||[];const says=items.filter(x=>x.k==='say');const tools=items.filter(x=>x.k==='tool').length;
+  const NOISE=/^Client\.listTools\(\)[^\n]*\n?/g;
+  const items=(s.turn||[]).map(x=>x.k==='say'?{...x,t:String(x.t).replace(NOISE,'').trim()}:x).filter(x=>x.k!=='say'||x.t);const says=items.filter(x=>x.k==='say');const tools=items.filter(x=>x.k==='tool').length;
   const last=says.length?says[says.length-1].t.replace(/\s+/g,' '):'';
   $('didline').textContent=last?last.slice(0,110)+(last.length>110?'…':''):(s.alive?'아직 한 말이 없다':'');
   $('didmeta').textContent=(tools?`도구 ${tools}번`:'')+(items.length&&items[items.length-1].ts?' · '+items[items.length-1].ts:'');
