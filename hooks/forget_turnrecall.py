@@ -587,6 +587,7 @@ def main() -> None:
     # claim)만 0.9172 vs 1.0000으로 갈려 주입 0 vs 3이 됐다 — 방금 쓴 claim은
     # 1.0으로 포화하므로 푸시 회상의 on/off가 장부 신선도에 결합돼 있었다.
     results = result.get("results") or []
+    results = _activation_filter(results)   # 2026-09-07: 허브·기계 기록은 푸시 회상 후보에서 뺀다(활성 엔진, FORGET_TURNRECALL_ACTIVATION=off로 끔)
     # 창은 자격 후보 상위 FLATNESS_WINDOW개 — 인출을 깊게 해도 자[尺]는 그대로다
     # (c63: 자격 4개였던 질의의 spread 0.0454가 창 5에서도 0.0454, 중앙값 위치 보존).
     scores_all = sorted(
@@ -727,6 +728,30 @@ def main() -> None:
             ledger_picks.append((new_id, "green", new_text))  # 메아리 측정은 현재본 기준
         _remember_injected(turns_path, injected, seen_book)
         _extend_offer_ledger(session_id, ledger_picks, trace_id)
+
+
+def _activation_filter(results: list) -> list:
+    """활성 엔진(forget.activation)으로 허브(노출만 많고 안 쓰인 기억)·devloop 기계 기록을 걸러낸다.
+    점수는 건드리지 않는다 — 평탄도 자[尺]는 그대로. 엔진이 없으면 그대로 통과(fail-open)."""
+    if os.getenv("FORGET_TURNRECALL_ACTIVATION", "on").lower() == "off" or not results:
+        return results
+    try:
+        import importlib.util
+        _A = None
+        for root in (os.getenv("FORGET_REPO"), os.path.expanduser("~/orca/workspaces/forget/내-프롬프트를-공유하기-싫어"), os.path.expanduser("~/Documents/forget")):
+            f = os.path.join(root or "", "forget", "activation.py")
+            if root and os.path.isfile(f):
+                spec = importlib.util.spec_from_file_location("forget_activation", f)   # 패키지 임포트 없이 파일만(시스템 python3, 의존성 0)
+                _A = importlib.util.module_from_spec(spec); spec.loader.exec_module(_A)
+                break
+        if _A is None:
+            return results
+        ranked = _A.rerank(results, exclude_machine=True)
+        keep = {r["id"] for r in ranked if r["activation_breakdown"].get("hub", 0) > -0.2}
+        out = [r for r in results if r.get("id") in keep]
+        return out or results
+    except Exception:
+        return results
 
 
 def _note_unmeasured_flatness(prompt: str, candidates: int, eligible: int, injected: int) -> None:
