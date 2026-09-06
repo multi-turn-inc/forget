@@ -105,8 +105,26 @@ function translateClaude(ev) {            // Claude Code stream-json → pi 모�
   }
   return out;
 }
+let turnText = "";
+async function afterTurn() {
+  const text = turnText.trim(); turnText = "";
+  if (!text || !OPENAI_KEY || !voiceOn) return;
+  try {
+    const clean = text.replace(/```[\s\S]*?```/g, " 코드는 화면에. ").replace(/[*_`#>|]/g, "").replace(/\(https?:[^)]+\)/g, "");
+    const id = `t${Date.now()}`; ttsCache.set(id, await speak(clean)); if (ttsCache.size > 20) ttsCache.delete(ttsCache.keys().next().value);
+    _b({ type: "speech_ready", id, chars: clean.length });
+  } catch (e) { _b({ type: "speech_error", error: String(e).slice(0, 120) }); }
+}
+let voiceOn = false;
 function broadcastAndResolve(ev) {
-  if (BACKEND === "claude") { for (const t of translateClaude(ev)) _b(t); return; }
+  if (BACKEND === "claude") {
+    for (const t of translateClaude(ev)) {
+      if (t.type === "message_update" && t.assistantMessageEvent?.type === "text_delta") turnText += t.assistantMessageEvent.delta;
+      if (t.type === "agent_settled") setTimeout(afterTurn, 0);
+      _b(t);
+    }
+    return;
+  }
   if (ev.type === "response" && ev.id && pending.has(ev.id)) { pending.get(ev.id)(ev); pending.delete(ev.id); } _b(ev);
 }
 pi.stdout.removeAllListeners("data");
@@ -137,6 +155,27 @@ function claudeHistory(sid, max = 40) {
     }
     return out.slice(-max);
   } catch { return []; }
+}
+// ── 마주보기: 목소리 (2026-09-07, 정훈 «새로 만들자. 마주볼걸») ─────────────────
+// STT: OpenAI gpt-4o-mini-transcribe · TTS: gpt-4o-mini-tts. 뇌는 그대로 Claude 포크 = 나.
+const OPENAI_KEY = process.env.OPENAI_API_KEY || "";
+const ttsCache = new Map();        // id → Buffer(mp3)
+let lastAssistantText = "";
+async function transcribe(buf, mime) {
+  const fd = new FormData();
+  const ext = /m4a|mp4/.test(mime || "") ? "m4a" : /wav/.test(mime || "") ? "wav" : /mp3|mpeg/.test(mime || "") ? "mp3" : "webm";
+  fd.append("file", new Blob([buf], { type: mime || "audio/webm" }), `voice.${ext}`);
+  fd.append("model", "gpt-4o-mini-transcribe"); fd.append("language", "ko");
+  const r = await fetch("https://api.openai.com/v1/audio/transcriptions", { method: "POST", headers: { Authorization: `Bearer ${OPENAI_KEY}` }, body: fd });
+  if (!r.ok) throw new Error(`stt ${r.status} ${(await r.text()).slice(0, 120)}`);
+  return (await r.json()).text || "";
+}
+async function speak(text) {
+  const r = await fetch("https://api.openai.com/v1/audio/speech", { method: "POST", headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "gpt-4o-mini-tts", voice: process.env.FORGET_FACE_VOICE || "ash", input: text.slice(0, 1800), response_format: "mp3", speed: 1.05,
+      instructions: "한국어. 차분하고 낮은 목소리. 반말 문장을 자연스럽게, 서두르지 않고. 감탄사 없이." }) });
+  if (!r.ok) throw new Error(`tts ${r.status}`);
+  return Buffer.from(await r.arrayBuffer());
 }
 function readJson(p) { try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; } }
 function body(req) { return new Promise((r) => { let s = ""; req.on("data", (c) => (s += c)); req.on("end", () => { try { r(JSON.parse(s || "{}")); } catch { r({}); } }); }); }
@@ -173,6 +212,23 @@ const server = createServer(async (req, res) => {
   if (url.pathname === "/state") return json(await ask({ type: "get_state" }));
   if (url.pathname === "/messages") return json(await ask({ type: "get_messages" }, 15000));
   if (url.pathname === "/sidecar") return json(sidecar());
+  if (url.pathname === "/voice" && req.method === "POST") {                 // 녹음 → 전사 → 프롬프트
+    const chunks = []; for await (const c of req) chunks.push(c);
+    const buf = Buffer.concat(chunks); voiceOn = true;
+    try {
+      const text = (await transcribe(buf, req.headers["content-type"])).trim();
+      if (!text) return json({ ok: false, error: "empty" });
+      _b({ type: "heard", text });
+      const r = await ask({ type: "prompt", message: text });
+      return json({ ok: true, text, r });
+    } catch (e) { return json({ ok: false, error: String(e).slice(0, 200) }, 500); }
+  }
+  if (url.pathname.startsWith("/tts/")) {
+    const id = url.pathname.slice(5).replace(/\.mp3$/, ""); const b = ttsCache.get(id);
+    if (!b) { res.writeHead(404); return res.end(); }
+    res.writeHead(200, { "Content-Type": "audio/mpeg", "Content-Length": b.length }); return res.end(b);
+  }
+  if (url.pathname === "/voice_mode" && req.method === "POST") { const b = await body(req); voiceOn = !!b.on; return json({ ok: true, voiceOn }); }
   if (url.pathname === "/observe" && req.method === "POST") {         // 정훈의 «맞아»/«아니야» → 원장(green 승격 / supersede)
     const b = await body(req);
     const mcp = async (name, args) => { const r = await fetch(process.env.FORGET_MCP_URL || "http://localhost:8000/mcp/forget/http/junghunkim", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } }) }); const d = await r.json(); return d.result?.content?.[0]?.text || ""; };

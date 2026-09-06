@@ -41,6 +41,9 @@ canvas.light{position:fixed;inset:0;width:100vw;height:100vh;z-index:0}
 .bar .in{max-width:720px;margin:0 auto;display:flex;gap:10px;align-items:flex-end;background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--glass-b);border-radius:30px;padding:8px 8px 8px 20px;box-shadow:0 12px 40px rgba(60,40,30,.09)}
 textarea{flex:1;resize:none;border:0;background:transparent;font:inherit;font-size:17px;line-height:1.5;color:var(--ink);padding:10px 0;min-height:44px;max-height:220px;outline:none}
 textarea::placeholder{color:var(--faint)}
+.mic{border:0;border-radius:999px;width:46px;height:46px;background:transparent;color:var(--soft);cursor:pointer;display:grid;place-items:center;flex:none;margin-left:-8px}.mic svg{width:22px;height:22px}.mic.on{background:var(--ink);color:#fff;box-shadow:0 0 0 8px rgba(23,22,26,.08)}
+.speaking canvas.light{filter:saturate(1.25) brightness(1.03)}
+.heard{font-size:13px;color:var(--faint);text-align:right;margin:-10px 0 14px}
 .go{border:0;border-radius:999px;width:46px;height:46px;background:var(--ink);color:#fff;cursor:pointer;display:grid;place-items:center;flex:none}
 .go svg{width:20px;height:20px}.go.stop{background:var(--warn)}
 @media(max-width:1180px){.mem{display:none}}
@@ -50,7 +53,7 @@ textarea::placeholder{color:var(--faint)}
 <span class="who"><select id="pick"><option value="anthropic|claude-fable-5-1">Fable 5.1</option><option value="anthropic|claude-opus-5">Opus 5</option><option value="openai|gpt-5.5">GPT-5.5</option><option value="spark|qwen3.6:27b">Spark Qwen 27B</option></select></span></div>
 <div class="wrap"><div class="older" id="older" hidden></div><div id="main"></div></div>
 <div class="mem"><div class="t"><span>기억 블록</span><span id="mu"></span></div><div id="block"><div class="it">사이드카 대기</div></div><div class="meta" id="side"></div><div class="t" style="margin-top:16px"><span>남긴 관찰</span><span style="font-weight:400">맞아 / 아니야</span></div><div id="obs"><div class="it">아직 없다</div></div></div>
-<div class="bar"><div class="in"><textarea id="in" placeholder="말해" rows="1"></textarea><button class="go" id="go" aria-label="보내기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div></div>
+<div class="bar"><div class="in"><button class="mic" id="mic" aria-label="말하기" title="누르고 있는 동안 듣는다"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><textarea id="in" placeholder="말해" rows="1"></textarea><button class="go" id="go" aria-label="보내기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div></div>
 <script>
 /* 빛 배경 — 도란 light.js와 동일 팔레트 */
 if(location.search.includes('flat')){document.querySelector('canvas.light').remove();document.documentElement.style.setProperty('--glass','rgba(255,255,255,.9)')}
@@ -79,7 +82,16 @@ function onEv(ev){
   else if(ev.type==="agent_start"){setBusy(true)}
   else if(ev.type==="agent_settled"){endAi();setBusy(false);refreshSide()}
   else if(ev.type==="compaction_start"){el("tool","<details><summary>기억 정리 중</summary></details>")}
+  else if(ev.type==="heard"){addMe(ev.text)}
+  else if(ev.type==="speech_ready"){playSpeech(ev.id)}
 }
+/* 마주보기 — 누르고 말하면 듣고, 답은 목소리로 온다 */
+let rec=null,chunks=[],audioEl=null;
+async function startRec(){try{const st=await navigator.mediaDevices.getUserMedia({audio:true});rec=new MediaRecorder(st,{mimeType:"audio/webm"});chunks=[];rec.ondataavailable=e=>chunks.push(e.data);rec.onstop=async()=>{st.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:"audio/webm"});if(blob.size<2000)return;const r=await(await fetch("/voice",{method:"POST",headers:{"Content-Type":"audio/webm"},body:blob})).json();if(!r.ok&&r.error)el("heard",`듣지 못했다 · ${esc(r.error)}`)};rec.start();$("#mic").classList.add("on")}catch(e){el("heard","마이크를 열 수 없다")}}
+function stopRec(){if(rec&&rec.state!=="inactive")rec.stop();$("#mic").classList.remove("on")}
+const micBtn=$("#mic");micBtn.onmousedown=startRec;micBtn.onmouseup=stopRec;micBtn.onmouseleave=stopRec;micBtn.ontouchstart=e=>{e.preventDefault();startRec()};micBtn.ontouchend=e=>{e.preventDefault();stopRec()};
+addEventListener("keydown",e=>{if(e.code==="Space"&&document.activeElement!==$("#in")&&!e.repeat){e.preventDefault();startRec()}});addEventListener("keyup",e=>{if(e.code==="Space"&&document.activeElement!==$("#in")){e.preventDefault();stopRec()}});
+function playSpeech(id){if(audioEl){audioEl.pause()}audioEl=new Audio(`/tts/${id}.mp3`);document.body.classList.add("speaking");audioEl.onended=()=>document.body.classList.remove("speaking");audioEl.play().catch(()=>document.body.classList.remove("speaking"))}
 function connect(){const es=new EventSource("/events?since="+seq);es.onmessage=m=>{const ev=JSON.parse(m.data);seq=ev._seq||seq;onEv(ev)};es.onerror=()=>{es.close();setTimeout(connect,1500)}}
 async function sendMsg(){const t=$("#in").value.trim();if(!t)return;$("#in").value="";$("#in").style.height="auto";addMe(t);await fetch("/prompt",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(busy?{message:t,streaming:"steer"}:{message:t})})}
 $("#go").onclick=()=>busy?fetch("/abort",{method:"POST"}):sendMsg();

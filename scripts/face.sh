@@ -20,6 +20,7 @@ if [ "$MODE" = here ]; then
   pkill -f attention_sidecar.py 2>/dev/null; launchctl kickstart -k gui/501/ai.forget.attention 2>/dev/null || (nohup .venv/bin/python scripts/attention_sidecar.py --harness claude >> ~/.forget/attention/sidecar.log 2>&1 &)
   ok "사이드카 → Claude 세션 추적"
   pkill -f "harness/face/server.mjs" 2>/dev/null; sleep 1
+  export OPENAI_API_KEY="$(pi auth print-api-key --provider openai 2>/dev/null)"
   nohup node harness/face/server.mjs --backend claude --session "$SESS" --model "$MODEL" --port "$PORT" >> ~/.forget/attention/face.log 2>&1 &
   sleep 3; curl -s -m 5 "localhost:$PORT/state" >/dev/null && ok "얼굴 http://127.0.0.1:$PORT (Claude Code 포크 ← ${SESS:0:8}, $MODEL)" || { bad "얼굴이 안 뜸 — ~/.forget/attention/face.log"; exit 1; }
   [ "${FACE_NO_OPEN:-0}" = "1" ] || open "http://127.0.0.1:$PORT"; exit 0
