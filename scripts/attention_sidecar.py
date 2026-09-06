@@ -11,8 +11,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from forget import attention as T
 
 
-def latest_transcript() -> Path:
-    files = glob.glob(os.path.expanduser("~/.claude/projects/*/*.jsonl"))
+HARNESS_GLOBS = {"claude": ["~/.claude/projects/*/*.jsonl"], "pi": ["~/.pi/agent/sessions/*/*.jsonl"]}
+
+
+def latest_transcript(harness: str = "auto") -> Path:
+    keys = list(HARNESS_GLOBS) if harness == "auto" else [harness]
+    files = [f for k in keys for g in HARNESS_GLOBS[k] for f in glob.glob(os.path.expanduser(g))]
     return Path(max(files, key=os.path.getmtime))
 
 
@@ -34,15 +38,17 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--source"); ap.add_argument("--once", action="store_true"); ap.add_argument("--force", action="store_true")
     ap.add_argument("--dry", action="store_true"); ap.add_argument("--interval", type=float, default=2.0); ap.add_argument("--k", type=int, default=3)
+    ap.add_argument("--harness", choices=["auto", "claude", "pi"], default=os.getenv("FORGET_ATTENTION_HARNESS", "auto"),
+                    help="따라갈 전사의 하네스. 두 하네스를 번갈아 쓰는 동안은 하나를 못 박는다")
     a = ap.parse_args()
-    src = Path(a.source) if a.source else latest_transcript()
+    src = Path(a.source) if a.source else latest_transcript(a.harness)
     ensure_tunnel()
     st = T.load_state()
     print(f"source {src}  block {len(st['block'])}", file=sys.stderr)
     while True:
         try:
             if not a.source:                       # 새 세션이 열리면 그쪽을 따라간다
-                cur = latest_transcript()
+                cur = latest_transcript(a.harness)
                 if cur != src:
                     print(f"switch → {cur}", file=sys.stderr); src = cur
             r = T.tick(st, src, force=a.force, k_actions=a.k, dry=a.dry)

@@ -111,9 +111,37 @@ export default async function forgetExtension(pi: any) {
     }
   } catch { /* 터널이 죽어 있으면 로컬 프로바이더 없이 기동 — fail-open */ }
 
+  // ── 0b) Spark 프로바이더: ollama(OpenAI 호환) — 사이드카와 같은 터널 :18813 ──
+  const SPARK = ENV.FORGET_MID_URL ?? "http://127.0.0.1:18813";
+  try {
+    const res = await fetch(`${SPARK}/api/tags`, { signal: AbortSignal.timeout(3000) });
+    const payload: any = await res.json();
+    const models = (payload?.models ?? []).filter((m: any) => !String(m.name).includes("embed")).map((m: any) => ({
+      id: String(m.name), name: `spark ${String(m.name)}`, reasoning: false, input: ["text"],
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: 32768, maxTokens: 4096,
+    }));
+    if (models.length) {
+      pi.registerProvider("spark", { name: "DGX Spark (ollama)", baseUrl: `${SPARK}/v1`, apiKey: "ollama", api: "openai-completions", models });
+    }
+  } catch { /* Spark 터널이 없으면 프로바이더 없이 기동 */ }
+
+  // ── 0c) 제자리 작업 블록: 사이드카(scripts/attention_sidecar.py)가 유지하는
+  //        ~/.forget/attention/block.md 를 매 턴 시스템 프롬프트에 «다시» 쓴다.
+  //        덧붙이기가 아니라 교체이므로 틀린 줄은 다음 턴에 사라진다(2026-09-07, 정훈 «제자리 블록부터 붙여»).
+  const ATTN = ENV.FORGET_ATTENTION_DIR ?? `${ENV.HOME}/.forget/attention`;
+  async function readBlock(): Promise<string> {
+    try {
+      const { readFileSync } = await import("node:fs");
+      const txt = readFileSync(`${ATTN}/block.md`, "utf8").trim();
+      return txt;
+    } catch { return ""; }
+  }
+
   // ── 1) 기상 재수화 ────────────────────────────────────────────────────
   pi.on("before_agent_start", async (event: any, _ctx: any) => {
     let block = "";
+    const attn = await readBlock();
+    if (attn) block += `\n\n## Working block (forget attention — 사이드카가 대화를 보며 고른 것, 매 턴 교체)\n${attn}`;
     try {
       const capsule = await forgetPost("/v1/context/assemble/", {
         query: "현재 작업 맥락", filters: { user_id: USER },
