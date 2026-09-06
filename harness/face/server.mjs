@@ -16,11 +16,23 @@ const MODEL = opt("--model", process.env.FORGET_FACE_MODEL || "claude-fable-5-1"
 const ATTN = process.env.FORGET_ATTENTION_DIR || join(homedir(), ".forget", "attention");
 const HERE = dirname(fileURLToPath(import.meta.url));
 
-const piArgs = ["--mode", "rpc", "--provider", PROVIDER, "--model", MODEL, "--approve"];
-if (SESSION) piArgs.push("--session", SESSION); else piArgs.push("--name", `얼굴 ${new Date().toISOString().slice(5, 16).replace("T", " ")}`);
-const pi = spawn("pi", piArgs, { cwd: process.cwd(), stdio: ["pipe", "pipe", "pipe"], env: process.env });
-pi.stderr.on("data", (d) => process.stderr.write(`[pi] ${d}`));
-pi.on("exit", (c) => { console.error(`pi exited ${c}`); process.exit(c ?? 0); });
+const BACKEND = opt("--backend", process.env.FORGET_FACE_BACKEND || "pi");   // pi | claude
+// claude 백엔드: «나는 원래 여기 있었다»(2026-09-07) — Claude Code 세션을 포크해 이어 간다. 옮기지 않고 얼굴만 씌운다.
+let child;
+if (BACKEND === "claude") {
+  const cArgs = ["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--include-partial-messages", "--verbose",
+                 "--permission-mode", process.env.FORGET_FACE_PERMISSION || "bypassPermissions"];
+  if (SESSION) cArgs.push("--resume", SESSION, "--fork-session");
+  if (MODEL && MODEL !== "claude-fable-5-1") cArgs.push("--model", MODEL);
+  child = spawn("claude", cArgs, { cwd: process.cwd(), stdio: ["pipe", "pipe", "pipe"], env: process.env });
+} else {
+  const piArgs = ["--mode", "rpc", "--provider", PROVIDER, "--model", MODEL, "--approve"];
+  if (SESSION) piArgs.push("--session", SESSION); else piArgs.push("--name", `얼굴 ${new Date().toISOString().slice(5, 16).replace("T", " ")}`);
+  child = spawn("pi", piArgs, { cwd: process.cwd(), stdio: ["pipe", "pipe", "pipe"], env: process.env });
+}
+const pi = child;
+pi.stderr.on("data", (d) => process.stderr.write(`[${BACKEND}] ${d}`));
+pi.on("exit", (c) => { console.error(`${BACKEND} exited ${c}`); process.exit(c ?? 0); });
 
 const clients = new Set();
 const history = [];               // 최근 이벤트 링(새 클라이언트 재생용)
@@ -42,6 +54,12 @@ pi.stdout.on("data", (d) => {
 const send = (cmd) => pi.stdin.write(JSON.stringify(cmd) + "\n");
 const pending = new Map();
 function ask(cmd, timeoutMs = 8000) {   // 요청/응답 상관
+  if (BACKEND === "claude") {
+    if (cmd.type === "prompt") { send({ type: "user", message: { role: "user", content: cmd.message } }); return Promise.resolve({ success: true }); }
+    if (cmd.type === "get_state") return Promise.resolve({ success: true, data: { model: { provider: "anthropic", id: MODEL }, sessionName: claudeState.session ? `claude ${claudeState.session.slice(0, 8)}` : "claude" } });
+    if (cmd.type === "get_messages") return Promise.resolve({ success: true, data: { messages: [] } });
+    return Promise.resolve({ success: false, error: "claude 백엔드는 " + cmd.type + " 미지원" });
+  }
   const id = `f${++seq}`;
   return new Promise((res) => {
     const t = setTimeout(() => { pending.delete(id); res({ success: false, error: "timeout" }); }, timeoutMs);
@@ -51,7 +69,36 @@ function ask(cmd, timeoutMs = 8000) {   // 요청/응답 상관
 }
 // 응답 가로채기: broadcast 전에 pending 매칭
 const _b = broadcast;
-function broadcastAndResolve(ev) { if (ev.type === "response" && ev.id && pending.has(ev.id)) { pending.get(ev.id)(ev); pending.delete(ev.id); } _b(ev); }
+let claudeState = { session: null, busy: false, tools: new Map() };
+function translateClaude(ev) {            // Claude Code stream-json → pi 모양 이벤트(페이지는 하나의 어휘만 안다)
+  const out = [];
+  if (ev.type === "system" && ev.subtype === "init") { claudeState.session = ev.session_id; out.push({ type: "claude_init", session: ev.session_id, model: ev.model }); }
+  else if (ev.type === "stream_event" && ev.event) {
+    const e = ev.event;
+    if (!claudeState.busy) { claudeState.busy = true; out.push({ type: "agent_start" }); }
+    if (e.type === "content_block_delta" && e.delta?.type === "text_delta") out.push({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: e.delta.text } });
+    if (e.type === "content_block_start" && e.content_block?.type === "tool_use") { claudeState.tools.set(e.index, e.content_block); }
+  }
+  else if (ev.type === "assistant" && ev.message?.content) {
+    for (const c of ev.message.content) if (c.type === "tool_use") out.push({ type: "tool_execution_start", toolCallId: c.id, toolName: c.name, args: c.input });
+    if (ev.message.content.some((c) => c.type === "text")) out.push({ type: "message_end", message: { role: "assistant" } });
+  }
+  else if (ev.type === "user" && ev.message?.content) {
+    for (const c of Array.isArray(ev.message.content) ? ev.message.content : []) if (c.type === "tool_result") {
+      const txt = typeof c.content === "string" ? c.content : (c.content || []).map((x) => x.text || "").join("\n");
+      out.push({ type: "tool_execution_end", toolCallId: c.tool_use_id, result: { content: [{ type: "text", text: txt }] } });
+    }
+  }
+  else if (ev.type === "result") {
+    if (!claudeState.busy && !ev.num_turns) return out;          // 기동 직후의 빈 result — 턴이 아니다
+    claudeState.busy = false; out.push({ type: "agent_settled", cost: ev.total_cost_usd, turns: ev.num_turns });
+  }
+  return out;
+}
+function broadcastAndResolve(ev) {
+  if (BACKEND === "claude") { for (const t of translateClaude(ev)) _b(t); return; }
+  if (ev.type === "response" && ev.id && pending.has(ev.id)) { pending.get(ev.id)(ev); pending.delete(ev.id); } _b(ev);
+}
 pi.stdout.removeAllListeners("data");
 pi.stdout.on("data", (d) => {
   buf += d.toString("utf8");
@@ -100,4 +147,4 @@ const server = createServer(async (req, res) => {
   if (url.pathname === "/sidecar") return json(sidecar());
   res.writeHead(404); res.end();
 });
-server.listen(PORT, "127.0.0.1", () => console.error(`얼굴 http://127.0.0.1:${PORT}  (pi ${PROVIDER}/${MODEL}${SESSION ? " · session " + SESSION.split("/").pop() : ""})`));
+server.listen(PORT, "127.0.0.1", () => console.error(`얼굴 http://127.0.0.1:${PORT}  (${BACKEND} ${PROVIDER}/${MODEL}${SESSION ? " · session " + SESSION.split("/").pop() : ""})`));
