@@ -5865,7 +5865,9 @@ def search_memories(payload: dict[str, Any], project_id: str | None = None) -> d
         if adjusted:
             scored.sort(key=lambda item: (item["score"], item["updated_at"]), reverse=True)
     event_id = create_event("SEARCH", payload, {"top_k": top_k, "threshold": threshold}, project_id=project_id)
-    complete_event(event_id, "SUCCEEDED", scored[:top_k], started_at, start_time)
+    # 2026-09-07 retention: 결과 전문(건당 ~21KB, 누적 361MB) 대신 id·score·160자만 기록한다.
+    from .retention import compact_search_results as _compact_search_results
+    complete_event(event_id, "SUCCEEDED", _compact_search_results(scored[:top_k], text_chars=160), started_at, start_time)
     record_usage(
         project_id,
         "memory_search",
@@ -11921,6 +11923,13 @@ def _record_context_trace(
         "role_backfill": role_backfill,
         "context_access_decision_id": result.get("context_access_decision_id"),
     }
+    # 2026-09-07 retention: 실측 건당 30~70KB(자료화·use_now·후보 스냅샷·디버그)가 주 64MB로 쌓였다.
+    # 캡슐·질의·상태·후보 id만 남기고, 전문은 FORGET_TRACE_VERBOSE=1 일 때만 기록한다.
+    from .retention import compact_trace_payload as _compact_trace_payload, trace_verbose as _trace_verbose
+    if not _trace_verbose():
+        trace_payload = _compact_trace_payload(trace_payload)
+        trace_payload.pop("compacted_at", None)
+        trace_payload["compact"] = True
     with get_db() as conn:
         conn.execute(
             """

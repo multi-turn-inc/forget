@@ -578,6 +578,28 @@ def weekly_digest(path: Path, user: str, days: int = 7) -> dict[str, Any]:
     }
 
 
+def cmd_retention(args: argparse.Namespace) -> int:
+    """Compact heavy records. Memories are never touched."""
+    from . import retention
+    rep = retention.report()
+    print(f"db {rep['db_mb']} MB (free pages {rep['free_mb']} MB) · traces {rep['context_traces']['rows']} rows / "
+          f"{rep['context_traces']['payload_mb']} MB · search results "
+          f"{rep['events'].get('SEARCH', {}).get('results_mb', 0)} MB · growth 7d: {rep['growth_7d_mb']}")
+    res = retention.run(older_than_days=args.days, labeled_days=args.labeled_days, apply=args.apply)
+    mode = "APPLIED" if args.apply else "DRY-RUN"
+    print(f"[{mode}] traces: {res['traces']['candidates']} rows → reclaim {res['traces']['reclaim_mb']} MB "
+          f"(kept labeled {res['traces']['skipped_labeled']}) · search events: {res['search_events']['candidates']} rows → "
+          f"reclaim {res['search_events']['reclaim_mb']} MB · total {res['reclaim_mb_total']} MB")
+    if args.apply and args.vacuum:
+        v = retention.vacuum()
+        print(f"VACUUM {v['before_mb']} → {v['after_mb']} MB")
+    elif args.apply:
+        print("file size shrinks only after `forget retention --apply --vacuum` (or VACUUM).")
+    else:
+        print("nothing changed. run with --apply to rewrite, add --vacuum to shrink the file.")
+    return 0
+
+
 def cmd_weekly(args: argparse.Namespace) -> None:
     import getpass
 
@@ -927,6 +949,12 @@ def main(argv: list[str] | None = None) -> None:
                           "for you to review and send yourself")
     sub.add_parser("upgrade", help="pip upgrade + service restart + doctor, in one command",
                    parents=[shared])
+    ret = sub.add_parser("retention", help="compact old recall traces / search-event results (dry-run by default); "
+                         "records are heavier than memories — measured 717MB traces vs 48MB memories", parents=[shared])
+    ret.add_argument("--apply", action="store_true", help="actually rewrite rows (default: report only)")
+    ret.add_argument("--days", type=int, default=14, help="compact traces/events older than N days (default 14)")
+    ret.add_argument("--labeled-days", type=int, default=90, help="keep traces that have feedback outcomes for N days (default 90)")
+    ret.add_argument("--vacuum", action="store_true", help="VACUUM after apply (needs free disk ≈ current file size)")
     sub.add_parser("weekly", help="what memory did this week — counts only, never content",
                    parents=[shared])
     sub.add_parser("reembed", help="re-embed all memories with the active embedding stack "
@@ -968,6 +996,7 @@ def main(argv: list[str] | None = None) -> None:
      "doctor": cmd_doctor,
      "upgrade": cmd_upgrade,
      "weekly": cmd_weekly,
+     "retention": cmd_retention,
      "reembed": cmd_reembed,
      "recall": cmd_recall,
      "migrate-scope": cmd_migrate_scope}[command](args)
