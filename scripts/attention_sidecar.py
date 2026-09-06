@@ -12,7 +12,7 @@ from forget import attention as T
 
 
 HARNESS_GLOBS = {"claude": ["~/.claude/projects/*/*.jsonl"], "pi": ["~/.pi/agent/sessions/*/*.jsonl"],
-                 "codex": ["~/.codex/sessions/*/*/*/rollout-*.jsonl"]}
+                 "codex": ["~/.codex/sessions/*/*/*/rollout-*.jsonl"], "body": ["~/.forget/body/*.jsonl"]}
 
 
 def _last_user_ts(path: str) -> float:
@@ -52,7 +52,10 @@ def _last_user_ts(path: str) -> float:
             continue
         if isinstance(c, list) and c and isinstance(c[0], dict) and c[0].get("type") in ("tool_result",):
             continue
-        txt = c if isinstance(c, str) else "".join(p.get("text", "") for p in c if isinstance(p, dict))
+        try:
+            txt = str(c) if isinstance(c, str) else "".join(p.get("text", "") for p in c if isinstance(p, dict))
+        except (TypeError, AttributeError):
+            continue
         if not txt.strip() or txt.startswith("<") or txt.startswith("[Request interrupted"):
             continue
         ts = d.get("timestamp") or ""
@@ -112,7 +115,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--source"); ap.add_argument("--once", action="store_true"); ap.add_argument("--force", action="store_true")
     ap.add_argument("--dry", action="store_true"); ap.add_argument("--interval", type=float, default=2.0); ap.add_argument("--k", type=int, default=3)
-    ap.add_argument("--harness", choices=["auto", "claude", "pi", "codex"], default=os.getenv("FORGET_ATTENTION_HARNESS", "auto"),
+    ap.add_argument("--harness", choices=["auto", "claude", "pi", "codex", "body"], default=os.getenv("FORGET_ATTENTION_HARNESS", "auto"),
                     help="따라갈 전사의 하네스. 두 하네스를 번갈아 쓰는 동안은 하나를 못 박는다")
     ap.add_argument("--status", action="store_true", help="지금 들고 있는 블록·마지막 틱·관찰 수를 보여주고 끝낸다")
     a = ap.parse_args()
