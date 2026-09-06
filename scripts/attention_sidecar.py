@@ -23,6 +23,15 @@ def _last_user_ts(path: str) -> float:
     except Exception:
         return 0.0
     best = 0.0
+    born = 0.0                                     # pi 세션 헤더 시각 — 이식된(더 오래된 시각의) 턴은 «이 파일에서 말한 것»이 아니다
+    try:
+        with open(path, "rb") as f:
+            head = json.loads(f.readline().decode("utf-8", "ignore"))
+        if head.get("type") == "session":
+            from datetime import datetime as _dt
+            born = _dt.fromisoformat(str(head.get("timestamp", "")).replace("Z", "+00:00")).timestamp()
+    except Exception:
+        born = 0.0
     for line in data.splitlines():
         if '"role":"user"' not in line and '"role": "user"' not in line:
             continue
@@ -45,6 +54,8 @@ def _last_user_ts(path: str) -> float:
             t = datetime.fromisoformat(str(ts).replace("Z", "+00:00")).timestamp()
         except Exception:
             t = os.path.getmtime(path)
+        if born and t < born - 5:
+            continue                               # 이식분 제외
         best = max(best, t)
     return best
 
