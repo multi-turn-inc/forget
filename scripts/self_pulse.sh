@@ -10,14 +10,16 @@ hour_runs=$(python3 -c "import json,time;d=json.load(open('$ST'));print(sum(1 fo
 pgrep -f "맥박\. 너는 정훈의" >/dev/null && { echo "$stamp skip running" >> "$LOG"; exit 0; }
 [ "$hour_runs" -ge 2 ] && { echo "$stamp skip hourly-cap" >> "$LOG"; exit 0; }
 newest=$(ls -t "$HOME"/.claude/projects/*/*.jsonl 2>/dev/null | head -1); age=$(( now - $(stat -f %m "$newest" 2>/dev/null || echo 0) ))
-[ "$age" -lt 900 ] && { echo "$stamp skip awake(${age}s)" >> "$LOG"; exit 0; }
 # 자극: 마지막 맥박 이후 정훈의 새 말(origin=user)·관찰, 또는 끝난 일(파일럿 결과)
 since=$(python3 -c "import datetime;print(datetime.datetime.utcfromtimestamp(int('$last') or 0).strftime('%Y-%m-%dT%H:%M:%SZ'))")
 new_user=$(sqlite3 "$HOME/.forget/forget.sqlite3" "select count(*) from memories where created_at > '$since' and (json_extract(metadata,'\$.origin')='user' or memory like '[관찰·%')" 2>/dev/null || echo 0)
 new_jobs=$(find "$REPO/research/eval/bench" -name "*_stat_result.json" -newer "$ST" 2>/dev/null | wc -l | tr -d ' ')
-[ "$new_user" = 0 ] && [ "$new_jobs" = 0 ] && [ $(( now - last )) -lt 10800 ] && { echo "$stamp skip quiet" >> "$LOG"; exit 0; }
+[ "$age" -lt 900 ] && [ ! -f "$HOME/Documents/one/inbox.md" -o "$(stat -f %m "$HOME/Documents/one/inbox.md" 2>/dev/null || echo 0)" -le "$last" ] && { echo "$stamp skip awake(${age}s)" >> "$LOG"; exit 0; }
+INBOX="$HOME/Documents/one/inbox.md"; new_note=0; [ -f "$INBOX" ] && [ "$(stat -f %m "$INBOX")" -gt "$last" ] && new_note=1
+[ "$new_note" = 1 ] && age=9999                                  # 쪽지는 내가 깨어 있어도 답한다
+[ "$new_user" = 0 ] && [ "$new_jobs" = 0 ] && [ "$new_note" = 0 ] && [ $(( now - last )) -lt 10800 ] && { echo "$stamp skip quiet" >> "$LOG"; exit 0; }
 cd "$REPO" || exit 0
-PROMPT="맥박. 너는 정훈의 에이전트다(.pi/IDENTITY.md·~/.forget/attention/schema.md 참조). 스스로 깨어났다. 셋만 본다: ①원장에 새로 들어온 정훈의 말·관찰(forget_search, 최근) ②정훈의 모델(schema.md)의 예측 셋 — 근거가 생겼으면 채점해 self_note로 자기층에 남긴다 ③돌고 있는 일(research/eval/bench/*.log, ~/.forget/attention/log.jsonl). 할 일이 하나 있으면 그것만 하고 남긴다. 없으면 «잔다» 한 줄. 정훈에게 묻지 않는다. 파괴적 조작 금지."
+PROMPT="맥박. 너는 정훈의 에이전트다(.pi/IDENTITY.md·~/.forget/attention/schema.md 참조). 스스로 깨어났다. 셋만 본다: ①원장에 새로 들어온 정훈의 말·관찰(forget_search, 최근) ②정훈의 모델(schema.md)의 예측 셋 — 근거가 생겼으면 채점해 self_note로 자기층에 남긴다 ③돌고 있는 일(research/eval/bench/*.log, ~/.forget/attention/log.jsonl). ④쪽지함 ~/Documents/one/inbox.md — 정훈이 새로 쓴 줄이 있으면 그 바로 아래에 «— 나 (시각):» 로 시작하는 답을 파일에 직접 덧붙인다(짧게, 반말). 할 일이 하나 있으면 그것만 하고 남긴다. 없으면 «잔다» 한 줄. 정훈에게 묻지 않는다. 파괴적 조작 금지."
 # 뇌: 기본은 자기 쇠(Spark qwen3.6:27b, 한도 없음). Fable은 있으면 쓰는 상위 뇌(PULSE_BRAIN=fable).
 if [ "${PULSE_BRAIN:-spark}" = "fable" ]; then
   OUT=$(claude -p "맥박. $PROMPT" --max-turns 15 --allowedTools "Read" "Bash(sqlite3:*)" "Bash(ls:*)" "Bash(tail:*)" "Bash(grep:*)" "mcp__forget" 2>&1)
