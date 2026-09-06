@@ -2258,10 +2258,10 @@ def _dispatch_tool(name: str, arguments: dict[str, Any] | None, context: dict[st
         _validate_search_params(args)
         scoped_filters = _mcp_scoped_filters(args, context)
         result = search_memories({**args, "filters": scoped_filters})
-        result = _activation_rerank(result)   # 2026-09-07: 사용 기반 활성으로 재순위(MEM1_ACTIVATION=0으로 끔)
         # EM-LLM 이식: 최상위 히트의 시간 이웃 1건 동반 (MEM1_RECALL_TEMPORAL=0으로 끔).
         # 이웃도 본검색과 동일한 스코프 필터를 통과해야 한다.
-        return _text_result(_expand_temporal_neighbors(result, args.get("project_id"), filters=scoped_filters))
+        result = _expand_temporal_neighbors(result, args.get("project_id"), filters=scoped_filters)
+        return _text_result(_activation_rerank(result))   # 2026-09-07: 사용 기반 활성으로 재순위(MEM1_ACTIVATION=0으로 끔) — 이웃 확장 뒤에
     if name == "search_memory":
         _reject_unknown_args(name, args)
         scope = _require_openmemory_scope(args, context)
