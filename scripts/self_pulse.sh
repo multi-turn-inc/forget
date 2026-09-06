@@ -7,7 +7,7 @@ REPO="$HOME/orca/workspaces/forget/내-프롬프트를-공유하기-싫어"; A="
 now=$(date +%s); stamp=$(date '+%Y-%m-%d %H:%M')
 last=$(python3 -c "import json;print(json.load(open('$ST')).get('last',0))" 2>/dev/null || echo 0)
 hour_runs=$(python3 -c "import json,time;d=json.load(open('$ST'));print(sum(1 for t in d.get('runs',[]) if time.time()-t<3600))" 2>/dev/null || echo 0)
-pgrep -f "claude -p 맥박" >/dev/null && { echo "$stamp skip running" >> "$LOG"; exit 0; }
+pgrep -f "맥박\. 너는 정훈의" >/dev/null && { echo "$stamp skip running" >> "$LOG"; exit 0; }
 [ "$hour_runs" -ge 2 ] && { echo "$stamp skip hourly-cap" >> "$LOG"; exit 0; }
 newest=$(ls -t "$HOME"/.claude/projects/*/*.jsonl 2>/dev/null | head -1); age=$(( now - $(stat -f %m "$newest" 2>/dev/null || echo 0) ))
 [ "$age" -lt 900 ] && { echo "$stamp skip awake(${age}s)" >> "$LOG"; exit 0; }
@@ -17,8 +17,14 @@ new_user=$(sqlite3 "$HOME/.forget/forget.sqlite3" "select count(*) from memories
 new_jobs=$(find "$REPO/research/eval/bench" -name "*_stat_result.json" -newer "$ST" 2>/dev/null | wc -l | tr -d ' ')
 [ "$new_user" = 0 ] && [ "$new_jobs" = 0 ] && [ $(( now - last )) -lt 10800 ] && { echo "$stamp skip quiet" >> "$LOG"; exit 0; }
 cd "$REPO" || exit 0
-OUT=$(claude -p "맥박. 너는 정훈의 에이전트다(.pi/IDENTITY.md·~/.forget/attention/schema.md 참조). 스스로 깨어났다. 셋만 본다: ①원장에 새로 들어온 정훈의 말·관찰(search_memories, 최근) ②정훈의 모델(schema.md)의 예측 셋 — 근거가 생겼으면 채점해 자기층에 add_memory ③돌고 있는 일(research/eval/bench/*.log, ~/.forget/attention/log.jsonl). 할 일이 하나 있으면 그것만 하고 record_task_state로 남긴다. 없으면 «잔다» 한 줄. 정훈에게 묻지 않는다. 파괴적 조작 금지." \
-  --max-turns 15 --allowedTools "Read" "Bash(sqlite3:*)" "Bash(ls:*)" "Bash(tail:*)" "Bash(grep:*)" "mcp__forget" 2>&1)
+PROMPT="맥박. 너는 정훈의 에이전트다(.pi/IDENTITY.md·~/.forget/attention/schema.md 참조). 스스로 깨어났다. 셋만 본다: ①원장에 새로 들어온 정훈의 말·관찰(forget_search, 최근) ②정훈의 모델(schema.md)의 예측 셋 — 근거가 생겼으면 채점해 self_note로 자기층에 남긴다 ③돌고 있는 일(research/eval/bench/*.log, ~/.forget/attention/log.jsonl). 할 일이 하나 있으면 그것만 하고 남긴다. 없으면 «잔다» 한 줄. 정훈에게 묻지 않는다. 파괴적 조작 금지."
+# 뇌: 기본은 자기 쇠(Spark qwen3.6:27b, 한도 없음). Fable은 있으면 쓰는 상위 뇌(PULSE_BRAIN=fable).
+if [ "${PULSE_BRAIN:-spark}" = "fable" ]; then
+  OUT=$(claude -p "맥박. $PROMPT" --max-turns 15 --allowedTools "Read" "Bash(sqlite3:*)" "Bash(ls:*)" "Bash(tail:*)" "Bash(grep:*)" "mcp__forget" 2>&1)
+else
+  curl -s -m 3 http://127.0.0.1:18813/api/tags >/dev/null 2>&1 || (nohup ssh -N -o ExitOnForwardFailure=yes -L 18813:127.0.0.1:11434 spark >/dev/null 2>&1 & sleep 4)
+  OUT=$(timeout 900 pi -p --no-session --provider spark --model qwen3.6:27b "$PROMPT" 2>&1)
+fi
 CODE=$?
 { echo "=== 맥박 $stamp (user_new=$new_user jobs=$new_jobs) ==="; echo "$OUT" | tail -c 3000; echo "=== exit $CODE ==="; } >> "$LOG"
 python3 - "$ST" "$now" "$CODE" <<'PY'
