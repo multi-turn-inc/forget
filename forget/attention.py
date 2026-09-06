@@ -242,6 +242,23 @@ def apply_judgement(st: dict[str, Any], cands: list[dict[str, Any]], j: dict[str
     return {"added": added, "dropped": [d["id"] for d in dropped if isinstance(d, dict)]}
 
 
+def _recent_proposal_quotes(hours: int = 24) -> set[str]:
+    p = ATTN_DIR / "proposals.jsonl"
+    if not p.exists():
+        return set()
+    cutoff = time.time() - hours * 3600
+    out: set[str] = set()
+    for line in p.read_text().splitlines()[-500:]:
+        try:
+            d = json.loads(line)
+            at = datetime.fromisoformat(str(d.get("at", "")).replace("Z", "+00:00")).timestamp()
+        except Exception:
+            continue
+        if at >= cutoff:
+            out.add(re.sub(r"\s+", "", str(d.get("text", "")).split("-")[0].split("—")[0])[:40])
+    return out
+
+
 def record_observations(j: dict[str, Any], min_conf: float = 0.7) -> list[str]:
     """정훈의 결정·거부·정정만 원장에 남긴다. 에이전트 추론이므로 시스템이 yellow를 붙인다."""
     saved = []
@@ -249,9 +266,12 @@ def record_observations(j: dict[str, Any], min_conf: float = 0.7) -> list[str]:
         kind, text, conf = str(o.get("kind", "")), str(o.get("text", "")).strip(), float(o.get("conf") or 0)
         if kind not in ("decision", "rejection", "correction", "preference") or conf < min_conf or len(text) < 12:
             continue
-        # 중복: 거의 같은 기억이 이미 있으면 건너뛴다
+        # 중복: 거의 같은 기억이 이미 있거나(검색 0.92+), 최근 24h 제안과 인용부가 같으면 건너뛴다
         top = search(text[:300], 3)
         if top and float(top[0].get("score") or 0) >= 0.92:
+            continue
+        quote = re.sub(r"\s+", "", text.split("-")[0].split("—")[0])[:40]
+        if quote and quote in _recent_proposal_quotes():
             continue
         with open(ATTN_DIR / "proposals.jsonl", "a") as f:
             f.write(json.dumps({"at": now_iso(), **o}, ensure_ascii=False) + "\n")
