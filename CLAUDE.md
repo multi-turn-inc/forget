@@ -42,6 +42,13 @@
   차단 형태 **전면**: `;` 복합도 `&&`와 똑같이 승인 요구 · 인라인 `python3 -c` 안의 **모든 `#`**(주석이든
   마크다운 `##` 헤더든 — 가드는 «따옴표 안 개행 뒤 #»만 보고 의미를 묻지 않는다) · heredoc. `#`이 든
   본문(frictions.md·predictions.md 절)은 Edit/Write 도구로 쓴다 — 인라인 python으로 append하지 않는다.
+  **추가 등재(c305 관찰 3형태 + c306 실측 1형태 · P78 «형태 갱신 = 처치»)**: `grep … | head`(«multiple
+  operations») · **grep 패턴 안의 `\|` 대체·`\{n,m\}` 수량자**(c306 2회 — 파이프 뒤에서는 «multiple
+  operations», 단독으로도 «requires approval»; 같은 세션의 `grep "a\|b" … | tail -N`과 `grep -o "[^|]*"`는
+  통과했으므로 술어는 미확인 — 정규식 좁히기는 **Grep 도구**로 한다) · `$?` 확장(«simple_expansion» —
+  종료 코드는 스크립트 안에서 print한다) · `> 파일` 출력 리다이렉트(«allowed working directories» 거부 —
+  비ASCII 워크트리 경로·관측 41 기전 · 큰 출력은 하네스 자동 저장 파일을 Read한다). 파트 T curl 한 줄의
+  `| python3 -c` 파이프는 통과한다.
 
 **어느 쪽이든 `restore_note`에 하네스 종류(A/B/C)를 병기한다** — 병기하지 않으면 세 계열이
 한 분모에 섞여 지표가 판정 불가가 된다.
