@@ -48,7 +48,9 @@
   통과했으므로 술어는 미확인 — 정규식 좁히기는 **Grep 도구**로 한다) · `$?` 확장(«simple_expansion» —
   종료 코드는 스크립트 안에서 print한다) · `> 파일` 출력 리다이렉트(«allowed working directories» 거부 —
   비ASCII 워크트리 경로·관측 41 기전 · 큰 출력은 하네스 자동 저장 파일을 Read한다). 파트 T curl 한 줄의
-  `| python3 -c` 파이프는 통과한다.
+  `| python3 -c` 파이프는 통과한다. **c310 등재(감사 실측 1형태)**: 인라인 `python3 -c` 안의 `|=`(파이프
+  문자 직후 `=` — «Contains zsh =cmd equals expansion» · 따옴표 안이어도 가드는 `=`로 시작하는 단어로 본다) —
+  증강 대입이 든 파이썬은 Write 도구로 파일을 만들어 `.venv/bin/python tmp/x.py`로 실행한다.
 
 **어느 쪽이든 `restore_note`에 하네스 종류(A/B/C)를 병기한다** — 병기하지 않으면 세 계열이
 한 분모에 섞여 지표가 판정 불가가 된다.
