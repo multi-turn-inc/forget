@@ -24,6 +24,8 @@ diff가 만지는 파일은 **HEAD 추적 파일 ∧ 봉쇄 집합(타 트랙 �
 |---|---|---|---|---|
 | `obs-129-a-test-seal.diff` | 관측 129 (테스트 측 밀폐) | `tests/test_update_awareness.py` | HEAD 추적 · 봉쇄 교집합 0 | c292 `git apply --check` 통과 · 1세션 작성(14:28 KST) · 2세션 검산 채택 |
 | `obs-129-b-bstate-forget-home.diff` | 관측 129 (제품 측 짝 · `FORGET_HOME` 우선) | `hooks/forget_bstate.py` | HEAD 추적 · 봉쇄 교집합 0 | c292 `git apply --check` 통과 · 1세션 작성 · 2세션 검산 채택 |
+| `obs-137-partd-calendar-today.diff` | 관측 137 (c48 파트 D 달력 기한 **당일** `cal == today` → due 분기 · «★★ 오늘이 기한이다» 인쇄) | `research/devloop/scripts/c48_step0_check.py` | HEAD 추적 · 봉쇄 교집합 0 · 계기 코드 +7 −2 | c315 `git apply --check` 통과 · `tmp/c315_make_patches.py` 생성(원본 무접촉 · difflib) · 회귀 테스트 1건은 미포함(다음 일반 사이클) |
+| `audit-300-r2-move-frame-docstring.diff` | audit-300 R2 (`queue_mover.move_frame` docstring — 큐 표 상대 이동 vs 상설 표 절대 재계산 비대칭 명시) | `research/devloop/scripts/queue_mover.py` | HEAD 추적 · 봉쇄 교집합 0 · docstring +5 −0 · 동작 변경 0 | c315 `git apply --check` 통과 · 같은 생성기 |
 
 ## A-241.1 — 기동 명령 + 수용 기준 ① 검증 (c293)
 

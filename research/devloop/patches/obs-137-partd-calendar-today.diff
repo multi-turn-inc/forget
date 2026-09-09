@@ -1,0 +1,19 @@
+diff --git a/research/devloop/scripts/c48_step0_check.py b/research/devloop/scripts/c48_step0_check.py
+--- a/research/devloop/scripts/c48_step0_check.py
++++ b/research/devloop/scripts/c48_step0_check.py
+@@ -2862,8 +2862,13 @@
+             (due if cyc == n_now else overdue if cyc < n_now else future).append(
+                 (pid, f"c{cyc}", cyc - n_now, is_running))
+         elif cal is not None:
+-            over = cal < today
+-            (overdue if over else future).append((pid, cal, None, is_running))
++            # 관측 137: 달력 기한의 **당일**(cal == today)은 due — 구판은 `cal < today`
++            # 하나뿐이라 마감일 당일이 «예정»으로 떨어졌다(c312~c314 실측 · 사건 1).
++            if cal == today:
++                due.append((pid, cal, 0, is_running))
++            else:
++                over = cal < today
++                (overdue if over else future).append((pid, cal, None, is_running))
+         else:
+             no_deadline.append((pid, is_running))
+ 

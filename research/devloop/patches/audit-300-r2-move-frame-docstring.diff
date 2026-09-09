@@ -1,0 +1,15 @@
+diff --git a/research/devloop/scripts/queue_mover.py b/research/devloop/scripts/queue_mover.py
+--- a/research/devloop/scripts/queue_mover.py
++++ b/research/devloop/scripts/queue_mover.py
+@@ -217,6 +217,11 @@
+ 
+     perm_report['settlement_prev'] = settlement_receipt(직전 프레임 = old_n) — 이동 직전
+     프레임의 정산 줄은 그 사이클 수확이 썼어야 하므로, 이동 시점이 그 1비트의 검산 시점이다.
++
++    비대칭(audit-300 R2): 큐 표(shift_queue_frame)는 old_n → new_n **상대 이동**(셀 값 +Δ)이고,
++    상설 파생 계수기 표(recalc_permanent_table)는 new_n으로 **절대 재계산**(N − start + 1)이다.
++    따라서 old_n을 틀리게 주면 큐 표만 어긋나고 상설 표는 옳게 나온다 — 두 표가 갈리면
++    의심할 것은 old_n이다.
+     """
+     lines = text.splitlines()
+     q = shift_queue_frame(lines, old_n, new_n)
