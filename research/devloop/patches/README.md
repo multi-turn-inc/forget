@@ -26,6 +26,8 @@ diff가 만지는 파일은 **HEAD 추적 파일 ∧ 봉쇄 집합(타 트랙 �
 | `obs-129-b-bstate-forget-home.diff` | 관측 129 (제품 측 짝 · `FORGET_HOME` 우선) | `hooks/forget_bstate.py` | HEAD 추적 · 봉쇄 교집합 0 | c292 `git apply --check` 통과 · 1세션 작성 · 2세션 검산 채택 |
 | `obs-137-partd-calendar-today.diff` | 관측 137 (c48 파트 D 달력 기한 **당일** `cal == today` → due 분기 · «★★ 오늘이 기한이다» 인쇄) | `research/devloop/scripts/c48_step0_check.py` | HEAD 추적 · 봉쇄 교집합 0 · 계기 코드 +7 −2 | c315 `git apply --check` 통과 · `tmp/c315_make_patches.py` 생성(원본 무접촉 · difflib) · 회귀 테스트 1건은 미포함(다음 일반 사이클) |
 | `audit-300-r2-move-frame-docstring.diff` | audit-300 R2 (`queue_mover.move_frame` docstring — 큐 표 상대 이동 vs 상설 표 절대 재계산 비대칭 명시) | `research/devloop/scripts/queue_mover.py` | HEAD 추적 · 봉쇄 교집합 0 · docstring +5 −0 · 동작 변경 0 | c315 `git apply --check` 통과 · 같은 생성기 |
+| `obs-126-a-parts-second-predicate.diff` | 관측 126 (c48 파트 S 사망 의심 눈 **제2 술어** — `predecessor_death_evidence`에 `weak` 키[devloop 소유 미커밋 ∧ 수확 이후 무접촉 = **약** · HEAD 신선도 불문] · `evidence`는 **강**으로 존치 · part_s 헤더 두 술어 병기 · «증거 0건»은 강·약 둘 다 0일 때만) | `research/devloop/scripts/c48_step0_check.py` | HEAD 추적 · 봉쇄 교집합 0 · 계기 코드 +24 −6 · 상수 발명 0 | c316 `git apply --check` 통과 · `tmp/c316_make_patch.py` 생성(원본 무접촉 · difflib) · **격리 검산**(pytest 호출 0): 원본 테스트→변환 c48 22/22 · 변환 테스트→변환 c48 25/25 — 적용 후 pytest의 대체 아님 |
+| `obs-126-b-tests-weak-evidence.diff` | 관측 126 (회귀 — 기존 «무접촉 = 증거 아님» 단언 1건을 «강 아님·약임»으로 정정 + c208 재현[`blockade_rows` mtime < HEAD]·강·약·unknown 3칸 분리·빈 입력 키 존재 3건 신설) | `tests/test_devloop_step0_reverify.py` | HEAD 추적 · 봉쇄 교집합 0 · +40 −3 | c316 `git apply --check` 통과 · 같은 생성기 · 대조군: 변환 테스트→**원본** c48 = 4 실패(새 단언 전부 `KeyError: 'weak'`) · **a와 짝** — b만 적용하면 그 4건이 실패한다 |
 
 ## A-241.1 — 기동 명령 + 수용 기준 ① 검증 (c293)
 

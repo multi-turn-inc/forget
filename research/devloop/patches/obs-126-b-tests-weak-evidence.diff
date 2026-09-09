@@ -1,0 +1,58 @@
+diff --git a/tests/test_devloop_step0_reverify.py b/tests/test_devloop_step0_reverify.py
+--- a/tests/test_devloop_step0_reverify.py
++++ b/tests/test_devloop_step0_reverify.py
+@@ -216,10 +216,13 @@
+     assert c48.predecessor_death_evidence(rows)["evidence"] == []
+ 
+ 
+-def test_devloop_path_untouched_since_harvest_is_not_evidence():
+-    # 수확 이후 무접촉이면 그 파일은 이번 세대의 산출이 아니다.
++def test_devloop_path_untouched_since_harvest_is_weak_not_strong_evidence():
++    # 수확 이후 무접촉은 **강** 증거가 아니다 — 그러나 배제 근거도 아니다(관측 126): 무관 트랙이
++    # 그 사이에 커밋하면 죽은 세션의 산출도 HEAD보다 오래된다. 제2 술어(약)로 남는다.
+     rows = [("research/devloop/frictions.md", 300.0, -125.6, c48.UNTOUCHED_AFTER_HARVEST)]
+-    assert c48.predecessor_death_evidence(rows)["evidence"] == []
++    out = c48.predecessor_death_evidence(rows)
++    assert out["evidence"] == []
++    assert [p for p, _, _ in out["weak"]] == ["research/devloop/frictions.md"]
+ 
+ 
+ def test_unreadable_mtime_is_unknown_not_absence():
+@@ -266,3 +269,37 @@
+     assert verdict == "일치"
+     rows = [("research/devloop/predictions.md", 0.5, +18.1, c48.TOUCHED_AFTER_HARVEST)]
+     assert c48.predecessor_death_evidence(rows)["evidence"]
++
++
++# --- 관측 126 (c208 · diff c316): 남의 트랙 커밋이 죽은 세션의 지문을 지운다 ------------
++#
++# c208 세션이 frictions.md를 쓰고 수확 전에 죽었다(mtime 08-24 20:36Z). 그 뒤 무관 L3 트랙이
++# HEAD를 커밋했다(08-25 09:10Z). 제1 술어 «HEAD보다 새로움»이 거짓이 되어 눈은 «증거 0건»을
++# 인쇄했다. 제2 술어는 HEAD 신선도를 필요조건이 아니라 **강도 라벨**로 쓴다 — 강(`evidence`)
++# 은 그대로, 약(`weak`)이 새로 보인다. c209 소급 감사: 노출 창 48/224 = 21.4%.
++
++
++def test_foreign_commit_after_death_is_weak_evidence_not_silence():
++    head_ct, now = 1_000_000.0, 1_100_000.0
++    rows = c48.blockade_rows(
++        [("research/devloop/frictions.md", head_ct - 45_000.0),   # 죽은 세션 산출 · HEAD가 뒤에 전진
++         ("harness/body/brain.py", head_ct - 45_000.0)],           # 타 트랙 WIP · 소유 밖 → 어느 칸에도 없음
++        head_ct, now)
++    out = c48.predecessor_death_evidence(rows)
++    assert out["evidence"] == []
++    assert [p for p, _, _ in out["weak"]] == ["research/devloop/frictions.md"]
++
++
++def test_strong_and_weak_are_disjoint_and_both_reported():
++    rows = [("research/devloop/predictions.md", 0.5, +18.1, c48.TOUCHED_AFTER_HARVEST),
++            ("research/devloop/frictions.md", 30.0, -12.0, c48.UNTOUCHED_AFTER_HARVEST),
++            ("research/devloop/gate-queue.md", None, None, "판정 불가(stat 실패·경로 부재)")]
++    out = c48.predecessor_death_evidence(rows)
++    assert [p for p, _, _ in out["evidence"]] == ["research/devloop/predictions.md"]
++    assert [p for p, _, _ in out["weak"]] == ["research/devloop/frictions.md"]
++    assert out["unknown"] == ["research/devloop/gate-queue.md"]
++
++
++def test_weak_key_exists_even_when_empty():
++    # 호출자(part_s)가 dd["weak"]를 읽는다 — 키 부재가 KeyError로 판정 불가를 내면 안 된다.
++    assert c48.predecessor_death_evidence([]) == {"evidence": [], "weak": [], "unknown": []}

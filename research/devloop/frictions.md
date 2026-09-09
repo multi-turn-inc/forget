@@ -12593,3 +12593,25 @@ P80 (b)가 실측한다.
 **반게임 선언.** 근거 = 원장 c308~c314 restore_note 원문(캡슐 절단 위치 기재) · c48 파트 B 인쇄(budget/capsule_chars/
 truncated · 캡슐 원문) · task_state c314 next_actions[0] 원문(문자 수) · 이 세션 SessionStart 훅 주입본. 재현 = 파트 B
 캡슐 원문의 «다음 행동:» 줄 끝 «…» 위치와 next_actions[0] 문자 수를 사이클별로 대조.
+
+## 관측 126 보강 (사이클 316 **일반**) — 수용 기준 ② 처치 = P76 diff 2본 완성(적용 안 함): 제2 술어(약 · HEAD 무관) + 회귀 3건 · 격리 검산 3벌 · 회부 존속
+
+**처치 diff.** `patches/obs-126-a-parts-second-predicate.diff`(c48 `predecessor_death_evidence`에 `weak` 키 추가 — devloop
+소유 미커밋 ∧ «수확 이후 무접촉» = **약** · `evidence`는 **강**으로 존치 · part_s 헤더에 두 술어 병기 · 약 N건 인쇄 ·
+«증거 0건»은 강·약 둘 다 0일 때만 · +24 −6) + `patches/obs-126-b-tests-weak-evidence.diff`(tests/test_devloop_step0_reverify.py
+— 기존 «무접촉 = 증거 아님» 단언을 «강 아님·약임»으로 · c208 재현 `blockade_rows(mtime = head_ct − 45,000s)` → evidence [] ·
+weak [frictions.md] · 강·약·unknown 3칸 분리 · 빈 입력 키 존재 · +40 −3). 상수 발명 0 · 결론 문장 0(c151 규약 승계) ·
+정의역 = 두 파일 HEAD 추적 ∧ 봉쇄 27건 교집합 0(파트 A 직독). `git apply --check` 6본 전부 통과. **작업 트리 적용 0** —
+적용은 봉쇄 해제 또는 게이트(patches/README 규약).
+
+**격리 검산 (P76 한계 ① «패치가 옳은가는 재지 않는다»의 부분 충전 · pytest 호출 0 · 추적 파일 쓰기 0).** 변환본을
+tmp/c316_patchcheck/에 두고 importlib 적재 · 테스트 함수 직접 호출(`tmp/c316_make_patch.py`): (가) 원본 테스트 22건 →
+변환 c48 = **22/22**(하위 호환 — `evidence` 의미 무변경) · (나) 변환 테스트 25건 → 변환 c48 = **25/25** · (다) 변환 테스트
+25건 → **원본** c48 = 21/25 · **실패 4 = 새 단언 4건 전부**(`KeyError: 'weak'` 3 · 빈 입력 동등 1) — 대조군: 새 단언이
+구본에서 실제로 떨어진다(원칙 1). 한계: 격리 exec는 pytest 수집·fixture·경로 해석과 다르다 — 적용 후 pytest 실측이 정본이고
+이 검산은 그 대체가 아니다.
+
+**남는 것.** ④ 정본 처치·문면 개정은 여전히 적용 뒤(봉쇄 해제·게이트) · ③ 미확정(노출 창 21.4% 상한 · c209) 무변경 ·
+적용 전 파트 S 인쇄는 구본이라 c316 step 0도 «증거 0건(devloop 소유 미커밋 없음)»을 인쇄했다 — 오늘은 devloop 소유
+미커밋 0건이라 그 0은 참이고 기전만 존속. 다음 감사 c320의 `git apply --check` 재검산 대상(patches/ 6본). **회부 존속** ·
+open Δ 0 · 상태 전이 = «처치 후보 식별» → «처치 완성 · 적용 대기». 첫 «보강» 헤더라 P79 축약 정의역 밖(전문 유지).
