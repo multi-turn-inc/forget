@@ -1,0 +1,12 @@
+diff --git a/research/devloop/scripts/c48_step0_check.py b/research/devloop/scripts/c48_step0_check.py
+--- a/research/devloop/scripts/c48_step0_check.py
++++ b/research/devloop/scripts/c48_step0_check.py
+@@ -2405,7 +2405,7 @@
+     loose_r = frictions_text.count("보강 (사이클")
+     recent_r = [(c, k) for c, k in sorted(reinf.items()) if c >= n_now - 30]
+     recent_txt = " ".join(f"c{c}×{k}" if k > 1 else f"c{c}" for c, k in recent_r) or "없음"
+-    print(f"  [재발 표본 계수 — audit-270 R3 (c275 배선)] «보강 (사이클 N» 헤더 = 총 {total_r}건")
++    print(f"  [보강 헤더 계수(재발 아님 포함) — audit-270 R3 (c275 배선) · audit-320 R4 개명] «보강 (사이클 N» 헤더 = 총 {total_r}건")
+     print(f"     최근 30창(c{n_now - 30}~): {len(recent_r)}사이클 {sum(k for _, k in recent_r)}건 — {recent_txt}")
+     print(f"     ↳ 느슨 탐침(헤더 외 산문 포함 부분문자열) = {loose_r}건 — 차이 {loose_r - total_r}건은"
+           f" 산문 인용분. **진단 전용·고발 없음**(관측 107) — 정본 계수는 header_kind 술어 쪽이다.")

@@ -1,0 +1,52 @@
+diff --git a/research/devloop/scripts/c48_step0_check.py b/research/devloop/scripts/c48_step0_check.py
+--- a/research/devloop/scripts/c48_step0_check.py
++++ b/research/devloop/scripts/c48_step0_check.py
+@@ -112,6 +112,25 @@
+     return n, mode
+ 
+ 
++def state_cycle_from_summary(summary: str) -> int | None:
++    """task_state summary에서 세대 사이클 번호를 뽑는다. **순수 함수** (관측 140 · audit-320 R2 · c321).
++
++    우선순위: ① 문두 «cN 완료»(절차 5 summary의 현행 서식) → ② 첫 «사이클 N» 인용 → ③ None.
++    ②는 문면 어디든 첫 매치라 **인용문일 수 있다** — c93~c320 파트 S·㉼가 «일치»로 인쇄한 값은
++    전부 ②였고, 문두 «cN 완료(…)» 서식은 ①이 없어 «판정 불가»(c319·c320 자기 세대)이거나
++    903번째 문자의 인용 우연(c320이 c319 세대를 «일치 319»로 읽은 자리)이었다. None은 호출자가
++    «일치»로 접지 않는다(task_state_lag의 c93 규율 그대로).
++
++    왜 함수인가. 같은 정규식이 두 자리(task_state_lag · ㉼ 3자 대조 인라인)에 살아 있었다 —
++    관측 99(한 파일 안 두 계기가 같은 입력을 다르게 푼다)의 예방 = 술어를 한 곳에 둔다.
++    """
++    head = re.match(r"[^\w]*c(\d+)\s*완료", summary)
++    if head:
++        return int(head.group(1))
++    cited = re.search(r"사이클\s*(\d+)", summary)
++    return int(cited.group(1)) if cited else None
++
++
+ def task_state_lag(ledger_last: int, summary: str) -> tuple[int | None, str]:
+     """원장 마지막 사이클과 task_state 세대의 사이클을 대조한다. **순수 함수** (c93).
+ 
+@@ -120,10 +139,9 @@
+     돌지 않았다"인데, 그 구간은 N-1 == ledger_last로 나타난다. ledger_last보다 **뒤진**
+     세대는 정상 구간이 없다 — 그 사이 어느 사이클의 쓰기가 착지하지 못한 것이다.
+     """
+-    match = re.search(r"사이클\s*(\d+)", summary)
+-    if not match:
++    state_cycle = state_cycle_from_summary(summary)  # 관측 140: 문두 «cN 완료» 우선
++    if state_cycle is None:
+         return None, "판정 불가(세대 문면에 사이클 번호 없음)"
+-    state_cycle = int(match.group(1))
+     if state_cycle == ledger_last:
+         return state_cycle, "일치"
+     if state_cycle < ledger_last:
+@@ -482,8 +500,7 @@
+         rows = (call("get_task_state", {"task_id": "devloop", "limit": 1}) or {}).get("results") or []
+         if rows:
+             summary = " ".join(str(rows[0].get("summary") or "").split())
+-            state_match = re.search(r"사이클\s*(\d+)", summary)
+-            state_cycle = int(state_match.group(1)) if state_match else None
++            state_cycle = state_cycle_from_summary(summary)  # 관측 140: task_state_lag과 같은 눈
+     except Exception as exc:  # noqa: BLE001 — 도달 실패도 관측이며 침묵보다 낫다
+         state_probe_err = f"{type(exc).__name__}: {exc}"
+     orphan_suspect, orphan_lines = crash_orphan_verdict(max(cycles), head_cycle, state_cycle)
