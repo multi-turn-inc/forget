@@ -1,0 +1,56 @@
+diff --git a/tests/test_devloop_vocab_overdue_direction.py b/tests/test_devloop_vocab_overdue_direction.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_devloop_vocab_overdue_direction.py
+@@ -0,0 +1,51 @@
++# -*- coding: utf-8 -*-
++"""audit-320 R3 (c323 diff): «마감-기한도과(반증)» — 도과를 «반증»과 가르는 방향 병기 값의 회귀. 합성 값만.
++
++실대장 값을 상수로 박지 않는다(관측 100). 계약은 어휘 정본(c124_retro_prep.VOCAB)의 한 값과 그 값이 두
++자[尺](계수 키 · c124 손 밑값)에서 어디로 떨어지는가이지, 오늘 대장의 위반 수가 아니다(관측 106).
++"""
++import os
++import sys
++from collections import Counter
++
++sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
++                                "research", "devloop", "scripts"))
++import c124_retro_prep as rp  # noqa: E402
++
++
++# ---- audit-320 R3 계약 -----------------------------------------------------------------------
++
++def test_r3_overdue_with_direction_parses_without_vocab_error():
++    """판별 ①: P36형 상태줄 «(a) 마감-기한도과(반증) · (b) 마감-기한도과(반증) · (c) 비예측»이 어휘 안이다."""
++    arms, errs = rp.parse_status("(a) 마감-기한도과(반증) · (b) 마감-기한도과(반증) · (c) 비예측")
++    assert errs == []
++    assert arms == [("a", "마감-기한도과(반증)"), ("b", "마감-기한도과(반증)"), ("c", "비예측")]
++    assert "마감-기한도과(반증)" in rp.VOCAB
++
++
++def test_r3_base_value_strips_direction_for_hand_ruler():
++    """판별 ②: c124 손 자[尺] 대조는 밑값으로 — «마감-기한도과(반증)» → «마감-기한도과»(P26 사상값과 같은 칸)."""
++    assert rp._r10_base("마감-기한도과(반증)") == "마감-기한도과"
++    assert rp._r10_base("마감-기한도과(반증)") == rp.HAND_TO_R10["DISCARDED(기한 도과 강제 마감)"]
++
++
++def test_r3_overdue_direction_counts_apart_from_bare_refutation():
++    """불변 ①: 계수 키는 원문 그대로 — «반증» 칸과 합쳐지지 않는다(R3의 목적 · 처치가 깨뜨리면 안 되는 성질)."""
++    assert rp._vocab_key("마감-기한도과(반증)") == "마감-기한도과(반증)"
++    c = Counter(rp._vocab_key(v) for v in ["반증", "마감-기한도과(반증)", "반증"])
++    assert c["반증"] == 2 and c["마감-기한도과(반증)"] == 1
++
++
++def test_r3_bare_overdue_stays_valid_unlike_early_close():
++    """불변 ②: 맨 «마감-기한도과»는 강등되지 않는다 — 방향 의무는 «마감-조기»에만 있다(c136)."""
++    _, errs = rp.parse_status("(a) 마감-기한도과")
++    assert errs == []
++    _, errs2 = rp.parse_status("(a) 마감-조기")
++    assert errs2 and "방향 병기 의무 위반" in errs2[0]
++
++
++def test_r3_vocab_keeps_r10_values_and_bare_overdue():
++    """불변 ③: R10 11값 ⊂ VOCAB · 맨 «마감-기한도과»·«반증» 존치 — R3는 추가이지 교체가 아니다."""
++    assert set(rp.VOCAB_R10) <= set(rp.VOCAB)
++    assert "마감-기한도과" in rp.VOCAB and "반증" in rp.VOCAB
++    assert len(rp.VOCAB) == len(set(rp.VOCAB))

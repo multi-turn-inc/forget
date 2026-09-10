@@ -1,0 +1,39 @@
+diff --git a/research/devloop/scripts/c124_retro_prep.py b/research/devloop/scripts/c124_retro_prep.py
+--- a/research/devloop/scripts/c124_retro_prep.py
++++ b/research/devloop/scripts/c124_retro_prep.py
+@@ -188,7 +188,15 @@
+ VOCAB_DEFECT = ("무기재",)
+ VOCAB_C127 = ("비예측", "마감-미가동")
+ VOCAB_C136 = ("마감-조기(지지)", "마감-조기(반증)", "수반")
+-VOCAB = VOCAB_R10 + VOCAB_DEFECT + VOCAB_C127 + VOCAB_C136
++# audit-320 R3 (c323 diff · 적용 = 게이트): «도과»를 «반증»과 가른다. **정의역 정정** — 맨 «마감-기한도과»는
++# R10(c125)부터 있었다(P26 손 자[尺] 사상 대상). 없던 것은 처분 조항(P24 규율 «도과 무판정이면 반증으로
++# 계상»)이 강제하는 **방향을 가진 도과**다: P36 판정(c317)은 (a)(b) 둘 다 맨 «반증»을 썼고, 그 낱말이 하는 일은
++# «닫혔다»뿐이었으며(audit-320 §2-⑤) 파트 P는 «반증»이 어휘 안이라 잡을 수 없다. c136 «마감-조기(지지/반증)»과
++# 같은 서식 = 마감 사건 + 처분 방향. 맨 «마감-기한도과»는 존치(강등 없음 — 마감-조기와 달리 방향 의무 아님 ·
++# 방향 없는 도과 = 처분 조항 무발동 마감). 계수: `_vocab_key`는 원문 그대로라 «반증» 칸과 갈리고,
++# `_r10_base`는 밑값 «마감-기한도과»로 내린다. 지지 방향은 만들지 않는다 — 대장에 그런 처분 조항이 없다.
++VOCAB_C323 = ("마감-기한도과(반증)",)
++VOCAB = VOCAB_R10 + VOCAB_DEFECT + VOCAB_C127 + VOCAB_C136 + VOCAB_C323
+ 
+ # 수반 팔 서식: `(b) 수반((a))` — 어느 팔에 수반되는지 병기 의무.
+ SUBSUME_RE = re.compile(r"^수반\(\([a-z]\)\)$")
+@@ -208,6 +216,8 @@
+     """
+     if val.startswith("마감-조기("):
+         return "마감-조기"
++    if val.startswith("마감-기한도과("):  # audit-320 R3 (c323): 방향 병기 도과 → 밑값
++        return "마감-기한도과"
+     return _vocab_key(val)
+ 
+ STATUS_RE = re.compile(r"^-\s*상태:\s*(.+?)\s*$")
+@@ -510,7 +520,8 @@
+     for k in VOCAB:
+         s, a = sec_counts.get(k, 0), p["arm_counts"].get(k, 0)
+         if s or a:
+-            tag = ("  ← c136 개정(R10)" if k in VOCAB_C136 else
++            tag = ("  ← c323 audit-320 R3" if k in VOCAB_C323 else
++                   "  ← c136 개정(R10)" if k in VOCAB_C136 else
+                    "  ← c127 신설" if k in VOCAB_C127 else
+                    "  ← 하자" if k in VOCAB_DEFECT else "")
+             print(f"    {k:14s} 절 {s:3d}                       팔 {a:3d}{tag}")
