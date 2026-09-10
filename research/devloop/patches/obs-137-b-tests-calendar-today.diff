@@ -1,0 +1,38 @@
+diff --git a/tests/test_devloop_step0_deadlines.py b/tests/test_devloop_step0_deadlines.py
+--- a/tests/test_devloop_step0_deadlines.py
++++ b/tests/test_devloop_step0_deadlines.py
+@@ -116,3 +116,34 @@
+     assert out["cycle"].get("P46") == 166
+     assert out["cycle"].get("P47") == 167
+     assert out["variant_hits"]["판정 시한"] == 0, "새 서식이 생겼으면 파트 D를 확장할 것"
++
++
++# --- 관측 137 (c312 · diff c315 → c318): 달력 기한의 **당일**이 계기에 없었다 -------------
++#
++# c312~c316(09-10 KST 01:23~03:27)의 파트 D는 P36(마감 2026-09-10)을 «예정 → 2026-09-10»으로
++# 인쇄했다 — `cal < today` 한 술어라 cal == today가 future로 떨어졌다(사건 1 · 노출 5). 분류를
++# 순수 함수 `deadline_bucket`으로 뽑아 세 상태(도과·**오늘**·예정)를 고정한다. 실 대장 직독 0.
++
++
++def test_calendar_deadline_on_the_day_is_due():
++    assert c48.deadline_bucket(None, "2026-09-10", 318, "2026-09-10") == ("due", "2026-09-10", 0)
++
++
++def test_calendar_deadline_yesterday_is_overdue_and_tomorrow_is_future():
++    assert c48.deadline_bucket(None, "2026-09-10", 318, "2026-09-11") == ("overdue", "2026-09-10", None)
++    assert c48.deadline_bucket(None, "2026-09-10", 318, "2026-09-09") == ("future", "2026-09-10", None)
++
++
++def test_cycle_deadline_buckets_are_unchanged_by_the_calendar_fix():
++    assert c48.deadline_bucket(318, None, 318, "2026-09-11") == ("due", "c318", 0)
++    assert c48.deadline_bucket(316, None, 318, "2026-09-11") == ("overdue", "c316", -2)
++    assert c48.deadline_bucket(325, None, 318, "2026-09-11") == ("future", "c325", 7)
++
++
++def test_cycle_axis_wins_when_both_axes_are_present():
++    # parse_deadlines는 두 축을 따로 담는다 — 둘 다 있으면 사이클 축이 먼저다(c164 if/elif 순서 보존).
++    assert c48.deadline_bucket(320, "2026-09-10", 318, "2026-09-10") == ("future", "c320", 2)
++
++
++def test_no_deadline_is_its_own_bucket():
++    assert c48.deadline_bucket(None, None, 318, "2026-09-11") == ("none", None, None)

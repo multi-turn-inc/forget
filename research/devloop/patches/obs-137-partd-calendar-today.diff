@@ -1,19 +1,59 @@
 diff --git a/research/devloop/scripts/c48_step0_check.py b/research/devloop/scripts/c48_step0_check.py
 --- a/research/devloop/scripts/c48_step0_check.py
 +++ b/research/devloop/scripts/c48_step0_check.py
-@@ -2862,8 +2862,13 @@
-             (due if cyc == n_now else overdue if cyc < n_now else future).append(
-                 (pid, f"c{cyc}", cyc - n_now, is_running))
-         elif cal is not None:
+@@ -2804,6 +2804,29 @@
+             "unstamped": sorted(unstamped, key=_pid_key), "since": since}
+ 
+ 
++def deadline_bucket(cyc: int | None, cal: str | None, n_now: int, today: str
++                    ) -> tuple[str, str | None, int | None]:
++    """파트 D 기한 분류 — **순수 함수**. (bucket, 표시 기한, gap) 반환. 인자만 본다.
++
++    bucket ∈ {"due", "overdue", "future", "none"}. 사이클 축은 gap = cyc − n_now(0 = 오늘),
++    달력 축은 gap = 0(**당일**) · None(그 밖 — 인쇄가 «달력 기한 도과»/«달력 기한»으로 가른다).
++    두 축이 다 있으면 사이클 축이 먼저다(c164 인라인 if/elif 순서 보존).
++
++    왜 함수인가 (관측 137 · c312 · diff c315→c318). c164~의 분기는 part_d 안 인라인이었고
++    달력 축에 `cal < today` 한 술어뿐이라 마감일 **당일**이 «예정»으로 떨어졌다(P36 2026-09-10 ·
++    c312~c316 다섯 사이클 침묵 · 사건 1). 인라인이면 회귀가 part_d 전체(실 대장·원장·계기 큐
++    직독)를 불러야 시험된다(관측 129 부류) — 그래서 분류만 여기로 뽑고 인쇄는 part_d에 둔다.
++    """
++    if cyc is not None:
++        gap = cyc - n_now
++        return ("due" if gap == 0 else "overdue" if gap < 0 else "future", f"c{cyc}", gap)
++    if cal is not None:
++        if cal == today:
++            return ("due", cal, 0)
++        return ("overdue" if cal < today else "future", cal, None)
++    return ("none", None, None)
++
++
+ def part_d() -> None:
+     """[D] 예측 판정 기한 — 매 사이클 (c164 신설, P48, 감사 R5 이관분 = 계기 큐 ㉦).
+ 
+@@ -2854,18 +2877,16 @@
+           f"  [프레임 N={n_now}, 원장 cycle max +1]")
+ 
+     due, overdue, future, no_deadline = [], [], [], []
++    buckets = {"due": due, "overdue": overdue, "future": future}
+     for pid in sorted(pending, key=_pid_key):
+-        cyc = parsed["cycle"].get(pid)
+-        cal = parsed["calendar"].get(pid)
+         is_running = pid in running
+-        if cyc is not None:
+-            (due if cyc == n_now else overdue if cyc < n_now else future).append(
+-                (pid, f"c{cyc}", cyc - n_now, is_running))
+-        elif cal is not None:
 -            over = cal < today
 -            (overdue if over else future).append((pid, cal, None, is_running))
-+            # 관측 137: 달력 기한의 **당일**(cal == today)은 due — 구판은 `cal < today`
-+            # 하나뿐이라 마감일 당일이 «예정»으로 떨어졌다(c312~c314 실측 · 사건 1).
-+            if cal == today:
-+                due.append((pid, cal, 0, is_running))
-+            else:
-+                over = cal < today
-+                (overdue if over else future).append((pid, cal, None, is_running))
++        # 관측 137: 분류는 순수 함수 deadline_bucket — 달력 당일(cal == today)이 due로 간다.
++        bucket, shown, gap = deadline_bucket(
++            parsed["cycle"].get(pid), parsed["calendar"].get(pid), n_now, today)
++        if bucket == "none":
++            no_deadline.append((pid, is_running))
          else:
-             no_deadline.append((pid, is_running))
+-            no_deadline.append((pid, is_running))
++            buckets[bucket].append((pid, shown, gap, is_running))
  
+     if due:
+         print("  ★★ 오늘이 기한이다 — 절차 2의 선택은 이 판정이다:")
