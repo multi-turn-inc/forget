@@ -29,9 +29,12 @@
   소스(감사 소스·추세·정산 정본)가 task_state에 비종속이므로 턴2 정독이 첫 유효 행동 →
   `restore_turns` **2**. **일반 사이클**은 선택(절차 2)이 task_state `next_actions`에
   종속이라 첫 유효 행동이 턴3 → `restore_turns` **3**.
-  **C형 curl의 가드 통과 형태(c291 실측 · 관측 132 · P75)** — 한 줄·주석 없음·파이프만:
-  `curl -s -X POST localhost:8000/mcp/forget/http/junghunkim -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_task_state","arguments":{"task_id":"devloop"}}}' | python3 -c 'import sys,json; d=json.load(sys.stdin); [print(c.get("text","")) for c in d["result"]["content"]]'`
-  출력이 크면 하네스가 파일로 저장한다 → Read 1회(별도 턴·rt에 산입). **차단되는 형태**(c291 각 1턴 소모):
+  **C형 curl의 가드 통과 형태(c291 실측 · 관측 132 · P75 · **c326 `results` 벗김 판본으로 갱신**)** — 한 줄·주석 없음·파이프만:
+  `curl -s -X POST localhost:8000/mcp/forget/http/junghunkim -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_task_state","arguments":{"task_id":"devloop"}}}' | python3 -c 'import sys,json; d=json.load(sys.stdin); t="".join(c.get("text","") for c in d["result"]["content"]); j=json.loads(t) if t.strip().startswith("{") else None; print(json.dumps({k:v for k,v in j.items() if k not in ("results",)},ensure_ascii=False,indent=1) if isinstance(j,dict) else t)'`
+  **왜 벗기는가(관측 141).** `get_task_state`는 같은 claim을 `current`와 `results[0]`에 두 번 싣는다 — 원형(text 그대로 인쇄)은 34~38KB라
+  하네스 저장 문턱(19,016B 근방)을 넘어 저장본 Read 1턴을 내고(c323 rt 4 · c326 실측 34,872B), 벗김본은 ≈17KB로 인라인 수신된다(c325 실측).
+  `current`가 정본이며 `results`는 단일 조회에서 같은 본문이다(처치 diff = patches/obs-141-a·b·c · 적용 = 게이트). 출력이 그래도 크면
+  하네스가 파일로 저장한다 → Read 1회(별도 턴·rt에 산입). **차단되는 형태**(c291 각 1턴 소모):
   인라인 `python3 -c` 안의 `#` 주석(«Newline followed by #») · heredoc `<<EOF`(«Parser skipped input») ·
   `&&` 복합 명령 · `zsh tmp/x.sh` 스크립트 실행(승인 요구 = 무인 세션 사망 경로). 파일이 필요하면 Write
   도구로 만들고 `python3 tmp/x.py`로 단순 실행한다. 절차 5의 쓰기 호출은 `-d @tmp/x.json`(Write 도구로 생성).

@@ -1,0 +1,25 @@
+diff --git a/research/devloop/scripts/c48_step0_check.py b/research/devloop/scripts/c48_step0_check.py
+--- a/research/devloop/scripts/c48_step0_check.py
++++ b/research/devloop/scripts/c48_step0_check.py
+@@ -343,7 +343,9 @@
+     by_cycle = {int(r["cycle"]): r for r in ledger_rows}
+     print("[S. 유동층 대조 — 원장 마지막 사이클 vs task_state 세대 (c93 처치, 관측 49)]")
+     try:
+-        rows = (call("get_task_state", {"task_id": "devloop", "limit": 1}) or {}).get("results") or []
++        ts_resp = call("get_task_state", {"task_id": "devloop", "limit": 1}) or {}
++        # 관측 141 (c326): 단일 조회의 본문은 `current`다 — `results[0]`는 참조 행(claim_id · ref)일 수 있다.
++        rows = [ts_resp["current"]] if isinstance(ts_resp.get("current"), dict) else []
+     except Exception as exc:  # noqa: BLE001 — 도달 실패도 관측이며 침묵보다 낫다
+         print(f"  판정 불가 — get_task_state 도달 실패: {type(exc).__name__}: {exc}")
+         return
+@@ -479,7 +481,9 @@
+     state_cycle: int | None = None
+     state_probe_err = ""
+     try:
+-        rows = (call("get_task_state", {"task_id": "devloop", "limit": 1}) or {}).get("results") or []
++        ts_resp = call("get_task_state", {"task_id": "devloop", "limit": 1}) or {}
++        # 관측 141 (c326): 단일 조회의 본문은 `current`다 — `results[0]`는 참조 행(claim_id · ref)일 수 있다.
++        rows = [ts_resp["current"]] if isinstance(ts_resp.get("current"), dict) else []
+         if rows:
+             summary = " ".join(str(rows[0].get("summary") or "").split())
+             state_match = re.search(r"사이클\s*(\d+)", summary)

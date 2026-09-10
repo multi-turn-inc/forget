@@ -5591,6 +5591,10 @@ persona는 상태 주입이 무이득(+0.0111 ≈ A)이고 베이스는 +62% —
   (c325 **회고** — 신규 0 · patches/ **14본 유지** · `git apply --check` 14본 한 번에 통과(HEAD 561ecb4 · 작업 트리 쓰기 0) · (b) 부패 0 ·
   A-325.1(서열 37)이 승인되면 devloop 소유 11본(c48 5 · tests 5 · queue_mover 1)이 적용 정의역 · 제품 2본(obs-129-a·b)·개헌 2본(audit-320-r3-a·b)은
   게이트 존속 · 관측 141(store.py) · 관측 138 (ii)(store.py) = 신규 diff 후보 2(다음 일반 사이클).)
+  (c326 **일반** — 신규 **3본**(obs-141-a store.py +60 −20 · obs-141-b c48 +6 −2 · obs-141-c tests +96 −5) · patches/ **17본** · `git apply --check`
+  단독 3/3 · c48 5본 → b 순차 · **17본 한 번에 통과**(HEAD 8a06e36 · 작업 트리 쓰기 0) · (b) 부패 0 · 격리 검산 5벌(가~마 · tmp/c326_make_patch.py) ·
+  a·c는 제품(forget/ · tests/) = A-325.1 정의역 밖 · b는 devloop 소유이나 a의 짝 · 1′ R2 «store.py 교집합 0 복원 시» 조건 충족(파트 A 교집합 0) →
+  store.py 첫 diff. 순열 재검산은 c330 감사 몫.)
 
 ## P77
 **등록 2026-09-05 (장기 작업 하네스 사이클 1, 숫자 보기 전).** 우리 하네스(pi 루프 + forget)로 실제 개발 작업(H-3① 구현)을 돌리면 **사람 개입 없이 4시간을 넘기지 못한다: 70%.** 측정 = run-001.jsonl의 K_human 첫 사건 시각. 판정 = 9/9 실행 종료 시. 대조군 없음(첫 실측). 반증 시 «반나절 자율»이 기준선이 되고, 지지 시 첫 병목(리셋/승인 프롬프트/도구 실패 반복)에 이름을 붙인다. 지시서: research/harness/cycle-1-brief.md.
@@ -5909,3 +5913,7 @@ persona는 상태 주입이 무이득(+0.0111 ≈ A)이고 베이스는 +62% —
 - **한계 (선언).** ① 응답의 «준함» 판정은 손이다. ② 정훈이 기억 채널을 읽는 빈도는 미측정 — 반증이 «매체 무관»을 확정하려면 최소 1회 세션 존재가 필요하고
   그 존재는 auto-memory·커밋 시각으로 사후 확인한다. ③ 루프 자기 규약을 재지 제품을 재지 않는다(공표 가드 대상 아님).
 - 상태: (a) 시계-가동 · (b) 시계-가동 · (c) 시계-가동
+  (c326 선독 1 — 응답 **0**: search_memories «A-325.1» 1회(계기 호출 · 계상 제외) = 요청 사본 2건(event db1f1890 · kind=request_to_user)만 ·
+  gate-queue 서열 37 응답 칸 공백 · `git log --all --since=09-07` 정훈 커밋 = 3cb4b7e(09-10 13:06 KST · store.py +1 · 타 워크트리 detached HEAD
+  [Codex forget-b2b-saas integrations/forget-engine] · main-work 밖) = **활동 증거이지 응답 아님**(한계 ② 세션 존재 1건 확인) · 재발송 0 · 기한까지
+  7일(tmp/c326_metrics.py).)

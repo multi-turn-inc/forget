@@ -1,0 +1,104 @@
+diff --git a/forget/store.py b/forget/store.py
+--- a/forget/store.py
++++ b/forget/store.py
+@@ -1710,6 +1710,52 @@
+     return marker
+ 
+ 
++def _task_state_ref(row: dict[str, Any]) -> dict[str, Any]:
++    """Reference row for a single-task query (관측 141, c326 diff).
++
++    A single-task ``get_task_state`` used to carry the same claim twice -- once
++    as ``current`` and again as ``results[0]`` -- so the response was twice the
++    body (c323~c325: 34~38KB against a 17~19KB body) and crossed the harness
++    auto-save threshold every cycle. ``current`` is the body; ``results`` keeps
++    its list shape but holds this reference instead of a second copy.
++    """
++    return {
++        "task_id": row.get("task_id"),
++        "claim_id": row.get("claim_id"),
++        "ref": "current",
++    }
++
++
++def _task_state_list_response(
++    results: list[dict[str, Any]],
++    *,
++    project_id: str | None,
++    as_of: str,
++    state_source: str,
++    single: bool,
++) -> dict[str, Any]:
++    """One envelope for both ``get_task_state`` branches (epoch / claim ledger).
++
++    List queries (no task_id, or more than one row) are unchanged: ``results``
++    carries every row and ``current`` mirrors ``results[0]``. A single-task
++    query (``single`` and exactly one row) carries the body once, in
++    ``current``; ``results[0]`` is the reference row from ``_task_state_ref``.
++    ``count`` stays the number of rows found.
++    """
++    current = results[0] if results else None
++    listed = [_task_state_ref(current)] if (single and current is not None and len(results) == 1) else results
++    return {
++        "schema_version": "mem1-task-state-list-v1",
++        "project_id": project_id,
++        "replay_as_of": as_of,
++        "count": len(results),
++        "results": listed,
++        "current": current,
++        "freshness": task_state_freshness(current, as_of),
++        "state_source": state_source,
++    }
++
++
+ def get_task_state(payload: dict[str, Any] | None = None, project_id: str | None = None) -> dict[str, Any]:
+     payload = dict(payload or {})
+     project_id = payload.get("project_id") or project_id or current_project_id()
+@@ -1778,16 +1824,13 @@
+         if len(epoch_results) >= limit:
+             break
+     if epoch_results:
+-        return {
+-            "schema_version": "mem1-task-state-list-v1",
+-            "project_id": project_id,
+-            "replay_as_of": as_of,
+-            "count": len(epoch_results),
+-            "results": epoch_results,
+-            "current": epoch_results[0],
+-            "freshness": task_state_freshness(epoch_results[0], as_of),
+-            "state_source": "workspace_epoch_as_of" if as_of else "workspace_epoch",
+-        }
++        return _task_state_list_response(
++            epoch_results,
++            project_id=project_id,
++            as_of=as_of,
++            state_source="workspace_epoch_as_of" if as_of else "workspace_epoch",
++            single=bool(task_id),
++        )
+     params: list[Any] = [project_id]
+     where = """
+      WHERE project_id = ?
+@@ -1848,16 +1891,13 @@
+                 "replay_as_of": as_of,
+             }
+         )
+-    return {
+-        "schema_version": "mem1-task-state-list-v1",
+-        "project_id": project_id,
+-        "replay_as_of": as_of,
+-        "count": len(results),
+-        "results": results,
+-        "current": results[0] if results else None,
+-        "freshness": task_state_freshness(results[0] if results else None, as_of),
+-        "state_source": "claim_ledger_as_of" if as_of else "claim_ledger",
+-    }
++    return _task_state_list_response(
++        results,
++        project_id=project_id,
++        as_of=as_of,
++        state_source="claim_ledger_as_of" if as_of else "claim_ledger",
++        single=bool(task_id),
++    )
+ 
+ 
+ def _exact_scope_filter(scope: dict[str, Any]) -> dict[str, Any]:

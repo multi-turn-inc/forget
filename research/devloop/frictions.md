@@ -12841,3 +12841,34 @@ task_state 저장본 Read 0회(대조군 c323 rt 4 · c324·c325 손 우회).
 **반게임 선언.** 근거 = tmp/c324_p80.py · tmp/c325_p80.py 출력(바이트 3종 · 깊은 동치) · store.py L1781~1790·L1851~1860 직독 · c324
 19,015B 인쇄 프로브. 재현 = curl get_task_state 응답을 `results` 유무로 두 번 재고 하네스 저장 여부를 본다. 루프 자기 규약이 아니라
 **제품** 관측(공표 가드 c141 예외 아님 · 개선 주장은 ③의 대조군과 함께).
+
+## 관측 141 보강 (사이클 326, 신규 번호 아님) — 첫 보강 = **처치 diff 3본 완성(적용 안 함 · P76)**: `obs-141-a`(store.py 봉투 함수 `_task_state_list_response` + 참조 행 `_task_state_ref` · +60 −20) · `obs-141-b`(c48 L346·L482 `results` → `current` 이주 · +6 −2) · `obs-141-c`(tests/test_project_layer.py 단일 조회 2곳 이주 +5 −5 + tests/test_task_state_single_echo.py **신규** 판별 3·불변 2 · +91) · c326 실측 응답 34,872B(current 17,228 · `results == [current]` True) → 참조 행 적용 시 **17,736B = 본문 1.029배 · 문턱 19,016B 아래**(tmp/c326_make_patch.py·저장본 산술 · 적용 뒤 실측 아님)
+
+**처치 설계.** 정본 = `current`(손 규약 · `_resume_workspace_for_context` L7957·L7963이 이미 `current`) · `results`는 단일 조회(task_id 지정 ∧
+count == 1)에서 `[{task_id, claim_id, ref: "current"}]` · 목록 조회·부재·count·freshness·state_source 불변 · epoch·claim 두 갈래가 한 봉투
+함수를 공유(같은 반환부 두 자리 → 한 함수 · 관측 99·140 부류의 처치 형). 소비자 이주 = c48 두 자리(devloop) + **tests/test_project_layer.py 두
+자리**(제품 테스트 — 단일 조회에서 `results[0]["scope"]`·`["summary"]`를 읽었다 · 주조 문면 «c48만 · hooks 0»은 **과소**[c326 Grep 실측]) · 그
+밖의 `results` 소비 6자리(situation.py L107 · store.py L11174·L11251·L11287·L13275 · mcp.py `_activation_rerank` L1330)는 전부 목록 조회라
+무접촉. 귀속: a·c = 제품(forget/ · tests/ — A-325.1 정의역 밖) · b = devloop 소유이나 a의 짝(a 없이 b만 적용해도 `current`는 있으니 무해 ·
+b 없이 a만 적용하면 c48 파트 S·㉼가 참조 행에서 summary를 못 읽어 «세대 없음»을 인쇄 — 순서 의무 = a보다 b 먼저 또는 동시).
+
+**격리 검산(tmp/c326_make_patch.py · pytest는 복사본 패키지에만 · 작업 트리 쓰기 0).** (가) 변환 forget/ 복사본 + 신규 5 · task_state_freshness
+원본 · project_layer 이주본 = **46/46** · (나) 변환 복사본 + project_layer **원본** = 정확히 2 실패(test_scope_transition_supersedes_the_untagged_epoch ·
+test_scope_forks_heal_on_next_write = a·c가 짝) · (다) **원본** 패키지 + 신규 테스트 = 판별 3 실패 · 불변 2 통과(대조군) · (라) 변환 c48 복사본 →
+실 서버(미적용) 파트 S·㉼ 줄 원본과 동일 · rc 동일 · (마) `git apply --check` 단독 3/3 · c48 5본 → obs-141-b 순차 통과 · **patches/ 전수 17본
+한 번에 통과**(HEAD 8a06e36 · b는 HEAD 기준 생성 · 인접 헝크 충돌 0). 검산 장치 쪽 실측 3건(cwd=저장소 루트면 원본 forget/가 복사본을 가림 →
+cwd=복사본 · test_project_layer가 tests/../hooks/를 상대 적재 → hooks/ 복사 · c48 복사본이 형제 모듈을 못 찾음 → sys.path 삽입 · 테스트 상수 끝
+공백이 저장 시 strip됨 → 상수 정정) — 전부 diff 무관.
+
+**수용 기준 상태.** ① «results 제거 = 본문 1배» = 판별 ②(응답 − current < current) + 저장본 산술 1.03배 · **적용 뒤 실측은 게이트 뒤** ② 목록
+회귀 = 불변 ①·② + freshness 4/4 + project_layer 이주본 34/34 ③ rt 3에서 저장본 Read 0회 = 적용 뒤 실측 — **대조군 = 이 사이클**: 손이 `results`
+벗김 판본(task_state [2])을 안 쓰고 CLAUDE.md 파트 T 원형 한 줄을 써 34,872B가 저장됐고 저장본 Read를 첫 유효 행동과 같은 턴3에 병렬(rt 3 유지 ·
+c324 형태) — **두 채널 갈림**(CLAUDE.md 한 줄 = 원형 · task_state = 벗김 판본 · 무기억 손은 CLAUDE.md를 먼저 읽는다[턴1 이전 채널]) → 이 사이클
+CLAUDE.md 파트 T 한 줄을 벗김 판본으로 갱신(배달 채널 · 게이트 불요 · 회귀 test_devloop_step0_turn_protocol). **회부 존속**(적용 = 게이트).
+
+## 관측 138 보강 (사이클 326, 신규 번호 아님) — 여덟째 보강 = 캡슐 «다음 행동:» **전문 도달 6연속**([0] 180자 = 캡슐 180자 · ≤ 200 규칙 표본 · CLAUDE.md ≤ 200자 문면 첫 적용 표본) · P80 창 동결이라 값만 — **축약형**
+
+**값+포인터.** next_actions[0] 180자(task_state claim cdc04067 · c325 2차 record) · 캡슐 «다음 행동:» 180자 = 전문(절단 마커
+없음 · c48 파트 B 캡슐 원문) · «현재 목표:» 248자(summary 3,184자 · 절단 유지 · 240 상수) · B층 «구조적 폴백 — LLM 요약 실패» 19연속
+(A-241.1 주소) · 저장본 두 파일 python 직독(tmp/c326_edits.py · 손 옮겨적기 0). 행동 효과: 캡슐 [0]로 모드·첫 안건(관측 141 diff) 턴1 전 확정 →
+턴3 = 저장본 Read + store.py·frictions·patches 정독 병렬(rt 3 · C형 일반 규정값). 회부 존속(② truncated 플래그 항목 단위 미이행 · (ii) 선택).

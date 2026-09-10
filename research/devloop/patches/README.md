@@ -36,6 +36,9 @@ diff가 만지는 파일은 **HEAD 추적 파일 ∧ 봉쇄 집합(타 트랙 �
 | `obs-139-b-tests-corider-last.diff` | 관측 139 ③ (회귀 6건 — 판별 4: 둘째 이후 번호·등장 순 · 원본/처분/산문 [] · last 전파+opened·tagged 무접촉 · 실 대장 136 ≥ 318 / 불변 2: 무주 번호 항목 미생성·헤더 계수 1 · open 집합 불변) | `tests/test_devloop_step0_observations.py` | HEAD 추적 · 봉쇄 교집합 0 · +83 −0 | c322 `git apply --check` 통과 · 같은 생성기 · 대조군: 변환 테스트→**원본** c48 = 판별 4 실패(`AttributeError: header_coriders` 2 + AssertionError 2) · 불변 2 양쪽 통과(설계) · **a와 짝** — b만 적용하면 판별 4건이 실패한다 |
 | `audit-320-r3-vocab-overdue-direction.diff` | audit-320 R3 («도과»를 «반증»과 가른다 — **정의역 정정**: 맨 «마감-기한도과»는 R10[c125]부터 VOCAB에 있었고 없던 것은 처분 조항[P24 «도과 무판정이면 반증 계상»]이 강제하는 방향 · P36 판정 c317 (a)(b) 맨 «반증»×2 · 처치 = `VOCAB_C323 = ("마감-기한도과(반증)",)` c136 «마감-조기(지지/반증)» 서식 · `_r10_base` 밑값 «마감-기한도과» · §1 tag 1행 · 맨 값 존치[강등 없음] · 지지 방향 미신설) | `research/devloop/scripts/c124_retro_prep.py` | HEAD 추적 · 봉쇄 교집합 0 · 계기 코드 +13 −2 · **값 신설 = 개헌 채널(A-160.x/R2b)이라 적용 = 게이트** | c323 `git apply --check` 통과(신규 2 + c48 5본 = 7본 한 번에) · `tmp/c323_make_patch.py`(원본 무접촉 · difflib) · 격리 검산(pytest 호출 0): 변환 테스트→변환 5/5 · **실 predictions.md: records·errors·arm_counts 원본 = 변환 동일(절 83 · 위반 1[P39 기지] · «반증» 팔 23 · 신규 값 팔 0)** — P36 상태줄 «(a) 반증 · (b) 반증» 정정은 적용 뒤 |
 | `audit-320-r3-tests-vocab-overdue-direction.diff` | audit-320 R3 (회귀 5건 **신규 파일** — 판별 2: P36형 상태줄 어휘 안 · `_r10_base` 밑값 = P26 사상값 / 불변 3: 계수 키 «반증»과 분리 · 맨 «마감-기한도과» 무강등[마감-조기와 대비] · R10 ⊂ VOCAB·중복 0) | `tests/test_devloop_vocab_overdue_direction.py` (신규) | 신규 파일 · 봉쇄 교집합 0 · +51 −0 | c323 `git apply --check` 통과(단독 · 7본 묶음) · 같은 생성기 · 대조군: 변환 테스트→**원본** 모듈 = 판별 2 실패(AssertionError 2) · 불변 3 양쪽 통과(설계) · **a와 짝** — b만 적용하면 판별 2건이 실패한다 |
+| `obs-141-a-store-single-task-envelope.diff` | 관측 141 (`get_task_state` 이중 에코 — epoch·claim 두 반환부를 봉투 함수 `_task_state_list_response`로 · 단일 task_id 조회[task_id 지정 ∧ count == 1]에서 `current` = 본문 · `results[0]` = 참조 행 `_task_state_ref` {task_id, claim_id, ref} · 목록 조회·부재·count·freshness·state_source 불변) | `forget/store.py` | HEAD 추적 · 봉쇄 교집합 0(파트 A c326) · **제품 코드** +60 −20 · A-325.1 정의역 밖 = 게이트 | c326 `git apply --check` 통과 · `tmp/c326_make_patch.py`(원본 무접촉 · difflib) · 격리 검산(복사본 패키지 pytest · 작업 트리 쓰기 0): 변환 pkg + 신규 5·freshness 4·project_layer 이주본 34 = **46/46** · 원본 pkg + 신규 5 = 판별 3 실패·불변 2 통과 · 저장본 산술 34,872B → 17,736B(본문 1.03배 · 문턱 아래) |
+| `obs-141-b-c48-current-consumer.diff` | 관측 141 (소비자 이주 — c48 파트 S·㉼ 두 자리 `results[0]` → `current` · a의 짝: a만 적용하면 c48이 참조 행에서 summary를 못 읽는다 · b만 적용은 무해) | `research/devloop/scripts/c48_step0_check.py` | HEAD 추적 · 봉쇄 교집합 0 · 계기 코드 +6 −2 · devloop 소유 | c326 `git apply --check` 통과(단독 · **c48 5본 → b 순차 통과** · HEAD 기준 생성 · 인접 헝크 충돌 0) · 변환 c48 복사본 → 실 서버(미적용) 파트 S·㉼ 줄 원본과 동일 · rc 동일 |
+| `obs-141-c-tests-single-echo.diff` | 관측 141 (회귀 — tests/test_project_layer.py 단일 조회 2곳 `results[0]` → `current` 이주 + `tests/test_task_state_single_echo.py` **신규**: 판별 3[참조 행 서식 · 응답 − current < current · as_of 재생] + 불변 2[목록 서식 · 부재]) | `tests/test_project_layer.py` · `tests/test_task_state_single_echo.py`(신규) | HEAD 추적 + 신규 파일 · 봉쇄 교집합 0 · +96 −5 · 제품 테스트 | c326 `git apply --check` 통과 · 같은 생성기 · 대조군: 변환 pkg + project_layer **원본** = 정확히 2 실패(이주 대상 2건) · **a와 짝** |
 
 ## 순서 전수 검산 (c324 · 규약 2의 «HEAD 전진» 검산과 별개 축)
 
@@ -44,6 +47,9 @@ c322~c323 영수증은 c48 5본(`obs-140-a` `obs-139-a` `audit-320-r4` `obs-137`
 (`git apply --check`만 · 작업 트리 쓰기 0 · pytest 호출 0): 단독 5/5 · 순서쌍 20/20 · **순열 120/120** 통과 ·
 7본 묶음(+`audit-320-r3-a·b`) 정순·역순·extra선행 3/3 · **patches/ 14본 전수 한 번에 통과**. 5본은 같은 파일의 서로
 다른 헝크라 순서 무관이 증명됐다. 이 결과는 **HEAD 기준**이다 — 규약 2대로 HEAD가 전진하면 다시 돈다(다음 = c330 감사).
+
+c326 신규 3본(`obs-141-a·b·c`): 단독 3/3 · c48 5본 → `obs-141-b` 순차 통과 · **patches/ 전수 17본 한 번에 통과**(HEAD 8a06e36 · `tmp/c326_make_patch.py`).
+순열 재검산(17본)은 c330 감사 몫. 적용 순서 의무 = `obs-141-b`를 `obs-141-a`보다 먼저 또는 동시(b는 a 없이 무해 · a는 b 없이 c48 파트 S·㉼를 깨뜨린다).
 
 ## A-241.1 — 기동 명령 + 수용 기준 ① 검증 (c293)
 
@@ -59,5 +65,5 @@ A-241.1(gate-queue.md 서열 30)의 처분 "기동 승인"이 나오면 실행�
   실패(exit 1, engine=structural-fallback, captured_at 2026-09-04T13:09:10+0900) — 기동 전
   베이스라인.
 
-미완성 후보(다음 일반 사이클): 1′ R2 `store.py`(교집합 0 복원 시) · 관측 138 (ii) 캡슐 조립기 슬롯 최소 보장(P80 (b) 또는 슬롯
+미완성 후보(다음 일반 사이클): 1′ R2 `store.py`(교집합 0 복원 시 — **c326 obs-141-a가 store.py 첫 diff** · 1′ R2 본체는 별도) · 관측 138 (ii) 캡슐 조립기 슬롯 최소 보장(P80 (b) 또는 슬롯
 고정값 실측 뒤) · 파트 X «기지 은퇴 목록» 상수(4건).
