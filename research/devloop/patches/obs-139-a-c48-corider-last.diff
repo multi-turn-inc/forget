@@ -1,0 +1,48 @@
+diff --git a/research/devloop/scripts/c48_step0_check.py b/research/devloop/scripts/c48_step0_check.py
+--- a/research/devloop/scripts/c48_step0_check.py
++++ b/research/devloop/scripts/c48_step0_check.py
+@@ -1333,6 +1333,32 @@
+     return num, kind
+ 
+ 
++_OBS_MENTION = re.compile(r"관측\s+(\d+)")
++
++
++def header_coriders(line: str) -> list[int]:
++    """«보강» 헤더에 **동승**한 둘째 이후 관측 번호 (관측 139 잔여 사각 · c322). **순수 함수**.
++
++    한 헤더가 여러 관측을 나른다 — c302가 시작한 «여러 관측 = 1절» 서식(c317·c318 실측:
++    `## 관측 137 보강 (사이클 317, …) — … 관측 138 첫 보강 … · 관측 136 ① 전사`). header_kind는
++    첫 번호 하나만 읽으므로 동승분의 `last`는 갱신되지 않았다(관측 139 «잔여 사각 (선언)»).
++    정의역 = header_kind가 «보강»으로 읽는 행만 — 원본 헤더의 계보 인용(«관측 29의 3세대»)은
++    보강이 아니고, 헤더 밖 산문은 어떤 번호도 나르지 않는다. 첫 번호 제외 · 중복 제거 · 등장 순.
++    한계(정직): 헤더 **안** 인용(«관측 107 규율»)도 동승으로 읽는다 — 과계상 방향이며 닿는 값은
++    `last` 하나다(tagged·exited·opened·title 무접촉). 비-보강 행·비-헤더 행은 [].
++    """
++    hk = header_kind(line)
++    if not hk or hk[1] != "보강":
++        return []
++    first = hk[0]
++    out: list[int] = []
++    for m in _OBS_MENTION.finditer(line):
++        n = int(m.group(1))
++        if n != first and n not in out:
++            out.append(n)
++    return out
++
++
+ def parse_observations(text: str) -> dict[int, dict]:
+     """frictions.md의 실재 표기 관행에서 관측별 상태를 파생한다. **순수 함수** (c108, P34).
+ 
+@@ -1358,6 +1384,11 @@
+             cycles = _OBS_CYCLE.findall(line)
+             if cycles:
+                 entry["last"] = max(entry["last"] or 0, int(cycles[-1]))
++                # 관측 139 ③ (c322): 동승 관측의 last 전파 — 기존 항목에만. 무주 번호를 새 항목으로
++                # 낳으면 키 집합이 헤더 인용에 따라 흔들린다(파트 F 무번호·계수 눈의 정의역 오염).
++                for co in header_coriders(line):
++                    if co in obs:
++                        obs[co]["last"] = max(obs[co]["last"] or 0, int(cycles[-1]))
+             if kind == "원본":
+                 entry["opened"] = int(cycles[-1]) if cycles else None
+                 tail = line[line.rfind("(사이클"):] if "(사이클" in line else line

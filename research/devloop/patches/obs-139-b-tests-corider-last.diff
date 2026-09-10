@@ -1,0 +1,90 @@
+diff --git a/tests/test_devloop_step0_observations.py b/tests/test_devloop_step0_observations.py
+--- a/tests/test_devloop_step0_observations.py
++++ b/tests/test_devloop_step0_observations.py
+@@ -270,3 +270,86 @@
+ def test_reinforcement_counts_empty_text_is_empty():
+     # 계약 ④: 무표본 = 빈 dict — 0을 값으로 위장하지 않는다(부재와 0의 구별은 호출부 몫).
+     assert c48.reinforcement_counts("") == {}
++
++
++# ---- 관측 139 ③ (c322): 동승 관측 — 한 «보강» 헤더가 나르는 둘째 이후 번호의 last 전파 ------
++#
++# c302가 시작한 «여러 관측 = 1절» 서식에서 header_kind는 첫 번호만 읽어 동승분(c317·c318의 138·136)의
++# `last`가 색인 밖이었다(관측 139 «잔여 사각 (선언)»). 계약: ① 동승 번호는 «보강» 헤더에서만 · 첫 번호
++# 제외 · 중복 제거 · 등장 순 ② 원본/처분 헤더·산문은 [] ③ last만 전파 — opened·tagged·exited·title 무접촉
++# ④ 무주 번호는 새 항목을 낳지 않고 헤더 1건 = reinforcement_counts 1(P79 «헤더 계수는 1» 보존).
++
++CORIDER_SAMPLE = """\
++## 관측 136 — 첫 원본 (사이클 300, 유형 판정 회부)
++
++본문.
++
++## 관측 137 — 둘째 원본 (사이클 312, 유형 판정 회부)
++
++본문.
++
++## 관측 138 — 셋째 원본 (사이클 315, 유형 판정 회부)
++
++본문.
++
++## 관측 137 보강 (사이클 317, 신규 번호 아님) — 관측 137 수용 기준 ③ 이행 · 관측 138 첫 보강 = 표본 · 관측 136 ① 전사 — **축약형**(관측 137 «보강» 헤더 3회째)
++
++본문. 산문의 관측 138 인용은 헤더가 아니다.
++
++## 관측 46 — 원본 헤더의 계보 인용은 동승이 아니다: 관측 29(채널 상실)의 3세대 (사이클 90, 유형 판정 회부)
++
++본문.
++
++## 관측 7 보강 (사이클 322): 무주 번호 동승 — 관측 99 ① 전사
++"""
++
++CORIDER_HEADER = ("## 관측 137 보강 (사이클 317, 신규 번호 아님) — 관측 137 수용 기준 ③ 이행 · "
++                  "관측 138 첫 보강 = 표본 · 관측 136 ① 전사 — **축약형**(관측 137 «보강» 헤더 3회째)")
++
++
++def test_header_coriders_reads_second_and_later_numbers_once_in_order():
++    # 계약 ①: 첫 번호(137 · 두 번 등장) 제외 · 138 → 136 등장 순 · 중복 0.
++    assert c48.header_kind(CORIDER_HEADER) == (137, "보강")
++    assert c48.header_coriders(CORIDER_HEADER) == [138, 136]
++
++
++def test_header_coriders_is_empty_for_original_disposal_and_prose():
++    # 계약 ②: 원본 헤더의 계보 인용(관측 29) · 처분 헤더 · 산문 — 전부 [].
++    assert c48.header_coriders(
++        "## 관측 46 — 계보 인용: 관측 29(채널 상실)의 3세대 (사이클 90, 유형 판정 회부)") == []
++    assert c48.header_coriders("## 관측 6 처분 (사이클 15, amendment-15 §2) — 관측 5 와 함께 종결") == []
++    assert c48.header_coriders("본문. 관측 138 · 관측 136 인용") == []
++    assert c48.header_coriders("") == []
++
++
++def test_corider_last_propagates_from_reinforcement_header_only():
++    # 계약 ③: 138·136의 last = 317(동승) · 137 = 317(첫 번호) · opened·tagged 무접촉 · 29는 항목조차 없다.
++    obs = c48.parse_observations(CORIDER_SAMPLE)
++    assert obs[137]["last"] == 317
++    assert obs[138]["last"] == 317 and obs[138]["opened"] == 315 and obs[138]["tagged"] is True
++    assert obs[136]["last"] == 317 and obs[136]["opened"] == 300 and obs[136]["tagged"] is True
++    assert 29 not in obs
++    assert obs[46]["last"] == 90
++
++
++def test_corider_unknown_number_creates_no_entry_and_header_counts_once():
++    # 계약 ④: «관측 7 보강 … 관측 99» — 7은 원본 없이 항목이 생기고(기존 동작) 99는 생기지 않는다 ·
++    # 헤더 1건 = reinforcement_counts[322] == 1(동승은 계수를 늘리지 않는다).
++    obs = c48.parse_observations(CORIDER_SAMPLE)
++    assert 7 in obs and obs[7]["last"] == 322
++    assert 99 not in obs
++    assert c48.reinforcement_counts(CORIDER_SAMPLE)[322] == 1
++    assert c48.reinforcement_counts(CORIDER_SAMPLE)[317] == 1
++
++
++def test_corider_propagation_keeps_open_set_unchanged():
++    # 계약 ③ 보강: last 전파는 계상(open)에 닿지 않는다 — 태그·이탈은 원본·처분 분기만 바꾼다.
++    obs = c48.parse_observations(CORIDER_SAMPLE)
++    assert c48.open_observation_numbers(obs) == [46, 136, 137, 138]
++
++
++def test_real_ledger_c317_c318_coriders_reach_obs_136():
++    # 실 대장 불변 역사: 관측 137 보강 c317·c318 헤더가 «관측 136 ① 전사»를 나른다(관측 139 «노출» 기재).
++    # 관측 136은 자기 보강 헤더가 없어 구본 last는 개시 사이클에 머문다 — 처치 후 ≥ 318.
++    obs = _real()
++    assert obs[136]["last"] >= 318
