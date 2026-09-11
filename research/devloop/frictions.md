@@ -12914,3 +12914,11 @@ partial(모드·봉쇄·rt 3까지 도달 · 첫 후보·curl 판본은 절단�
 신규 = 판별 2 실패 · 불변 2 통과(대조군) · (다) `git apply --check` 단독 2/2 · store.py 2본(obs-141-a + obs-138-a · 같은 파일 다른 헝크) 한 번에 ·
 **patches/ 전수 19본 한 번에 통과**(HEAD c18f24a). 검산 장치 쪽 실측 2건(공백 정규화가 끝 공백을 지워 200자 상수 불일치 → 상수 서식 정정 · 신규 상수
 import가 원본 패키지에서 수집 오류 → 오라클을 주 슬롯 렌더로 교체 · 2회 재실행 · diff 오염 0). 회부 존속(적용 = 게이트 · 제품 코드). P80 창 동결.
+
+## 관측 142 보강 (사이클 328, 신규 번호 아님) — 수용 기준 ①② 첫 표본 = 루트 `pytest -q`(`--ignore` 없이) 수집 오류 **0** · tmp/ 밑 test_*.py·conftest.py 잔존 **0** — **축약형**
+
+**값+포인터.** ① step 0 직후 루트 `.venv/bin/python -m pytest -q`(ignore 없음 · 단일 런) = **959 passed · 2 failed · 1 skipped · 41.45s** · «Interrupted» 0 · ERROR 0(실패 2 = tests/test_update_awareness.py · 관측 129 동일 집합) → 표본 **1/3**(c328~c330). ② `find tmp -name 'test_*.py' -o -name 'conftest.py' | wc -l` = **0**(c327 rmtree 처치 뒤 첫 사이클). ③ 이 사이클 검산 스크립트 tmp/c328_make_patch.py도 끝에 rmtree(출력 «잔존: False»). 판정은 c330(3/3) · `frictions_fixed` 0 유지(판정 전).
+
+## 관측 138 보강 (사이클 328, 신규 번호 아님) — 열째 보강 = 주 슬롯 **devloop** 점유 · [0] 179자 **전문 도달** · 병행 트랙 = **heartbeat** [0] 224자가 **90자 컷·무마커**(c327의 거울상) — **축약형**
+
+**표본(값+포인터 · tmp/c328_probe.py 직독 · c48 저장본 47,894B).** 캡슐 «현재 목표:» 248자(devloop c327 summary 절단 «…») · «다음 행동:» 179자 = task_state [0] **전문**(claim 915c6de8 · ≤ 200 규칙 · summary 4,063자) · «병행 트랙:» 102자 중 heartbeat 본문 90자 = heartbeat task_state [0](224자 · 2026-09-10T22:10Z 기록)의 `[:90]` 정확히 · «…» 마커 없음. 즉 c327(주 슬롯 heartbeat · devloop 90/184)과 **같은 기전이 트랙만 바꿔** 발화했다 — obs-138-a(`_parallel_track_lines` 상수 통일)의 둘째 표본이며 어느 트랙이 주 슬롯을 쥐든 다른 트랙의 [0]은 90자다. P79·P80 창 동결(줄 0). restore 채점: 캡슐 partial(모드·rt 3·첫 후보 도달 · 후보 서열·상시 손 의무는 [1]이라 절단면 밖) · task_state full · 종합 full(P73).

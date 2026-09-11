@@ -1,0 +1,99 @@
+diff --git a/tests/test_devloop_step0_ordinal_calendar.py b/tests/test_devloop_step0_ordinal_calendar.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_devloop_step0_ordinal_calendar.py
+@@ -0,0 +1,94 @@
++"""c48 파트 O 달력 병기 (audit-320 R7 · c328 diff) — 서수 옆 «달력 = N일»을 계기가 인쇄한다.
++
++왜. 서수 «N사이클째»는 사이클 축이고 사이클 ≈ 1일은 가정이지 상수가 아니다(관측 135). 큐 정산 줄의
++«달력 병기»(R7)는 c318부터 tmp/cN_metrics.py 손 프로브(`days_since`)를 매 사이클 복제해 구했다 —
++계기에 없는 값은 열 사이클 동안 산문에만 살았다(관행 ㉖). 계약: ① 순수 함수 = today − start 행 date
++② date 접두만 읽는다 ③ 잴 수 없으면 None(0이 아니다) ④ part_o가 라벨마다 «달력 =» 줄 하나 / 불변:
++⑤ 서수 줄은 바이트 불변 ⑥ «달력» 줄을 원장에 전사해도 서수 계열에 유령 표본을 넣지 않는다.
++"""
++import contextlib
++import importlib.util
++import io
++import re
++import sys
++from pathlib import Path
++
++ROOT = Path(__file__).resolve().parents[1]
++SCRIPTS = ROOT / "research" / "devloop" / "scripts"
++sys.path.insert(0, str(SCRIPTS))
++SCRIPT = SCRIPTS / "c48_step0_check.py"
++spec = importlib.util.spec_from_file_location("c48_step0_check_ordinal_calendar", SCRIPT)
++c48 = importlib.util.module_from_spec(spec)
++spec.loader.exec_module(c48)
++
++
++# ---- 합성 표본 (관측 100: 실 원장 값을 상수로 박지 않는다) --------------------------------------
++
++ROWS = [
++    {"cycle": 116, "date": "2026-08-14"},
++    {"cycle": 127, "date": "2026-08-15T09:00:00+0900"},
++    {"cycle": 142},
++    {"cycle": 200, "date": "2026-09-12"},
++]
++TODAY = "2026-09-12"
++
++
++def _part_o_output(**kw) -> str:
++    buf = io.StringIO()
++    with contextlib.redirect_stdout(buf):
++        c48.part_o(**kw)
++    return buf.getvalue()
++
++
++# ---- 판별 (원본 c48에서는 떨어진다) ------------------------------------------------------------
++
++def test_calendar_days_is_today_minus_start_row_date():
++    """계약 ①: 값 = today − start 행 date · 당일은 0."""
++    assert c48.ordinal_calendar_days(ROWS, 116, TODAY) == (29, "2026-08-14")
++    assert c48.ordinal_calendar_days(ROWS, 200, TODAY) == (0, "2026-09-12")
++
++
++def test_calendar_days_reads_only_the_date_prefix():
++    """계약 ②: 시각·오프셋이 붙어도 YYYY-MM-DD 접두만 읽는다."""
++    assert c48.ordinal_calendar_days(ROWS, 127, TODAY) == (28, "2026-08-15")
++
++
++def test_calendar_days_is_none_not_zero_when_unmeasurable():
++    """계약 ③: date 무기재 · 행 부재 · today 무기재 = None — 0일로 위장하지 않는다."""
++    assert c48.ordinal_calendar_days(ROWS, 142, TODAY) is None
++    assert c48.ordinal_calendar_days(ROWS, 999, TODAY) is None
++    assert c48.ordinal_calendar_days(ROWS, 116, "") is None
++
++
++def test_part_o_prints_one_calendar_line_per_anchor():
++    """계약 ④: 실 원장 인쇄에서 라벨마다 «달력 =» 줄 하나 · 값은 순수 함수와 일치(today 고정)."""
++    out = _part_o_output(today=TODAY)
++    cal_lines = [l for l in out.splitlines() if l.strip().startswith("달력 = ")]
++    assert len(cal_lines) == len(c48.ORDINAL_ANCHORS)
++    rows = c48._ledger_rows()
++    for (label, start, _pattern), line in zip(c48.ORDINAL_ANCHORS, cal_lines):
++        got = c48.ordinal_calendar_days(rows, start, TODAY)
++        assert got is not None, f"{label}: start 행 c{start}의 date를 못 읽었다"
++        days, d0 = got
++        assert f"**{days}일**" in line and f"c{start}" in line and d0 in line, line
++
++
++# ---- 불변 (원본·변환 양쪽 통과) ----------------------------------------------------------------
++
++def test_ordinal_line_itself_is_byte_stable():
++    """계약 ⑤: 서수 줄은 `**N사이클째**  [start cS · 프레임 N=F]`로 끝난다 — 달력은 별줄이다."""
++    out = _part_o_output()
++    ord_lines = [l for l in out.splitlines() if "사이클째**  [start c" in l]
++    assert len(ord_lines) == len(c48.ORDINAL_ANCHORS)
++    for line in ord_lines:
++        assert re.search(r"\*\*\d+사이클째\*\*  \[start c\d+ · 프레임 N=\d+\]$", line), line
++
++
++def test_calendar_line_does_not_feed_the_ordinal_series():
++    """계약 ⑥: «달력» 줄을 원장 산문에 그대로 전사해도 세 앵커·세 느슨 탐침 어느 것도 표본을 만들지 않는다."""
++    line = "달력 = **28일**  [start 행 c127 date 2026-08-15 → today 2026-09-12 · 서수와 다른 자[尺]]"
++    row = [{"cycle": 1, "work": "봉쇄(타 트랙 미커밋 잔존) · 서비스율 0 · 원터치 대기 — " + line}]
++    for _label, _start, pattern in c48.ORDINAL_ANCHORS:
++        assert c48._ordinal_series(row, pattern) == []
++    for pattern in c48.LOOSE_ORDINAL_PROBES.values():
++        assert c48._ordinal_series(row, pattern) == []

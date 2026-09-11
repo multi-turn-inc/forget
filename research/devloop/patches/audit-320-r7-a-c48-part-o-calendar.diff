@@ -1,0 +1,59 @@
+diff --git a/research/devloop/scripts/c48_step0_check.py b/research/devloop/scripts/c48_step0_check.py
+--- a/research/devloop/scripts/c48_step0_check.py
++++ b/research/devloop/scripts/c48_step0_check.py
+@@ -2127,7 +2127,32 @@
+     }
+ 
+ 
+-def part_o() -> None:
++def ordinal_calendar_days(rows: list[dict], start: int, today: str) -> tuple[int, str] | None:
++    """파트 O 서수 옆 **달력 일수** (audit-320 R7 · c328 diff). **순수 함수**.
++
++    서수(N − start + 1)는 사이클 축이고 «사이클 ≈ 1일»은 가정이지 상수가 아니다(관측 135:
++    c302~c304가 한 KST 날 안에 셋 떴다). 큐 정산 줄은 c318부터 «달력 병기»를 tmp/cN_metrics.py
++    손 프로브(`days_since`)로 구해 적었다 — 열 사이클 복제. 이 함수가 그 산술의 기계 거처다.
++    값 = today − start 행 `date`(원장 date = 로컬 YYYY-MM-DD · 파트 D `time.strftime("%Y-%m-%d")`와
++    같은 시계). start 행이 없거나 date/today가 YYYY-MM-DD 접두가 아니면 None — «0일»로 위장하지
++    않는다. 반환 = (일수, start 행 date). 서수와 **다른 자[尺]**이며 같은 칸에 섞지 않는다(관측 92).
++    """
++    from datetime import date as _date
++
++    by = {int(r["cycle"]): r for r in rows if isinstance(r, dict) and "cycle" in r}
++    row = by.get(int(start))
++    if row is None:
++        return None
++    m = re.match(r"(\d{4})-(\d{2})-(\d{2})", str(row.get("date") or ""))
++    t = re.match(r"(\d{4})-(\d{2})-(\d{2})", str(today or ""))
++    if not m or not t:
++        return None
++    d0 = _date(*(int(x) for x in m.groups()))
++    d1 = _date(*(int(x) for x in t.groups()))
++    return (d1 - d0).days, d0.isoformat()
++
++
++def part_o(today: str | None = None) -> None:
+     """[O] 서수 — 자[尺] 1종 고정 + 계기 계산 (c161 ㉠ 집행, P46).
+ 
+     왜. 같은 낱말 "N사이클째"가 두 규약으로 쓰였다(관측 85 (A)): 계기는 `N − start`,
+@@ -2149,6 +2174,9 @@
+     print("  ※ 절차 5에서 원장 append 후 재실행하면 프레임이 +1 옮겨가고 값도 +1 된다 —")
+     print("    전사 시 프레임을 값과 함께 옮기거나 이 파트를 재실행할 것 (P46 한계 ⑤).")
+     print("  [아래 값을 원장·task_state에 **그대로** 전사할 것. 손 증분 금지 = P46 (a).]")
++    today_o = today or time.strftime("%Y-%m-%d")
++    print(f"  달력 자[尺] (audit-320 R7 · c328 배선): today = {today_o}(로컬 · 파트 D와 같은 시계) ·"
++          " 일수 = today − start 행 date · 서수와 **다른 자[尺]** — 같은 칸에 섞지 말 것(관측 92).")
+ 
+     for label, start, pattern in ORDINAL_ANCHORS:
+         val = n_exec - start + 1
+@@ -2156,6 +2184,11 @@
+         recent = [(c, o) for c, o in series
+                   if series and c > max(x for x, _ in series) - ORDINAL_WINDOW]
+         print(f"    {label}  →  **{val}사이클째**  [start c{start} · 프레임 N={n_exec}]")
++        cal = ordinal_calendar_days(rows, start, today_o)
++        if cal is None:
++            print(f"       달력 = **미측정** (start 행 c{start} 부재 또는 date 무기재 — 0일이 아니다)")
++        else:
++            print(f"       달력 = **{cal[0]}일**  [start 행 c{start} date {cal[1]} → today {today_o} · 서수와 다른 자[尺]]")
+         if not recent:
+             print("       !! 계열 0본 — 정규식이 원장 문면과 다르다. '드리프트 없음'으로"
+                   " 읽지 말 것(미측정이다).")
