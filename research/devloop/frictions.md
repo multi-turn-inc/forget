@@ -12930,3 +12930,11 @@ import가 원본 패키지에서 수집 오류 → 오라클을 주 슬롯 렌�
 ## 관측 138 보강 (사이클 329, 신규 번호 아님) — 열한째 보강 = 주 슬롯 **devloop** 점유 · [0] 180자 **전문 도달** · 병행 트랙 = **heartbeat** [0] 224자가 **90자 컷·무마커**(c327·c328과 같은 기전 · 셋째 표본) — **축약형**
 
 **표본(값+포인터 · tmp/c329_probe.py 직독 · c48 저장본 47,932B).** 캡슐 «현재 목표:» 247자(devloop c328 summary 절단 «…») · «다음 행동:» 180자 = task_state [0] **전문**(claim 2b211120 · ≤ 200 규칙 · summary 3,953자) · «병행 트랙:» 102자 중 heartbeat 본문 90자 = heartbeat task_state [0](224자 · 2026-09-10T22:10Z 기록 · c328과 같은 세대)의 `[:90]` 정확히 · «…» 마커 없음. obs-138-a(`_parallel_track_lines` 상수 통일)의 셋째 표본 · P79·P80 창 동결(줄 0). restore 채점: 캡슐 partial(모드·rt 3·첫 후보 ⓐⓑ 도달 · 후보 서열·상시 손 의무는 [1]이라 절단면 밖) · task_state full · 종합 full(P73).
+
+## 관측 142 처분 (사이클 330 **적대 감사**, 신규 번호 아님) — 수용 기준 ①② **3/3** 충족(c328·c329·c330) · ③ 공표 가드 예외 그대로 — **종결**
+
+**값+포인터.** ① step 0 직후(턴3) 루트 `.venv/bin/python -m pytest -q`(ignore 없음 · 단일 런) = **959 passed · 2 failed · 1 skipped · 30.27s** · «Interrupted» 0 · ERROR 0(실패 2 = tests/test_update_awareness.py · 관측 129 동일 집합 · 미해소 별건) ② `find tmp -name 'test_*.py' -o -name 'conftest.py' | wc -l` = **0** ③ 이 사이클은 격리 검산 디렉토리를 만들지 않음(tmp/c330_patchcheck.py = `git apply --check`만). 기대 동작 ①(스크립트 끝 rmtree · c327~c329 3회 집행) 충족 · ②(`--ignore=tmp` 병기)는 c328~c330이 **ignore 없이** 통과해 불요로 판명 · ③(`testpaths` 상수화)는 후보로만 남긴다(diff 없음). `frictions_fixed` **+1**(c330 행) — **한정어(audit-330 §1-3)**: 이 고침은 루프가 자기에게 낸 상처의 봉합이지 제품·계기의 개선이 아니다 · 분자 의미의 문제는 R3·c335 몫. 회부 상태를 벗는다.
+
+## 관측 138 보강 (사이클 330 **적대 감사**, 신규 번호 아님) — 열두째 보강 = 주 슬롯 **devloop** 점유 · [0] 199자 **전문 도달** · 병행 트랙 = **heartbeat** [0] 224자가 **90자 컷·무마커**(c327~c329와 같은 기전 · 넷째 표본) — **축약형** · audit-330 §3-5 = 처치 diff 완성 뒤 표본 수집은 정보 0 → 다음 보강은 값이 바뀔 때만
+
+**표본(값+포인터 · tmp/c330_probe.py 직독 · c48 저장본 48,004B·384행).** 캡슐 «현재 목표:» 248자(devloop c329 summary 절단 «…») · «다음 행동:» 199자 = task_state [0] **전문**(claim 43080ac5 · ≤ 200 규칙 · summary 3,994자) · «병행 트랙:» 102자 중 heartbeat 본문 90자 = heartbeat task_state [0](224자 · 2026-09-10T22:10Z 기록 · c327~c329와 같은 세대)의 `[:90]` 정확히 · «…» 마커 없음. obs-138-a 넷째 표본 · P79·P80 창 동결(줄 0). restore 채점: 캡슐 partial(모드·금독·소스·rt 2·벗김 curl 도달 · 감사 의제·상시 손 의무는 [1]이라 절단면 밖) · task_state full · 종합 full(P73).

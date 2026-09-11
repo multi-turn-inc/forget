@@ -5604,6 +5604,9 @@ persona는 상태 주입이 무이득(+0.0111 ≈ A)이고 베이스는 +62% —
   (c329 **일반** — 신규 **2본**(partx-retire-a c48 파트 X 기지 은퇴 목록 +56 −6 · partx-retire-b tests 신규 +115) · patches/ **23본** · `git apply --check` 단독 2/2 ·
   c48 8본(기존 7 + a) 한 번에 · **23본 한 번에 통과**(HEAD 5e21a9f · 작업 트리 쓰기 0) · (b) 부패 0 · 격리 검산 4벌(가 원본 reason_record 8/8 · 나 7/7 · 다 대조군 판별 5 실패·불변 2 통과 ·
   라 실 tmp/ part_x 인쇄 = 위반 4행 집합 동일 · 원본 ★요구 있음 · 변환 ★요구 없음 · [기지·은퇴 목록] 4건 · tmp/c329_make_patch.py · 끝에 rmtree) · a·b 전부 devloop 소유 = A-325.1 정의역 **안** · 순열 재검산은 c330 감사 몫.)
+  (c330 **적대 감사** — 신규 0 · patches/ **23본 유지** · **순열 재검산**(tmp/c330_patchcheck.py · `git apply --check`만 · 작업 트리 쓰기 0 · HEAD 3a037a8): 단독 **23/23** ·
+  정순(이름순)·역순 통과 · 순서쌍 **506/506** · c48 대상 8본 순열 3 **336/336** → c326~c329 «순열은 c330 감사 몫» 4건 해소 · (b) 부패 0 · 한계 ① 그대로(적용 없는 diff는 pytest 미통과 ·
+  격리 검산은 부분 충전) · 대상 파일 색인 = c48 8 · store.py 2 · tests 8파일 · queue_mover 1 · c124_retro_prep 1 · hooks/forget_bstate 1 · 다음 재검산 = HEAD 전진 시(규약 2) 또는 c340 감사.)
 
 ## P77
 **등록 2026-09-05 (장기 작업 하네스 사이클 1, 숫자 보기 전).** 우리 하네스(pi 루프 + forget)로 실제 개발 작업(H-3① 구현)을 돌리면 **사람 개입 없이 4시간을 넘기지 못한다: 70%.** 측정 = run-001.jsonl의 K_human 첫 사건 시각. 판정 = 9/9 실행 종료 시. 대조군 없음(첫 실측). 반증 시 «반나절 자율»이 기준선이 되고, 지지 시 첫 병목(리셋/승인 프롬프트/도구 실패 반복)에 이름을 붙인다. 지시서: research/harness/cycle-1-brief.md.
@@ -5935,3 +5938,6 @@ persona는 상태 주입이 무이득(+0.0111 ≈ A)이고 베이스는 +62% —
   (c329 선독 4 — 응답 **0**: search_memories «A-325.1 승인 기각 되돌려» 1회(계기 호출 · 계상 제외 · curl 한 줄) = 11건 중 source=user **0**(devloop 요청 사본 4건 09-10T19:43 metadata.kind request_to_user ·
   무라벨 7건은 07-24~09-08 기지 · 09-10 이후 사용자 발화 0) · gate-queue 서열 37 응답 칸 공백 · `git log --all --since=2026-09-10` 비-devloop 커밋 = 3cb4b7e 1건(기지 · 신규 0) ·
   재발송 0 · 기한까지 **6일**(tmp/c329_metrics.py · `date -u` 09-11T17:53Z = KST 09-12 · c327·c328과 같은 KST 날 — 한 KST 날에 세 사이클 · 관측 135 계열).)
+  (c330 선독 5 — 응답 **0**: search_memories «A-325.1 devloop 소유 경로 자기 결재 승인 기각» 1회(계기 호출 · 계상 제외 · curl 한 줄) = 상위 10건 전부 devloop 자기 기록(요청 사본 event db1f1890 ·
+  사이클 노트) · source=user **0** · gate-queue 서열 37 응답 칸 공백 · `git log --all --since=2026-09-10 --max-count=40` 비-devloop 커밋 = 3cb4b7e 1건(기지 · 신규 0) ·
+  재발송 0 · 기한까지 **6일**(tmp/c330_metrics.py · `date -u` 09-11T18:33Z = KST 09-12 · c327~c329와 같은 KST 날 — 한 KST 날에 네 사이클 · audit-330 §2-5).)
