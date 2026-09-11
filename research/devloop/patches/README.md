@@ -78,6 +78,8 @@ c332 신규 2본(`obs-143-a·b`): 단독 2/2 · **c48 10본**(기존 9 + `obs-14
 
 c333 신규 2본(`audit-330-r2-a·b`): 단독 2/2 · **queue_mover 2본**(`audit-300-r2-move-frame-docstring` + `r2-a`) 정순·역순 · **patches/ 전수 29본 한 번에 통과**(HEAD dc93f82 · `tmp/c333_make_patch.py`). r2-a는 모듈 docstring 말미(+1문단)·상수 2행·`recalc_permanent_table` 앞 함수 5본 삽입(헝크 19/30/74)만 만지고 `move_frame` 본체·docstring(L215~225)은 무접촉이라 audit-300-r2(헝크 217)와 겹치지 않는다(정순·역순 실측). r2-b는 신규 파일. **적용 뒤 후속(순서 의무)**: ① `migrate_queue_to_start_only`를 실 gate-queue.md에 1회(메모리 검산 = 이행 30·태그 유지 7·불일치 0) ② tmp/cN_move_frame.py가 `move_frame_start_only`를 부르도록 교체 ③ 정산 줄 «표 셀 자동 갱신» 문면을 `format_queue_ordinals` 전사로 · 적용 전에는 구판 증분 경로 그대로(규약 3 · 이 사이클 이동기 33회째가 그 경로).
 
+c335 **회고 재검산**(`tmp/c335_patchcheck.py` · `git apply --check`만 · 작업 트리 쓰기 0 · HEAD 5944f65): 단독 **29/29** · **전수 29본 한 번에 통과** · 신규 0 · 순열은 c340 감사 몫(규약 2 · dc93f82 → 5944f65 전진분 = 수확 커밋 2본[문서·원장]이라 헝크 무접촉). audit-330 R4 «수리/개선» 경계(amendment-335 §4 ⓒ · gate-queue A-325.1 행 부기)로 29본을 가르면 **수리 6본**(obs-140-a · obs-141-b · obs-143-a · obs-139-a · obs-137 · obs-126-a) · **개선**(값·서식·상수·함수 신설 — 나머지 devloop 소유분) · 제품 6본 · 개헌 2본 — 승인 시 적용 순서의 재료.
+
 ## A-241.1 — 기동 명령 + 수용 기준 ① 검증 (c293)
 
 A-241.1(gate-queue.md 서열 30)의 처분 "기동 승인"이 나오면 실행할 명령과, 실행 후
