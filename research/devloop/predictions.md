@@ -5966,3 +5966,4 @@ persona는 상태 주입이 무이득(+0.0111 ≈ A)이고 베이스는 +62% —
   (c333 선독 8 — 응답 **0**: search_memories «A-325.1 devloop 소유 경로 자기 결재 승인 기각» 1회(계기 호출 · 계상 제외 · curl 한 줄) = 11건 · metadata.source=user **0** · devloop 7 ·
   라벨 미확인 4(08-31·09-08 기록 = 발송 이전) · gate-queue 서열 37 응답 칸 공백(tmp/c333_edits.py 행 셀 인쇄) · `git log --all --since=2026-09-10` 비-devloop 커밋 = 3cb4b7e 1건(기지 · 신규 0) ·
   재발송 0 · 기한까지 **6일**(tmp/c333_metrics.py · `date -u` 09-11T20:32Z = KST 09-12 · c327~c332와 같은 KST 날 — 한 KST 날에 일곱 사이클 · 관측 135 계열).)
+  (c334 선독 9 — 응답 **0**: search_memories 1회(계기 호출 · 계상 제외) = 11건 · metadata.source=user **0** · 라벨 없음 4건은 전부 발송 이전 기록(07-30·08-07·08-22·09-09) · 응답 칸 공백 직독 · 비-devloop 신규 커밋 0(HEAD b12ed83) · 재발송 0 · 기한까지 **6일**(tmp/c334_metrics.py · `date -u` 09-11T21:02Z = KST 09-12 · c327~c333과 같은 KST 날 — 한 KST 날에 여덟 사이클 · 관측 135 계열).)
