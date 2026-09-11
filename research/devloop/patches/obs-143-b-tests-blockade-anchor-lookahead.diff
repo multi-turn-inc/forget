@@ -1,0 +1,73 @@
+diff --git a/tests/test_devloop_step0_ordinals.py b/tests/test_devloop_step0_ordinals.py
+--- a/tests/test_devloop_step0_ordinals.py
++++ b/tests/test_devloop_step0_ordinals.py
+@@ -531,3 +531,69 @@
+     for label, cand in census.items():
+         print(f"  {label}: {cand}")
+     assert len(census) == len(c48.ORDINAL_ANCHORS)
++
++
++# ── 관측 143 — 앵커 낱말이 두 어휘에 산다 (c332 처치) ────────────────────────────
++#
++# 왜 이 절이 있는가. 봉쇄 앵커 `(?:미커밋|잔존|영토)…(\d+)사이클째`의 낱말 «잔존»은 관측 142가
++# c327~c330 `tests` 필드에 상시 도입한 «tmp/ 잔존 0»에도 산다. c330 행에서 그 «잔존» 뒤 80자 안에
++# **다른 계열**의 서수 «29사이클째 적색»(절차 4 적색 연속)이 왔고, 계열 값 29 → 함의 앵커 c302 ≠
++# c127 → `test_real_ledger_blockade_series_agrees_with_declared_anchor`가 c330 수확 **뒤** 붉어졌다
++# (관측 100 정방향). 파트 O 손 판독은 거짓 양성이라 봤지만 회귀에는 손 판독 단계가 없다.
++#
++# 처치는 라벨 요구(«봉쇄»)가 아니다 — 위 절이 c171 실측으로 막아 둔 확장이다. 매치 **직후** 문맥
++# «적색|연속»을 부정 전방 탐색으로 제외한다. 앵커 낱말·창·값 그룹·느슨 탐침은 그대로다.
++
++OBS143_C330_TESTS = (
++    "격리 검산 디렉토리 생성 0(tmp/ 잔존 0). skip 1 = uvicorn. 절차 4 «전체 통과» 문면은 "
++    "29사이클째 적색인 채 «외부 귀속»으로 이월."
++)
++
++
++def test_obs143_other_series_ordinal_after_anchor_word_is_not_a_blockade_sample():
++    """★ 관측 143의 정중앙 — c330 실문면(합성 복제): «잔존 … 29사이클째 적색»은 봉쇄 계열 밖."""
++    row = {"cycle": 330, "tests": OBS143_C330_TESTS}
++    assert c48._ordinal_series([row], BLOCKADE) == []
++    assert c48._ordinal_field_matches(row, BLOCKADE) == []
++
++
++def test_obs143_streak_wording_after_ordinal_is_excluded_too():
++    """상태형 계수기 어휘 «N사이클째 연속»도 산술형 자[尺]가 아니다 — 같은 제외."""
++    row = {"cycle": 900, "work": "타 트랙 미커밋 잔존 12사이클째 연속 무접촉"}
++    assert c48._ordinal_series([row], BLOCKADE) == []
++
++
++def test_obs143_exclusion_does_not_swallow_a_later_genuine_ordinal():
++    """제외는 그 서수 하나만 버린다 — 같은 필드 뒤의 정품 봉쇄 문면은 여전히 잡힌다."""
++    row = {"cycle": 332, "tests": OBS143_C330_TESTS
++           + " **[상태:봉쇄(타 트랙 미커밋 잔존) 206사이클째@파트 O 프레임 N=332]**"}
++    assert c48._ordinal_series([row], BLOCKADE) == [(332, 206)]
++
++
++def test_obs143_real_ledger_c330_row_is_not_in_the_blockade_series():
++    """실 원장 회귀 — c330 행은 봉쇄 라벨을 인쇄하지 않았다(그 행의 «잔존»은 관측 142 문면이다).
++
++    c164 절과 같은 모양이다: 소급 편집 0(관측 100 규율)이므로 이 행은 영원히 이 모양이고,
++    처치가 물러지면 이 절이 먼저 붉어진다.
++    """
++    rows = c48._ledger_rows()
++    by_cycle = {int(r["cycle"]): r for r in rows}
++    assert 330 in by_cycle, "원장에 c330 행이 없다 — 이 테스트의 전제가 깨졌다"
++    assert c48._ordinal_series([by_cycle[330]], BLOCKADE) == []
++
++
++def test_obs143_canonical_wordings_are_still_captured():
++    """불변 — 정품 문면 3종(c162·c171·파트 O 전사)은 처치 전후 모두 잡힌다."""
++    rows = [
++        {"cycle": 162, "tests": "**타 트랙 미커밋 5건 동일 구성 = 파트 O 인쇄 36사이클째**[start c127]"},
++        {"cycle": 171, "tests": "**[상태:봉쇄(타 트랙 미커밋 잔존) 45사이클째@파트 O 프레임 N=171]**"},
++        {"cycle": 332, "work": "봉쇄(타 트랙 미커밋 잔존) → **206사이클째** [start c127]"},
++    ]
++    assert c48._ordinal_series(rows, BLOCKADE) == [(162, 36), (171, 45), (332, 206)]
++
++
++def test_obs143_loose_probe_and_other_anchors_are_untouched():
++    """불변 — 처치의 정의역은 봉쇄 앵커 하나다. 느슨 탐침과 다른 두 앵커의 문면은 그대로."""
++    assert c48.LOOSE_ORDINAL_PROBES["봉쇄(타 트랙 미커밋 잔존)"] == r"봉쇄[^\n]{0,24}?(\d+)사이클째"
++    assert SERVICE == r"서비스율[^\n]{0,40}?(\d+)사이클째"
++    assert ONETOUCH == r"원터치[^\n]{0,60}?(\d+)사이클째"
