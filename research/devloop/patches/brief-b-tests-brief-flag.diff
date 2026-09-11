@@ -1,0 +1,114 @@
+diff --git a/tests/test_devloop_step0_brief.py b/tests/test_devloop_step0_brief.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_devloop_step0_brief.py
+@@ -0,0 +1,109 @@
++"""c48 `--brief` (c331 diff · audit-330 R5) — 파트는 그대로, 인쇄만 줄 단위로 줄인다.
++
++왜. step 0의 c48 인쇄가 48,004B·384행으로 하네스 인라인 문턱(≈19,016B · 관측 141)을 넘어 매 사이클 저장본 Read
++1턴을 강제했다(c323~c331). 계약: ① 목록 줄(들여쓰기 ≥ 6 · «    관측 N » · «  | »)의 연속 ≥ BRIEF_RUN_MIN은 한 줄로
++접히고 짧은 연속은 그대로 ② 경보 줄(!! ★ [!] «→ **»)은 들여쓰기·길이와 무관하게 불변 ③ 주석 줄(※ ↳)은 빠지고 계수된다
++④ BRIEF_LINE_CHARS 초과 본문 줄은 절단 마커(남은 글자 수)로 끝난다 ⑤ run_part(brief=True)는 첫 줄과 사망 배너를 보존한다
++⑥ __main__ 블록은 `--brief`를 파싱해 run_part 전건에 전달한다 / 불변: ⑦ 규칙에 걸리는 줄이 없으면 항등 ⑧ run_part
++기본 호출은 문면을 한 글자도 더하지 않는다(P67 (c)).
++"""
++import contextlib
++import importlib.util
++import io
++import re
++import sys
++from pathlib import Path
++
++ROOT = Path(__file__).resolve().parents[1]
++SCRIPTS = ROOT / "research" / "devloop" / "scripts"
++sys.path.insert(0, str(SCRIPTS))
++SCRIPT = SCRIPTS / "c48_step0_check.py"
++spec = importlib.util.spec_from_file_location("c48_step0_check_brief", SCRIPT)
++c48 = importlib.util.module_from_spec(spec)
++spec.loader.exec_module(c48)
++
++
++# ---- 합성 표본 (관측 100: 실 인쇄를 상수로 박지 않는다) ------------------------------------------
++
++def _run(parts, **kw):
++    deaths = []
++    buf = io.StringIO()
++    with contextlib.redirect_stdout(buf):
++        for label, fn in parts:
++            c48.run_part(label, fn, deaths, **kw)
++    return buf.getvalue(), deaths
++
++
++# ---- 판별 (원본 c48에서는 떨어진다) ------------------------------------------------------------
++
++def test_list_runs_collapse_and_short_runs_stay():
++    """계약 ①: 목록 줄 연속 ≥ run_min은 한 줄 «… 목록 n행 생략» · run_min 미만은 그대로."""
++    lines = ["[A. 헤더]", "        p1", "        p2", "        p3", "  값 = 1", "        solo", "  끝"]
++    out, stats = c48.brief_lines(lines, run_min=2)
++    assert out[0] == "[A. 헤더]" and out[-2] == "  끝"
++    assert any("목록 3행 생략" in l for l in out) and "        p1" not in out
++    assert "        solo" in out
++    assert stats["list"] == 3
++
++
++def test_alert_lines_are_never_folded_or_cut():
++    """계약 ②: !! ★ 줄은 들여쓰기 10칸이든 400자든 불변 · 목록 연속도 끊는다."""
++    long_alert = "          !! " + "x" * 400
++    lines = ["        a", "        b", long_alert, "        c", "        d", "    ★ 요구: " + "y" * 300]
++    out, stats = c48.brief_lines(lines, run_min=2)
++    assert long_alert in out and ("    ★ 요구: " + "y" * 300) in out
++    assert stats["cut"] == 0 and stats["list"] == 4
++
++
++def test_note_lines_are_dropped_and_counted():
++    """계약 ③: ※ ↳ 줄은 빠지고 계수된다 · 말미 계수 줄이 그 수를 말한다."""
++    lines = ["[S. 헤더]", "    ※ 주석 하나", "  값 = 2", "    ↳ 주석 둘"]
++    out, stats = c48.brief_lines(lines)
++    assert "    ※ 주석 하나" not in out and "    ↳ 주석 둘" not in out
++    assert stats["note"] == 2 and any("주석 2행 뺌" in l for l in out)
++
++
++def test_long_text_lines_are_cut_with_remainder_marker():
++    """계약 ④: line_chars 초과 본문 줄은 앞 line_chars + « …[+n자 · --brief]»."""
++    body = "  값 " + "z" * 300
++    out, stats = c48.brief_lines([body], line_chars=50)
++    assert out[0].startswith(body[:50]) and out[0].endswith(f" …[+{len(body) - 50}자 · --brief]")
++    assert stats["cut"] == 1
++
++
++def test_run_part_brief_keeps_first_line_and_death_banner():
++    """계약 ⑤: 첫 줄(배너)은 그대로 · 사망 배너(!!)는 접히지 않고 deaths도 기록된다."""
++    def dies():
++        raise ValueError("계기 버그")
++
++    out, deaths = _run([("N", lambda: print("[N. 배너]")), ("O", dies)], brief=True, brief_stats={})
++    assert out.startswith("[N. 배너]\n")
++    assert "파트 O 사망" in out and "계기 버그" in out
++    assert [l for l, _ in deaths] == ["O"]
++
++
++def test_main_block_parses_brief_and_passes_it_to_every_run_part():
++    """계약 ⑥: __main__이 `--brief`를 읽고 run_part 호출 전건에 brief=brief를 넘긴다."""
++    src = SCRIPT.read_text(encoding="utf-8")
++    main_block = src.split('if __name__ == "__main__":')[1]
++    assert '"--brief" in sys.argv[1:]' in main_block
++    calls = re.findall(r"run_part\(\s*\"[^\"]+\"\s*,\s*part_[a-z_]+\s*,([^)]*)\)", main_block)
++    assert calls and all("brief=brief" in c for c in calls), calls
++
++
++# ---- 불변 (원본·변환 양쪽 통과) ----------------------------------------------------------------
++
++def test_run_part_default_adds_nothing():
++    """계약 ⑧: 기본 호출은 P67 (c) 그대로 — 사망 0이면 문면을 한 글자도 더하지 않는다."""
++    out, deaths = _run([("N", lambda: print("[N. 배너]")), ("O", lambda: print("[O. 서수]"))])
++    assert deaths == [] and out == "[N. 배너]\n[O. 서수]\n"
++
++
++def test_isolation_contract_unchanged_on_death():
++    """계약 ⑦의 짝: 사망 처리 문면(계기측 · 뒤의 파트는 계속)은 어느 판본에서도 같다."""
++    def dies():
++        raise ValueError("boom")
++
++    out, deaths = _run([("B", dies), ("O", lambda: print("[O. 서수]"))])
++    assert "계기측" in out and "뒤의 파트는 계속 실행된다" in out and "[O. 서수]" in out
++    assert [l for l, _ in deaths] == ["B"]

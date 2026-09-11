@@ -5607,6 +5607,12 @@ persona는 상태 주입이 무이득(+0.0111 ≈ A)이고 베이스는 +62% —
   (c330 **적대 감사** — 신규 0 · patches/ **23본 유지** · **순열 재검산**(tmp/c330_patchcheck.py · `git apply --check`만 · 작업 트리 쓰기 0 · HEAD 3a037a8): 단독 **23/23** ·
   정순(이름순)·역순 통과 · 순서쌍 **506/506** · c48 대상 8본 순열 3 **336/336** → c326~c329 «순열은 c330 감사 몫» 4건 해소 · (b) 부패 0 · 한계 ① 그대로(적용 없는 diff는 pytest 미통과 ·
   격리 검산은 부분 충전) · 대상 파일 색인 = c48 8 · store.py 2 · tests 8파일 · queue_mover 1 · c124_retro_prep 1 · hooks/forget_bstate 1 · 다음 재검산 = HEAD 전진 시(규약 2) 또는 c340 감사.)
+  (c331 **일반** — 신규 2본 `brief-a-c48-brief-flag.diff`(c48 +111 −12 · audit-330 R5 · 순수 함수 brief_lines[목록 줄 연속 접기·주석 줄 계수·긴 줄 절단·경보 줄 불변] ·
+  run_part 래퍼[원 본문 → _run_part_raw · 무옵션 경로 문면 불변] · __main__ `--brief` 파싱·11파트 전달·합계 1행 · devloop 소유 = A-325.1 정의역 안) · `brief-b-tests-brief-flag.diff`
+  (tests/test_devloop_step0_brief.py 신규 +109 · 판별 6 · 불변 2) → **25본** · 격리 검산(tmp/c331_make_patch.py · pytest 프로세스 0 · 검산 디렉토리 생성 0 · 작업 트리 쓰기 0):
+  원본 isolation ②③ → 변환 7/7(+capsys 1 스킵) · 소스 단언 3/3 · 신규→변환 8/8 · 신규→**원본** 판별 6 실패·불변 2 통과 · **실 실행**(변환 소스 exec · __file__ 실 경로 · 실 서버):
+  원본 무옵션 48,668B·395행 = 변환 무옵션 48,668B·395행(다른 행 0) · 변환 `--brief` **17,907B·210행**(< 19,016B · 목록 183행 접음·주석 38행 뺌·절단 2행 ·
+  파트 헤더 13·경보 12·값 줄 16·첫 줄 보존) · `git apply --check` 단독 2/2 · c48 9본 한 번에 · 전수 25본 한 번에(HEAD cacc8bb) · 순열 재검산은 c340 감사 몫 · (b) 부패 0.)
 
 ## P77
 **등록 2026-09-05 (장기 작업 하네스 사이클 1, 숫자 보기 전).** 우리 하네스(pi 루프 + forget)로 실제 개발 작업(H-3① 구현)을 돌리면 **사람 개입 없이 4시간을 넘기지 못한다: 70%.** 측정 = run-001.jsonl의 K_human 첫 사건 시각. 판정 = 9/9 실행 종료 시. 대조군 없음(첫 실측). 반증 시 «반나절 자율»이 기준선이 되고, 지지 시 첫 병목(리셋/승인 프롬프트/도구 실패 반복)에 이름을 붙인다. 지시서: research/harness/cycle-1-brief.md.
@@ -5941,3 +5947,6 @@ persona는 상태 주입이 무이득(+0.0111 ≈ A)이고 베이스는 +62% —
   (c330 선독 5 — 응답 **0**: search_memories «A-325.1 devloop 소유 경로 자기 결재 승인 기각» 1회(계기 호출 · 계상 제외 · curl 한 줄) = 상위 10건 전부 devloop 자기 기록(요청 사본 event db1f1890 ·
   사이클 노트) · source=user **0** · gate-queue 서열 37 응답 칸 공백 · `git log --all --since=2026-09-10 --max-count=40` 비-devloop 커밋 = 3cb4b7e 1건(기지 · 신규 0) ·
   재발송 0 · 기한까지 **6일**(tmp/c330_metrics.py · `date -u` 09-11T18:33Z = KST 09-12 · c327~c329와 같은 KST 날 — 한 KST 날에 네 사이클 · audit-330 §2-5).)
+  (c331 선독 6 — 응답 **0**: search_memories «A-325.1 devloop 소유 경로 자기 결재 승인 기각» 1회(계기 호출 · 계상 제외 · curl 한 줄) = 11건 · source=user **0** · devloop 7 ·
+  라벨 미확인 4(08-31·09-08 기록 = 요청 발송 c325[09-11] **이전**이라 응답일 수 없음) · gate-queue 서열 37 응답 칸 공백 · `git log --all --since=2026-09-10 --max-count=40` 비-devloop
+  커밋 = 3cb4b7e 1건(기지 · 신규 0) · 재발송 0 · 기한까지 **6일**(tmp/c331_metrics.py · `date -u` 09-11T19:08Z = KST 09-12 · c327~c330과 같은 KST 날 — 한 KST 날에 다섯 사이클 · 관측 135 계열).)

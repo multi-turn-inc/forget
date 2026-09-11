@@ -1,0 +1,171 @@
+diff --git a/research/devloop/scripts/c48_step0_check.py b/research/devloop/scripts/c48_step0_check.py
+--- a/research/devloop/scripts/c48_step0_check.py
++++ b/research/devloop/scripts/c48_step0_check.py
+@@ -27,8 +27,10 @@
+ 
+ from __future__ import annotations
+ 
++import contextlib
+ import glob
+ import hashlib
++import io
+ import json
+ import os
+ import re
+@@ -3057,7 +3059,75 @@
+     return (int(re.sub(r"\D", "", pid) or 0), pid)
+ 
+ 
+-def run_part(label: str, fn, deaths: list[tuple[str, str]]) -> None:
++#: c331 신설 — `--brief` (audit-330 R5). 왜. step 0의 이 스크립트 인쇄가 c330 실측 48,004B·384행으로 하네스
++#: 인라인 문턱(≈19,016B · 관측 141)을 넘어 **매 사이클 저장본 Read 1턴**을 강제했다(c323~c331 9연속). 파트를 없애지
++#: 않고 **줄 단위로** 줄인다 — 값 줄은 남고 ① 목록 줄(들여쓰기 ≥ 6 · 파트 F 색인 «    관측 N » · 캡슐 원문 «  | »)의
++#: 연속 ≥ BRIEF_RUN_MIN은 한 줄 «… 목록 n행 생략»으로 접고 ② 주석 줄(※ ↳ 시작)은 파트 말미 계수로 빼며 ③ BRIEF_LINE_CHARS를
++#: 넘는 본문 줄은 절단 마커로 끝낸다. 경보 줄(BRIEF_KEEP 부분문자열 — !! ★ [!] «→ **»)은 어느 규칙에도 걸리지 않는다.
++#: 첫 줄(part_n 배너)·파트 헤더·굵은 값 줄은 규칙 밖이라 불변이다. **무옵션 실행은 한 글자도 바뀌지 않는다**(P67 (c)와
++#: 같은 규율 — brief=False 경로는 원 본문 그대로). 문턱 아래 여부는 실측이지 이 상수의 약속이 아니다.
++BRIEF_LINE_CHARS = 200
++BRIEF_RUN_MIN = 2
++BRIEF_KEEP: tuple[str, ...] = ("!!", "★", "[!]", "→ **")
++_BRIEF_LIST_RX = re.compile(r"^(?: {6,}\S|    관측 \d+ |  \| )")
++_BRIEF_NOTE_RX = re.compile(r"^\s*[※↳]")
++
++
++def brief_keep(line: str) -> bool:
++    return any(k in line for k in BRIEF_KEEP)
++
++
++def brief_class(line: str) -> str:
++    """줄의 --brief 등급: 'keep'(경보 · 규칙 밖) · 'note'(주석) · 'list'(목록) · 'text'(그 밖). keep이 먼저다."""
++    if brief_keep(line):
++        return "keep"
++    if _BRIEF_NOTE_RX.match(line):
++        return "note"
++    if _BRIEF_LIST_RX.match(line):
++        return "list"
++    return "text"
++
++
++def brief_lines(lines: list[str], line_chars: int = BRIEF_LINE_CHARS,
++                run_min: int = BRIEF_RUN_MIN) -> tuple[list[str], dict[str, int]]:
++    """파트 출력 한 벌을 --brief 규칙으로 줄인다. **순수 함수** — 그래서 테스트된다.
++
++    반환 = (줄 목록, 계수 {"list": 접힌 목록 줄 수, "note": 뺀 주석 줄 수, "cut": 절단 줄 수}).
++    규칙에 걸리는 줄이 없으면 입력을 **그대로** 돌려준다(항등 · 말미 계수 줄도 없다).
++    """
++    out: list[str] = []
++    stats = {"list": 0, "note": 0, "cut": 0}
++    run: list[str] = []
++
++    def flush() -> None:
++        if len(run) >= run_min:
++            stats["list"] += len(run)
++            out.append(f"      … 목록 {len(run)}행 생략(--brief)")
++        else:
++            out.extend(run)
++        run.clear()
++
++    for ln in lines:
++        cls = brief_class(ln)
++        if cls == "list":
++            run.append(ln)
++            continue
++        flush()
++        if cls == "note":
++            stats["note"] += 1
++            continue
++        if cls == "text" and len(ln) > line_chars:
++            stats["cut"] += 1
++            ln = ln[:line_chars] + f" …[+{len(ln) - line_chars}자 · --brief]"
++        out.append(ln)
++    flush()
++    if any(stats.values()):
++        out.append(f"  [--brief] 목록 {stats['list']}행 접음 · 주석 {stats['note']}행 뺌 · 절단 {stats['cut']}행"
++                   " — 전문 = 무옵션 실행")
++    return out, stats
++
++
++def _run_part_raw(label: str, fn, deaths: list[tuple[str, str]]) -> None:
+     """파트 하나를 격리 실행한다. 사망은 **전파되지 않되 조용하지도 않다** (c192, 관측 121 ㉡).
+ 
+     구조 이전: `main()`이 11파트를 무보호로 순차 호출했다. c192 실측 — 6번째
+@@ -3086,39 +3156,68 @@
+         print(f"    → 뒤의 파트는 계속 실행된다(c192 처치). 사망 요약은 말미에 있다.")
+ 
+ 
++def run_part(label: str, fn, deaths: list[tuple[str, str]], brief: bool = False,
++             brief_stats: dict[str, int] | None = None) -> None:
++    """`_run_part_raw`의 얇은 겉옷 (c331 · audit-330 R5). brief=False면 원 본문을 **그대로** 호출한다 —
++    출력·사망 처리·deaths 기록 전부 종전과 동일. brief=True면 그 출력을 잡아 `brief_lines`로 줄여 인쇄하고
++    계수를 `brief_stats`에 더한다. 사망 배너는 «!!»를 달고 있어 어느 판본에서도 접히지 않는다.
++    """
++    if not brief:
++        _run_part_raw(label, fn, deaths)
++        return
++    buf = io.StringIO()
++    with contextlib.redirect_stdout(buf):
++        _run_part_raw(label, fn, deaths)
++    raw = buf.getvalue()
++    if not raw:
++        return
++    lines, stats = brief_lines(raw.splitlines())
++    if brief_stats is not None:
++        for k, v in stats.items():
++            brief_stats[k] = brief_stats.get(k, 0) + v
++    print("\n".join(lines))
++
++
+ if __name__ == "__main__":
+     # c192(관측 121·P67): 순서와 그 이유는 아래 주석 그대로다 — 바뀐 것은 **호출
+     # 방식뿐**이다. 각 파트를 run_part로 감싸 한 파트의 사망이 나머지를 데려가지
+     # 못하게 한다. 사망 0이면 출력·종료 코드는 종전과 동일하다.
+     deaths: list[tuple[str, str]] = []
++    # c331(audit-330 R5): `--brief` — 파트 격리·순서는 그대로, 인쇄만 brief_lines로 줄인다.
++    brief = "--brief" in sys.argv[1:]
++    brief_stats: dict[str, int] = {"list": 0, "note": 0, "cut": 0}
+     # part_n을 1행에 남긴다 — 그 배너가 F-절차0 처치이고 P16 (a)가 5/5로 성립한
+     # 작동 중인 처치다. 몸 지문은 그 **직후**(여전히 첫 화면)에 세운다.
+     # part_s는 그 바로 다음 — 복원의 신뢰성 판정이 몸 지문보다 앞선다(c93).
+-    run_part("N", part_n, deaths)
+-    run_part("S", part_s, deaths)
+-    run_part("Body", part_body, deaths)
+-    run_part("R", part_recall, deaths)
+-    run_part("A", part_a, deaths)
+-    run_part("B", part_b, deaths)
++    run_part("N", part_n, deaths, brief=brief, brief_stats=brief_stats)
++    run_part("S", part_s, deaths, brief=brief, brief_stats=brief_stats)
++    run_part("Body", part_body, deaths, brief=brief, brief_stats=brief_stats)
++    run_part("R", part_recall, deaths, brief=brief, brief_stats=brief_stats)
++    run_part("A", part_a, deaths, brief=brief, brief_stats=brief_stats)
++    run_part("B", part_b, deaths, brief=brief, brief_stats=brief_stats)
+     # part_f는 말미다 — part_n 배너 1행·Body 첫 화면(P21)의 기존 계약을 건드리지 않고,
+     # 인덱스는 절차 2(선택) 직전에 읽히는 마지막 화면이 된다.
+-    run_part("F", part_f, deaths)
++    run_part("F", part_f, deaths, brief=brief, brief_stats=brief_stats)
+     # part_d는 part_f 바로 뒤 — 기한이 오늘이면 그 판정이 **절차 2의 선택**이므로,
+     # 선택 입력(미해소 관측 조망)과 같은 화면에 인접해야 한다. 파트 F의 '조망 =
+     # 마지막' 계약은 c161에 파트 P·X가 아래에 붙어 실질 종료됐다(그 사실은 파트 O
+     # 주석에 이미 적혀 있다).
+-    run_part("D", part_d, deaths)
++    run_part("D", part_d, deaths, brief=brief, brief_stats=brief_stats)
+     # part_p는 part_f 뒤 — 대장 위생은 절차 2의 선택 입력이 아니라 절차 3의 등록
+     # 직전에 읽혀야 한다. 파트 F의 조망 계약(마지막 화면)을 깨지 않으려 그 아래 붙인다.
+-    run_part("P", part_p, deaths)
++    run_part("P", part_p, deaths, brief=brief, brief_stats=brief_stats)
+     # part_x는 말미 — 프로브 위생은 절차 3(수행) 직전에 읽히면 된다. 파트 P와 같은
+     # 이유로 파트 F의 조망 계약 아래에 둔다.
+-    run_part("X", part_x, deaths)
++    run_part("X", part_x, deaths, brief=brief, brief_stats=brief_stats)
+     # part_o는 맨 마지막 — 서수는 절차 5(수확)에서 쓰이므로 마지막 화면이 곧 그 자리에
+     # 가장 가까운 화면이다. 파트 F의 '조망 = 마지막' 계약은 c161에 파트 P·X가 이미
+     # 아래에 붙어 실질 종료됐고(그 사실을 여기 적는다), 서수는 F의 경과값과 **같은
+     # 자[尺]**를 쓰므로 둘이 인접해 대조되는 편이 낫다.
+-    run_part("O", part_o, deaths)
++    run_part("O", part_o, deaths, brief=brief, brief_stats=brief_stats)
++
++    if brief:
++        print(f"\n[--brief 합계] 목록 {brief_stats['list']}행 접음 · 주석 {brief_stats['note']}행 뺌 · "
++              f"절단 {brief_stats['cut']}행 — 값·경보·헤더 줄 불변 · 전문 = 무옵션 실행 (c331 · audit-330 R5)")
+ 
+     # 말미 사망 요약 — 격리가 사망을 «읽고 넘기는 배너»로 만들지 않기 위한 셋 중 둘째.
+     # 사망 0이면 이 블록은 아무것도 인쇄하지 않는다(P67 (c) 팔).
