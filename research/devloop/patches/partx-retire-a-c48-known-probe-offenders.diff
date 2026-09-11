@@ -1,0 +1,99 @@
+diff --git a/research/devloop/scripts/c48_step0_check.py b/research/devloop/scripts/c48_step0_check.py
+--- a/research/devloop/scripts/c48_step0_check.py
++++ b/research/devloop/scripts/c48_step0_check.py
+@@ -1513,6 +1513,44 @@
+     return got
+ 
+ 
++#: c329 신설 — 파트 X 위반의 **기지(旣知) 은퇴 목록**. 손 유지 상수(`KNOWN_VOCAB_OFFENDERS`와 같은 등급:
++#: 바뀌면 이 표를 고치고 보고에 선언한다). 왜. 파트 X는 c158~c328 **171사이클** 동안 같은 위반 4건(c149·c157·c163 —
++#: 전부 probe_guard 채택[c158] **이전** 프로브)을 매 사이클 인쇄했고, c171의 «사유 기재 감시»는 그 4건에 대해 매 사이클
++#: 원장에 사유를 **다시** 적으라고 요구했다 — 처치 불가(과거분 · 미추적 tmp/) 항목의 사유를 사이클마다 복제한 것이다.
++#: 파트 P가 P39를 `KNOWN_VOCAB_OFFENDERS`로 가르듯 여기서도 **신규와 기지를 가른다**: 기지분은 인쇄하되 «★ 요구»를
++#: 내지 않고, 사유·처치 의무는 **신규분에만** 산다. 키 = (저장소 상대경로 · POSIX 구분자, 패턴 종류) — 행 번호는 넣지
++#: 않는다(파일이 편집되면 번호가 밀리고 목록이 늑대소년이 된다). 등재 조건 = 과거분 ∧ 원장에 사유가 이미 적혔다
++#: (c166·c168·c170 … c328 실측). 목록에 있는데 스캔에 없으면 part_x가 «줄여라»로 인쇄한다 — 목록이 현실보다 커지지 않게.
++KNOWN_PROBE_OFFENDERS: tuple[tuple[str, str], ...] = (
++    ("tmp/c149_latency_decompose.py", "getattr-기본값"),
++    ("tmp/c157_hand_corpus.py", "hasattr-삼항"),
++    ("tmp/c163_next_corpus.py", "getattr-기본값"),
++    ("tmp/c163_p45_premise.py", "hasattr-삼항"),
++)
++
++
++def split_probe_violations(violations: list[dict], repo: str,
++                           known: tuple[tuple[str, str], ...] = KNOWN_PROBE_OFFENDERS,
++                           ) -> tuple[list[dict], list[dict], list[tuple[str, str]]]:
++    """파트 X 위반 목록을 (신규, 기지, 은퇴목록-부재)로 가른다. **순수 함수** — 그래서 테스트된다.
++
++    키 = (`repo` 상대경로 · POSIX 구분자, kind). 행 번호·소스 문면은 키가 아니다. 셋째 반환값은
++    `known`에 있으나 이번 스캔에 없는 항목 — 파일이 지워졌거나 처치됐다는 뜻이며, 호출자는 그것을
++    **인쇄**해야 한다(목록이 현실보다 크면 그 자체가 늑대소년이다).
++    """
++    known_set = set(known)
++    fresh: list[dict] = []
++    old: list[dict] = []
++    seen: set[tuple[str, str]] = set()
++    for v in violations:
++        rel = os.path.relpath(v["path"], repo).replace(os.sep, "/")
++        key = (rel, v["kind"])
++        (old if key in known_set else fresh).append(v)
++        seen.add(key)
++    absent = [k for k in known if k not in seen]
++    return fresh, old, absent
++
++
+ def part_x() -> None:
+     """[X] 일회용 프로브 인구조사 — 매 사이클 (c158 신설, P45, c157 HAND 별건 3).
+ 
+@@ -1541,8 +1579,9 @@
+         return
+ 
+     viol, unparsed = rep["violations"], rep["unparsed"]
++    fresh, known, absent = split_probe_violations(viol, REPO)
+     print("\n[X. 일회용 프로브 인구조사 — 매 사이클 (c158 신설, P45)]")
+-    print(f"  tmp/*.py {len(rep['scanned'])}본 검사 · 위반 {len(viol)}건 ·"
++    print(f"  tmp/*.py {len(rep['scanned'])}본 검사 · 위반 {len(viol)}건 (신규 {len(fresh)} · 기지 {len(known)}) ·"
+           f" **미검사 {len(unparsed)}본** · probe_guard 채택 {len(rep['guarded'])}본")
+     print(f"  탐지 규칙 정본 = probe_guard.PATTERNS ({len(PATTERNS)}종: {' · '.join(PATTERNS)})"
+           f" — 이 파일은 사본을 갖지 않는다.")
+@@ -1551,9 +1590,19 @@
+         print("  !! 미검사분 — 이 수는 '위반 0'에 섞이지 않는다:")
+         for u in unparsed:
+             print(f"       {os.path.relpath(u['path'], REPO)}  {u['why']}")
+-    if viol:
+-        print("  !! 위반 — 폴백이 실패를 값으로 위장할 수 있는 자리:")
+-        for v in viol:
++    for k_rel, k_kind in absent:
++        print(f"  !! 은퇴 목록에 있으나 스캔에 없다: {k_rel} [{k_kind}]"
++              " — KNOWN_PROBE_OFFENDERS를 줄여라(목록이 현실보다 크다).")
++    if known:
++        print(f"  [기지·은퇴 목록] {len(known)}건 — 손 유지 상수 KNOWN_PROBE_OFFENDERS 등재분"
++              "(c329 · 과거분 · 사유 기재 의무 없음 · 늘어나면 보고에 선언):")
++        for v in known:
++            c = cycle_of(v["path"])
++            print(f"       c{c if c is not None else '??'}  "
++                  f"{os.path.relpath(v['path'], REPO)}:{v['line']}  [{v['kind']}]  {v['src']}")
++    if fresh:
++        print("  !! 신규 위반 — 폴백이 실패를 값으로 위장할 수 있는 자리:")
++        for v in fresh:
+             c = cycle_of(v["path"])
+             print(f"       c{c if c is not None else '??'}  "
+                   f"{os.path.relpath(v['path'], REPO)}:{v['line']}  [{v['kind']}]  {v['src']}")
+@@ -1576,13 +1625,14 @@
+         else:
+             print(f"    !! 직전 행 c{last_c}은 위반을 인쇄받고 **사유를 적지 않았다**"
+                   " — 관측 103의 이월 사건이 방금 하나 더 났다.")
+-        print(f"    ★ 요구: 이 사이클 원장에 위반 {len(viol)}건의 **사유 또는 처치**를 적어라.")
++        print(f"    ★ 요구: 이 사이클 원장에 신규 위반 {len(fresh)}건의 **사유 또는 처치**를 적어라.")
+         print("       미기재는 다음 사이클 이 줄이 ✗로 검출한다(관측 103 수용 기준 (i)).")
+         print(f"    어휘(손 유지 상수) = {' · '.join(VIOLATION_REASON_TERMS)}")
+         print("       ※ 어휘 밖 표현으로 적으면 이 눈은 **과잉 고발**한다 — 거짓 음성이")
+         print("         루프에 유리하지 않은 방향으로 기울게 골랐다(관측 76·104의 교훈).")
+     else:
+-        print("  위반 0 — 4패턴 클린.")
++        print("  신규 위반 0 — 4패턴 클린."
++              + (f" 기지 {len(known)}건은 은퇴 목록 등재분(사유 기재 의무 없음)." if known else ""))
+ 
+ 
+ # ── ㉠ 서수 1종 고정 (c161 집행, P46 · 관측 85 수용 기준 ③ / 처치 설계 = c153 별건 1) ──

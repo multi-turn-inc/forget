@@ -1,0 +1,120 @@
+diff --git a/tests/test_devloop_step0_probe_retirement.py b/tests/test_devloop_step0_probe_retirement.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_devloop_step0_probe_retirement.py
+@@ -0,0 +1,115 @@
++"""c48 파트 X «기지 은퇴 목록» (c329 diff) — 신규 위반과 기지 위반을 가르고 «★ 요구»는 신규분에만 낸다.
++
++왜. 파트 X는 c158~c328 171사이클 동안 같은 위반 4건(c149·c157·c163 · probe_guard 채택 이전 프로브)을 매 사이클
++인쇄했고, c171의 «사유 기재 감시»는 그 4건의 사유를 매 사이클 원장에 다시 적으라고 요구했다 — 처치 불가 항목의
++사유 복제. 파트 P의 KNOWN_VOCAB_OFFENDERS 규율을 파트 X로 옮긴다. 계약: ① 상수는 (상대경로, 종류) 쌍의 튜플이며
++경로는 tmp/ 밑 · 종류는 probe_guard.PATTERNS 안 · 중복 0 ② 키는 경로·종류이지 행 번호가 아니다 ③ 목록에 있는데
++스캔에 없는 항목은 «부재»로 돌려준다 ④ 전건 기지면 «★ 요구»가 없고 «[기지·은퇴 목록]»이 있다 ⑤ 신규 1건이 섞이면
++«★ 요구»는 신규 수(1)를 말한다 / 불변: ⑥ 사유 어휘 상수는 그대로 ⑦ 미검사분은 여전히 인쇄된다.
++"""
++import contextlib
++import importlib.util
++import io
++import os
++import sys
++from pathlib import Path
++
++ROOT = Path(__file__).resolve().parents[1]
++SCRIPTS = ROOT / "research" / "devloop" / "scripts"
++sys.path.insert(0, str(SCRIPTS))
++SCRIPT = SCRIPTS / "c48_step0_check.py"
++spec = importlib.util.spec_from_file_location("c48_step0_check_probe_retirement", SCRIPT)
++c48 = importlib.util.module_from_spec(spec)
++spec.loader.exec_module(c48)
++import probe_guard  # noqa: E402
++
++
++# ---- 합성 표본 (관측 100: 실 tmp/ 상태를 상수로 박지 않는다) ------------------------------------
++
++def _abs(rel: str) -> str:
++    return os.path.join(str(c48.REPO), *rel.split("/"))
++
++
++def _viol(rel: str, kind: str, line: int = 1) -> dict:
++    return {"path": _abs(rel), "kind": kind, "line": line, "src": f"src of {rel}"}
++
++
++KNOWN2 = (("tmp/c1_a.py", "hasattr-삼항"), ("tmp/c2_b.py", "getattr-기본값"))
++
++
++def _part_x_output_with(report: dict) -> str:
++    """probe_guard.scan_probes를 합성 보고서로 바꿔 part_x를 돌린다(픽스처 없음 · finally 복원)."""
++    orig = probe_guard.scan_probes
++    probe_guard.scan_probes = lambda paths: report
++    try:
++        buf = io.StringIO()
++        with contextlib.redirect_stdout(buf):
++            c48.part_x()
++        return buf.getvalue()
++    finally:
++        probe_guard.scan_probes = orig
++
++
++def _report(violations, unparsed=()):
++    return {"scanned": [v["path"] for v in violations], "violations": list(violations),
++            "unparsed": list(unparsed), "guarded": [], "patterns": list(probe_guard.PATTERNS)}
++
++
++# ---- 판별 (원본 c48에서는 떨어진다) ------------------------------------------------------------
++
++def test_known_offenders_is_a_declared_hand_maintained_constant():
++    """계약 ①: (상대경로, 종류) 쌍의 튜플 · tmp/ 밑 · PATTERNS 안 · 중복 0."""
++    k = c48.KNOWN_PROBE_OFFENDERS
++    assert isinstance(k, tuple) and len(k) >= 1
++    for rel, kind in k:
++        assert rel.startswith("tmp/") and "\\" not in rel, rel
++        assert kind in probe_guard.PATTERNS, kind
++    assert len(set(k)) == len(k)
++
++
++def test_split_keys_on_relpath_and_kind_not_line():
++    """계약 ②: 같은 경로·종류면 행 번호가 달라도 기지 · 종류가 다르면 신규."""
++    v_known = _viol("tmp/c1_a.py", "hasattr-삼항", line=999)
++    v_other_kind = _viol("tmp/c1_a.py", "except-pass", line=999)
++    v_new = _viol("tmp/c9_z.py", "getattr-기본값")
++    fresh, known, absent = c48.split_probe_violations([v_known, v_other_kind, v_new], str(c48.REPO), KNOWN2)
++    assert known == [v_known]
++    assert fresh == [v_other_kind, v_new]
++
++
++def test_split_reports_retired_entries_absent_from_scan():
++    """계약 ③: 목록에 있는데 스캔에 없는 항목은 «부재»로 돌아온다 — 목록이 현실보다 크면 보이게."""
++    fresh, known, absent = c48.split_probe_violations([_viol("tmp/c1_a.py", "hasattr-삼항")], str(c48.REPO), KNOWN2)
++    assert absent == [("tmp/c2_b.py", "getattr-기본값")]
++    assert fresh == [] and len(known) == 1
++
++
++def test_part_x_requires_no_reason_when_all_violations_are_known():
++    """계약 ④: 전건 기지 → «★ 요구» 없음 · «[기지·은퇴 목록]» 있음 · 헤더에 (신규 0 · 기지 N)."""
++    viols = [_viol(rel, kind, line=7) for rel, kind in c48.KNOWN_PROBE_OFFENDERS]
++    out = _part_x_output_with(_report(viols))
++    assert "★ 요구" not in out, out
++    assert f"[기지·은퇴 목록] {len(viols)}건" in out, out
++    assert f"(신규 0 · 기지 {len(viols)})" in out, out
++
++
++def test_part_x_still_demands_a_reason_for_a_fresh_violation_only():
++    """계약 ⑤: 기지 1 + 신규 1 → «★ 요구»는 신규 1건을 말한다(전체 2가 아니다)."""
++    rel, kind = c48.KNOWN_PROBE_OFFENDERS[0]
++    out = _part_x_output_with(_report([_viol(rel, kind), _viol("tmp/c999_new.py", "except-pass")]))
++    assert "★ 요구: 이 사이클 원장에 신규 위반 1건의" in out, out
++    assert "tmp/c999_new.py" in out
++
++
++# ---- 불변 (원본·변환 양쪽 통과) ----------------------------------------------------------------
++
++def test_reason_vocabulary_is_untouched():
++    """계약 ⑥: 사유 어휘 상수는 그대로다 — 신규분의 «사유 기재 감시»가 계속 그것을 쓴다."""
++    assert "파트 X" in c48.VIOLATION_REASON_TERMS and "probe_guard" in c48.VIOLATION_REASON_TERMS
++    assert c48.reason_recorded({"work": "파트 X 신규 위반 0"}) == ["파트 X"]
++
++
++def test_unparsed_probes_are_still_printed():
++    """계약 ⑦: 미검사분은 어느 판본에서도 «위반 0»에 섞이지 않고 인쇄된다."""
++    out = _part_x_output_with(_report([], unparsed=[{"path": _abs("tmp/c5_broken.py"), "why": "SyntaxError line 3"}]))
++    assert "미검사 1본" in out and "tmp/c5_broken.py" in out

@@ -43,6 +43,8 @@ diff가 만지는 파일은 **HEAD 추적 파일 ∧ 봉쇄 집합(타 트랙 �
 | `obs-138-b-tests-parallel-track-slot.diff` | 관측 138 (ii) (회귀 — `tests/test_capsule_parallel_track_slot.py` **신규**: 판별 2[≤200자 [0] 병행 트랙 전문 · 초과분 주 슬롯과 동일 절단·마커] + 불변 2[주 슬롯 220·마커 · 자기 제외·2줄 상한]) | `tests/test_capsule_parallel_track_slot.py`(신규) | 신규 파일 · 봉쇄 교집합 0 · +86 · 제품 테스트 | c327 `git apply --check` 통과 · 같은 생성기 · 오라클 = 주 슬롯 렌더(상수 import 없음 — 원본 패키지에서도 수집됨) · **a와 짝** |
 | `audit-320-r7-a-c48-part-o-calendar.diff` | audit-320 R7 (파트 O **달력 병기** 배선 — 순수 함수 `ordinal_calendar_days(rows, start, today)` = today − start 행 `date` [로컬 YYYY-MM-DD · 파트 D와 같은 시계] · 행 부재/date·today 무기재 = None[0일 위장 없음] · `part_o(today=None)` · 라벨마다 서수 줄 **아래 별줄** «달력 = **N일**  [start 행 cS date D → today T · 서수와 다른 자[尺]]» · 서수 줄 바이트 불변 · c318~c327 tmp/cN_metrics.py `days_since` 손 프로브의 기계 거처) | `research/devloop/scripts/c48_step0_check.py` | HEAD 추적 · 봉쇄 교집합 0(파트 A c328) · 계기 코드 +34 −1 · 상수 발명 0 · devloop 소유 = A-325.1 정의역 안 | c328 `git apply --check` 통과(단독 · c48 7본 한 번에 · 전수 21본) · `tmp/c328_make_patch.py`(원본 무접촉 · difflib) · 격리 검산(pytest 프로세스 0 · 본문 exec · 끝에 rmtree): 원본 ordinals 테스트→변환 c48 30/30 · 신규→변환 6/6 · **실 원장 part_o 인쇄 = 달력 줄 3(28·29·26일)+헤더 1 빼면 원본과 동일** · 검산기 자체 오류 1(헤더 행수 상수 2→1 · diff 오염 0) |
 | `audit-320-r7-b-tests-part-o-calendar.diff` | audit-320 R7 (회귀 **신규 파일** `tests/test_devloop_step0_ordinal_calendar.py` — 판별 4: today − date · 접두만 · None≠0 · 실 원장 라벨당 «달력 =» 1줄 / 불변 2: 서수 줄 정규식 종결 불변 · «달력» 줄 전사가 세 앵커·세 느슨 탐침에 표본 0) | `tests/test_devloop_step0_ordinal_calendar.py`(신규) | 신규 파일 · 봉쇄 교집합 0 · +94 · devloop 소유 | c328 `git apply --check` 통과(단독 · 21본 묶음) · 같은 생성기 · 대조군: 신규→**원본** c48 = 판별 4 실패(`AttributeError: ordinal_calendar_days` 3 + `TypeError: part_o() … today` 1) · 불변 2 양쪽 통과(설계) · **a와 짝** |
+| `partx-retire-a-c48-known-probe-offenders.diff` | 파트 X «기지 은퇴 목록» (c329 — 손 유지 상수 `KNOWN_PROBE_OFFENDERS` [키 = (저장소 상대경로, 패턴 종류) · 행 번호 없음 · 4건 c149·c157·c163 = probe_guard 채택 이전 프로브] + 순수 함수 `split_probe_violations(violations, repo, known)` → (신규, 기지, 은퇴목록-부재) · part_x 헤더에 «(신규 f · 기지 k)» 병기 · 기지분은 «[기지·은퇴 목록]»으로 인쇄 · «★ 요구»(사유 기재 감시)는 **신규분에만** · 목록에 있는데 스캔에 없으면 «줄여라» 경보 · 파트 P `KNOWN_VOCAB_OFFENDERS` 규율의 파트 X판 · 왜 = c158~c328 171사이클 같은 4건 인쇄 + c171 이후 매 사이클 사유 재기재) | `research/devloop/scripts/c48_step0_check.py` | HEAD 추적 · 봉쇄 교집합 0(파트 A c329) · 계기 코드 +56 −6 · 상수 1 신설(손 유지 · 선언) · devloop 소유 = A-325.1 정의역 안 | c329 `git apply --check` 통과(단독 · c48 8본 한 번에 · 전수 23본) · `tmp/c329_make_patch.py`(원본 무접촉 · difflib) · 격리 검산(pytest 프로세스 0 · 본문 exec · 끝에 rmtree): 원본 reason_record 테스트→변환 c48 8/8 · 신규→변환 7/7 · **실 tmp/ part_x 인쇄 = 위반 4행 집합 동일 · 원본 «★ 요구» 있음 → 변환 없음 · «[기지·은퇴 목록] 4건» · 부재 경보 0** |
+| `partx-retire-b-tests-known-probe-offenders.diff` | 파트 X «기지 은퇴 목록» (회귀 **신규 파일** `tests/test_devloop_step0_probe_retirement.py` — 판별 5: 상수 서식[tmp/ · PATTERNS · 중복 0] · 키 = 경로·종류(행 번호 아님) · 부재 반환 · 전건 기지 → ★ 없음 · 기지 1+신규 1 → ★ «신규 1건» / 불변 2: 사유 어휘 상수 불변 · 미검사분 인쇄 · scan_probes 합성 치환 = 픽스처 없음·finally 복원) | `tests/test_devloop_step0_probe_retirement.py`(신규) | 신규 파일 · 봉쇄 교집합 0 · +115 · devloop 소유 | c329 `git apply --check` 통과(단독 · 23본 묶음) · 같은 생성기 · 대조군: 신규→**원본** c48 = 판별 5 실패(`AttributeError: KNOWN_PROBE_OFFENDERS` 3 + `AttributeError: split_probe_violations` 2) · 불변 2 양쪽 통과(설계) · **a와 짝** |
 
 ## 순서 전수 검산 (c324 · 규약 2의 «HEAD 전진» 검산과 별개 축)
 
@@ -60,6 +62,8 @@ c327 신규 2본(`obs-138-a·b`): 단독 2/2 · store.py 2본(`obs-141-a` + `obs
 
 c328 신규 2본(`audit-320-r7-a·b`): 단독 2/2 · **c48 7본**(`obs-140-a` `obs-139-a` `audit-320-r4` `obs-137` `obs-126-a` `obs-141-b` + `r7-a`) 한 번에 · **patches/ 전수 21본 한 번에 통과**(HEAD 28b527d · `tmp/c328_make_patch.py`). r7-a는 part_o 정의부·인쇄 2줄만 만지므로 기존 c48 6본과 헝크가 겹치지 않는다(한 순서 실측 · 순열은 c330 감사 몫).
 
+c329 신규 2본(`partx-retire-a·b`): 단독 2/2 · **c48 8본**(기존 7 + `partx-retire-a`) 한 번에 · **patches/ 전수 23본 한 번에 통과**(HEAD 5e21a9f · `tmp/c329_make_patch.py`). partx-retire-a는 part_x 정의부 앞(상수·순수 함수 삽입)과 part_x 본문 4곳만 만지므로 기존 c48 7본과 헝크가 겹치지 않는다(한 순서 실측 · 순열은 c330 감사 몫).
+
 ## A-241.1 — 기동 명령 + 수용 기준 ① 검증 (c293)
 
 A-241.1(gate-queue.md 서열 30)의 처분 "기동 승인"이 나오면 실행할 명령과, 실행 후
@@ -76,4 +80,5 @@ A-241.1(gate-queue.md 서열 30)의 처분 "기동 승인"이 나오면 실행�
 
 미완성 후보(다음 일반 사이클): 1′ R2 `store.py`(교집합 0 복원 시 — **c326 obs-141-a가 store.py 첫 diff** · 1′ R2 본체는 별도) · 관측 138 (ii) — **c327 obs-138-a·b 완성**(같은 슬롯 상수) · 잔여 = `truncated` 항목 단위 플래그 ·
 audit-320 R7 — **c328 r7-a·b 완성**(파트 O 달력 병기) · 잔여 = 큐 정산 줄 «달력 병기» 문면을 파트 O 인쇄 전사로 대체(적용 뒤) ·
-파트 X «기지 은퇴 목록» 상수(4건) · 관측 142 ③ pytest `testpaths`(수집 범위 판단 뒤).
+파트 X «기지 은퇴 목록» — **c329 partx-retire-a·b 완성** · 잔여 = 적용 뒤 원장 «파트 X 사유» 칸 소거(신규분 발생 시에만 부활) ·
+관측 142 ③ pytest `testpaths`(수집 범위 판단 뒤).
