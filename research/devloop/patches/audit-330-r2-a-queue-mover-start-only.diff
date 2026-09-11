@@ -1,0 +1,181 @@
+diff --git a/research/devloop/scripts/queue_mover.py b/research/devloop/scripts/queue_mover.py
+--- a/research/devloop/scripts/queue_mover.py
++++ b/research/devloop/scripts/queue_mover.py
+@@ -19,6 +19,14 @@
+ 무공지로 소멸해도(관측 130) 드리프트 0만 인쇄했다. 처치 = 재계산 패스 말미에
+ **직전 프레임 정산 줄 존재 1비트**를 읽기 전용으로 산출한다(`settlement_receipt`) —
+ 부재면 시끄럽게, 침묵 금지. 불릿은 **읽기만** 한다(무접촉 규율 불변).
++
++audit-330 R2 (c333 diff · 적용 = 게이트): 큐 표의 «N사이클째» **저장을 폐지**하고 `[start cK]`만 저장한다.
++왜 — 저장된 서수는 매 사이클 37칸이 +1로 재기록돼 gate-queue.md 한 파일이 최근 30커밋 변경 5,791행 중
++2,208행(38%)을 냈다(audit-330 §2). 값은 헤더 프레임과 start에서 언제나 재계산 가능하므로(자[尺] 1종 ·
++파트 O와 같은 산식) 저장할 이유가 없고, 저장하면 관측 92(라벨과 값이 한 칸)·관측 134(암산 동결)의 자리가 된다.
++이행은 일회성(`migrate_queue_to_start_only`) · 읽기는 `queue_ordinals` · 이동기는 `move_frame_start_only`
++(큐 패스 = 헤더만 · 상설 표 = 재계산 불변 · ㉨ 영수증 불변). 구판 `move_frame`은 이행 전 파일용으로 존치 —
++본체·docstring 무접촉(audit-300 R2 docstring diff와 헝크 분리).
+ """
+ import re
+ 
+@@ -30,6 +38,10 @@
+ FRAME_CELL_RE = re.compile(r"프레임 N=(\d+) 값")
+ # 정산 불릿 두 서식: «- **cN 정산**:» (단일·범위 cA~cB) / «- **cA~cB 정산 줄 공백**» (공백 기재)
+ SETTLE_RE = re.compile(r"^- \*\*c(\d+)(?:~c(\d+))? 정산(?P<gap> 줄 공백)?")
++# audit-330 R2 — start만 저장하는 큐 표의 태그. 대괄호·소괄호 둘 다(손 표기 두 서식 · c332_edits 직독 정규식과 동일).
++START_TAG_RE = re.compile(r"[\[(]start c(\d+)[\])]")
++# 저장 서수 «**V사이클째**» — 굵게가 있든 없든 값을 걷어낸다(이행 전용 · 뒤따르는 공백까지).
++STORED_ORDINAL_RE = re.compile(r"\*{0,2}(\d+)사이클째\*{0,2}[ \t]*")
+ 
+ 
+ class FrameMismatch(Exception):
+@@ -74,6 +86,151 @@
+         lines[i] = "|".join(cells)
+         report["changed"].append((i + 1, old, old + 1))
+     return report
++
++
++# ── audit-330 R2 — start만 저장 (c333 diff) ────────────────────────────────────
++def _queue_span(lines):
++    start = next(i for i, l in enumerate(lines) if l.startswith(QUEUE_HDR))
++    end = next(i for i, l in enumerate(lines[start + 1:], start + 1)
++               if l.startswith("###"))
++    return start, end
++
++
++def _queue_frame(lines, start):
++    m = re.search(r"N=(\d+)", lines[start])
++    if not m:
++        raise FrameMismatch(f"큐 헤더에 프레임이 없다: {lines[start]}")
++    return int(m.group(1))
++
++
++def _seq_label(cells):
++    for c in cells:
++        t = c.strip().strip("*").strip()
++        if t:
++            return t[:16]
++    return "?"
++
++
++def migrate_queue_to_start_only(lines):
++    """audit-330 R2 **일회성 이행**: 큐 표의 저장 서수 «V사이클째»를 걷어내고 `[start cK]`만 남긴다.
++
++    K = 헤더 프레임 N − V + 1 (자[尺] 1종 · 파트 O와 동일 산식). 태그가 이미 있으면 그 K와 산출 K를
++    대조한다 — 다르면 **고치지 않고** mismatch에 남긴다(침묵 수리 금지 · 관측 92 계열). 취소선 칸(동결)·
++    다중/영 적중 칸·`###` 이하 산문은 무접촉. lines를 제자리 수정.
++
++    반환 report: {frame, migrated:[(1-based line, V, K)], tagged_kept:[(line, K)],
++                  mismatch:[(line, V, K_tag, K_calc)], skipped:[line], bad:[line]}
++    """
++    start, end = _queue_span(lines)
++    frame = _queue_frame(lines, start)
++    r = {"frame": frame, "migrated": [], "tagged_kept": [], "mismatch": [], "skipped": [], "bad": []}
++    for i in range(start + 1, end):
++        line = lines[i]
++        if not line.lstrip().startswith("|"):
++            continue
++        cells = line.split("|")
++        idx = [j for j, c in enumerate(cells) if AGE_RE.search(c)]
++        if not idx:
++            continue
++        target = idx[-1]
++        cell = cells[target]
++        if "~~" in cell:
++            r["skipped"].append(i + 1)
++            continue
++        hits = AGE_RE.findall(cell)
++        if len(hits) != 1:
++            r["bad"].append(i + 1)
++            continue
++        v = int(hits[0][0])
++        k_calc = frame - v + 1
++        tag = START_TAG_RE.search(cell)
++        if tag:
++            k_tag = int(tag.group(1))
++            if k_tag != k_calc:
++                r["mismatch"].append((i + 1, v, k_tag, k_calc))
++                continue
++            cells[target] = STORED_ORDINAL_RE.sub("", cell, count=1)
++            r["tagged_kept"].append((i + 1, k_tag))
++        else:
++            cells[target] = STORED_ORDINAL_RE.sub(f"[start c{k_calc}] ", cell, count=1)
++            r["migrated"].append((i + 1, v, k_calc))
++        lines[i] = "|".join(cells)
++    return r
++
++
++def queue_ordinals(lines, n):
++    """읽기 전용 — 큐 표의 `[start cK]`를 읽어 서수 N − K + 1을 **계산**한다. 쓰기 0.
++
++    취소선 칸(동결)은 제외. 태그 없이 저장 서수가 남은 활성 칸은 legacy에 따로 싣는다(침묵 금지 —
++    이행이 덜 된 칸을 «없음»으로 접지 않는다).
++    반환: {frame, rows:[(1-based line, 서열 라벨, K, N−K+1)], legacy:[(line, V)]}
++    """
++    start, end = _queue_span(lines)
++    r = {"frame": n, "rows": [], "legacy": []}
++    for i in range(start + 1, end):
++        line = lines[i]
++        if not line.lstrip().startswith("|"):
++            continue
++        cells = line.split("|")
++        cand = [j for j, c in enumerate(cells) if START_TAG_RE.search(c) or AGE_RE.search(c)]
++        if not cand:
++            continue
++        cell = cells[cand[-1]]
++        if "~~" in cell:
++            continue
++        age = AGE_RE.findall(cell)
++        if age:
++            # 저장 서수가 남은 칸 = 이행 미완(태그가 같이 있어도) — 다중 적중은 구판과 같이 무접촉·무보고
++            if len(age) == 1:
++                r["legacy"].append((i + 1, int(age[0][0])))
++            continue
++        tag = START_TAG_RE.search(cell)
++        if tag:
++            k = int(tag.group(1))
++            r["rows"].append((i + 1, _seq_label(cells), k, n - k + 1))
++    return r
++
++
++def format_queue_ordinals(r):
++    """인쇄 서식 — 파트 O와 같은 «N사이클째 [start cK]» 꼴. 문자열 리스트 반환(호출자가 print)."""
++    out = [f"[큐 서수 — 프레임 N={r['frame']} · 자[尺] = N − start + 1 · 저장값 0 (audit-330 R2)]"]
++    for line, seq, k, v in r["rows"]:
++        out.append(f"  L{line} 서열 {seq}: **{v}사이클째** [start c{k}]")
++    if r["legacy"]:
++        out.append(f"  !! 저장 서수 잔존 {len(r['legacy'])}칸(이행 미완) — "
++                   + " · ".join(f"L{ln} {v}사이클째" for ln, v in r["legacy"]))
++    return out
++
++
++def shift_queue_header_only(lines, old_n, new_n):
++    """R2 이후의 큐 패스 — 헤더 프레임만 교체하고 칸은 만지지 않는다(값은 읽기 시 계산).
++
++    활성 칸에 저장 서수가 남아 있으면 legacy에 시끄럽게 싣는다 — 증분하지 않는다(이행이 정본).
++    반환 report: {header:(old, new), legacy:[(line, V)], span:(start, end)}
++    """
++    start, end = _queue_span(lines)
++    hdr = lines[start]
++    if f"N={old_n}" not in hdr:
++        raise FrameMismatch(f"큐 헤더 프레임이 N={old_n}이 아니다: {hdr}")
++    lines[start] = hdr.replace(f"N={old_n}", f"N={new_n}")
++    legacy = queue_ordinals(lines, new_n)["legacy"]
++    return {"header": (hdr, lines[start]), "legacy": legacy, "span": (start, end)}
++
++
++def move_frame_start_only(text, old_n, new_n):
++    """R2 판 이동기 — 큐 표는 헤더만 · 상설 표는 재계산(불변) · ㉨ 영수증(불변).
++
++    반환 (new_text, queue_report, perm_report). queue_report['ordinals'] = queue_ordinals(new_n)
++    (인쇄용 · 파일에는 쓰지 않는다). 이행(migrate_queue_to_start_only) 뒤에는 이 함수를 부르고
++    구판 move_frame은 부르지 않는다 — 구판은 저장 서수가 없는 칸을 «무접촉»으로 지나가므로 실수해도
++    값을 망치진 않지만 헤더만 두 번 옮길 수 있다(FrameMismatch가 막는다).
++    """
++    lines = text.splitlines()
++    q = shift_queue_header_only(lines, old_n, new_n)
++    p = recalc_permanent_table(lines, new_n)
++    p["settlement_prev"] = settlement_receipt(lines, old_n)
++    q["ordinals"] = queue_ordinals(lines, new_n)
++    return "\n".join(lines) + "\n", q, p
+ 
+ 
+ def recalc_permanent_table(lines, new_n):

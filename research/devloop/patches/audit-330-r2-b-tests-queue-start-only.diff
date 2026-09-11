@@ -1,0 +1,137 @@
+diff --git a/tests/test_devloop_queue_start_only.py b/tests/test_devloop_queue_start_only.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_devloop_queue_start_only.py
+@@ -0,0 +1,132 @@
++"""audit-330 R2 회귀 — 큐 표 «N사이클째» 저장 폐지 · start만 저장 (c333 diff · 적용 = 게이트).
++
++계약 대상 = research/devloop/scripts/queue_mover.py의 R2 경로. 합성 픽스처만 사용 — 실원장 값 상수
++금지(관측 100·106). 구판 move_frame 계약 ①~⑫은 tests/test_devloop_queue_mover.py에 그대로 산다.
++
++왜. 저장된 서수는 매 사이클 37칸이 +1로 재기록돼 gate-queue.md가 최근 30커밋 변경 행의 38%를 냈다
++(audit-330 §2 · c332 수확 실측 41+/40−). 값은 헤더 프레임 N과 start에서 언제나 N − start + 1로 재계산
++가능하므로(파트 O와 같은 자[尺]) 저장할 이유가 없다.
++
++계약:
++  ① 이행: 태그 없는 활성 칸 «**V사이클째**» → `[start cK]` (K = 프레임 N − V + 1) · 앞 칸 인용값 무접촉
++  ② 이행: 태그가 있고 산출 K와 일치 → 저장 서수만 걷고 태그 유지
++  ③ 이행: 태그가 있고 산출 K와 **불일치** → 칸 무접촉 · mismatch 보고(침묵 수리 금지)
++  ④ 이행: 취소선 칸·다중 적중 칸·`###` 이하 산문 무접촉
++  ⑤ 읽기: queue_ordinals가 태그에서 N − K + 1을 계산 · 저장 서수 잔존 칸은 legacy로 시끄럽게
++  ⑥ 이동: move_frame_start_only = 큐 헤더만 교체 · 칸 무접촉 · 상설 표 재계산 · ㉨ 영수증
++  ⑦ 이동: 이행된 큐 블록에서 프레임 이동으로 달라지는 행 = 헤더 **1행뿐**(R2의 «사이클당 diff 0» 논거)
++  ⑧ 불변: 구판 move_frame은 이행 전 픽스처에서 그대로 증분한다(계약 ①·⑥ 재확인)
++"""
++import os
++import sys
++
++sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
++                                "research", "devloop", "scripts"))
++import pytest  # noqa: E402
++from queue_mover import (FrameMismatch, format_queue_ordinals, migrate_queue_to_start_only,  # noqa: E402
++                         move_frame, move_frame_start_only, queue_ordinals, shift_queue_header_only)
++
++FIXTURE = """\
++# 게이트 큐 — 합성 픽스처 (R2)
++
++## 큐 (프레임 N=100 · 경과 산식 = N − start + 1)
++
++| 서열 | 청구 | 경과 |
++|---|---|---|
++| 1 | 알파 (12사이클째에 상신) | 응답 대기 **40사이클째** |
++| 2 | 브라보 | ~~7사이클째~~ 해소 |
++| 3 | 찰리 | 9사이클째 · 3사이클째 |
++| 4 | 델타 | **10사이클째**[start c91] |
++| 5 | 에코 | **10사이클째**[start c90] |
++| 6 | 폭스 | 산문만 |
++
++### 정산 (c99)
++
++- 과거 프레임의 기록: 40사이클째라고 적혀 있었다.
++
++## 상설 파생 계수기 (조건부 절 밖)
++
++| 계수기 | 앵커 | 산식 | 프레임 N=100 값 |
++|---|---|---|---|
++| 줄루 연속 정지 | **c61** | `N − 61 + 1` | **40사이클째** |
++
++- **c100 정산**: N=100 · 드리프트 0.
++"""
++
++
++def _migrated():
++    lines = FIXTURE.splitlines()
++    r = migrate_queue_to_start_only(lines)
++    return lines, r
++
++
++def _row(lines, label):
++    return next(l for l in lines if f"| {label} |" in l)
++
++
++def test_migration_derives_start_from_frame():  # 계약 ①
++    lines, r = _migrated()
++    assert _row(lines, "알파 (12사이클째에 상신)") == "| 1 | 알파 (12사이클째에 상신) | 응답 대기 [start c61] |"
++    assert (lines.index(_row(lines, "알파 (12사이클째에 상신)")) + 1, 40, 61) in r["migrated"]
++    assert r["frame"] == 100
++
++
++def test_migration_keeps_consistent_tag():  # 계약 ②
++    lines, r = _migrated()
++    assert _row(lines, "델타") == "| 4 | 델타 | [start c91] |"
++    assert [k for _, k in r["tagged_kept"]] == [91]
++
++
++def test_migration_reports_mismatch_without_fixing():  # 계약 ③ — 침묵 수리 금지
++    lines, r = _migrated()
++    assert _row(lines, "에코") == "| 5 | 에코 | **10사이클째**[start c90] |"
++    assert [m[1:] for m in r["mismatch"]] == [(10, 90, 91)]
++
++
++def test_migration_leaves_frozen_multi_and_prose():  # 계약 ④
++    lines, r = _migrated()
++    out = "\n".join(lines)
++    assert "| 2 | 브라보 | ~~7사이클째~~ 해소 |" in out
++    assert "| 3 | 찰리 | 9사이클째 · 3사이클째 |" in out
++    assert "과거 프레임의 기록: 40사이클째라고 적혀 있었다." in out
++    assert "| **40사이클째** |" in out  # 상설 표는 이행 정의역 밖
++    assert len(r["skipped"]) == 1 and len(r["bad"]) == 1
++
++
++def test_queue_ordinals_computes_from_tags_and_flags_legacy():  # 계약 ⑤
++    lines, _ = _migrated()
++    r = queue_ordinals(lines, 101)
++    assert [(k, v) for _, _, k, v in r["rows"]] == [(61, 41), (91, 11)]
++    assert [v for _, v in r["legacy"]] == [10]  # 에코 — 불일치로 이행 안 됨
++    text = "\n".join(format_queue_ordinals(r))
++    assert "**41사이클째** [start c61]" in text and "!! 저장 서수 잔존 1칸" in text
++
++
++def test_move_frame_start_only_touches_header_only_in_queue():  # 계약 ⑥
++    lines, _ = _migrated()
++    out, q, p = move_frame_start_only("\n".join(lines) + "\n", 100, 101)
++    assert "## 큐 (프레임 N=101" in out
++    assert "| 1 | 알파 (12사이클째에 상신) | 응답 대기 [start c61] |" in out
++    assert "| **41사이클째** |" in out and "프레임 N=101 값" in out   # 상설 표는 재계산
++    assert p["settlement_prev"]["present"] is True
++    assert [(k, v) for _, _, k, v in q["ordinals"]["rows"]] == [(61, 41), (91, 11)]
++    assert [v for _, v in q["legacy"]] == [10]
++    with pytest.raises(FrameMismatch):
++        shift_queue_header_only(out.splitlines(), 100, 102)
++
++
++def test_start_only_frame_move_changes_exactly_one_queue_line():  # 계약 ⑦ — R2의 논거
++    lines, _ = _migrated()
++    before = "\n".join(lines) + "\n"
++    after, q, _ = move_frame_start_only(before, 100, 101)
++    b, a = before.splitlines(), after.splitlines()
++    s, e = q["span"]
++    changed_in_queue = [i for i in range(s, e) if b[i] != a[i]]
++    assert changed_in_queue == [s]
++
++
++def test_legacy_move_frame_still_increments_unmigrated_fixture():  # 계약 ⑧ — 불변
++    out, q, _ = move_frame(FIXTURE, 100, 101)
++    assert "| 1 | 알파 (12사이클째에 상신) | 응답 대기 **41사이클째** |" in out
++    assert "| 4 | 델타 | **11사이클째**[start c91] |" in out
++    assert q["changed"] and q["bad"] and q["skipped"]
