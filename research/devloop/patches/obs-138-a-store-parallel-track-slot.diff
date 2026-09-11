@@ -1,0 +1,36 @@
+diff --git a/forget/store.py b/forget/store.py
+--- a/forget/store.py
++++ b/forget/store.py
+@@ -7637,6 +7637,13 @@
+ CONTEXT_OUTCOME_OBSERVED_SCHEMA_VERSION = "mem1-context-outcome-observed-v0"
+ CONTEXT_OUTCOME_INFERRED_SCHEMA_VERSION = "mem1-context-outcome-inferred-v0"
+ CONTEXT_CAPSULE_TOKEN_BUDGET = 400
++# One cap for a task's first next action, whichever capsule line carries it
++# (관측 138, c327 diff). The main «다음 행동:» slot allowed 220 chars while the
++# «병행 트랙:» pointer for every other in-flight task hard-cut at [:90] with no
++# marker -- so a ≤200-char next_actions[0] reached the reader in full only on
++# the cycles when its own track happened to own the capsule (devloop c317,
++# c327: 90/294 and 90/182 under a fresher heartbeat epoch).
++CAPSULE_NEXT_ACTION_CHARS = 220
+ CONTEXT_UTILITY_FAILURE_STAGES = {
+     "none",
+     "write_failure",
+@@ -11306,7 +11313,8 @@
+         if status not in ("in_progress", "active", "running", "blocked", "pending"):
+             continue
+         next_actions = item.get("next_actions") or []
+-        first = str(next_actions[0])[:90] if next_actions else ""
++        # same cap and same «…» marker as the main slot (관측 138 · c327 diff)
++        first = _autopilot_short_text(next_actions[0], CAPSULE_NEXT_ACTION_CHARS) if next_actions else ""
+         lines.append(f"{task_id} — {first}" if first else task_id)
+         if len(lines) >= limit:
+             break
+@@ -11408,7 +11416,7 @@
+     lines = [
+         f"현재 목표: {_autopilot_short_text(capsule.get('goal'), 240)}{goal_suffix}",
+         f"현재 상태: {_autopilot_short_text(capsule.get('status'), 120)}",
+-        f"다음 행동: {_autopilot_short_text(next_action.get('action'), 220)}",
++        f"다음 행동: {_autopilot_short_text(next_action.get('action'), CAPSULE_NEXT_ACTION_CHARS)}",
+     ]
+     try:
+         stale_hours = float(os.environ.get("MEM1_CAPSULE_STALE_HOURS", "24") or 24)

@@ -5595,6 +5595,9 @@ persona는 상태 주입이 무이득(+0.0111 ≈ A)이고 베이스는 +62% —
   단독 3/3 · c48 5본 → b 순차 · **17본 한 번에 통과**(HEAD 8a06e36 · 작업 트리 쓰기 0) · (b) 부패 0 · 격리 검산 5벌(가~마 · tmp/c326_make_patch.py) ·
   a·c는 제품(forget/ · tests/) = A-325.1 정의역 밖 · b는 devloop 소유이나 a의 짝 · 1′ R2 «store.py 교집합 0 복원 시» 조건 충족(파트 A 교집합 0) →
   store.py 첫 diff. 순열 재검산은 c330 감사 몫.)
+  (c327 **일반** — 신규 **2본**(obs-138-a store.py +10 −2 · obs-138-b tests 신규 +86) · patches/ **19본** · `git apply --check` 단독 2/2 ·
+  store.py 2본(obs-141-a + obs-138-a) 한 번에 · **19본 한 번에 통과**(HEAD c18f24a · 작업 트리 쓰기 0) · (b) 부패 0 · 격리 검산 2벌(가·나 · tmp/c327_make_patch.py) ·
+  a·b 전부 제품(forget/ · tests/) = A-325.1 정의역 밖 · 관측 138 (ii) 첫 절반(같은 슬롯) · 순열 재검산은 c330 감사 몫 · 검산 디렉토리 rmtree(관측 142).)
 
 ## P77
 **등록 2026-09-05 (장기 작업 하네스 사이클 1, 숫자 보기 전).** 우리 하네스(pi 루프 + forget)로 실제 개발 작업(H-3① 구현)을 돌리면 **사람 개입 없이 4시간을 넘기지 못한다: 70%.** 측정 = run-001.jsonl의 K_human 첫 사건 시각. 판정 = 9/9 실행 종료 시. 대조군 없음(첫 실측). 반증 시 «반나절 자율»이 기준선이 되고, 지지 시 첫 병목(리셋/승인 프롬프트/도구 실패 반복)에 이름을 붙인다. 지시서: research/harness/cycle-1-brief.md.
@@ -5917,3 +5920,6 @@ persona는 상태 주입이 무이득(+0.0111 ≈ A)이고 베이스는 +62% —
   gate-queue 서열 37 응답 칸 공백 · `git log --all --since=09-07` 정훈 커밋 = 3cb4b7e(09-10 13:06 KST · store.py +1 · 타 워크트리 detached HEAD
   [Codex forget-b2b-saas integrations/forget-engine] · main-work 밖) = **활동 증거이지 응답 아님**(한계 ② 세션 존재 1건 확인) · 재발송 0 · 기한까지
   7일(tmp/c326_metrics.py).)
+  (c327 선독 2 — 응답 **0**: search_memories «A-325.1 …» 1회(계기 호출 · 계상 제외 · tmp/c327_probe.py) = 11건 중 source=user 1건은 2026-07-30 설계 철학
+  원문(무관) · 나머지 요청 사본(09-10T19:43 · 4건)·devloop 자기 기록 · gate-queue 서열 37 응답 칸 공백 · `git log --all --since=09-10` 정훈 커밋 = 3cb4b7e
+  1건(기지 · 응답 아님 · 신규 0) · 재발송 0 · 기한까지 **6일**(tmp/c327_metrics.py · `date -u` 09-11T16:48Z = KST 09-12).)

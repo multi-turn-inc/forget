@@ -12872,3 +12872,45 @@ CLAUDE.md 파트 T 한 줄을 벗김 판본으로 갱신(배달 채널 · 게이
 없음 · c48 파트 B 캡슐 원문) · «현재 목표:» 248자(summary 3,184자 · 절단 유지 · 240 상수) · B층 «구조적 폴백 — LLM 요약 실패» 19연속
 (A-241.1 주소) · 저장본 두 파일 python 직독(tmp/c326_edits.py · 손 옮겨적기 0). 행동 효과: 캡슐 [0]로 모드·첫 안건(관측 141 diff) 턴1 전 확정 →
 턴3 = 저장본 Read + store.py·frictions·patches 정독 병렬(rt 3 · C형 일반 규정값). 회부 존속(② truncated 플래그 항목 단위 미이행 · (ii) 선택).
+
+## 관측 142 — 격리 검산이 남긴 복사본 테스트 디렉토리가 다음 사이클 절차 4 게이트를 수집 단계에서 죽인다: tmp/ 밑의 conftest.py + test_*.py를 루트 `pytest -q`가 수집해 ERROR 1건으로 전체가 «Interrupted»됐고, 959개 테스트는 한 줄도 돌지 않았다 (사이클 327 **일반**, **회부** · devloop 계기 관측 — 루프 자기 규약)
+
+**증상.** c327 step 0 직후 백그라운드 `.venv/bin/python -m pytest -q`(c326과 같은 형태) → `ERROR tmp/c326_patchcheck/tests_chk/test_task_state_freshness.py` ·
+«Interrupted: 1 error during collection» · 0.83s · **실행 0건**. `--ignore=tmp` 재실행 = 959/2/1 33.76s(실패 2 = tests/test_update_awareness.py · 관측 129
+동일 집합). 같은 세션 첫 시도가 초록이 아니라 **수집 사망**이었다 — 원장 `tests` 열이 «959/2/1 18연속»을 잇던 자리다.
+
+**기전.** pyproject.toml에 `[tool.pytest.ini_options]`(testpaths·norecursedirs) 없음 → rootdir 전체 수집(tests/ · gtm/doran/demo · services/cloud-relay ·
+그리고 tmp/**). c326 `tmp/c326_make_patch.py`가 격리 검산용 `tmp/c326_patchcheck/tests_chk/`(conftest.py + test_*.py 4본 · 복사본 패키지 PYTHONPATH
+전제)를 남겼다. c326 자신은 step 0 직후(디렉토리 생성 **전**) pytest를 개시했으므로 초록 — 산출물이 **자기 사이클의 게이트는 통과하고 다음 사이클의
+게이트를 죽인다**(관측 100 «회귀가 자기 사이클의 수확에 붉어진다»의 역방향 · 관측 129 «밀폐를 선언한 테스트가 밀폐되지 않은 모듈을 불렀다» 부류).
+ERROR의 세부 원인(중복 conftest · rootdir 밖 상대 적재)은 해부하지 않았다 — 수용 기준 밖.
+
+**기대 동작.** ① 검산 스크립트는 종료 시 복사본 디렉토리를 `rmtree`한다(c327 `tmp/c327_make_patch.py` 집행 · c326 잔존분도 같은 호출에서 제거 ·
+영수증은 diff·frictions 본문이지 디렉토리가 아니다) ② 절차 4 호출 형태에 `--ignore=tmp`를 병기(task_state step 0 주의 · 잔존 재발 시 게이트가 아니라
+수집이 죽었음을 원장에 구별해 적는다) ③ 제품 쪽 `testpaths` 상수화는 gtm/·services/ 테스트의 수집 범위를 바꾸므로 별도 판단 — 후보만, diff 안 만듦.
+
+**수용 기준.** ① c328~c330 루트 `pytest -q`(`--ignore` 없이) 수집 오류 0 ② tmp/ 밑 `test_*.py`·`conftest.py` 잔존 0(프로그램 직독) ③ 이 관측은 루프
+자기 규약(devloop 계기)이라 공표 가드(c141)의 예외 — 제품 개선 주장 없음.
+
+**반게임 선언.** 근거 = 이 세션 pytest 출력 파일 2본(1차 «Interrupted: 1 error during collection» · 2차 `--ignore=tmp` 959/2/1) · `tmp/c327_make_patch.py`
+출력 «rmtree: ['tmp/c327_patchcheck', 'tmp/c326_patchcheck']». 재현 = tmp/ 밑에 conftest.py + test_x.py를 두고 루트에서 `pytest -q`.
+
+## 관측 138 보강 (사이클 327, 신규 번호 아님) — 아홉째 보강 = **(ii) 트랙별 슬롯 diff 2본 완성(적용 안 함 · P76)** + 표본 = 주 슬롯 심장박동 점유 · devloop [0] 184자가 «병행 트랙:» 줄에서 **90자 컷·무마커**(c317 형 2건째) — 처치 절이라 축약형 아님
+
+**표본(값+포인터 · tmp/c327_probe.py 직독).** 캡슐 «현재 목표:» 252자 + «다음 행동:» 220자 = **심장박동 트랙 task_state**(≈17h 전 기록 ·
+devloop c326 20:25Z보다 신선 → 주 슬롯 선점 · c317 선례) · «병행 트랙:» 줄 100자 중 devloop 본문 90자 = `[0][:90]` 정확히 · «…» 마커 없음 ·
+task_state [0] 184자(claim 5a535efe · ≤ 200 규칙 준수 · summary 3,372자). 즉 ≤ 200자 규칙(P80 (a) 처치)은 **자기 트랙이 캡슐을 쥔
+사이클에만** 전문 도달을 보장했다 — 타 트랙이 쥐면 90자(c61 «병행 트랙 90자 컷»의 자릿수 그대로 · c317 90/294 · c327 90/184). restore 채점: 캡슐
+partial(모드·봉쇄·rt 3까지 도달 · 첫 후보·curl 판본은 절단면 밖) · task_state full.
+
+**처치 diff(P76 · 적용 안 함).** `patches/obs-138-a-store-parallel-track-slot.diff`(forget/store.py +10 −2 · **제품**): 상수
+`CAPSULE_NEXT_ACTION_CHARS = 220`(값 발명 0 — 주 슬롯의 기존 리터럴) · `_render_context_capsule_text` 주 슬롯 220 리터럴 → 상수 · `_parallel_track_lines`
+`str(next_actions[0])[:90]` → `_autopilot_short_text(next_actions[0], 상수)` = 같은 상한·같은 «…» 마커·공백 정규화. 예산 루프(꼬리 pop) 불변 — 비용 =
+병행 트랙 줄 최대 +260자(2트랙)라 꼬리 줄(중요 제약·관련 대상·열린 루프)이 먼저 떨어진다(설계 주석의 우선순위 그대로). 이것은 (ii) «트랙별 슬롯 최소
+보장»의 첫 절반(같은 슬롯)이고 ② `truncated` 항목 단위 플래그는 **미이행**. `patches/obs-138-b-tests-parallel-track-slot.diff`(tests/test_capsule_parallel_track_slot.py
+**신규** +86 · 판별 2[≤200자 [0] 전문 · 초과분 주 슬롯과 동일 절단] + 불변 2[주 슬롯 220·마커 · 자기 제외·2줄 상한]).
+
+**격리 검산(tmp/c327_make_patch.py · pytest는 복사본 패키지에만 · 작업 트리 쓰기 0).** (가) 변환 forget/ 복사본 + 신규 4 = **4/4** · (나) **원본** 패키지 +
+신규 = 판별 2 실패 · 불변 2 통과(대조군) · (다) `git apply --check` 단독 2/2 · store.py 2본(obs-141-a + obs-138-a · 같은 파일 다른 헝크) 한 번에 ·
+**patches/ 전수 19본 한 번에 통과**(HEAD c18f24a). 검산 장치 쪽 실측 2건(공백 정규화가 끝 공백을 지워 200자 상수 불일치 → 상수 서식 정정 · 신규 상수
+import가 원본 패키지에서 수집 오류 → 오라클을 주 슬롯 렌더로 교체 · 2회 재실행 · diff 오염 0). 회부 존속(적용 = 게이트 · 제품 코드). P80 창 동결.

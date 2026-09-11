@@ -1,0 +1,91 @@
+diff --git a/tests/test_capsule_parallel_track_slot.py b/tests/test_capsule_parallel_track_slot.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_capsule_parallel_track_slot.py
+@@ -0,0 +1,86 @@
++"""관측 138 (c327 diff): a task's first next action gets the same slot on every capsule line.
++
++The main «다음 행동:» slot allowed 220 chars while the «병행 트랙:» pointer for other
++in-flight tasks hard-cut next_actions[0] at 90 chars with no marker. A ≤200-char [0]
++(the CLAUDE.md rule) therefore reached the reader in full only on cycles when its own
++track owned the capsule (devloop c317: 90/294 · c327: 90/182 under a fresher heartbeat
++epoch). Contract: both lines use CAPSULE_NEXT_ACTION_CHARS and the «…» marker; the
++render budget loop is untouched. Values here are synthetic (관측 100).
++"""
++
++from __future__ import annotations
++
++import os
++from pathlib import Path
++
++from forget import db as app_db
++from forget.db import init_db
++from forget.store import _parallel_track_lines, _render_context_capsule_text, record_task_state
++
++_DB_COUNTER = 0
++# exactly 200 / 300 chars, single spaces only, no trailing whitespace (the slot text is whitespace-normalised)
++ACTION_200 = ("c327 = 일반 · 봉쇄 → 코드 변경 0 · diff만 · C형 턴 배치 파트 T · " * 6)[:199] + "끝"
++ACTION_300 = ("관측 138 (ii) 트랙별 슬롯 최소 보장 diff 후보 · " * 12)[:299] + "끝"
++assert len(ACTION_200) == 200 and len(ACTION_300) == 300
++
++
++def _main_slot(action: str) -> str:
++    """The «다음 행동:» body the main capsule slot renders for this action -- the oracle for the parallel line."""
++    text = _render_context_capsule_text({"goal": "g", "status": "s", "next_action": {"action": action}})
++    return text.splitlines()[2].split("다음 행동: ", 1)[1]
++
++
++def _fresh_db() -> None:
++    global _DB_COUNTER
++    _DB_COUNTER += 1
++    path = Path(f"/tmp/mem1-capsule-parallel-slot-{os.getpid()}-{_DB_COUNTER}.sqlite3")
++    for suffix in ("", "-wal", "-shm"):
++        path.with_name(path.name + suffix).unlink(missing_ok=True)
++    os.environ["MEM1_DB_PATH"] = str(path)
++    app_db.DB_PATH = path
++    init_db()
++
++
++def _two_tracks(devloop_action: str) -> None:
++    record_task_state({"task_id": "devloop", "status": "in_progress", "summary": "loop", "next_actions": [devloop_action]})
++    record_task_state({"task_id": "heartbeat", "status": "in_progress", "summary": "beat", "next_actions": ["tunnel"]})
++
++
++# ---- 관측 138 계약 -----------------------------------------------------------------------
++
++def test_parallel_track_carries_a_200_char_first_action_in_full():
++    """판별 ①: 주 슬롯을 다른 트랙이 쥐어도 ≤200자 [0]은 «병행 트랙:» 줄에 전문으로 실린다 (구본: 90자 컷)."""
++    _fresh_db()
++    _two_tracks(ACTION_200)
++    lines = _parallel_track_lines(None, "heartbeat")
++    assert len(lines) == 1 and lines[0].startswith("devloop — ")
++    assert lines[0] == "devloop — " + ACTION_200
++
++
++def test_parallel_track_marks_its_cut_like_the_main_slot():
++    """판별 ②: 상한을 넘는 [0]은 주 슬롯과 같은 상한·같은 «…» 마커로 잘린다 (구본: 무마커 90자)."""
++    _fresh_db()
++    _two_tracks(ACTION_300)
++    lines = _parallel_track_lines(None, "heartbeat")
++    body = lines[0].split("devloop — ", 1)[1]
++    assert body.endswith("…") and body == _main_slot(ACTION_300)
++
++
++# ---- 불변 ----------------------------------------------------------------------------------
++
++def test_main_slot_is_unchanged():
++    """불변 ①: 주 «다음 행동:» 슬롯 — ≤200자 전문 · 초과분은 «…» 마커 · 상한 220."""
++    assert _main_slot(ACTION_200) == ACTION_200
++    cut = _main_slot(ACTION_300)
++    assert cut.endswith("…") and len(cut) == 220
++
++
++def test_parallel_track_still_skips_self_and_keeps_its_limit():
++    """불변 ②: 현재 태스크 제외 · 최대 2줄 · 서식 «task_id — [0]»."""
++    _fresh_db()
++    record_task_state({"task_id": "a", "status": "in_progress", "summary": "a", "next_actions": ["one"]})
++    record_task_state({"task_id": "b", "status": "in_progress", "summary": "b", "next_actions": ["two"]})
++    record_task_state({"task_id": "c", "status": "in_progress", "summary": "c", "next_actions": ["three"]})
++    record_task_state({"task_id": "me", "status": "in_progress", "summary": "me", "next_actions": ["mine"]})
++    lines = _parallel_track_lines(None, "me")
++    assert len(lines) == 2 and all(" — " in line and not line.startswith("me") for line in lines)

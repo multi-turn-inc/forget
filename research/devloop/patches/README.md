@@ -39,6 +39,8 @@ diff가 만지는 파일은 **HEAD 추적 파일 ∧ 봉쇄 집합(타 트랙 �
 | `obs-141-a-store-single-task-envelope.diff` | 관측 141 (`get_task_state` 이중 에코 — epoch·claim 두 반환부를 봉투 함수 `_task_state_list_response`로 · 단일 task_id 조회[task_id 지정 ∧ count == 1]에서 `current` = 본문 · `results[0]` = 참조 행 `_task_state_ref` {task_id, claim_id, ref} · 목록 조회·부재·count·freshness·state_source 불변) | `forget/store.py` | HEAD 추적 · 봉쇄 교집합 0(파트 A c326) · **제품 코드** +60 −20 · A-325.1 정의역 밖 = 게이트 | c326 `git apply --check` 통과 · `tmp/c326_make_patch.py`(원본 무접촉 · difflib) · 격리 검산(복사본 패키지 pytest · 작업 트리 쓰기 0): 변환 pkg + 신규 5·freshness 4·project_layer 이주본 34 = **46/46** · 원본 pkg + 신규 5 = 판별 3 실패·불변 2 통과 · 저장본 산술 34,872B → 17,736B(본문 1.03배 · 문턱 아래) |
 | `obs-141-b-c48-current-consumer.diff` | 관측 141 (소비자 이주 — c48 파트 S·㉼ 두 자리 `results[0]` → `current` · a의 짝: a만 적용하면 c48이 참조 행에서 summary를 못 읽는다 · b만 적용은 무해) | `research/devloop/scripts/c48_step0_check.py` | HEAD 추적 · 봉쇄 교집합 0 · 계기 코드 +6 −2 · devloop 소유 | c326 `git apply --check` 통과(단독 · **c48 5본 → b 순차 통과** · HEAD 기준 생성 · 인접 헝크 충돌 0) · 변환 c48 복사본 → 실 서버(미적용) 파트 S·㉼ 줄 원본과 동일 · rc 동일 |
 | `obs-141-c-tests-single-echo.diff` | 관측 141 (회귀 — tests/test_project_layer.py 단일 조회 2곳 `results[0]` → `current` 이주 + `tests/test_task_state_single_echo.py` **신규**: 판별 3[참조 행 서식 · 응답 − current < current · as_of 재생] + 불변 2[목록 서식 · 부재]) | `tests/test_project_layer.py` · `tests/test_task_state_single_echo.py`(신규) | HEAD 추적 + 신규 파일 · 봉쇄 교집합 0 · +96 −5 · 제품 테스트 | c326 `git apply --check` 통과 · 같은 생성기 · 대조군: 변환 pkg + project_layer **원본** = 정확히 2 실패(이주 대상 2건) · **a와 짝** |
+| `obs-138-a-store-parallel-track-slot.diff` | 관측 138 (ii) (캡슐 «병행 트랙:» 줄의 타 트랙 next_actions[0] 컷 `[:90]`·무마커 → 주 슬롯과 같은 상수 `CAPSULE_NEXT_ACTION_CHARS = 220` + `_autopilot_short_text` «…» 마커 · 주 슬롯 리터럴 220 → 상수 · 예산 루프 불변) | `forget/store.py` | HEAD 추적 · 봉쇄 교집합 0(파트 A c327) · **제품 코드** +10 −2 · A-325.1 정의역 밖 = 게이트 · obs-141-a와 같은 파일 다른 헝크 | c327 `git apply --check` 통과(단독 · store.py 2본 한 번에 · 전수 19본) · `tmp/c327_make_patch.py` · 격리 검산(복사본 패키지 pytest · 작업 트리 쓰기 0): 변환 pkg + 신규 4 = **4/4** · 원본 pkg + 신규 = 판별 2 실패·불변 2 통과 · 표본 c327 캡슐 «병행 트랙:» devloop 90/184 무마커 |
+| `obs-138-b-tests-parallel-track-slot.diff` | 관측 138 (ii) (회귀 — `tests/test_capsule_parallel_track_slot.py` **신규**: 판별 2[≤200자 [0] 병행 트랙 전문 · 초과분 주 슬롯과 동일 절단·마커] + 불변 2[주 슬롯 220·마커 · 자기 제외·2줄 상한]) | `tests/test_capsule_parallel_track_slot.py`(신규) | 신규 파일 · 봉쇄 교집합 0 · +86 · 제품 테스트 | c327 `git apply --check` 통과 · 같은 생성기 · 오라클 = 주 슬롯 렌더(상수 import 없음 — 원본 패키지에서도 수집됨) · **a와 짝** |
 
 ## 순서 전수 검산 (c324 · 규약 2의 «HEAD 전진» 검산과 별개 축)
 
@@ -50,6 +52,9 @@ c322~c323 영수증은 c48 5본(`obs-140-a` `obs-139-a` `audit-320-r4` `obs-137`
 
 c326 신규 3본(`obs-141-a·b·c`): 단독 3/3 · c48 5본 → `obs-141-b` 순차 통과 · **patches/ 전수 17본 한 번에 통과**(HEAD 8a06e36 · `tmp/c326_make_patch.py`).
 순열 재검산(17본)은 c330 감사 몫. 적용 순서 의무 = `obs-141-b`를 `obs-141-a`보다 먼저 또는 동시(b는 a 없이 무해 · a는 b 없이 c48 파트 S·㉼를 깨뜨린다).
+
+c327 신규 2본(`obs-138-a·b`): 단독 2/2 · store.py 2본(`obs-141-a` + `obs-138-a`) 한 번에 · **patches/ 전수 19본 한 번에 통과**(HEAD c18f24a · `tmp/c327_make_patch.py`).
+순열 재검산(19본)은 c330 감사 몫. **검산 디렉토리는 스크립트 끝에 rmtree**(관측 142 — 남기면 다음 사이클 루트 `pytest -q`가 수집 단계에서 죽는다).
 
 ## A-241.1 — 기동 명령 + 수용 기준 ① 검증 (c293)
 
@@ -65,5 +70,5 @@ A-241.1(gate-queue.md 서열 30)의 처분 "기동 승인"이 나오면 실행�
   실패(exit 1, engine=structural-fallback, captured_at 2026-09-04T13:09:10+0900) — 기동 전
   베이스라인.
 
-미완성 후보(다음 일반 사이클): 1′ R2 `store.py`(교집합 0 복원 시 — **c326 obs-141-a가 store.py 첫 diff** · 1′ R2 본체는 별도) · 관측 138 (ii) 캡슐 조립기 슬롯 최소 보장(P80 (b) 또는 슬롯
-고정값 실측 뒤) · 파트 X «기지 은퇴 목록» 상수(4건).
+미완성 후보(다음 일반 사이클): 1′ R2 `store.py`(교집합 0 복원 시 — **c326 obs-141-a가 store.py 첫 diff** · 1′ R2 본체는 별도) · 관측 138 (ii) — **c327 obs-138-a·b 완성**(같은 슬롯 상수) · 잔여 = `truncated` 항목 단위 플래그 ·
+파트 X «기지 은퇴 목록» 상수(4건) · 관측 142 ③ pytest `testpaths`(수집 범위 판단 뒤).
