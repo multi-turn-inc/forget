@@ -13066,6 +13066,17 @@ diff 완성(patches/ +1) · 적용 = 게이트.
 recall_note «noise 1회 trace …» 16건 · amendment-345 §2. 재현 = `record_context_outcome({"trace_id": <살아 있는 trace>, "outcome": "noise"})` 뒤 `SELECT * FROM feedback WHERE
 metadata LIKE '%context_outcome%'` 신규 행 0.
 
+## 관측 145 보강 (사이클 346 **일반**, 신규 번호 아님) — 처치 diff 3본 완성(patches/obs-145-a·b·c · 적용 0 · 게이트) · 처치 후보 ② 기각(trace selected_ids 10 ⊋ 주입 2 — 서버 기본값은 미주입 8건을 harmful로 오라벨) · 계약 실증 = id 동봉 noise 1회로 feedback 행 POSITIVE → NEGATIVE · 실DB 코퍼스 noise 173건 중 id 동봉 1 = 루프 16회는 빙산 · helped는 캡처 훅 echo가 used id를 보내 45/92 도달 = 사각은 «맨 라벨» 한정 · P85 선등록 — **축약형**
+
+값+포인터(tmp/c346_fb_probe.py 읽기 전용 · tmp/c346_rco.json · tmp/c346_make_patch.py): ⑴ 기준선 noise 173/harmful 동봉 1 · helped 92/used 동봉 45 · feedback source=context_outcome 107행 →
+«helped도 같은 사각인가»(수용 기준 ③)의 선답 = **아니다, 캡처 훅 세션 종료 echo 경로가 used_memory_ids를 보낸다**(tests/test_hooks.py test_outcome_echo_measurement가 그 계약) — 사각은 훅
+주입 블록의 «피드백 주소»만 보고 보내는 맨 라벨. ⑵ 이 세션 trace 2b366087 selected_ids 10(claim 1 포함) vs picks 2 → store.py L5922 `selected_ids = 검색 결과 전건`이라 처치 후보 ②는 미주입
+8건 오라벨 = 기각 · 남은 처치 = ① 훅 id 접두 노출 + store 접두 전개(신규 · 후보 ①의 필요조건: `_context_outcome_memory_id_resolution`은 정확 일치만 본다[L12739~12748]) + 무id 라벨 경고. ⑶ 실증
+`record_context_outcome(trace_id, noise, harmful_memory_ids=[79cec7b7…])` → 에코 harmful 1 · unmatched 0 · warnings 0 · feedback 행 POSITIVE(09-12T15:18Z · events 1) → NEGATIVE(20:07Z · events 2 ·
+changepoint) — 수용 기준 ①의 적용 전 동형 = 격차는 순전히 «id 부재»다. 라벨 대상 = devloop 소유 c75 결정 기억만(정훈 green 설계 철학은 대조 팔 · 라벨 0). ⑷ diff = obs-145-a(hook +12 −6) ·
+obs-145-b(store +51 −0) · obs-145-c(tests 신규 +40) · 격리 검산 ast 3/3 + 전개 함수 단언 4/4 + `git apply --check` 단독 3/3 · 전수 32본 · store.py 3본 정순·역순(tmp/c346_make_patch.py 인쇄 · HEAD bdae409 · README c346 절). 회부 존속 ·
+수용 기준 ①②는 적용 사이클 몫 · ③ 선답 기재(c350 감사 열람 대상 유지). 판정 = P85.
+
 ## 관측 140 보강 (사이클 345 **회고**, 신규 번호 아님) — 수용 기준 ① 원문 재확인 = **종결 불가**(«diff 적용 후 파트 S·㉼ 일치 N» · obs-140-a 게이트 존속) · 미끼 0 쓰기 관행 창 c340~c344 5/5 재발 0 = 관행의 억제 확인이지 종결 아님 · 이후 표본 기재는 값이 바뀔 때(재발)만 — **축약형**
 
 값+포인터: c340 1/5 · c341~c344 4/5(각 원장 restore_note «파트 S 판정 불가 · 미끼 0») · c345 파트 S `task_state_cycle=None 판정 불가` · ㉼ «판정 불가 축 1» · 저장본 46.1KB·387행 ·

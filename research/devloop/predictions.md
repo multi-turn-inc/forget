@@ -6056,3 +6056,28 @@ persona는 상태 주입이 무이득(+0.0111 ≈ A)이고 베이스는 +62% —
 - **한계 (선언).** ① 바이트는 토큰이 아니다. ② «불변 k항»의 k는 손이 세며 그 정직은 (c) 판독이 잰다. ③ 루프 자기 규약을 재지 제품을 재지 않는다(공표 가드 대상 아님). ④ 사이클
   발화 주기(하루 여러 번)는 재지 않는다 — amendment-345 §4 ⓓ 문면 후보의 몫.
 - 상태: (a) 시계-미시작 · (b) 시계-미시작 · (c) 시계-미시작 · (d) 시계-미시작
+
+## P85 — 관측 145 처치(훅 주입 항목마다 기억 id 8자 접두 노출 + store의 접두 전개·무id 라벨 경고)가 적용되면 루프의 noise 라벨이 기억 단위 되먹임(feedback 행)에 닿고, 되먹임이 닿은 기억은 이후 5사이클 devloop 훅 주입에서 빠진다 — 적용 전 팔은 이 사이클의 «id 동봉 noise 1회»가 이미 연다 (등록 2026-09-13 사이클 346 **일반**, **트랙: devloop** · 제품 코드 diff 3본 = 게이트[A-325.1 정의역 밖] · 적용 전 팔은 측정 전용·코드 변경 0 — 관측 145 수용 기준 ①②③ 소비 · P83 (a) 반증 승계)
+
+- **근거 (tmp/c346_fb_probe.py 읽기 전용 · tmp/c346_rco.json · 이 세션 실측).** ① 기준선: 실DB context_outcomes에서 outcome_label=noise **173건 중 harmful id 동봉 1건**(0.6%) · helped 92건 중 used id 동봉 45건(캡처 훅 세션 종료 echo 경로가
+  used_memory_ids를 보낸다 → feedback 테이블 source=context_outcome 107행 실재) — 사각은 «맨 라벨»(id 없는 helped/noise)에 한정되며 루프의 noise 16회는 빙산의 일각이다. ② 이 세션 훅 trace
+  2b366087의 selected_ids = **10건**(claim 1 포함) vs 주입 picks **2건**(설계 철학 07ad010a · c75 결정 79cec7b7) → 관측 145 처치 후보 ②(서버가 noise+무id면 trace 주입 전건을 harmful 기본값)는
+  **기각** — 서버가 아는 집합은 검색 결과 전건이지 훅이 문턱·평탄도·self층 필터 뒤에 실제 주입한 부분집합이 아니어서 미주입 8건을 오라벨한다. ③ 계약 실증: `record_context_outcome(trace_id,
+  outcome=noise, harmful_memory_ids=[79cec7b7…])` 1회 → 응답 harmful_memory_ids 에코 1 · unmatched 0 · warnings 0 · feedback 행 **POSITIVE(09-12T15:18Z · a1 events 1 · +0.05 · 캡처 훅 helped 유래)
+  → NEGATIVE(09-12T20:07Z · a1 events 2 · changepoint true · value −1.0 · adjust −0.15)**. 라벨 대상은 devloop 소유 c75 결정 기억(지시서 절차 1과 중복)만 — 정훈 green 설계 철학 기억은 라벨 0(대조 팔).
+- **처치 문면 (diff 3본 · research/devloop/patches/obs-145-a·b·c · 적용 0).** a = hooks/forget_turnrecall.py 주입 항목 «(light·직접·id xxxxxxxx)» + 충돌쌍·시간 이웃 줄에도 id 접두 + 피드백 주소 문면에
+  인자·계약 명시. b = forget/store.py `_context_outcome_expand_id_prefixes`(≥8자 접두를 그 trace의 selected_ids 안 유일 매치로 전개 · 모호·미지·짧은 조각은 그대로 → 기존 unmatched 경고) + id 없는
+  helped/noise에 warnings 1줄(«trace level only»). c = tests/test_context_outcome_prefix_ids.py 회귀 4건(신규 파일).
+- **예측.** (a) **적용 전 팔(측정 전용)**: 창 c347~c351의 devloop 세션 훅 회상 블록 도달 사이클에서 c75 결정 기억(79cec7b7) 주입 **0회** — 대조군 = c336~c345 도달 9사이클 중 c75 주입 7(c342~c345 4연속 주입).
+  (a′) **대조 팔**: 같은 창에서 설계 철학 기억(07ad010a · 라벨 0)은 도달 전건 주입 유지(c336~c345 9/9) — (a)가 참이고 (a′)도 참이어야 기전이 «되먹임»이지 «회상 전반의 변동»이 아니다.
+  (b) **적용 후(트리거형 · 게이트)**: 적용 사이클부터 루프의 rco 호출이 접두 id를 동봉하고 응답 harmful/used_memory_ids가 비어 있지 않으며 unmatched 0 · id 없이 보낸 호출은 warnings ≥ 1.
+  (c) 적용 후 5사이클: noise 라벨된 기억마다 feedback 행 ≥ 1(NEGATIVE · source=context_outcome) = 관측 145 수용 기준 ① 그대로.
+- **(a) 반증.** 도달 ≥ 3 중 c75 주입 ≥ 2 — 다만 판정 시 feedback 행의 그 시점 값을 병기한다(한계 ①). **부분** = 주입 1. **(a′) 반증** = 설계 철학 부재 ≥ 2(그러면 (a)는 판정 불가로 강등 — 기전 분리 실패).
+  **(b) 반증.** 적용 후 접두 전개 실패(unmatched ≥ 1) 또는 id 동봉 호출의 warnings ≥ 1이 1회라도. **(c) 반증.** 라벨 뒤 feedback 행 0인 기억 1건.
+- **(d) 판정 불가.** (a)(a′) 창 내 훅 회상 블록 도달 < 3 · (b)(c) 적용 전.
+- **대조군.** c336~c345 훅 회상 도달 9 · 설계 철학 9/9 · c75 7/9(원장 recall_note 직독 · tmp/c345_metrics.py «P83 recall_note 직독» 블록 서식) · 기준선 noise 173/1 · helped 92/45 · feedback 107행.
+- **판정.** (a)(a′) c351 일반 사이클(또는 c350 감사 열람 · 도달 3 미만이면 c355 회고까지 연장) · (b)(c) 적용 뒤 5사이클 · 도구 = tmp/c346_fb_probe.py(읽기 전용) + 원장 recall_note.
+- **한계 (선언).** ① a1 집계는 기억의 전체 outcome 스트림을 반감기 가중한다 — 캡처 훅의 helped echo가 c75를 다시 used로 보고하면 NEGATIVE가 되돌아갈 수 있다(09-12T15:18 POSITIVE 행이 그 경로의 실재 증거) → (a)
+  판정에 feedback 행 값을 병기하고 «양·음 경합»과 «되먹임 무효»를 가른다. ② 되먹임이 순위를 얼마나 내리는지(−0.15가 주입 문턱을 넘기는지)는 미지 — (a)가 바로 그 실측이다. ③ 이 팔은 devloop 프롬프트
+  세션에만(활성 필터 예외) · 8자 접두 충돌은 trace 10건 규모에서 무시 가능하며 store는 모호 시 미전개. ④ 이 사이클의 실DB 쓰기 = feedback 행 1(devloop 소유 기억 · 비파괴 · 명시 피드백이면 덮어쓰지 않는 경로).
+- 상태: (a) 시계-가동(c347~c351) · (a′) 시계-가동 · (b) 트리거-미시작 · (c) 트리거-미시작 · (d) —

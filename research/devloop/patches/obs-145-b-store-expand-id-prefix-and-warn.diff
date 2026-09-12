@@ -1,0 +1,74 @@
+--- a/forget/store.py
++++ b/forget/store.py
+@@ -12423,6 +12423,46 @@
+     return {}
+ 
+ 
++def _context_outcome_expand_id_prefixes(payload: dict[str, Any], selected_ids: list[Any]) -> dict[str, Any]:
++    """Expand >=8-char memory-id prefixes in used/missing/harmful_memory_ids to the unique trace id they prefix.
++
++    관측 145 (2026-09-13, c346): the turn-recall injection block prints each memory's 8-char id
++    prefix (hooks/forget_turnrecall.py) because ranking feedback only closes when the outcome
++    carries memory ids — `_close_outcome_feedback_loop` returns on an empty id set, so a bare
++    `outcome=noise` was a trace-level annotation for 16 devloop cycles. Expansion is scoped to
++    this trace's selected_ids; an ambiguous or unknown prefix is left as-is and falls through to
++    the existing unmatched_memory_ids warning. Full ids and short (<8) fragments pass unchanged.
++    """
++    candidates = [str(value) for value in selected_ids if value]
++    if not candidates:
++        return payload
++
++    def _expand(values: Any) -> Any:
++        if not isinstance(values, list):
++            return values
++        out: list[Any] = []
++        for value in values:
++            text = str(value or "").strip()
++            hits = (
++                [candidate for candidate in candidates if candidate.startswith(text)]
++                if len(text) >= 8 and text not in candidates
++                else []
++            )
++            out.append(hits[0] if len(hits) == 1 else value)
++        return out
++
++    expanded = dict(payload)
++    observed = expanded.get("observed") if isinstance(expanded.get("observed"), dict) else None
++    for key in ("used_memory_ids", "missing_memory_ids", "harmful_memory_ids"):
++        if key in expanded:
++            expanded[key] = _expand(expanded[key])
++        if observed is not None and key in observed:
++            observed = dict(observed)
++            observed[key] = _expand(observed[key])
++            expanded["observed"] = observed
++    return expanded
++
++
+ def _context_outcome_observed(payload: dict[str, Any]) -> dict[str, Any]:
+     observed_payload = payload.get("observed") if isinstance(payload.get("observed"), dict) else {}
+ 
+@@ -13041,6 +13081,9 @@
+     if isinstance(trace_payload, dict):
+         trace_payload = dict(trace_payload)
+         trace_payload.setdefault("trace_query", trace_row["query"])
++    # 관측 145 (c346): 8자 이상 id 접두를 이 trace의 selected_ids로 전개한다 — 훅 주입 블록이
++    # 접두만 노출하므로 호출자가 전문 id 없이도 기억 단위 라벨을 붙일 수 있다.
++    payload = _context_outcome_expand_id_prefixes(payload, json_loads(trace_row["selected_ids"], []))
+     observed = _context_outcome_enrich_observed_from_trace(
+         _context_outcome_observed(payload),
+         trace_payload if isinstance(trace_payload, dict) else {},
+@@ -13152,6 +13195,14 @@
+         outcome_warnings.append(
+             "used_memory_ids feed ranking feedback only when first_action_productive is true — "
+             "pass first_action_productive explicitly when the action succeeded"
++        )
++    if outcome_label in {"helped", "noise"} and not labeled_memory_ids:
++        # 관측 145 (c346): id 없는 라벨은 context_outcomes 행(trace 주석)으로만 남고 feedback
++        # 테이블(기억 순위)에는 닿지 않는다 — 침묵 대신 계약을 응답에 적는다.
++        outcome_warnings.append(
++            f"outcome={outcome_label} was recorded at trace level only — pass harmful_memory_ids (noise) "
++            "or used_memory_ids (helped) to reach ranking feedback; the injection block prints each "
++            "memory's 8-char id prefix and this endpoint expands it"
+         )
+     selected_ids = json_loads(trace_row["selected_ids"], [])
+     used_selected_ids = [memory_id for memory_id in used_memory_ids if _context_memory_id_in(memory_id, selected_ids)]

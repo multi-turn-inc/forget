@@ -1,0 +1,43 @@
+--- /dev/null
++++ b/tests/test_context_outcome_prefix_ids.py
+@@ -0,0 +1,40 @@
++"""관측 145 (c346): record_context_outcome의 id 접두 전개.
++
++훅 주입 블록이 기억 id 8자 접두만 노출하므로, 호출자가 그것으로 harmful/used_memory_ids를 채울 수 있어야
++되먹임(feedback 행)에 닿는다. 전개는 그 trace의 selected_ids 안에서 유일 매치만 — 모호·미지·짧은 조각은 그대로.
++"""
++import os
++import sys
++from pathlib import Path
++
++sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
++os.environ.setdefault("MEM1_DB_PATH", "/tmp/forget-test-prefix-ids.sqlite3")
++
++from forget.store import _context_outcome_expand_id_prefixes  # noqa: E402
++
++C75 = "79cec7b7-c535-4b01-8b01-a65e7d818653"
++PHIL = "07ad010a-ff35-45c1-b5ac-9e32a99c4cf9"
++PHIL_TWIN = "07ad010a-0000-4000-8000-000000000000"
++SELECTED = [C75, PHIL, PHIL_TWIN]
++
++
++def test_prefix_expands_to_unique_trace_id():
++    out = _context_outcome_expand_id_prefixes({"harmful_memory_ids": ["79cec7b7"]}, SELECTED)
++    assert out["harmful_memory_ids"] == [C75]
++
++
++def test_ambiguous_prefix_is_left_alone():
++    out = _context_outcome_expand_id_prefixes({"used_memory_ids": ["07ad010a"]}, SELECTED)
++    assert out["used_memory_ids"] == ["07ad010a"]
++
++
++def test_full_id_short_fragment_pass_through_and_observed_block_expands_without_mutating_input():
++    payload = {"observed": {"missing_memory_ids": ["79cec7b7-c535", C75, "79ce"]}}
++    out = _context_outcome_expand_id_prefixes(payload, SELECTED)
++    assert out["observed"]["missing_memory_ids"] == [C75, C75, "79ce"]
++    assert payload["observed"]["missing_memory_ids"][0] == "79cec7b7-c535"
++
++
++def test_empty_trace_returns_payload_unchanged():
++    payload = {"harmful_memory_ids": ["79cec7b7"]}
++    assert _context_outcome_expand_id_prefixes(payload, []) is payload
