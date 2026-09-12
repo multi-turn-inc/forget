@@ -12984,3 +12984,19 @@ c48 정규식 + 회귀: c330 실 행이 계열에 잡히지 않고 정품 «봉�
 **수용 기준 ① 표본.** c331~c334 append 단언 오매치 0 = 4/4(c335 append도 같은 단언 — 5본째 예정) · 파트 O «처치 후 이탈 후보» = c330 1본 유지(거짓 양성 기지).
 **구조 처치 후보(diff 후보 · 봉쇄 · 상신 아님).** 서수를 산문에서 읽지 않는다 — 원장 행에 구조화 필드 `ordinals`(`{"봉쇄": {"start": 127}, "서비스율0": {"start": 116}, "원터치": {"start": 142}}` · 값이 아니라 **start만** · R2와 같은 규율)를 두고 파트 O·회귀는 그 필드를 우선 읽으며 산문 정규식은 무필드 구간(c0~c335)에만 쓴다. 원장 스키마 변경 = c315 분류 ③(자기 결재 범주)이나 append 스키마 단언·c48 파트 O·회귀 3본이 함께 움직여야 하므로 **P76 diff 묶음**으로 완성(다음 일반 사이클 후보) · 예측 선등록 동반.
 **정본.** obs-143-a·b(patches/ · c332) · P76 c332 줄 · amendment-335 §3.
+
+## 관측 144 — 몸 지문 계기(P21)가 «재교정 필요 — 변경 ['dist_info']»를 c302~c336 **35사이클** 인쇄했는데 그것을 옮겨 적은 원장 행은 0건이다: 09-05 정훈의 0.5.0 릴리스 커밋과 09-07 03:09 KST 재설치가 c337에야 원장에 닿았다 — 인쇄는 계속되고 전사는 c204 이후 멈췄다 (사이클 337 **일반**, **회부** · devloop 계기 관측 — 루프 자기 규약 · 관측 103·30 가족)
+
+**증상.** c337 step 0 파트 Body 2줄(저장본 직독): «forget_ai-0.5.0 inst_vs_repo=editable:… eff=fastembed:…mpnet… store=MEB1:768 / 대조: **재교정 필요** — 변경 ['dist_info'] → oracle replay 계열·gate_audit·score_weight_* 를 재교정 전 판정 금지».
+baseline `body-fingerprint.json` `dist_info` = forget_ai-**0.4.0**(_recorded_cycle 197 · 08-24). 원장 프로그램 직독(tail/cat 0): «재교정 필요»를 든 행 = c68·c96·c138 **3행뿐** · «dist_info» **0행** · «Body» 마지막 언급 **c204** · «forget_ai-0» 마지막 c67 · research/devloop 전체에 «0.5.0» **0건**.
+c336 task_state summary·next_actions(3,400자·4항목)에도 Body 판정 0회 — 무기억 손에게 배달되는 어느 채널에도 이 상태가 없었다.
+
+**기전.** ① 몸 변경 1차 증거: 커밋 **e1c1e31**(2026-09-05 15:58 KST · junghun · «release prep: forget-ai 0.5.0 + forget-connect 0.6.0» · pyproject.toml) → `~/.forget/venv/lib/python3.14/site-packages/forget_ai-0.5.0.dist-info` mtime **2026-09-07 03:09:48 KST**(`ls -ldT` · 같은 분의 타 트랙 커밋 e8d16fa 03:09:15 · 6746f24 03:10:35 = 정훈 작업 중 재설치 · editable 대상 경로 불변 · 임베딩 스택 불변). 첫 영향 사이클 = **c302**(원장 date ≥ 09-07인 첫 행 · 09-09 KST) → c336까지 35사이클 · c337이 36번째 인쇄이자 첫 전사.
+② 파트 Body는 3줄 고정 인쇄(P21 정직 병기 ②)이고 판정이 굵은 글자일 뿐 경보 접두(`!!`·`★`)가 없다 — 파트 X의 «★ 요구 … 미기재는 다음 사이클 ✗»(관측 103 처치 (i))류 **사유 기재 감시가 Body에는 없다**. c48 재실행을 `| python3 -c` 키워드 필터로 값 줄만 보는 관행(c336 step 0 주의)과 저장본 384행 중 Body가 60~61행에 있다는 자리가 눈을 비켰다.
+③ P21 (a)는 c71 종결 · «사건 발생 시 관측 채널 신규 표본, 재개봉 아님»(predictions L999)으로 이관됐으나, 사건을 그 채널로 옮기는 손은 상시 손 의무 ①~⑭ 어디에도 없었다 — 관측 103 «판정이 끝난 계기의 규율이 조용히 소멸했다: 인쇄는 계속되고 사유 기재는 멈췄다»의 Body판.
+
+**기대 동작.** ① 원장 `restore_note`가 매 사이클 Body 판정을 한 토큰(«Body 일치» / «Body 재교정 필요[변경 …]» / «Body 판정 불가»)으로 전사하고 append 스크립트가 그 존재를 단언한다(c337부터 · tmp/c337_append.py) ② baseline 갱신은 `_how_to_update` 순서(1차 증거 → 표시 → 노트 → 갱신)를 따른다 — 이 절이 노트, 갱신은 **diff `patches/obs-144-a`**(적용 = 게이트 · devloop 소유 데이터 파일 = A-325.1 정의역 · R4 «수리» 범주[신설 0 · 자기 계기 기준선을 실측값으로 정정]) · **선례 병기**: c197 재교정은 봉쇄 중 baseline을 직접 갱신·커밋했다(정훈 승인 몸 교체) — 이번은 정훈 자신의 릴리스 커밋이 몸 변경이라 승인 성격은 같고, 다른 것은 c292 이후 patches/ 관행과 A-325.1 미응답이다 ③ «재교정 전 판정 금지» 대상 계기(oracle replay 계열·gate_audit·score_weight_*)의 c302~c336 판정 기록 유무는 원장 프로그램 직독으로 적는다(tmp/c337_make_patch.py 인쇄 · 이 절은 값을 미리 적지 않는다).
+
+**수용 기준.** ① c337~c339 원장 행 restore_note에 Body 판정 토큰 존재 3/3(append 단언 · 무기재면 쓰기 0) ② obs-144-a diff 완성 · `git apply --check` 통과 · 격리 검산 = 변환 baseline vs 이 세션 live 지문 `compare_fingerprint` → «일치»(미채취 0) ③ 적용 뒤 c48 Body 실측 «일치» → 종결 · 그 전까지 회부 존속 ④ c48 Body에 판정 미전사 감시(파트 X «★ 요구»형)를 두는 처치는 개선(신설)이라 선등록 뒤 — 이 사이클 산출 아님.
+
+**반게임 선언.** 근거 = 이 세션 c48 저장본 Body 2줄(L60~61) · body-fingerprint.json 직독 · `ls -ldT` mtime · `git log -S'0.5.0' -- pyproject.toml`(e1c1e31 1건) · `git log --since/--until 09-07 03시` 인접 커밋 · 원장 프로그램 직독 4건(재교정 필요 3행 · dist_info 0행 · Body 마지막 c204 · date ≥ 09-07 첫 행 c302) · c336 task_state 본문. 재현 = `.venv/bin/python research/devloop/scripts/c48_step0_check.py`의 Body 파트(적용 전 «재교정 필요» · 적용 뒤 «일치»가 기대값).
