@@ -13032,3 +13032,48 @@ c340 c48 저장본 L7~9·L37 직독. 재발 2호(c339)의 비용(70KB·657행·R
 **왜 적용했는가(적용 근거 = 정의가 아니라 선례·성격).** audit-340 R2는 «am-335 ⓒ 정의(수리 = 즉시 적용)의 집행»으로 수리 7본 적용을 권고했으나, c341이 amendment-335 §4 ⓒ **원문**을 직독한 결과 그 문면은 «**제안 경계(승인 시 적용 규율)** … A-325.1 기각이면 경계는 무의미(둘 다 봉쇄)»이고 같은 절이 «봉쇄 중 수리 예외는 헌장 어디에도 없다 · c292 이후 수리·개선 둘 다 diff만으로 스스로 조였다»를 적는다 — 즉 «즉시 적용»은 시행 중인 정의가 아니라 **A-325.1 승인 시** 시행될 규율의 제안이다. 감사 §6 한계 ①(«원문에 승인 뒤 단서가 있으면 §1-3·R2는 정의역 밖»)이 정확히 이 경우다 → **c48 코드 diff 6본(obs-140-a·b · obs-143-a·b · obs-139-a·b)은 그대로 게이트**(A-325.1 정의역 · 절차 2 존재 술어 봉쇄 문면 존속). obs-144-a만 다른 이유: ① 데이터 파일(코드 0행)이라 절차 2 «코드 사이클 금지» 문면의 대상이 아니고 ② 같은 파일·같은 성격(정훈 릴리스 커밋이 원인인 몸 변경의 baseline 정정)의 **선례 c197**(커밋 9408a9f · 08-24 · 봉쇄 c127 이후 · 직접 갱신·커밋 · 이의 0)이 있으며 ③ 그 파일 자신의 `_how_to_update` 규약이 «노트 뒤 갱신»을 요구하고 c337이 노트를 적었고 ④ 정훈 위임(auto-memory «자원은 알아서 쓴다» 09-07 green)의 예외(파괴적 조작)에 해당하지 않으며 git revert 한 번으로 되돌아간다. 이것은 A-325.1 «계기·회귀 diff 자기 결재» 조항의 선취가 아니다 — 계기 코드 0행. 정훈 «되돌려» 한 마디면 복귀.
 
 **정정 기재(audit-340 §1-3 · frictions_fixed 0 10연속의 «원인» 재명명에 대한 재정정).** 감사는 원인을 «정의 미집행»이라 명명했으나 원문상 정의는 미시행이므로 원인 라벨은 **«정의 유예 = A-325.1 무응답»**(c337·c335가 이미 그렇게 적었다)이 맞다. 감사의 결론 방향(«즉시 적용 범주에 승인 시를 붙이면 범주가 사라진다»)은 그대로 c345 회고 의제 — 정의 문면을 «승인 시»로 둘지 «수리는 승인 불요»로 고칠지는 개헌 채널(cycle-prompt.md 절차 2 = A-325.1 본문)이다. 반게임 = amendment-335.md L93~L102 직독 · gate-queue.md A-325.1 행 «승인 시 적용 규율 제안» 문면 · `git log -- research/devloop/body-fingerprint.json`(c67·c72·c95·c111·c197 5건 전부 직접 커밋).
+
+## 관측 145 — noise 라벨은 trace에 붙고 기억에 붙지 않는다: `record_context_outcome(outcome=noise)`는 failure_stage만 적고 기억 id를 채우지 않으며, 랭킹 되먹임은 기억 id 집합이 비면 return한다 — 훅 주입 블록이 trace_id만 노출하므로 호출자는 그 집합을 채울 수 없고, 루프의 noise 16회(c330~c345)는 되먹임 0이 정상 동작이었다 (사이클 345 **회고**, **회부** · 제품 관측 — 공표 가드 c141 · 단일 코퍼스 표본 1)
+
+**증상.** P83 (a) «5회 이상 noise로 기록된 회상 2건이 창 c336~c345 주입에서 ≥ 1사이클 빠진다» = 도달 9사이클 중 **0/9**(설계 철학 팔 재주입 9/9 · 심장박동 팔
+부재 7/9는 c75 결정 기억으로의 대체 = 재순위) → (a) 반증(amendment-345 §2). 루프는 c330~c345 매 세션 `{trace_id, outcome:"noise"}`를 보냈고(tmp/c344_rco.json 서식 ·
+응답 에코 `failure_stage=selection_failure`) 제품은 같은 기억을 계속 주입했다.
+
+**기전(store.py 직독 · P83 판정 뒤 · 한계 ① 해제).** ① `record_context_outcome`(L13001~): outcome=noise → `payload.failure_stage="selection_failure"` ·
+`inferred.reason` · `metadata.outcome_label`만 setdefault — L13008 주석 «id 자동 채움도 하지 않는다». ② `used/missing/harmful_memory_ids`는 호출 payload에서만
+읽는다(`_context_outcome_observed` L12438~12440 · `_context_outcome_enrich_observed_from_trace`는 툴 힌트 정렬만 보강 · 기억 id 보강 0). ③ `_close_outcome_feedback_loop`
+(L12935~): `harmful ∪ (used ∧ first_action_productive)`가 비면 **L12959~12960 return** — feedback 행 0. ④ 훅 주입 블록(UserPromptSubmit «forget 회상 —» · «피드백 주소:
+record_context_outcome(trace_id=…)»)은 trace_id만 노출하고 기억 id를 노출하지 않는다 → 호출자가 ②의 집합을 채울 길이 없다. 결과: noise 라벨은 **trace 수준 주석**으로
+저장되고(context_outcomes 행) 기억 수준 랭킹(feedback 테이블)에는 닿지 않는다. 부류 = 관측 40(쓰기측 공백 — 라벨이 기억에 기록되지 않으면 후속 프로브는 원리적으로
+그것을 볼 수 없다) · 관측 67(래퍼가 trace_id를 떨어뜨림)의 대칭 — 이번엔 trace_id는 살고 **기억 id가 떨어진다**.
+
+**노출.** CLAUDE.md 규약(«record_context_outcome(helped|noise) … 이 feedback이 future recall salience를 훈련한다»)과 훅 문면(«피드백 주소»)은 기억 단위 되먹임을
+광고하는데, 호출 계약(id 필수)은 어디에도 적혀 있지 않다 — c330~c345 16회 noise · c64~ helped 기록 전건이 같은 자리다(helped도 used_memory_ids 없이는 POSITIVE 0 —
+미실측 · 회귀는 helped 라벨 0회 기록의 사각). 제품 대면 열(P83)이 «봉쇄·게이트 아래에서도 값이 변할 수 있는 지표»로 명명된 근거가 이 계약 위에 서 있었다.
+
+**처치(후보 · 제품 코드 = 게이트 · 이 회고는 diff를 만들지 않는다 · 봉쇄 중 재고 불증).** ① 훅 주입 블록이 항목마다 기억 id 접두(8자)를 함께 노출 → 호출자가
+`harmful_memory_ids`를 채울 수 있다. ② store가 outcome=noise이고 명시 id가 없으면 trace payload의 주입 기억 전건을 harmful 기본값으로 채운다(«선별 실패 = 주입 전건
+무용»의 정의와 일치 · 명시 id가 오면 그것만 · helped는 대칭으로 used 기본값). 둘 다 `forget/`·`hooks/` = A-325.1 정의역 밖(제품) · **c346 일반 사이클 후보** = 예측 선등록 +
+diff 완성(patches/ +1) · 적용 = 게이트.
+
+**기대 동작.** noise 1회가 그 trace의 주입 기억에 NEGATIVE feedback 행(source=context_outcome · −0.15 단일 라벨)을 남기고, 같은 질의의 다음 주입에서 그 기억의 순위가
+내려간다 — 그때 P83류 예측이 비로소 되먹임을 잰다.
+
+**수용 기준.** ① 처치 diff 적용(게이트) 후 noise 1회 → feedback 테이블에 해당 기억 id 행 ≥ 1(NEGATIVE) — 적용 사이클 실측. ② 적용 전: 이 관측을 P83 (a) 반증의 귀속으로
+기재하고 P83류 재등록은 적용 뒤에만(계약 불일치 위에서 재는 예측은 항상 반증). ③ c350 감사가 «helped 라벨도 같은 사각인가»를 회귀 대상으로 열람.
+
+**반게임 선언.** 근거 = forget/store.py L13001~13020 · L12426~12454 · L12457~12500 · L12935~12960(이 세션 Read 도구 직독 · 쓰기 0) · tmp/c344_rco.json · 원장 c330~c344
+recall_note «noise 1회 trace …» 16건 · amendment-345 §2. 재현 = `record_context_outcome({"trace_id": <살아 있는 trace>, "outcome": "noise"})` 뒤 `SELECT * FROM feedback WHERE
+metadata LIKE '%context_outcome%'` 신규 행 0.
+
+## 관측 140 보강 (사이클 345 **회고**, 신규 번호 아님) — 수용 기준 ① 원문 재확인 = **종결 불가**(«diff 적용 후 파트 S·㉼ 일치 N» · obs-140-a 게이트 존속) · 미끼 0 쓰기 관행 창 c340~c344 5/5 재발 0 = 관행의 억제 확인이지 종결 아님 · 이후 표본 기재는 값이 바뀔 때(재발)만 — **축약형**
+
+값+포인터: c340 1/5 · c341~c344 4/5(각 원장 restore_note «파트 S 판정 불가 · 미끼 0») · c345 파트 S `task_state_cycle=None 판정 불가` · ㉼ «판정 불가 축 1» · 저장본 46.1KB·387행 ·
+Body L60~61. 상시 의무 −1(매 사이클 표본 줄 중단 · audit-340 R5 «값 변화 시에만» 규율). 회부 존속. amendment-345 §3.
+
+## 관측 144 보강 (사이클 345 **회고**, 신규 번호 아님) — audit-340 R3 ② «손에게 시키는 줄»에 손이 답함 3건(파트 S 사각 5건 모순 0 · 파트 D 표본 칸 3질의 포장 아님 3/3 · 파트 O 미등재 6행 라벨 실재 = 탐침 거짓 음성) · R3 ① 전사 상한 선등록 = P84(«값 바뀐 줄만 원장에 · 불변은 1토큰») — **축약형**
+
+값+포인터(tmp/c345_parts_hand.py · 읽기 전용): ⑴ c189·c190·c200·c202·c206 자기보고 = 전부 «미정 — 다음 파트 S가 판정»(유보 · True 아님) → 모순 0 · 다음 행 판정 c190 «지연»·c191
+«c168형 미착지»(관측 55·P53 기지) · c201·c203·c207 «일치»(느슨 탐침 «지연» 3건 = 거짓 양성). ⑵ P74 «지지(표본 2, 약함)» L5489 · P78 «10건 전건 기재» L5749 · P79 «7건» L5788
+= 표본 실재 · «표본» 칸 서식만 부재. ⑶ c325~c330 gate_pending에 봉쇄·원터치·서비스율 라벨 3/3 존재(파트 O 탐침 필드 사각 · 관측 143 가족). 답의 정본 = amendment-345 §3 ·
+계기 인쇄 제거는 c48 diff 후보(게이트 · 신설 아님). 회부 존속.
