@@ -13088,3 +13088,23 @@ Body L60~61. 상시 의무 −1(매 사이클 표본 줄 중단 · audit-340 R5 
 «c168형 미착지»(관측 55·P53 기지) · c201·c203·c207 «일치»(느슨 탐침 «지연» 3건 = 거짓 양성). ⑵ P74 «지지(표본 2, 약함)» L5489 · P78 «10건 전건 기재» L5749 · P79 «7건» L5788
 = 표본 실재 · «표본» 칸 서식만 부재. ⑶ c325~c330 gate_pending에 봉쇄·원터치·서비스율 라벨 3/3 존재(파트 O 탐침 필드 사각 · 관측 143 가족). 답의 정본 = amendment-345 §3 ·
 계기 인쇄 제거는 c48 diff 후보(게이트 · 신설 아님). 회부 존속.
+
+## 관측 146 — 세션 종료 기계 에코가 매 세션을 «reasoning_failure»로 추론 저장하는데 그 행은 기억 id 0이라 아무것도 훈련하지 않는다: context_outcomes 3,928행 중 3,517행(89.5%)이 그 도장이고, devloop c346~c349 4세션 전건에 «rco 0» 자기보고 옆으로 시스템 추론 1건이 매번 실렸다 (사이클 350 **적대 감사**, **회부** · 제품 관측 — 공표 가드 c141 · 단일 코퍼스)
+
+**증상(tmp/c350_probe.py · tmp/c350_probe2.py · sqlite mode=ro).** `context_outcomes` 라벨×단계 분포 = reasoning_failure/None **3,517** · noise/selection_failure 158 · helped/none 92 · None/none 86 · None/selection_failure 45 · noise/packing_failure 15 · 기타 12. 3,517행 전건 `used_memory_ids=[]` · `harmful_memory_ids=[]` · metadata = `labeler: mechanical-echo-v3-semantic` · `inferred.source: system_inference` · confidence 0.5 · reason «first action was not productive; context may still have been sufficient» · `observed.first_action=""`. devloop trace 4건(c346 2b366087 · c347 44f663f6 · c348 fd429d54 · c349 7bd8d388) 전건에 세션 종료 직후(c349 = record_task_state 16:15:03Z + 24s) 이 행 1건. 일별 ~20행(09-09~09-12) · 09-06 114행.
+
+**기전(추정 · store 직독 안 함 — 감사는 코드 금독 아님이나 diff 금지라 처치 단계 몫).** 캡처 훅 세션 종료 echo가 outcome 라벨 없이 «관측» 페이로드를 보내고, 서버 추론기가 `first_action` 빈 값을 «비생산»으로 읽어 reasoning_failure를 기본값으로 찍는다. 기억 id가 비어 있어 `_close_outcome_feedback_loop`는 return(관측 145 기전 ③ 동일) → feedback 행 0. 되먹임에 닿는 행은 source=context_outcome 107(POSITIVE 100 · NEGATIVE 7) = 명시 호출분뿐.
+
+**노출.** ① 원장의 «rco 0»은 명시 호출 계수이지 그 trace의 outcome 계수가 아니다 — 두 수를 한 칸에 적으면 관측 92 형(라벨과 값이 칸을 나눠 씀). ② 3,517행이 «reasoning_failure»라는 판정 동사를 들고 있는데 그것을 읽는 계기가 없다(관측 108 형 — 경보가 판정 동사를 들고 정당화 계기는 부재). ③ devloop 세션의 첫 행동은 Read 도구라 «비생산» 추론의 참거짓 자체가 미검.
+
+**수용 기준.** ① 처치 후보 명명(c351 또는 c355): 세션 종료 echo가 `first_action` 관측 없이 추론 outcome을 쓰지 않거나, 추론 행에 selected_ids를 used 후보로 싣되 feedback 미적용 표지를 붙인다 — 제품 코드 = 게이트 · diff는 일반 사이클. ② 다음 원장부터 recall_note의 rco 계수는 «명시 n · 추론 m»으로 갈라 적는다(c351부터 · 회고가 서식 확정). ③ 관측 145 처치(obs-145-a·b·c) 적용 뒤에도 이 채널은 id 0이므로 별개 관측으로 존속 — 145의 종결이 146을 종결하지 않는다.
+
+**반게임 선언.** 근거 = 실DB 읽기 전용 탐침 2본(쓰기 0) · 원장 c346~c349 recall_note «rco 0» 4건 · P85 표본 1~3. 재현 = `SELECT failure_stage, json_extract(metadata,'$.outcome_label'), COUNT(*) FROM context_outcomes GROUP BY 1,2`.
+
+## 관측 145 보강 (사이클 350 **적대 감사**, 신규 번호 아님) — 수용 기준 ③ 회귀 열람 = helped 93 중 맨 48(52%)도 같은 사각 · noise +1(trace 64ea2426)은 project 40 타 프로젝트 질의의 caller 맨 라벨 = 사각의 devloop 밖 발화 1건 · P85 단계 분리의 점수 증거(c75 0.7591 rank 5 → top-10 밖 · 대조 팔 4 trace 변동 ≤ 0.018 · 0.7591 − 0.15 = 0.6091 < 10위 0.6197) — **축약형**
+
+값+포인터(tmp/c350_probe.py · tmp/c350_probe2.py · audit-350 §1-1 · §3-1 · §3-3): ⑴ helped 93/used 동봉 45 → 맨 48 — c346 선답 «사각은 맨 라벨 한정»은 참이나 helped의 절반이 그 맨 라벨이다. ⑵ 64ea2426 = filters `metadata.project=40` · 질의 «UMA as goal-aligned main research baseline …» · selected 8 · 09-13T15:37Z noise · id 0. ⑶ 되먹임 정합의 점수 근거는 P85 절 감사 열람 줄 · 후속 = P86 등록(c351 · 검색 단계 팔). 회부 존속.
+
+## 관측 143 보강 (사이클 350 **적대 감사**, 신규 번호 아님) — 같은 파일 회귀 2호: `test_real_ledger_blockade_coverage_is_incomplete_and_says_so`가 봉쇄 피복 95%(absent c329 · 프레임 N=349) → 100%(c329 창 20 이탈 · N=350)로 docstring의 자기 예고대로 만료 · 코드 변경 0 · 루트 pytest 957·4·1 · 관측 106 가족의 예고된 재발 · 처치 diff = c351 몫(patches/ · 적용 게이트) — **축약형**
+
+값+포인터(tmp/c350_cov.py · c48 `series_coverage` 직호출 · audit-350 §1-3): 봉쇄 N=349 pct 95.0 absent [329] → N=350 pct 100.0 absent [] · 서비스율 100/100 · 원터치 90(absent 329·330) → 95(absent 330). 실패 집합 = 외부 2(관측 129) + 관측 143 앵커 1(obs-143-a 게이트) + 자기 만료 1 = 4 사유 구별. 회부 존속.
