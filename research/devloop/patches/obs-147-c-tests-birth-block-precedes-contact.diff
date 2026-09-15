@@ -1,0 +1,102 @@
+diff --git a/tests/test_devloop_step0_db_births_order.py b/tests/test_devloop_step0_db_births_order.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_devloop_step0_db_births_order.py
+@@ -0,0 +1,97 @@
++"""관측 147 눈의 한계 ① (c361 diff): DB 출생 계수 블록은 task_state 비종속이므로, 세대 대조의 조기 return
++(get_task_state 도달 실패 · 세대 없음)이 그 블록을 지우면 안 된다 — 대조가 못 열린 사이클이 정확히 사망 의심이
++가장 필요한 사이클이다. 이 파일은 part_s의 **인쇄 순서 계약**을 고정한다(c358본 a는 블록을 사망 의심 눈 아래 =
++조기 return 뒤에 두어 그 사이클에 침묵했다 · c361 재배치).
++
++관행 ⑯ · 관측 100: 실DB 0(FORGET_DB = 부재 경로 → «판정 불가») · 서버 0(call 치환) · git 0(run 치환) · 원장 = 합성 2행.
++"""
++from __future__ import annotations
++
++import contextlib
++import io
++import json
++import os
++import sys
++
++REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
++sys.path.insert(0, os.path.join(REPO, "research", "devloop", "scripts"))
++
++import c48_step0_check as c48  # noqa: E402
++
++BIRTH = "[DB 출생 계수"
++GENERATION_ABSENT = "task_state=**세대 없음**"
++UNREACHABLE = "get_task_state 도달 실패"
++VERDICT = "판정=일치"
++DEATH_EYE = "[직전 세션 사망 의심"
++REVERIFY = "[자기보고 대조"
++VALID_ROW = {"summary": "c360 완료(사이클 360 수확 · 합성 세대)", "valid_from": "2026-09-15T02:39:48Z"}
++
++
++def _synthetic_ledger(tmp_path) -> str:
++    d = tmp_path / "research" / "devloop"
++    d.mkdir(parents=True)
++    rows = [{"cycle": 359, "restore_note": "판정=일치", "step5_write_reverified": "유보"},
++            {"cycle": 360, "restore_note": "판정=일치", "step5_write_reverified": "유보"}]
++    (d / "metrics.jsonl").write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n", encoding="utf-8")
++    return str(tmp_path)
++
++
++def _fake_run(cmd: list[str]) -> str:
++    if "-60" in cmd:
++        return "1789439855\tloop(cycle 360): 합성 수확 커밋\n1789400000\tloop(cycle 359): 합성"
++    return "1789439855"
++
++
++def _part_s_output(monkeypatch, tmp_path, call_impl) -> str:
++    monkeypatch.setattr(c48, "REPO", _synthetic_ledger(tmp_path))
++    monkeypatch.setattr(c48, "FORGET_DB", str(tmp_path / "absent.sqlite3"))
++    monkeypatch.setattr(c48, "call", call_impl)
++    monkeypatch.setattr(c48, "run", _fake_run)
++    monkeypatch.setattr(c48, "changed_entries", lambda changed=None: [])
++    buf = io.StringIO()
++    with contextlib.redirect_stdout(buf):
++        c48.part_s()
++    return buf.getvalue()
++
++
++def _unreachable(name, arguments):
++    raise ConnectionRefusedError("합성: 서버 부재")
++
++
++def _absent(name, arguments):
++    return {"results": [], "current": None, "count": 0}
++
++
++def _reachable(name, arguments):
++    return {"results": [VALID_ROW], "current": VALID_ROW, "count": 1}
++
++
++# ---- 판별 (HEAD c48에는 블록이 없고, c358본 obs-147-a는 블록을 조기 return 뒤에 둔다) ----------------
++
++def test_birth_block_prints_when_get_task_state_is_unreachable(monkeypatch, tmp_path):
++    """판별 ①: 서버 도달 실패(예외)로 세대 대조가 «판정 불가»여도 DB 출생 계수 블록은 인쇄된다(DB 부재 = 판정 불가 문면)."""
++    out = _part_s_output(monkeypatch, tmp_path, _unreachable)
++    assert UNREACHABLE in out
++    assert BIRTH in out and "판정 불가 — DB 부재" in out
++
++
++def test_birth_block_prints_when_generation_is_absent(monkeypatch, tmp_path):
++    """판별 ②: 세대 없음(빈 응답)으로 조기 return하는 경로에서도 블록은 인쇄된다."""
++    out = _part_s_output(monkeypatch, tmp_path, _absent)
++    assert GENERATION_ABSENT in out
++    assert BIRTH in out and "판정 불가 — DB 부재" in out
++
++
++def test_birth_block_precedes_the_generation_verdict(monkeypatch, tmp_path):
++    """판별 ③: 정상 경로에서 블록은 세대 판정 줄보다 **앞**에 있다 — 자리 계약(c358본은 뒤였다)."""
++    out = _part_s_output(monkeypatch, tmp_path, _reachable)
++    assert BIRTH in out and VERDICT in out
++    assert out.index(BIRTH) < out.index(VERDICT)
++
++
++# ---- 불변 (원본·c358본·변환 전부 통과) --------------------------------------------------------------
++
++def test_reachable_generation_still_prints_death_eye_and_reverify(monkeypatch, tmp_path):
++    """불변 ①: 세대가 있으면 세대 판정 · 사망 의심 눈 · 자기보고 대조가 종전대로 전부 인쇄된다."""
++    out = _part_s_output(monkeypatch, tmp_path, _reachable)
++    assert VERDICT in out and DEATH_EYE in out and REVERIFY in out

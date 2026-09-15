@@ -122,18 +122,24 @@ diff --git a/research/devloop/scripts/c48_step0_check.py b/research/devloop/scri
  def part_s() -> None:
      """[S] 유동층 대조 — 원장과 task_state가 같은 사이클을 가리키는가 (c93 처치, 관측 49).
  
-@@ -399,6 +513,14 @@
-                   f"{' ' + str(unk) if unk else ''}")
-         print("    ※ 이 눈은 **step 0에서만** 유효하다 — 사이클 도중 재실행하면 내 편집분이")
-         print("      같은 조건에 걸린다(파트 A의 같은 주의와 동일한 이유).")
-+
-+    # ── DB 출생 계수 — 파트 S 셋째 축 (c358 신설, 관측 147) ────────────────────
-+    # 위 두 눈은 저장소 **쓰기** 흔적을 읽는다. 턴 1~2에서 죽은 세션은 흔적 0이라 둘 다
-+    # 침묵하고, 그 세션은 DB에만 산다. 시계 = 직전 수확 커밋 시각(원장 date는 하루 자[尺]).
+@@ -340,6 +454,20 @@
+                 ledger_rows.append(json.loads(line))
+     cycles = [int(r["cycle"]) for r in ledger_rows]
+     ledger_last = max(cycles)
++    # ── DB 출생 계수 — 파트 S 셋째 축 (c358 신설 · c361 재배치, 관측 147 · 눈의 한계 ①) ──────
++    # 아래 두 눈(세대 대조 · 사망 의심)은 task_state와 저장소 **쓰기** 흔적을 읽는다. 턴 1~2에서
++    # 죽은 세션은 흔적 0이라 둘 다 침묵하고, 그 세션은 DB에만 산다. 이 축은 task_state에
++    # 비종속이므로 세대 대조의 조기 return(도달 실패 · 세대 없음)보다 **앞**에 인쇄한다 —
++    # 대조가 못 열린 사이클이 정확히 사망 의심이 가장 필요한 사이클이다(c358본은 사망 의심 눈
++    # 아래 = 조기 return 뒤에 두어 그 사이클에 침묵했다). 시계 = 직전 수확 커밋 시각(원장
++    # date는 하루 자[尺]). 이 자리는 obs-141-b(L343~349)·obs-126-a(L382~)의 변경 행과 겹치지 않는다.
++    print("[S′. DB 출생 계수 — 파트 S 셋째 축 · task_state 비종속 선인쇄 (c358 신설 · c361 재배치, 관측 147)]")
 +    since_epoch = loop_commit_epoch(run(["git", "log", "-60", "--format=%ct%x09%s"]).splitlines(), ledger_last)
 +    since_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(since_epoch)) if since_epoch is not None else None
 +    for line in format_births(predecessor_births(FORGET_DB, REPO, since_iso), since_iso):
 +        print(line)
- 
-     # 자기보고 대 외부 관측의 **계열**. 손 증분 0 — 원장에서 매 사이클 재계산한다 (P47 (b)).
-     rv = reverify_contradictions(ledger_rows)
++    print("    ※ 이 블록은 task_state 비종속이라 아래 세대 대조보다 먼저 인쇄된다 — 도달 실패·세대 없음의")
++    print("      조기 return이 이 블록을 지우지 않는다(관측 147 눈의 한계 ① 처치 · c361 재배치).")
+     by_cycle = {int(r["cycle"]): r for r in ledger_rows}
+     print("[S. 유동층 대조 — 원장 마지막 사이클 vs task_state 세대 (c93 처치, 관측 49)]")
+     try:
