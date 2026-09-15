@@ -1,0 +1,134 @@
+diff --git a/tests/test_context_outcome_feedback_applied.py b/tests/test_context_outcome_feedback_applied.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_context_outcome_feedback_applied.py
+@@ -0,0 +1,129 @@
++"""관측 146 (c357 diff): a context outcome row says whether it trained anything.
++
++89.5% of ``context_outcomes`` on the dogfood DB are session-end echoes -- rows
++with no memory ids, ``failure_stage=reasoning_failure``, labeler
++``mechanical-echo-*`` -- and none of them reaches the ``feedback`` table
++(``_close_outcome_feedback_loop`` returns before labeling). The stored row
++looked exactly like a labeled one; readers had to join ``feedback`` to tell.
++Contract: every recorded outcome carries ``feedback_applied`` (bool) and
++``feedback_memory_ids`` (the ids that actually got a feedback row) in both the
++response and the row metadata. Values here are synthetic (관측 100).
++"""
++
++from __future__ import annotations
++
++import hashlib
++import json
++import os
++from pathlib import Path
++
++from forget import db as app_db
++from forget.db import get_db, init_db
++from forget.store import record_context_outcome
++from forget.utils import utc_now
++
++_DB_COUNTER = 0
++PROJECT = "proj_local"
++
++
++def _fresh_db() -> None:
++    global _DB_COUNTER
++    _DB_COUNTER += 1
++    path = Path(f"/tmp/mem1-outcome-feedback-applied-{os.getpid()}-{_DB_COUNTER}.sqlite3")
++    for suffix in ("", "-wal", "-shm"):
++        path.with_name(path.name + suffix).unlink(missing_ok=True)
++    os.environ["MEM1_DB_PATH"] = str(path)
++    app_db.DB_PATH = path
++    init_db()
++
++
++def _seed(trace_id: str, memory_ids: list[str]) -> None:
++    now = utc_now()
++    with get_db() as conn:
++        for mid in memory_ids:
++            conn.execute(
++                "INSERT INTO memories (id, project_id, memory, hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
++                (mid, PROJECT, f"memory {mid}", hashlib.sha1(mid.encode()).hexdigest(), now, now),
++            )
++        payload = {"schema_version": "v1", "trace_id": trace_id, "trace_query": "q", "context_capsule_text": "capsule"}
++        conn.execute(
++            "INSERT INTO context_traces (trace_id, project_id, task_id, task_phase, policy_version, query, filters, "
++            "candidate_ids, selected_ids, rejected_ids, scores, roles, decision_reasons, token_cost, payload, created_at) "
++            "VALUES (?, ?, '', '', 'v', 'q', '{}', ?, ?, '[]', '{}', '{}', '{}', 0, ?, ?)",
++            (trace_id, PROJECT, json.dumps(memory_ids), json.dumps(memory_ids), json.dumps(payload), now),
++        )
++
++
++def _row_metadata(outcome_id: str) -> dict:
++    with get_db() as conn:
++        row = conn.execute("SELECT metadata FROM context_outcomes WHERE outcome_id = ?", (outcome_id,)).fetchone()
++    return json.loads(row["metadata"])
++
++
++def _feedback_rows() -> list[tuple[str, str]]:
++    with get_db() as conn:
++        return [(r["memory_id"], r["feedback"]) for r in conn.execute("SELECT memory_id, feedback FROM feedback ORDER BY memory_id")]
++
++
++# ---- 판별 (원본 코드에서 실패해야 한다) -------------------------------------------------------
++
++def test_echo_row_without_ids_says_feedback_applied_false():
++    """판별 ①: 세션 종료 echo 모양(id 0 · first_action 빈 값) → 행·응답 모두 feedback_applied False · ids []."""
++    _fresh_db()
++    _seed("t-echo", ["m1", "m2"])
++    res = record_context_outcome({"trace_id": "t-echo", "project_id": PROJECT, "observed": {"first_action": ""},
++                                  "metadata": {"labeler": "mechanical-echo-v2"}})
++    assert res["failure_stage"] == "reasoning_failure"  # the echo shape, unchanged
++    assert res["feedback_applied"] is False
++    assert res["feedback_memory_ids"] == []
++    meta = _row_metadata(res["outcome_id"])
++    assert meta["feedback_applied"] is False and meta["feedback_memory_ids"] == []
++    assert meta["labeler"] == "mechanical-echo-v2"  # caller metadata kept
++    assert _feedback_rows() == []
++
++
++def test_helped_with_used_id_says_true_and_lists_the_id():
++    """판별 ②: 명시 helped + used id 동봉 → True · ids == [id] · feedback 표 POSITIVE 1행."""
++    _fresh_db()
++    _seed("t-helped", ["m1", "m2"])
++    res = record_context_outcome({"trace_id": "t-helped", "project_id": PROJECT, "outcome": "helped", "used_memory_ids": ["m1"]})
++    assert res["feedback_applied"] is True
++    assert res["feedback_memory_ids"] == ["m1"]
++    assert _row_metadata(res["outcome_id"])["feedback_applied"] is True
++    assert _feedback_rows() == [("m1", "POSITIVE")]
++
++
++def test_explicit_user_feedback_is_respected_and_not_counted_as_applied():
++    """판별 ③: 사용자 명시 feedback 행이 있는 id는 upsert가 건너뛴다 → 그 id는 applied에 세지 않는다(False)."""
++    _fresh_db()
++    _seed("t-user", ["m1"])
++    with get_db() as conn:
++        conn.execute(
++            "INSERT INTO feedback (id, memory_id, feedback, feedback_reason, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?)",
++            ("fb-user", "m1", "NEGATIVE", "human said so", json.dumps({"source": "user"}), utc_now()),
++        )
++    res = record_context_outcome({"trace_id": "t-user", "project_id": PROJECT, "outcome": "helped", "used_memory_ids": ["m1"]})
++    assert res["feedback_applied"] is False
++    assert res["feedback_memory_ids"] == []
++    assert _feedback_rows() == [("m1", "NEGATIVE")]  # untouched
++
++
++# ---- 불변 (원본·변환 양쪽 통과) ---------------------------------------------------------------
++
++def test_echo_row_still_trains_nothing():
++    """불변 ①: echo 모양 행은 여전히 used/harmful [] · failure_stage reasoning_failure · feedback 표 0행."""
++    _fresh_db()
++    _seed("t-echo2", ["m1"])
++    res = record_context_outcome({"trace_id": "t-echo2", "project_id": PROJECT, "observed": {"first_action": ""}})
++    assert res["used_memory_ids"] == [] and res["harmful_memory_ids"] == []
++    assert res["failure_stage"] == "reasoning_failure"
++    assert _feedback_rows() == []
++
++
++def test_noise_with_harmful_id_still_writes_negative_feedback():
++    """불변 ②: 명시 noise + harmful id → selection_failure · feedback 표 NEGATIVE 1행 (기존 되먹임 경로 불변)."""
++    _fresh_db()
++    _seed("t-noise", ["m1", "m2"])
++    res = record_context_outcome({"trace_id": "t-noise", "project_id": PROJECT, "outcome": "noise", "harmful_memory_ids": ["m2"]})
++    assert res["failure_stage"] == "selection_failure"
++    assert _feedback_rows() == [("m2", "NEGATIVE")]

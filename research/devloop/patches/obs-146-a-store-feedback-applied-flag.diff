@@ -1,0 +1,95 @@
+diff --git a/forget/store.py b/forget/store.py
+--- a/forget/store.py
++++ b/forget/store.py
+@@ -12939,8 +12939,13 @@
+     harmful_memory_ids: list[str],
+     first_action_productive: bool,
+     now: str,
+-) -> None:
++) -> list[str]:
+     """Turn a recorded context outcome into ranking feedback.
++
++    Returns the memory ids that actually received a feedback row (관측 146,
++    c357 diff). Empty when nothing was labeled -- the shape of 89.5% of
++    context_outcomes (session-end echoes carry no memory ids) -- and ids the
++    upsert skipped to respect explicit user feedback are not counted.
+ 
+     This is the link that makes the "verified memory" loop actually close:
+     a memory flagged harmful when the agent used the assembled context gets a
+@@ -12957,16 +12962,17 @@
+     } - harmful
+     labeled = harmful | productive
+     if not labeled:
+-        return
++        return []
++    applied: list[str] = []
+     now_stamp = parse_datetime(now)
+     streams = _a1_outcome_events(conn, project_id, labeled)
+ 
+-    def _upsert(memory_id: str, feedback: str, reason: str, extra: dict[str, Any]) -> None:
++    def _upsert(memory_id: str, feedback: str, reason: str, extra: dict[str, Any]) -> bool:
+         row = conn.execute("SELECT metadata FROM feedback WHERE memory_id = ?", (memory_id,)).fetchone()
+         if row is not None:
+             meta = json_loads(row["metadata"], {})
+             if not isinstance(meta, dict) or meta.get("source") != "context_outcome":
+-                return  # respect explicit user feedback; do not clobber it
++                return False  # respect explicit user feedback; do not clobber it
+         conn.execute("DELETE FROM feedback WHERE memory_id = ?", (memory_id,))
+         _entity_prune_stats_cache.clear()
+         conn.execute(
+@@ -12976,6 +12982,7 @@
+             """,
+             (str(new_id()), memory_id, feedback, reason, json_dumps({"source": "context_outcome", **extra}), now),
+         )
++        return True
+ 
+     for memory_id in labeled:
+         a1 = _a1_outcome_value(streams.get(memory_id) or [], now_stamp)
+@@ -12995,7 +13002,9 @@
+             if memory_id in harmful
+             else "used productively in a context outcome"
+         )
+-        _upsert(memory_id, "NEGATIVE" if a1["value"] < 0 else "POSITIVE", reason, {"a1": a1})
++        if _upsert(memory_id, "NEGATIVE" if a1["value"] < 0 else "POSITIVE", reason, {"a1": a1}):
++            applied.append(memory_id)
++    return sorted(applied)
+ 
+ 
+ def record_context_outcome(payload: dict[str, Any], project_id: str | None = None) -> dict[str, Any]:
+@@ -13127,13 +13136,26 @@
+                 now,
+             ),
+         )
+-        _close_outcome_feedback_loop(
++        feedback_memory_ids = _close_outcome_feedback_loop(
+             conn,
+             project_id,
+             [memory_id for memory_id in used_memory_ids if memory_id in matched_memory_ids],
+             [memory_id for memory_id in harmful_memory_ids if memory_id in matched_memory_ids],
+             first_action_productive,
+             now,
++        )
++        # 관측 146 (c357 diff): the row itself says whether it trained anything.
++        # Session-end echoes (89.5% of context_outcomes) carry no memory ids, so
++        # the loop above returns [] and nothing reaches the feedback table -- but
++        # the stored row looked exactly like a labeled one. Readers had to join
++        # `feedback` to tell them apart; now the row carries the answer. The
++        # UPDATE comes after the loop because the loop reads the row it just
++        # inserted (A1 stream), so the INSERT order above is kept.
++        metadata["feedback_applied"] = bool(feedback_memory_ids)
++        metadata["feedback_memory_ids"] = feedback_memory_ids
++        conn.execute(
++            "UPDATE context_outcomes SET metadata = ? WHERE outcome_id = ?",
++            (json_dumps(metadata), outcome_id),
+         )
+     unmatched_memory_ids = [
+         memory_id for memory_id in labeled_memory_ids if memory_id not in matched_memory_ids
+@@ -13199,6 +13221,8 @@
+         "used_action_hint_source": used_action_hint_source,
+         "used_action_hint_target": used_action_hint_target,
+         "unmatched_memory_ids": unmatched_memory_ids,
++        "feedback_applied": metadata["feedback_applied"],
++        "feedback_memory_ids": feedback_memory_ids,
+         "warnings": outcome_warnings,
+         "created_at": now,
+     }
