@@ -1,0 +1,132 @@
+diff --git a/tests/test_devloop_step0_db_births.py b/tests/test_devloop_step0_db_births.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_devloop_step0_db_births.py
+@@ -0,0 +1,127 @@
++"""관측 147 (c358 diff): 첫 유효 행동 전에 죽은 세션은 저장소에 쓰기 흔적이 0이라 파트 S 사망 의심 눈 ·
++㉼ · 루트 tmp 지문이 전부 «증거 0»을 인쇄한다 — 그 세션의 출생·의도·사망은 DB에만 있다. «DB 출생 계수» 눈의 계약.
++
++관행 ⑯ · 관측 100: 능력은 **합성 sqlite**(:memory:)로 고정한다. 실DB 0 · 서버 0 · git 0.
++"""
++from __future__ import annotations
++
++import os
++import sqlite3
++import sys
++import tempfile
++
++REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
++sys.path.insert(0, os.path.join(REPO, "research", "devloop", "scripts"))
++
++import c48_step0_check as c48  # noqa: E402
++
++THIS_REPO = "/w/내-프롬프트"
++OTHER_REPO = "/w/other-worktree"
++SID = "f691fed8-8f99-47cc-901f-c6399f7b4700"
++
++
++def _db() -> sqlite3.Connection:
++    conn = sqlite3.connect(":memory:")
++    conn.executescript(
++        "CREATE TABLE context_traces (trace_id TEXT, created_at TEXT, query TEXT, selected_ids TEXT);"
++        "CREATE TABLE context_outcomes (outcome_id TEXT, trace_id TEXT, metadata TEXT, created_at TEXT);"
++        "CREATE TABLE memories (id TEXT, memory TEXT, created_at TEXT);"
++    )
++    return conn
++
++
++def _prompt(repo: str) -> str:
++    return c48.DEVLOOP_PROMPT_PREFIX + " 실행하라. 이 저장소(" + repo + ", 브랜치 main-work)의 LOOP.md"
++
++
++def _trace(conn, tid, at, query, n_sel=10):
++    conn.execute("INSERT INTO context_traces VALUES (?, ?, ?, ?)", (tid, at, query, "[" + ",".join(f'"m{i}"' for i in range(n_sel)) + "]"))
++
++
++def _outcome(conn, tid, at, labeler, sid):
++    conn.execute("INSERT INTO context_outcomes VALUES (?, ?, ?, ?)",
++                 (f"o-{tid}-{labeler}", tid, f'{{"labeler": "{labeler}", "session_id": "{sid}", "inferred": true}}', at))
++
++
++# ---- 판별 (원본 c48에는 이 함수들이 없다 → AttributeError) --------------------------------------
++
++def test_counts_only_this_repo_prompt_traces_after_since():
++    """판별 ①: since 이후 ∧ devloop 접두 ∧ 이 경로 — 셋 다 만족하는 trace만 센다(타 워크트리·startup·이전분 제외)."""
++    conn = _db()
++    _trace(conn, "aaaa0000", "2026-09-15T00:10:00Z", _prompt(THIS_REPO))          # since 이전
++    _trace(conn, "bbbb0000", "2026-09-15T01:00:00Z", _prompt(THIS_REPO))          # 대상
++    _trace(conn, "cccc0000", "2026-09-15T01:05:00Z", _prompt(OTHER_REPO))         # 타 워크트리
++    _trace(conn, "dddd0000", "2026-09-15T01:10:00Z", c48.STARTUP_QUERY_PREFIX + THIS_REPO + " — active", 5)  # startup
++    rows = c48.db_births(conn, THIS_REPO, "2026-09-15T00:30:00Z")
++    assert [r["trace_id"] for r in rows] == ["bbbb0000"]
++    assert rows[0]["selected"] == 10 and rows[0]["created_at"] == "2026-09-15T01:00:00Z"
++
++
++def test_echo_session_end_and_same_minute_startup_are_joined():
++    """판별 ②: 정상 종료 사망(echo 2 · SessionEnd 캡처 1 · 같은 분 startup 1) vs 경성 사망(전부 0)을 한 행씩 낸다."""
++    conn = _db()
++    _trace(conn, "aaaa1111", "2026-09-14T15:40:09Z", _prompt(THIS_REPO))
++    _trace(conn, "start111", "2026-09-14T15:40:05Z", c48.STARTUP_QUERY_PREFIX + THIS_REPO + " — active", 7)
++    _trace(conn, "start999", "2026-09-14T15:40:06Z", c48.STARTUP_QUERY_PREFIX + OTHER_REPO + " — active", 7)  # 타 경로 startup
++    _outcome(conn, "aaaa1111", "2026-09-14T15:43:05Z", "mechanical-echo-v2", SID)
++    _outcome(conn, "aaaa1111", "2026-09-14T15:43:05Z", "mechanical-echo-v3-semantic", SID)
++    conn.execute("INSERT INTO memories VALUES (?, ?, ?)", ("m-end", f"[SessionEnd] session {SID}: user 1·assistant 1", "2026-09-14T15:43:04Z"))
++    _trace(conn, "bbbb2222", "2026-09-14T16:21:59Z", _prompt(THIS_REPO))          # 경성 사망: outcome 0 · 캡처 0
++    rows = c48.db_births(conn, THIS_REPO, "2026-09-14T00:00:00Z")
++    assert [r["trace_id"] for r in rows] == ["aaaa1111", "bbbb2222"]
++    soft, hard = rows
++    assert soft["echo"] == 2 and sorted(soft["labelers"]) == ["mechanical-echo-v2", "mechanical-echo-v3-semantic"]
++    assert soft["session_ids"] == [SID] and soft["session_end"] == 1 and soft["startups_same_minute"] == 1
++    assert hard["echo"] == 0 and hard["labelers"] == [] and hard["session_ids"] == [] and hard["session_end"] == 0
++    assert hard["startups_same_minute"] == 0
++
++
++def test_missing_db_or_missing_since_is_undecidable_not_zero():
++    """판별 ③: DB 부재 · since 부재는 «판정 불가»다 — 빈 목록(0)으로 위장하지 않고 예외도 내지 않는다."""
++    absent = c48.predecessor_births("/nonexistent/forget.sqlite3", THIS_REPO, "2026-09-15T00:00:00Z")
++    assert absent["verdict"] == "판정 불가" and "부재" in absent["reason"] and absent["rows"] == []
++    no_clock = c48.predecessor_births("/nonexistent/forget.sqlite3", THIS_REPO, None)
++    assert no_clock["verdict"] == "판정 불가" and "since" in no_clock["reason"]
++    lines = c48.format_births(absent, "2026-09-15T00:00:00Z")
++    assert any("판정 불가" in ln for ln in lines) and not any("0건" in ln for ln in lines)
++
++
++def test_broken_schema_file_is_undecidable_not_a_crash():
++    """판별 ④: 파일은 있으나 표가 없다(스키마 불일치·잠금 부류) → sqlite3.Error를 «판정 불가»로 접는다."""
++    with tempfile.TemporaryDirectory() as d:
++        path = os.path.join(d, "empty.sqlite3")
++        sqlite3.connect(path).close()
++        res = c48.predecessor_births(path, THIS_REPO, "2026-09-15T00:00:00Z")
++    assert res["verdict"] == "판정 불가" and "OperationalError" in res["reason"] and res["rows"] == []
++
++
++def test_loop_commit_epoch_picks_the_harvest_commit_for_that_cycle():
++    """판별 ⑤: `%ct<TAB>%s` 행에서 정확히 그 사이클의 loop(cycle N) 커밋 시각을 뽑는다 — 없으면 None(0 아님) · 잡행 무시."""
++    lines = ["1789440000\tfeat: 남의 트랙", "1789433487\tloop(cycle 357): 사건 사이클", "garbage",
++             "1789400000\tloop(cycle 356): 무사건 사이클", "abc\tloop(cycle 355): x"]
++    assert c48.loop_commit_epoch(lines, 357) == 1789433487
++    assert c48.loop_commit_epoch(lines, 356) == 1789400000
++    assert c48.loop_commit_epoch(lines, 358) is None
++    assert c48.loop_commit_epoch(lines, 355) is None  # epoch 칸이 숫자가 아니면 None
++
++
++def test_format_reports_older_candidates_and_never_judges_the_newest():
++    """판별 ⑥: 최신 1건은 이 세션 추정이라 후보에서 뺀다 · 종료 절차 흔적 있음/무흔적을 가른다 · 1건이면 후보 줄 없음 · 0건은 «0건»."""
++    row = lambda tid, echo, end: {"trace_id": tid, "created_at": "2026-09-15T00:00:00Z", "selected": 10, "echo": echo,  # noqa: E731
++                                  "labelers": ["mechanical-echo-v2"] * echo, "session_ids": [], "session_end": end, "startups_same_minute": 1}
++    three = {"verdict": "계수", "reason": "", "rows": [row("soft0000", 2, 1), row("hard0000", 0, 0), row("this0000", 0, 0)]}
++    lines = c48.format_births(three, "2026-09-15T00:51:27Z")
++    joined = "\n".join(lines)
++    assert "태어난 세션 3건" in joined and "최신 제외 2건" in joined and "흔적 있음 1" in joined and "무흔적 1" in joined
++    one = {"verdict": "계수", "reason": "", "rows": [row("this0000", 0, 0)]}
++    assert not any("최신 제외" in ln for ln in c48.format_births(one, "x"))
++    zero = {"verdict": "계수", "reason": "", "rows": []}
++    assert any("0건" in ln for ln in c48.format_births(zero, "x"))
++
++
++# ---- 불변 (원본·변환 양쪽 통과) ---------------------------------------------------------------
++
++def test_head_loop_cycle_contract_the_clock_depends_on():
++    """불변 ①: 시계가 기대는 `head_loop_cycle` 계약 — loop 제목은 N · 비-loop 제목은 None (㉼ c267 그대로)."""
++    assert c48.head_loop_cycle("loop(cycle 357): 사건 사이클") == 357
++    assert c48.head_loop_cycle("feat: 남의 트랙") is None

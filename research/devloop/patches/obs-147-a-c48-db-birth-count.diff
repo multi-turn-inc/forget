@@ -1,0 +1,139 @@
+diff --git a/research/devloop/scripts/c48_step0_check.py b/research/devloop/scripts/c48_step0_check.py
+--- a/research/devloop/scripts/c48_step0_check.py
++++ b/research/devloop/scripts/c48_step0_check.py
+@@ -320,6 +320,120 @@
+     }
+ 
+ 
++# ── DB 출생 계수 — 관측 147 (c358 diff) ────────────────────────────────────────
++# 첫 유효 행동 전에 죽은 세션은 저장소에 쓰기 흔적이 0이라 파트 S 사망 의심 눈(P53) ·
++# ㉼ · 루트 tmp 지문이 전부 «증거 0»을 인쇄한다(c356~c357 사이 2세션 실측). 그 세션의
++# 출생·의도·사망은 도그푸드 DB에만 있다 — SessionStart 훅의 startup trace ·
++# UserPromptSubmit 훅의 프롬프트 trace · 세션 종료 echo outcome(관측 146) · SessionEnd
++# 캡처 기억. 이 눈은 그 표를 **읽기 전용**으로 센다. 상수 둘은 문턱이 아니라 실측 질의
++# 문면의 접두다(발명 0 · tmp/c357_probe3.py · tmp/c358_probe3.py 직독).
++DEVLOOP_PROMPT_PREFIX = "devloop 사이클을 정확히 한 바퀴"
++STARTUP_QUERY_PREFIX = "session startup in "
++
++
++def loop_commit_epoch(log_lines: list[str], cycle: int) -> int | None:
++    """`%ct<TAB>%s` 행들에서 `loop(cycle N)` 수확 커밋의 커밋 시각(epoch)을 뽑는다. **순수 함수**.
++
++    «직전 원장 행 이후»의 시계다 — 원장 `date`는 KST 날짜 10자뿐이라 하루 안의 여러
++    사이클을 못 가르고, HEAD는 남의 트랙 커밋일 수 있다(관측 126). 없으면 None —
++    판정 불가이지 0이 아니다.
++    """
++    for line in log_lines:
++        if "\t" not in line:
++            continue
++        ct, subject = line.split("\t", 1)
++        if ct.strip().isdigit() and head_loop_cycle(subject) == cycle:
++            return int(ct)
++    return None
++
++
++def db_births(conn: sqlite3.Connection, repo: str, since_iso: str,
++              prompt_prefix: str = DEVLOOP_PROMPT_PREFIX,
++              startup_prefix: str = STARTUP_QUERY_PREFIX) -> list[dict]:
++    """`since_iso` 이후, 이 저장소 경로가 질의 본문에 든 devloop 프롬프트 trace마다 한 행. **순수 함수**(연결은 호출자 몫).
++
++    행 = trace · 시각 · selected 수 · 같은 trace의 outcome 수와 labeler(echo) · outcome metadata의
++    session_id · 그 id를 본문에 든 기억 수(SessionEnd 캡처) · 같은 분 이 경로 startup trace 수.
++    """
++    rows: list[dict] = []
++    q = ("SELECT trace_id, created_at, selected_ids FROM context_traces "
++         "WHERE created_at >= ? AND query LIKE ? AND instr(query, ?) > 0 ORDER BY created_at")
++    for tid, created, selected in conn.execute(q, (since_iso, prompt_prefix + "%", repo)).fetchall():
++        try:
++            n_sel = len(json.loads(selected or "[]"))
++        except (TypeError, ValueError):
++            n_sel = None
++        labelers: list[str] = []
++        session_ids: list[str] = []
++        for (meta,) in conn.execute("SELECT metadata FROM context_outcomes WHERE trace_id = ?", (tid,)).fetchall():
++            try:
++                md = json.loads(meta or "{}")
++            except (TypeError, ValueError):
++                md = {}
++            if not isinstance(md, dict):
++                md = {}
++            labelers.append(str(md.get("labeler") or md.get("outcome_label") or "?"))
++            sid = md.get("session_id")
++            if isinstance(sid, str) and sid and sid not in session_ids:
++                session_ids.append(sid)
++        n_end = 0
++        for sid in session_ids:
++            n_end += conn.execute("SELECT COUNT(*) FROM memories WHERE memory LIKE ?", (f"%{sid}%",)).fetchone()[0]
++        minute = str(created)[:16]
++        n_start = conn.execute(
++            "SELECT COUNT(*) FROM context_traces WHERE query LIKE ? AND instr(query, ?) > 0 "
++            "AND created_at >= ? AND created_at < ?",
++            (startup_prefix + "%", repo, minute, minute + "~")).fetchone()[0]
++        rows.append({"trace_id": str(tid), "created_at": str(created), "selected": n_sel,
++                     "echo": len(labelers), "labelers": labelers, "session_ids": session_ids,
++                     "session_end": n_end, "startups_same_minute": n_start})
++    return rows
++
++
++def predecessor_births(db_path: str, repo: str, since_iso: str | None) -> dict:
++    """DB 출생 계수 — c48이 실DB 파일을 여는 **첫 의존**이라 부재·잠금·스키마 불일치·시계 부재는
++    전부 «판정 불가»다(관측 129 부류 · 0으로 위장하지 않는다). 읽기 전용 URI."""
++    if since_iso is None:
++        return {"verdict": "판정 불가", "reason": "직전 수확 커밋 loop(cycle N) 미발견 — since 없음", "rows": []}
++    if not os.path.exists(db_path):
++        return {"verdict": "판정 불가", "reason": f"DB 부재: {db_path}", "rows": []}
++    try:
++        conn = sqlite3.connect(f"file:{urllib.parse.quote(db_path)}?mode=ro", uri=True)
++        try:
++            rows = db_births(conn, repo, since_iso)
++        finally:
++            conn.close()
++    except sqlite3.Error as exc:
++        return {"verdict": "판정 불가", "reason": f"{type(exc).__name__}: {exc}", "rows": []}
++    return {"verdict": "계수", "reason": "", "rows": rows}
++
++
++def format_births(result: dict, since_iso: str | None) -> list[str]:
++    """인쇄 문면. 수는 내고 판정은 내지 않는다 — 최신 1건은 이 세션일 수 있고, echo 0·SessionEnd 0은
++    «진행 중»과 «경성 사망»을 DB만으로 못 가른다(관측 147 ②). 사망 판정은 손 몫."""
++    out = ["  [DB 출생 계수 — 직전 수확 커밋 이후 이 경로 devloop 프롬프트 trace (c358 신설, 관측 147)]"]
++    if result.get("verdict") != "계수":
++        out.append(f"    판정 불가 — {result.get('reason')}")
++        return out
++    rows = result["rows"]
++    if not rows:
++        out.append(f"    since={since_iso}(수확 커밋 시각) · 태어난 세션 **0건** — 이 세션의 프롬프트 trace가 없다"
++                   "(UserPromptSubmit 훅 미발화 또는 시계 이상 · 0은 무결의 증거가 아니다)")
++        return out
++    out.append(f"    since={since_iso}(수확 커밋 시각) · 태어난 세션 {len(rows)}건 — 최신 1건은 이 세션 추정")
++    for r in rows:
++        lab = ",".join(r["labelers"]) if r["labelers"] else "-"
++        out.append(f"      {r['trace_id'][:8]} {r['created_at']} sel={r['selected']} echo={r['echo']}[{lab}]"
++                   f" SessionEnd={r['session_end']} startup(같은 분)={r['startups_same_minute']}")
++    older = rows[:-1]
++    if older:
++        traced = sum(1 for r in older if r["echo"] or r["session_end"])
++        out.append(f"    → 최신 제외 {len(older)}건 = 원장 행 없이 끝난 세션 후보 · 종료 절차 흔적 있음 {traced} ·"
++                   f" 무흔적 {len(older) - traced} — session_count는 이 n을 든다(수용 기준 ②) · 사인은 제품 몫(③)")
++    out.append("    ※ 쓰기 흔적이 아니라 DB의 읽기 흔적을 센다(관측 80) — 위 두 눈의 사각을 메우는 셋째 축이며 대체가 아니다.")
++    return out
++
++
+ def part_s() -> None:
+     """[S] 유동층 대조 — 원장과 task_state가 같은 사이클을 가리키는가 (c93 처치, 관측 49).
+ 
+@@ -399,6 +513,14 @@
+                   f"{' ' + str(unk) if unk else ''}")
+         print("    ※ 이 눈은 **step 0에서만** 유효하다 — 사이클 도중 재실행하면 내 편집분이")
+         print("      같은 조건에 걸린다(파트 A의 같은 주의와 동일한 이유).")
++
++    # ── DB 출생 계수 — 파트 S 셋째 축 (c358 신설, 관측 147) ────────────────────
++    # 위 두 눈은 저장소 **쓰기** 흔적을 읽는다. 턴 1~2에서 죽은 세션은 흔적 0이라 둘 다
++    # 침묵하고, 그 세션은 DB에만 산다. 시계 = 직전 수확 커밋 시각(원장 date는 하루 자[尺]).
++    since_epoch = loop_commit_epoch(run(["git", "log", "-60", "--format=%ct%x09%s"]).splitlines(), ledger_last)
++    since_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(since_epoch)) if since_epoch is not None else None
++    for line in format_births(predecessor_births(FORGET_DB, REPO, since_iso), since_iso):
++        print(line)
+ 
+     # 자기보고 대 외부 관측의 **계열**. 손 증분 0 — 원장에서 매 사이클 재계산한다 (P47 (b)).
+     rv = reverify_contradictions(ledger_rows)
