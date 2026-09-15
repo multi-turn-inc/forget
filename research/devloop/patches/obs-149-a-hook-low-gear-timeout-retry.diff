@@ -1,0 +1,39 @@
+diff --git a/hooks/forget_turnrecall.py b/hooks/forget_turnrecall.py
+--- a/hooks/forget_turnrecall.py
++++ b/hooks/forget_turnrecall.py
+@@ -73,6 +73,12 @@
+ PICK_POOL = MAX_RECALLS + 2         # 주입·충돌 후보 집합은 종전과 동일 (입력 집합 불변)
+ FLATNESS_WINDOW = MAX_RECALLS + 2   # 창을 고정해 중앙값 위치를 보존 (len//2는 4·5 모두 2)
+ FLATNESS_MIN_SAMPLES = 4
++# 관측 149 (c362 diff): low 기어의 타임아웃은 강등 경로가 없어 침묵으로 끝났다 —
++# devloop 프롬프트 18턴 중 7턴이 그 자리에서 TimeoutError로 사라졌고 서버는 같은
++# 질의를 끝까지 처리해 trace(selected 10)를 남겼다(두 원장 갈림). 재시도는 후보
++# 집합만(PICK_POOL · 점수는 깊이 불변 — c63 실측) · 짧게(2s · high 강등과 같은 예산).
++LOW_RETRY_TOP_K = PICK_POOL
++LOW_RETRY_TIMEOUT = 2
+ MEMORY_CHAR_LIMIT = 160
+ MIN_PROMPT_LEN = 8
+ 
+@@ -575,10 +581,18 @@
+                            error=_error_brief(exc2))
+                 return
+         else:
+-            # fail-open은 유지하되 원장에는 남긴다 — 원인 종류 동봉 (관측 59 ②).
+-            _note_gate(session_id, gate, gear, "search_error", 0, 0, prompt,
+-                       error=_error_brief(exc))
+-            return
++            # 관측 149 (c362 diff): high의 «얕은 회상이 무회상보다 낫다»를 low에도 —
++            # 기어는 그대로 두고(강등이 아니라 재시도) 후보 집합만·짧게 한 번 더 묻는다.
++            # 그래도 안 되면 종전대로 fail-open + 원장 기록(원인 종류 동봉 · 관측 59 ②).
++            try:
++                search_args["top_k"] = LOW_RETRY_TOP_K
++                result = _rpc("search_memories", search_args, timeout=LOW_RETRY_TIMEOUT)
++                _note_gate(session_id, gate, gear, "retried_low", 0, 0, prompt,
++                           error=_error_brief(exc))
++            except Exception as exc2:
++                _note_gate(session_id, gate, gear, "search_error", 0, 0, prompt,
++                           error=_error_brief(exc2))
++                return
+     trace_id = str(result.get("trace_id") or "")
+     # 평탄도는 **주입 자격이 있는 후보**에서만 재야 한다 (c62 실측 수리).
+     # 이전 판본은 배제 이전의 전체 결과로 분포를 재서, 봉우리가 결코 주입될 수

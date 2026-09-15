@@ -1,0 +1,120 @@
+diff --git a/tests/test_hooks_low_gear_retry.py b/tests/test_hooks_low_gear_retry.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_hooks_low_gear_retry.py
+@@ -0,0 +1,115 @@
++"""관측 149 (c362 diff): low 기어 타임아웃은 침묵이 아니라 한 번 더.
++
++gate 원장 실측(09-12T20:00Z~ devloop 프롬프트 18턴): injected 11 · search_error 7 —
++비도달 7/7이 low 기어 5초 `TimeoutError`였고 서버는 같은 질의를 끝까지 처리해
++trace를 남겼다. high 기어에는 «타임아웃 → low 2초 강등» 경로가 있었지만 low에는
++없었다. 계약: low 타임아웃 → top_k = PICK_POOL · 2초로 재시도 1회(기어 불변) →
++성공이면 원장 `retried_low`(첫 예외 동봉) 뒤 종전 pick 경로 · 재실패면 종전대로
++`search_error`(둘째 예외 동봉) + fail-open. 기어는 `_classify_turn`을 고정해 정한다
++(정규식 표류에 비의존). 값은 합성(관측 100).
++"""
++
++from __future__ import annotations
++
++import importlib.util
++import io
++import json
++import sys
++from pathlib import Path
++
++HOOKS_DIR = Path(__file__).resolve().parents[1] / "hooks"
++RESULTS = [{"id": "m-149", "score": 0.61, "memory": "로컬-퍼스트 아키텍처 선호",
++            "metadata": {}, "trust": {"light": "green"}}]
++PROMPT = "devloop 사이클을 정확히 한 바퀴 실행하라. 지시서 절차를 따른다."
++
++
++def _load(name: str):
++    spec = importlib.util.spec_from_file_location(name, HOOKS_DIR / f"{name}.py")
++    module = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(module)
++    return module
++
++
++def _run_main(module, hook_input: dict, monkeypatch) -> None:
++    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(hook_input)))
++    module.main()
++
++
++def _rows(tmp_path) -> list[dict]:
++    return [json.loads(line) for line in
++            (tmp_path / "turnrecall_gate.jsonl").read_text(encoding="utf-8").splitlines()]
++
++
++def _module(monkeypatch, tmp_path, gear: str, behaviors: list, calls: list):
++    """behaviors[i] = i번째 `_rpc` 호출의 결과(예외 인스턴스면 raise · 목록이면 results)."""
++    module = _load("forget_turnrecall")
++    monkeypatch.setattr(module, "STATE_DIR", str(tmp_path))
++    fixed = ("neutral", "low") if gear == "low" else ("memory", "high")
++    monkeypatch.setattr(module, "_classify_turn", lambda prompt, transcript_path, crossed: fixed)
++
++    def fake_rpc(name, arguments, timeout=5):
++        assert name == "search_memories", name
++        calls.append({"top_k": arguments.get("top_k"), "recall": arguments.get("recall"), "timeout": timeout})
++        behavior = behaviors[min(len(calls) - 1, len(behaviors) - 1)]
++        if isinstance(behavior, BaseException):
++            raise behavior
++        return {"results": behavior[: int(arguments.get("top_k") or len(behavior))]}
++
++    monkeypatch.setattr(module, "_rpc", fake_rpc)
++    return module
++
++
++# ---- 판별 (원본 코드에서 실패해야 한다) -------------------------------------------------------
++
++def test_low_gear_timeout_retries_once_shallow_and_short(monkeypatch, tmp_path, capsys):
++    """판별 ①: low 타임아웃 → 재시도 1회(top_k PICK_POOL · 2s · 기어 불변) → 회상 도달 · 원장 retried_low → injected."""
++    calls: list = []
++    module = _module(monkeypatch, tmp_path, "low", [TimeoutError("timed out"), RESULTS], calls)
++    _run_main(module, {"session_id": "s149a", "prompt": PROMPT}, monkeypatch)
++    out = capsys.readouterr().out
++    assert "로컬-퍼스트" in out                       # 원본: 침묵
++    assert len(calls) == 2                           # 원본: 1
++    assert calls[0]["timeout"] == 5 and calls[0]["top_k"] == module.CANDIDATE_TOP_K
++    assert calls[1]["timeout"] == module.LOW_RETRY_TIMEOUT == 2
++    assert calls[1]["top_k"] == module.LOW_RETRY_TOP_K == module.PICK_POOL
++    assert calls[1]["recall"] == "low"               # 강등이 아니라 재시도
++    rows = _rows(tmp_path)
++    assert [r["action"] for r in rows] == ["retried_low", "injected"]
++    assert rows[0]["error"].startswith("TimeoutError") and "error" not in rows[1]
++
++
++def test_low_gear_double_timeout_stays_fail_open_with_second_error(monkeypatch, tmp_path, capsys):
++    """판별 ②: 재시도도 실패 → 종전대로 침묵 + search_error 1행 · error는 둘째 예외 · 호출 2."""
++    calls: list = []
++    module = _module(monkeypatch, tmp_path, "low", [TimeoutError("timed out"), OSError("connection refused")], calls)
++    _run_main(module, {"session_id": "s149b", "prompt": PROMPT}, monkeypatch)
++    assert capsys.readouterr().out == ""
++    assert len(calls) == 2                           # 원본: 1
++    rows = _rows(tmp_path)
++    assert [r["action"] for r in rows] == ["search_error"]
++    assert rows[-1]["error"].startswith("OSError")   # 원본: TimeoutError(첫 예외)
++
++
++# ---- 불변 (원본·변환 양쪽 통과) ---------------------------------------------------------------
++
++def test_high_gear_degrade_path_unchanged(monkeypatch, tmp_path, capsys):
++    """불변 ①: high 타임아웃 → low 강등 2s(top_k 그대로) → degraded_to_low → injected — 종전과 동일."""
++    calls: list = []
++    module = _module(monkeypatch, tmp_path, "high", [TimeoutError("timed out"), RESULTS], calls)
++    _run_main(module, {"session_id": "s149c", "prompt": PROMPT}, monkeypatch)
++    assert "로컬-퍼스트" in capsys.readouterr().out
++    assert len(calls) == 2
++    assert calls[0]["timeout"] == 7 and calls[0]["recall"] == "high"
++    assert calls[1]["timeout"] == 2 and calls[1]["recall"] == "low" and calls[1]["top_k"] == module.CANDIDATE_TOP_K
++    assert [r["action"] for r in _rows(tmp_path)] == ["degraded_to_low", "injected"]
++
++
++def test_low_gear_success_does_not_retry(monkeypatch, tmp_path, capsys):
++    """불변 ②: low 성공 경로는 호출 1 · injected 1행 · error 열 없음."""
++    calls: list = []
++    module = _module(monkeypatch, tmp_path, "low", [RESULTS], calls)
++    _run_main(module, {"session_id": "s149d", "prompt": PROMPT}, monkeypatch)
++    assert "로컬-퍼스트" in capsys.readouterr().out
++    assert len(calls) == 1 and calls[0]["top_k"] == module.CANDIDATE_TOP_K
++    rows = _rows(tmp_path)
++    assert [r["action"] for r in rows] == ["injected"] and "error" not in rows[0]
