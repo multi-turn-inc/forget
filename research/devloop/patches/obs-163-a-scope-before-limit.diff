@@ -1,0 +1,38 @@
+--- a/forget/store.py
++++ b/forget/store.py
+@@ -11171,7 +11171,7 @@
+     would fossilize a dead persona, which is worse than waking blank.
+     """
+     try:
+-        listing = get_task_state({"limit": 12}, project_id=project_id)
++        listing = get_task_state({"limit": 12, **(scope_filters or {})}, project_id=project_id)
+     except Exception:
+         return ""
+     max_age_days = float(os.environ.get("MEM1_STANCE_MAX_AGE_DAYS", "7"))
+@@ -11248,7 +11248,7 @@
+     and are excluded from parallel tracks (they are not work items).
+     """
+     try:
+-        listing = get_task_state({"limit": 12}, project_id=project_id)
++        listing = get_task_state({"limit": 12, **(scope_filters or {})}, project_id=project_id)
+     except Exception:
+         return []
+     lines: list[str] = []
+@@ -11284,7 +11284,7 @@
+     active thread visible without widening the budget.
+     """
+     try:
+-        listing = get_task_state({"limit": 8}, project_id=project_id)
++        listing = get_task_state({"limit": 8, **(scope_filters or {})}, project_id=project_id)
+     except Exception:
+         return []
+     lines: list[str] = []
+@@ -13272,7 +13272,7 @@
+         workspace_current = None
+         try:
+             fallback_scope = _capsule_scope_filters(payload)
+-            listing = get_task_state({"limit": 12}, project_id=project_id)
++            listing = get_task_state({"limit": 12, **(fallback_scope or {})}, project_id=project_id)
+             for item in listing.get("results") or []:
+                 if fallback_scope and not _task_claim_scope_matches_filters(
+                     item.get("scope") if isinstance(item.get("scope"), dict) else {}, fallback_scope
