@@ -290,18 +290,31 @@ def test_series_coverage_empty_series_is_unmeasured_not_full():
     assert cov["newest"] == 5 and cov["newest_seen"] is False
 
 
-def test_real_ledger_blockade_coverage_is_incomplete_and_says_so():
-    """실 원장 회귀 — 봉쇄 계열은 창을 다 덮지 못한다. 그 사실이 수로 나와야 한다.
+def test_real_ledger_blockade_coverage_is_reported_as_a_partition():
+    """실 원장 회귀 — 봉쇄 계열 피복은 **수로 보고**되고, 그 수는 창의 분할이다.
 
-    이 절은 «결함이 있다»를 고정하는 것이 아니라 «결함이 보인다»를 고정한다.
-    피복이 100%가 되는 날이 오면 이 assert가 먼저 깨지고, 그때는 계약이 아니라
-    데이터가 바뀐 것이다(관행: 회귀가 재는 값이 그 사이클에 바뀌는지 물어라).
+    ★ c351 개정 (관측 143 보강 c350 · 관측 106 가족 회귀 3호). 구판 이름은
+    `…_is_incomplete_and_says_so`였고 몸은 실 원장에 대해 `pct < 100.0` 과
+    `absent` 비어 있지 않음을 걸었다 — 즉 *«봉쇄 계열은 창을 다 덮지 못한다»*를
+    계약으로 박았다. docstring이 스스로 예고한 대로 c350에 피복이 100%가 되자
+    (c329 미등재 행이 20창을 벗어남 · 코드 변경 0 · tmp/c350_cov.py) 이 절이
+    먼저 깨졌다. 데이터가 바뀐 것이지 계약이 깨진 것이 아니므로, 값 요구를 걷고
+    **보고의 형태**만 남긴다 — 위 `..._reported_not_asserted` 절과 같은 경계.
+
+    계약: pct는 None이 아닌 0~100 실수 · span은 창 안 원장 사이클 전건(오름차순) ·
+    seen과 absent는 span의 분할(합집합 = span · 교집합 0) · newest는 원장 최종
+    사이클 · newest_seen은 newest ∈ seen과 동치. 피복이 100%든 95%든 이 절은
+    초록이며, 그 값을 **보고**하는 일은 파트 O 인쇄 몫이다.
     """
     label, start, pattern = c48.ORDINAL_ANCHORS[0]
     rows = c48._ledger_rows()
     cov = c48.series_coverage(rows, c48._ordinal_series(rows, pattern))
-    assert cov["pct"] is not None and cov["pct"] < 100.0
-    assert cov["absent"], "미등재가 0이면 이 절의 전제가 사라졌다"
+    assert cov["pct"] is not None and 0.0 <= cov["pct"] <= 100.0, cov["pct"]
+    assert cov["span"] == sorted(cov["span"]) and cov["span"], "창이 비었거나 정렬되지 않았다"
+    assert sorted(cov["seen"] + cov["absent"]) == cov["span"], "seen ∪ absent ≠ span — 분할이 아니다"
+    assert not set(cov["seen"]) & set(cov["absent"]), "seen ∩ absent ≠ ∅ — 분할이 아니다"
+    assert cov["newest"] == int(rows[-1]["cycle"]), "newest가 원장 최종 사이클이 아니다"
+    assert cov["newest_seen"] is (cov["newest"] in cov["seen"]), "newest_seen이 seen과 갈린다"
 
 
 def test_loose_probe_finds_what_the_strict_anchor_misses():
