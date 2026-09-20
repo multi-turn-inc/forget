@@ -1,0 +1,25 @@
+--- a/harness/body/tools.py
++++ b/harness/body/tools.py
+@@ -16,6 +16,10 @@
+ from forget import store as _store  # noqa: E402
+ 
+ USER = os.getenv("FORGET_USER", "junghunkim")
++# 관측 171: 스코프 MCP 경로(/mcp/<app>/http/<user>)의 읽기는 app_id 필터를 주입한다.
++# app_id 없이 쓴 상태 기록은 그 눈에 보이지 않는다(c396 «소실» · 실DB 434/435 · 격리 재현 7/7).
++# 읽기에도 같은 이름표를 붙여 두 손(몸·curl)의 눈을 같게 한다.
++APP = os.getenv("FORGET_APP", "forget")
+ 
+ SPEC: list[dict] = [
+     {"name": "bash", "description": "셸 명령 실행(작업 트리에서). 출력 앞뒤 12KB.",
+@@ -88,9 +92,9 @@
+         if name == "task_state":
+             if args.get("task_id") and (args.get("summary") or args.get("status")):
+                 _store.record_task_state({"task_id": args["task_id"], "status": args.get("status") or "in_progress",
+-                                          "summary": args.get("summary") or "", "next_actions": args.get("next_actions") or [], "user_id": USER})
++                                          "summary": args.get("summary") or "", "next_actions": args.get("next_actions") or [], "user_id": USER, "app_id": APP})
+                 return "recorded"
+-            r = _store.get_task_state({"limit": 8, "user_id": USER})
++            r = _store.get_task_state({"limit": 8, "user_id": USER, "app_id": APP})
+             return "\n".join(f"- {x.get('task_id')} [{x.get('status')}] {str(x.get('summary', ''))[:160]}" for x in (r.get("results") or [])[:8]) or "(없음)"
+         return f"unknown tool {name}"
+     except Exception as e:

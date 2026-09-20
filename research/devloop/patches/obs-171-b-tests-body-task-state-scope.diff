@@ -1,0 +1,30 @@
+--- /dev/null
++++ b/tests/test_body_task_state_scope.py
+@@ -0,0 +1,27 @@
++"""obs-171 회귀: 몸 하네스 task_state 도구가 쓴 상태를 스코프 MCP 읽기(app_id 필터)가 본다.
++
++c396 «task_state 소실» = 몸 도구가 user_id만으로 쓰고 /mcp/forget/http/<user> 읽기가 app_id=forget을
++주입해 _task_claim_scope_matches_filters 가 그 행을 숨긴 것(frictions.md 관측 171).
++"""
++import os
++import sys
++from pathlib import Path
++
++sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
++
++
++def test_body_task_state_write_visible_to_scoped_read(tmp_path, monkeypatch):
++    monkeypatch.setenv("MEM1_DB_PATH", str(tmp_path / "obs171.sqlite3"))
++    from forget import db as _db
++    from forget import store
++
++    _db.init_db()
++    from harness.body import tools
++
++    out = tools.run("task_state", {"task_id": "devloop", "status": "in_progress", "summary": "s", "next_actions": ["x"]})
++    assert out == "recorded"
++    scoped = store.get_task_state({"task_id": "devloop", "filters": {"user_id": tools.USER, "app_id": tools.APP}})
++    assert scoped["count"] == 1, "몸 도구가 쓴 상태를 스코프 읽기(app_id 필터)가 봐야 한다 (관측 171)"
++    plain = store.get_task_state({"task_id": "devloop", "filters": {"user_id": tools.USER}})
++    assert plain["count"] == 1
++    assert "devloop" in tools.run("task_state", {})
