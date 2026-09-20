@@ -1,0 +1,37 @@
+--- /dev/null
++++ b/tests/test_body_memory_add_scope.py
+@@ -0,0 +1,34 @@
++"""obs-173 회귀: 몸 하네스 memory_add/self_note 가 쓴 기억을 스코프 MCP 검색(app_id 필터)이 본다.
++
++c398 실측: 몸 기억 251/251 이 app_id 없이 착지 → /mcp/forget/http/<user> 의 search_memories(주입 {user_id, app_id=forget})
++에서 0건, 명시 {user_id} 에서 1위. 스토어 scope_guard 는 매 쓰기에 «foreign» 을 경고했고 tools.py 가 그 봉투를 버렸다
++(frictions.md 관측 173).
++"""
++import sys
++from pathlib import Path
++
++sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
++
++
++def test_body_memory_add_visible_to_scoped_search(tmp_path, monkeypatch):
++    monkeypatch.setenv("MEM1_DB_PATH", str(tmp_path / "obs173.sqlite3"))
++    monkeypatch.setenv("MEM1_EMBEDDING_PROVIDER", "local")  # deterministic-128 — 스코프 술어는 임베더 무관
++    monkeypatch.delenv("MEM1_SCOPE_FALLBACK_DEFAULT", raising=False)
++    from forget import db as _db
++    from forget import store
++
++    _db.init_db()
++    from harness.body import tools
++
++    text = "obs-173 표적: 몸이 쓴 기억은 스코프 검색에 보여야 한다."
++    assert tools.run("memory_add", {"text": text, "origin": "agent"}) == "saved"
++    assert tools.run("self_note", {"text": "obs-173 self note 표적."}) == "noted"
++    rows = [m for m in store.list_memory_dicts() if m.get("memory") in {text, "obs-173 self note 표적."}]
++    assert len(rows) == 2
++    for m in rows:
++        assert m.get("app_id") == tools.APP, "몸 쓰기는 canonical 풀(user×app)에 착지해야 한다 (관측 173)"
++        assert (m.get("metadata") or {}).get("scope_guard") is None, "scope_guard foreign 도장이 남으면 풀이 틀린 것"
++    scoped = store.search_memories({"query": text, "filters": {"user_id": tools.USER, "app_id": tools.APP}, "top_k": 5})
++    assert any(x.get("memory") == text for x in scoped.get("results") or []), "스코프 MCP 경로 검색이 몸 기억을 봐야 한다"
++    plain = store.search_memories({"query": text, "filters": {"user_id": tools.USER}, "top_k": 5})
++    assert any(x.get("memory") == text for x in plain.get("results") or [])

@@ -1,0 +1,46 @@
+--- a/harness/body/tools.py
++++ b/harness/body/tools.py
+@@ -16,6 +16,10 @@
+ from forget import store as _store  # noqa: E402
+ 
+ USER = os.getenv("FORGET_USER", "junghunkim")
++# 관측 171: 스코프 MCP 경로(/mcp/<app>/http/<user>)의 읽기는 app_id 필터를 주입한다.
++# app_id 없이 쓴 상태 기록은 그 눈에 보이지 않는다(c396 «소실» · 실DB 434/435 · 격리 재현 7/7).
++# 읽기에도 같은 이름표를 붙여 두 손(몸·curl)의 눈을 같게 한다.
++APP = os.getenv("FORGET_APP", "forget")
+ 
+ SPEC: list[dict] = [
+     {"name": "bash", "description": "셸 명령 실행(작업 트리에서). 출력 앞뒤 12KB.",
+@@ -72,6 +76,9 @@
+             rows = _A.rerank(r.get("results") or [])
+             return "\n".join(f"- [{str(x.get('created_at', ''))[:10]}|{(x.get('trust') or {}).get('light', '?')}] {str(x.get('memory', ''))[:300]}"
+                              for x in rows[: int(args.get("limit") or 8)]) or "(없음)"
++        # 관측 173: 몸의 기억 쓰기가 app_id 없이 착지해 스코프 MCP 경로 search_memories(주입 필터 {user_id, app_id})에
++        # 251/251 본이 보이지 않았고, 스토어 scope_guard 가 매 쓰기마다 «foreign» 을 경고했는데 이 함수가 그 봉투를 버렸다.
++        # 쓰기에 이름표를 단다. 읽기(memory_search)는 user_id 단독 그대로 — 레거시 app_id 없는 행도 계속 본다.
+         if name == "memory_add":
+             md: dict[str, Any] = {"origin": args["origin"], "source": "body"}
+             if args.get("topic"):
+@@ -79,18 +86,18 @@
+             if args["origin"] == "self":
+                 md["layer"] = "self"
+             _store.add_memories({"messages": [{"role": "user" if args["origin"] == "user" else "assistant", "content": args["text"]}],
+-                                 "user_id": USER, "metadata": md, "infer": False})
++                                 "user_id": USER, "app_id": APP, "metadata": md, "infer": False})
+             return "saved"
+         if name == "self_note":
+-            _store.add_memories({"messages": [{"role": "assistant", "content": args["text"]}], "user_id": USER,
++            _store.add_memories({"messages": [{"role": "assistant", "content": args["text"]}], "user_id": USER, "app_id": APP,
+                                  "metadata": {"layer": "self", "origin": "self", "source": "body"}, "infer": False})
+             return "noted"
+         if name == "task_state":
+             if args.get("task_id") and (args.get("summary") or args.get("status")):
+                 _store.record_task_state({"task_id": args["task_id"], "status": args.get("status") or "in_progress",
+-                                          "summary": args.get("summary") or "", "next_actions": args.get("next_actions") or [], "user_id": USER})
++                                          "summary": args.get("summary") or "", "next_actions": args.get("next_actions") or [], "user_id": USER, "app_id": APP})
+                 return "recorded"
+-            r = _store.get_task_state({"limit": 8, "user_id": USER})
++            r = _store.get_task_state({"limit": 8, "user_id": USER, "app_id": APP})
+             return "\n".join(f"- {x.get('task_id')} [{x.get('status')}] {str(x.get('summary', ''))[:160]}" for x in (r.get("results") or [])[:8]) or "(없음)"
+         return f"unknown tool {name}"
+     except Exception as e:

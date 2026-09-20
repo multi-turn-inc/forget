@@ -1,0 +1,25 @@
+--- a/harness/body/tools.py
++++ b/harness/body/tools.py
+@@ -76,6 +76,9 @@
+             rows = _A.rerank(r.get("results") or [])
+             return "\n".join(f"- [{str(x.get('created_at', ''))[:10]}|{(x.get('trust') or {}).get('light', '?')}] {str(x.get('memory', ''))[:300]}"
+                              for x in rows[: int(args.get("limit") or 8)]) or "(없음)"
++        # 관측 173: 몸의 기억 쓰기가 app_id 없이 착지해 스코프 MCP 경로 search_memories(주입 필터 {user_id, app_id})에
++        # 251/251 본이 보이지 않았고, 스토어 scope_guard 가 매 쓰기마다 «foreign» 을 경고했는데 이 함수가 그 봉투를 버렸다.
++        # 쓰기에 이름표를 단다. 읽기(memory_search)는 user_id 단독 그대로 — 레거시 app_id 없는 행도 계속 본다.
+         if name == "memory_add":
+             md: dict[str, Any] = {"origin": args["origin"], "source": "body"}
+             if args.get("topic"):
+@@ -83,10 +86,10 @@
+             if args["origin"] == "self":
+                 md["layer"] = "self"
+             _store.add_memories({"messages": [{"role": "user" if args["origin"] == "user" else "assistant", "content": args["text"]}],
+-                                 "user_id": USER, "metadata": md, "infer": False})
++                                 "user_id": USER, "app_id": APP, "metadata": md, "infer": False})
+             return "saved"
+         if name == "self_note":
+-            _store.add_memories({"messages": [{"role": "assistant", "content": args["text"]}], "user_id": USER,
++            _store.add_memories({"messages": [{"role": "assistant", "content": args["text"]}], "user_id": USER, "app_id": APP,
+                                  "metadata": {"layer": "self", "origin": "self", "source": "body"}, "infer": False})
+             return "noted"
+         if name == "task_state":
