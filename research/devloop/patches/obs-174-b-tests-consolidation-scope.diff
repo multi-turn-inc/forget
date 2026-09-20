@@ -1,0 +1,63 @@
+--- /dev/null
++++ b/tests/test_consolidation_scope.py
+@@ -0,0 +1,60 @@
++"""obs-174 회귀: 응고 엔진 두 손이 쓴 기억을 스코프 MCP 검색(app_id 필터)이 본다.
++
++c399 실측: `source=consolidation` 1,010/1,010 · `consolidation_daily` 26/26 이 app_id 없이 착지 → /mcp/forget/http/<user> 의
++search_memories(주입 {user_id, app_id=forget})에서 0건, 명시 {user_id} 에서 1위 · 전부 scope_guard «foreign» 도장 (frictions.md 관측 174).
++"""
++import sys
++from pathlib import Path
++
++sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
++
++
++def _setup(tmp_path, monkeypatch):
++    monkeypatch.setenv("MEM1_DB_PATH", str(tmp_path / "obs174.sqlite3"))
++    monkeypatch.setenv("MEM1_EMBEDDING_PROVIDER", "local")  # deterministic-128 — 스코프 술어는 임베더 무관
++    monkeypatch.delenv("MEM1_SCOPE_FALLBACK_DEFAULT", raising=False)
++    from forget import db as _db
++
++    _db.init_db()
++
++
++def _visible(store, text, filters):
++    r = store.search_memories({"query": text, "filters": filters, "top_k": 5})
++    return any(x.get("memory") == text for x in r.get("results") or [])
++
++
++def test_persist_consolidation_visible_to_scoped_search(tmp_path, monkeypatch):
++    _setup(tmp_path, monkeypatch)
++    from forget import server, store
++    from forget.scope_guard import CANONICAL_APP_ID
++
++    fact = "obs-174 표적: 잠들기 전 소화가 내린 사실은 스코프 검색에 보여야 한다."
++    out = server._persist_consolidation({"facts": [fact], "lessons": [], "intents": []}, user_id="junghunkim", session_ref="obs-174")
++    assert out["facts"] == 1 and out["errors"] == 0
++    rows = [m for m in store.list_memory_dicts() if m.get("memory") == fact]
++    assert len(rows) == 1
++    assert rows[0].get("app_id") == CANONICAL_APP_ID, "응고 쓰기는 canonical 풀(user×app)에 착지해야 한다 (관측 174)"
++    assert (rows[0].get("metadata") or {}).get("scope_guard") is None, "scope_guard foreign 도장이 남으면 풀이 틀린 것"
++    assert _visible(store, fact, {"user_id": "junghunkim", "app_id": CANONICAL_APP_ID})
++    assert _visible(store, fact, {"user_id": "junghunkim"})
++
++
++def test_consolidate_day_summary_visible_to_scoped_search(tmp_path, monkeypatch):
++    _setup(tmp_path, monkeypatch)
++    from forget import consolidation_cycle as cc, store
++    from forget.scope_guard import CANONICAL_APP_ID
++
++    originals = [f"obs-174 원본 {i}: canonical 풀에 쓰인 작업 노트 {i}." for i in range(5)]
++    for t in originals:
++        store.add_memories({"messages": [{"role": "assistant", "content": t}], "user_id": "junghunkim",
++                            "app_id": CANONICAL_APP_ID, "infer": False})
++    items = [(m["id"], m["memory"], dict(m.get("metadata") or {})) for m in store.list_memory_dicts() if m.get("memory") in originals]
++    assert len(items) == 5
++    monkeypatch.setattr(cc, "_local_distill_llm", lambda prompt: "obs-174 요약: 작업 노트 다섯 건을 한 문단으로.")
++    rep = cc.consolidate_day(str(tmp_path / "obs174.sqlite3"), "2026-08-30", items, "junghunkim")
++    assert rep.get("sank") == 5, rep
++    summary = [m for m in store.list_memory_dicts() if str(m.get("memory", "")).startswith("[일일 응고 2026-08-30]")]
++    assert len(summary) == 1
++    assert summary[0].get("app_id") == CANONICAL_APP_ID
++    assert (summary[0].get("metadata") or {}).get("scope_guard") is None
++    assert _visible(store, summary[0]["memory"], {"user_id": "junghunkim", "app_id": CANONICAL_APP_ID})

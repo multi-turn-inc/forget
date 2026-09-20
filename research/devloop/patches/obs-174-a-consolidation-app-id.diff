@@ -1,0 +1,90 @@
+--- a/forget/server.py
++++ b/forget/server.py
+@@ -742,21 +742,27 @@
+ 
+ 
+ def _persist_consolidation(distilled: dict[str, Any], *, user_id: str | None,
+-                           session_ref: str) -> dict[str, Any]:
++                           session_ref: str, app_id: str | None = None) -> dict[str, Any]:
+     """잠들기 전 소화 — 증류물을 상태 계층에 내린다. 실패는 항목별로 삼키고
+-    계수만 정직하게 반환한다 (응고화 실패가 압축을 죽이면 안 된다)."""
++    계수만 정직하게 반환한다 (응고화 실패가 압축을 죽이면 안 된다).
++
++    관측 174: 이 손이 app_id 없이 쓴 1,010본 전부가 스코프 MCP 경로(주입 필터
++    {user_id, app_id})의 search_memories에 보이지 않았고 매 쓰기에 scope_guard
++    «foreign» 도장을 받았다. 이름표 기본값 = canonical 풀(scope_guard와 같은 상수)."""
+     import hashlib
+ 
+     from . import worldmodel
++    from .scope_guard import CANONICAL_APP_ID
+     from .store import add_memories
+     out = {"facts": 0, "lessons": 0, "intents": 0, "errors": 0}
+     uid = user_id or "junghunkim"
++    aid = (app_id or "").strip() or CANONICAL_APP_ID
+     for kind in ("facts", "lessons"):
+         for item in distilled.get(kind) or []:
+             try:
+                 add_memories({
+                     "messages": [{"role": "assistant", "content": str(item)}],
+-                    "user_id": uid, "infer": False, "hebbian": False,
++                    "user_id": uid, "app_id": aid, "infer": False, "hebbian": False,
+                     "metadata": {"source": "consolidation", "session_ref": session_ref,
+                                  "consolidation_kind": kind,
+                                  "trust": {"kind": "fact" if kind == "facts" else "lesson",
+@@ -839,7 +845,8 @@
+     if payload.get("persist"):
+         distilled["persisted"] = _persist_consolidation(
+             distilled, user_id=str(payload.get("user_id") or "") or None,
+-            session_ref=str(payload.get("session_ref") or "pi-session"))
++            session_ref=str(payload.get("session_ref") or "pi-session"),
++            app_id=str(payload.get("app_id") or "") or None)
+     lines = ["## State capsule (consolidated by forget — not a lossy summary)"]
+     for key, title in [("facts", "Facts (with receipts)"), ("lessons", "Lessons"),
+                        ("intents", "Standing intents (inherit or release)")]:
+--- a/forget/consolidation_cycle.py
++++ b/forget/consolidation_cycle.py
+@@ -23,6 +23,7 @@
+ from typing import Any
+ 
+ from . import worldmodel
++from .scope_guard import CANONICAL_APP_ID
+ from .selfharness import _local_distill_llm, extract_handles
+ 
+ KEEP_RE = re.compile(
+@@ -78,7 +79,9 @@
+ 
+ 
+ def consolidate_day(db: str, day: str, items: list[tuple[str, str, dict]],
+-                    user_id: str) -> dict[str, Any]:
++                    user_id: str, app_id: str = CANONICAL_APP_ID) -> dict[str, Any]:
++    # 관측 174: 요약이 app_id 없이 착지하면 스코프 MCP 경로 검색에 보이지 않고(실DB 26/26),
++    # 침강된 원본(app_id=forget)은 스코프 밖 요약에 눌리지 않아 침강이 그 경로에서 무효가 된다.
+     corpus = "\n".join(f"- {t[:200]}" for _, t, _ in items)[:16000]
+     summary = _local_distill_llm(
+         f"Condense these low-value working notes from {day} into ONE dense Korean "
+@@ -101,7 +104,7 @@
+     keep_rate = (sum(1 for h in handles if h["value"] in body) / len(handles)) if handles else 1.0
+     from .store import add_memories
+     add_memories({"messages": [{"role": "assistant", "content": body}],
+-                  "user_id": user_id, "infer": False, "hebbian": False,
++                  "user_id": user_id, "app_id": app_id, "infer": False, "hebbian": False,
+                   "metadata": {"source": "consolidation_daily", "day": day,
+                                "sank_count": len(items),
+                                "handle_keep_rate": round(keep_rate, 3),
+@@ -190,6 +193,7 @@
+     ap.add_argument("--apply", action="store_true", help="실제 침강 (기본 dry-run)")
+     ap.add_argument("--yes", action="store_true", help="--live --apply 확인")
+     ap.add_argument("--user", default="junghunkim")
++    ap.add_argument("--app", default=CANONICAL_APP_ID, help="요약이 착지할 풀의 app_id (기본 canonical)")
+     ap.add_argument("--max-days", type=int, default=3, help="한 번에 응고할 날짜 수")
+     ap.add_argument("--restore", metavar="DAY", help="그날 침강을 복원 (YYYY-MM-DD)")
+     args = ap.parse_args()
+@@ -216,7 +220,7 @@
+         if not args.apply:
+             print(f"  [dry] {day}: {len(days[day])}건")
+             continue
+-        out = consolidate_day(db, day, days[day], args.user)
++        out = consolidate_day(db, day, days[day], args.user, args.app)
+         print(f"  {json.dumps(out, ensure_ascii=False)}")
+ 
+ 
