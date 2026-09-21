@@ -13,6 +13,7 @@ from forget import attention as T
 
 HARNESS_GLOBS = {"claude": ["~/.claude/projects/*/*.jsonl"], "pi": ["~/.pi/agent/sessions/*/*.jsonl"],
                  "codex": ["~/.codex/sessions/*/*/*/rollout-*.jsonl"], "body": ["~/.forget/body/*.jsonl"]}
+HARNESS_ENTRYPOINTS = {"sdk-cli"}   # 상주·devloop 등 SDK로 띄운 세션의 user 턴은 «사람 발화»가 아니다 — latest_transcript가 이들에 끌려 정훈 창을 놓쳤다(09-21 관측: 오늘 log.jsonl에 정훈 원문 0줄)
 
 
 def _last_user_ts(path: str) -> float:
@@ -50,6 +51,8 @@ def _last_user_ts(path: str) -> float:
         c = m.get("content")
         if c is None or d.get("isSidechain") or d.get("isCompactSummary") or d.get("isMeta"):
             continue
+        if d.get("entrypoint") in HARNESS_ENTRYPOINTS:
+            continue                               # 몸(상주)이 주입한 턴 — 사람이 아니다. 2026-09-21 실측: 내 세션 10개 전부 sdk-cli, 정훈 창은 cli/claude-desktop
         if isinstance(c, list) and c and isinstance(c[0], dict) and c[0].get("type") in ("tool_result",):
             continue
         try:
