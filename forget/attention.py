@@ -237,6 +237,26 @@ def situation(tail: list[dict[str, Any]]) -> str:
     return s[-TAIL_CHARS:]
 
 
+# 엔티티 질의 — 정훈 문장·situation 문자열만으로는 고유명사 기억이 안 올라온다(2026-09-21 DILABv2 실측: 이명범·김남주 5080(9/3)·
+# 공단 VPN(9/17)·이명범 통화(9/2) 세 green이 문장 질의 6종 전부 부재, 아래 추출 질의로 3/3 적중). «이명범 님»의 공백,
+# «5080은»의 조사 때문에 \b는 못 쓴다.
+_ENT_NAME = re.compile(r"([가-힣]{2,4})\s?(?:님|씨|과장|부장|소장|대표)")
+_ENT_LATIN = re.compile(r"(?<![A-Za-z])[A-Z][A-Za-z0-9]{1,9}(?![A-Za-z])")
+_ENT_NUM = re.compile(r"(?<!\d)\d{3,5}(?!\d)")
+_ENT_STOP = {"You", "Your", "The", "Asia", "Seoul", "DM", "CI", "KST", "UTC", "2025", "2026", "2027"}
+
+
+def entity_query(tail: list[dict[str, Any]], turns: int = 8, top: int = 20) -> str:
+    """최근 turns턴에서 이름(호칭 앞)·영문 토큰·3~5자리 숫자를 빈도순으로 모은 한 줄. 없으면 빈 문자열."""
+    txt = "\n".join(str(t.get("text", ""))[:600] for t in tail[-turns:])
+    found = _ENT_NAME.findall(txt) + _ENT_LATIN.findall(txt) + _ENT_NUM.findall(txt)
+    c: dict[str, int] = {}
+    for w in found:
+        if w not in _ENT_STOP:
+            c[w] = c.get(w, 0) + 1
+    return " ".join(w for w, _ in sorted(c.items(), key=lambda kv: -kv[1])[:top])
+
+
 def candidates(tail: list[dict[str, Any]], st: dict[str, Any], stats: dict[str, Any], timing: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     """timing이 주어지면 search_s(질의별 합)·rerank_s·queries·pool을 채운다 — fast_s 20~40s의 주범 특정용(2026-09-21)."""
     users = [t["text"] for t in tail if t["role"] == "user"]
@@ -245,6 +265,9 @@ def candidates(tail: list[dict[str, Any]], st: dict[str, Any], stats: dict[str, 
     seen_ids = set(st["seen"]) | {b["id"] for b in st["block"]}
     pool: dict[str, dict[str, Any]] = {}
     queries = {users[-1][:400], situation(tail)[:800]}
+    eq = entity_query(tail)
+    if eq:
+        queries.add(eq)                                   # 고유명사 기억은 이 질의로만 올라온다(위 주석)
     ts = time.time()
     for q in queries:
         for r in search(q, 40):

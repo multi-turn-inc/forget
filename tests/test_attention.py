@@ -59,6 +59,32 @@ def test_load_state_scrubs_injected_lines_from_persisted_tail(tmp_path, monkeypa
     assert st["offset"] == 9
 
 
+def test_entity_query_pulls_names_numbers_and_latin_tokens():
+    # 2026-09-21 DILABv2 실측: 문장 질의 6종이 놓친 이명범·김남주 5080(9/3)·공단 VPN(9/17) green이 이 질의로 3/3 적중.
+    tail = [
+        {"role": "user", "text": "그건 내가 정하는거야. 한대만 온거야? 그러면 일단 남주 주면 돼."},
+        {"role": "assistant", "text": "남주님, 5080은 남주님이 쓰시면 됩니다. CUDA 12.8 기준. 이명범 님 답글은 소장님이 직접. Your turn, KST 2026"},
+    ]
+    q = T.entity_query(tail)
+    toks = q.split()
+    assert "남주" in toks and "이명범" in toks and "5080" in toks and "CUDA" in toks
+    assert toks[0] == "남주"                       # 빈도순
+    for stop in ("Your", "KST", "2026"):
+        assert stop not in toks
+    assert T.entity_query([{"role": "user", "text": "응 보내줘"}]) == ""
+
+
+def test_candidates_adds_entity_query_when_present(monkeypatch):
+    calls = []
+    monkeypatch.setattr(T, "search", lambda q, limit=40: (calls.append(q), [])[1])
+    monkeypatch.setattr(T.A, "rerank", lambda rs, stats, exclude_machine=False: list(rs))
+    st = {"seen": {}, "block": []}
+    tail = [{"role": "user", "text": "답글 왔나"}, {"role": "assistant", "text": "이명범 님 답글은 아직. 5080은 남주님 몫."}]
+    timing: dict = {}
+    T.candidates(tail, st, {}, timing)
+    assert timing["queries"] == 3 and any("이명범" in q and "5080" in q for q in calls)
+
+
 def test_apply_judgement_edits_block_and_caps():
     st = {"block": [{"id": "old", "text": "o", "light": "green"}], "seen": {}}
     cands = [{"id": f"c{i}", "memory": f"m{i}", "trust": {"light": "green"}} for i in range(10)]
