@@ -52,11 +52,28 @@ def run_aside(prompt: str, timeout: int = 600) -> str:
     return _ANSI.sub("", (r.stdout or "") + (r.stderr or ""))
 
 
+# 둘째 칸 = 시각. aside 보고는 «2026-09-21 14:54»(라이브 2회 실측)이지만 «09-14 08:54»·«13:34»도 받는다 — 타입 덤프의 'oauth'·'urls'만 거르면 된다.
+_WHEN_RE = re.compile(r"^(?:\d{4}-)?(?:\d{2}-\d{2} )?\d{2}:\d{2}$")
+
+
+def _report_parts(line: str) -> list[str] | None:
+    """«발신자 | 시각 | 제목 [| 함]» 줄이면 칸 목록, 아니면 None.
+    «|» 개수만 보면 브라우저 확장의 TypeScript 유니언 타입 덤프('login' | 'credit-card' | …)가 메일 행으로 들어온다
+    (2026-09-21 17:59 launchd 첫 실행 n=9, 실제 2). 둘째 칸이 시각이어야 보고 줄이다."""
+    s = line.strip().lstrip("-*• ").strip().removeprefix("[기한]").strip()
+    if s.count("|") < 2:
+        return None
+    parts = [p.strip() for p in s.split("|")]
+    if len(parts) < 3 or not _WHEN_RE.match(parts[1]):
+        return None
+    return parts
+
+
 def compact_raw(report: str, tail_lines: int = 40) -> str:
     """raw 저장용 압축. aside 출력엔 접근성 트리 덤프([ref=…] 줄)가 수백 줄 섞여 4000자 컷이 보고 줄을 밀어낸다.
     남기는 것 = «|» 2개 이상인 보고 줄 전부 + ref 줄을 뺀 마지막 tail_lines 줄(«없음»·세션 id·오류 문구가 여기 있다)."""
     lines = report.splitlines()
-    report_lines = [l for l in lines if l.count("|") >= 2]
+    report_lines = [l for l in lines if _report_parts(l) is not None]
     plain = [l for l in lines if "[ref=" not in l and l.strip()]
     tail = plain[-tail_lines:]
     seen: set[str] = set()
@@ -72,17 +89,25 @@ def parse(report: str) -> list[dict]:
     """보고 텍스트에서 «발신자 | 시각 | 제목 | 함» 줄을 뽑는다. 기한 플래그는 [기한] 표시 또는 제목 정규식."""
     rows = []
     for line in report.splitlines():
-        s = line.strip().lstrip("-*• ").strip()
-        if s.count("|") < 2:
+        parts = _report_parts(line)
+        if parts is None:
             continue
-        flagged = s.startswith("[기한]")
-        s = s.removeprefix("[기한]").strip()
-        parts = [p.strip() for p in s.split("|")]
+        flagged = line.strip().lstrip("-*• ").strip().startswith("[기한]")
         sender, when, subject = parts[0], parts[1], parts[2]
         box = parts[3] if len(parts) > 3 else ""
         rows.append({"sender": sender, "at": when, "subject": subject, "box": box,
                      "deadline": bool(flagged or DEADLINE_RE.search(subject))})
     return rows
+
+
+def aside_error(report: str) -> str:
+    """aside가 브라우저에 못 닿았으면 그 문구. n=0이 «메일 없음»인지 «눈이 못 봤음»인지 갈라야 한다
+    (2026-09-21 11:36Z launchd 실행: raw에 «Error fetch failed»만 있고 보고 줄 0 → 기록은 n=0으로 남아 «조용함»과 구별 불가)."""
+    for line in report.splitlines():
+        s = line.strip().lstrip("•· ").strip()
+        if s.lower().startswith("error"):
+            return s[:200]
+    return ""
 
 
 def _key(r: dict) -> tuple[str, str, str]:
@@ -146,15 +171,19 @@ def main(argv: list[str] | None = None) -> int:
         return 3
     report = run_aside(prompt, timeout=a.timeout)
     rows = parse(report)
+    err = aside_error(report) if not rows else ""
     prior = load_prior()
     fresh = new_deadline_rows(rows, prior)
     rec = {"at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
            "since_kst": since, "n": len(rows), "deadline": [r for r in rows if r["deadline"]], "rows": rows,
            "raw": compact_raw(report)[-4000:]}
+    if err:
+        rec["error"] = err
+        print(f"aside error: {err}", file=sys.stderr)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     with open(OUT, "a") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
-    print(json.dumps({k: rec[k] for k in ("at", "since_kst", "n", "deadline")}, ensure_ascii=False))
+    print(json.dumps({k: rec[k] for k in ("at", "since_kst", "n", "deadline", "error") if k in rec}, ensure_ascii=False))
     if a.speak:
         line = speak_line(fresh)
         if line:

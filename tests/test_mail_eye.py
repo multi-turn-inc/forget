@@ -74,6 +74,40 @@ def test_post_to_inbox_writes_resident_reply_format_and_skips_empty(tmp_path):
     assert len(lines) == 2 and lines[1] == "— 나 (09-21 18:30): 둘째 줄"
 
 
+TYPE_DUMP = """listAccounts(): Promise<{ pwmAccountId: string; name: string; email?: string; isInitialized: boolean | null; isLocked: boolean }>
+updateItem(pwmAccountId: string, itemId: string, updates: Partial<Pick<CreateVaultItemInput, 'title' | 'urls' | 'fields'>>)
+type VaultItemCategory = 'login' | 'credit-card' | 'secure-note' | 'identity';
+include?: Array<'lowercase' | 'uppercase' | 'digit' | 'symbol'>;
+loginType?: 'password' | 'oauth' | 'passkey';
+designation?: 'username' | 'password' | 'first-name' | 'last-name';
+loginType?: 'password' | 'oauth' | 'passkey';
+- 신외선 | 2026-09-21 14:54 | [(주)신라이앤씨] 개별 컨설팅 인터뷰 일정 조사 안내 | 받은편지함
+- [기한] 김정화 | 2026-09-21 13:34 | [DIP] 신청서 9/25까지 제출 요청 | 스팸함
+"""
+
+
+def test_parse_requires_time_in_second_column_so_type_dumps_are_not_rows():
+    rows = mail_eye.parse(TYPE_DUMP)
+    assert [r["sender"] for r in rows] == ["신외선", "김정화"]
+    assert rows[0]["at"] == "2026-09-21 14:54" and rows[0]["box"] == "받은편지함" and rows[0]["deadline"] is False
+    assert rows[1]["deadline"] is True and rows[1]["box"] == "스팸함"
+
+
+def test_compact_raw_keeps_only_timed_report_lines_plus_tail():
+    out = mail_eye.compact_raw(TYPE_DUMP, tail_lines=1)
+    lines = out.splitlines()
+    assert lines[0].startswith("- 신외선 |") and lines[1].startswith("- [기한] 김정화 |")
+    assert not any("VaultItemCategory" in l for l in lines)
+
+
+def test_aside_error_marks_fetch_failure_not_empty_inbox():
+    failed = "  • Error fetch failed\ncreated new session: phO70YKb2Y804nYi\n"
+    assert mail_eye.parse(failed) == []
+    assert mail_eye.aside_error(failed) == "Error fetch failed"
+    quiet = "받은편지함: 없음\n스팸함: 없음\ncreated new session: abc\n"
+    assert mail_eye.aside_error(quiet) == ""
+
+
 def test_parse_flags_by_subject_regex_without_marker():
     rows = mail_eye.parse("- 감리 | 09:00 | 시정조치 결과 9/25까지 제출 요청 | 받은편지함")
     assert rows[0]["deadline"]
