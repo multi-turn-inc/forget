@@ -52,6 +52,22 @@ def run_aside(prompt: str, timeout: int = 600) -> str:
     return _ANSI.sub("", (r.stdout or "") + (r.stderr or ""))
 
 
+def compact_raw(report: str, tail_lines: int = 40) -> str:
+    """raw 저장용 압축. aside 출력엔 접근성 트리 덤프([ref=…] 줄)가 수백 줄 섞여 4000자 컷이 보고 줄을 밀어낸다.
+    남기는 것 = «|» 2개 이상인 보고 줄 전부 + ref 줄을 뺀 마지막 tail_lines 줄(«없음»·세션 id·오류 문구가 여기 있다)."""
+    lines = report.splitlines()
+    report_lines = [l for l in lines if l.count("|") >= 2]
+    plain = [l for l in lines if "[ref=" not in l and l.strip()]
+    tail = plain[-tail_lines:]
+    seen: set[str] = set()
+    out: list[str] = []
+    for l in report_lines + tail:
+        if l not in seen:
+            seen.add(l)
+            out.append(l)
+    return "\n".join(out)
+
+
 def parse(report: str) -> list[dict]:
     """보고 텍스트에서 «발신자 | 시각 | 제목 | 함» 줄을 뽑는다. 기한 플래그는 [기한] 표시 또는 제목 정규식."""
     rows = []
@@ -90,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
     rows = parse(report)
     rec = {"at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
            "since_kst": since, "n": len(rows), "deadline": [r for r in rows if r["deadline"]], "rows": rows,
-           "raw": report[-4000:]}
+           "raw": compact_raw(report)[-4000:]}
     OUT.parent.mkdir(parents=True, exist_ok=True)
     with open(OUT, "a") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
