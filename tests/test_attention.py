@@ -72,6 +72,12 @@ def test_entity_query_pulls_names_numbers_and_latin_tokens():
     for stop in ("Your", "KST", "2026"):
         assert stop not in toks
     assert T.entity_query([{"role": "user", "text": "응 보내줘"}]) == ""
+    # 경로·URL 어절은 엔티티가 아니다(2026-09-21 06:19Z: Users Library Mobile Documents CloudDocs가 질의에 들어감)
+    q2 = T.entity_query([{"role": "user", "text": "/Users/junghunkim/Library/Mobile\\ Documents/com\\~apple\\~CloudDocs/에이닷/01046776904_20260921_145045.txt 이것좀 처리해줘 https://forms.gle/Abc123 이명범 님"}])
+    toks2 = q2.split()
+    assert "이명범" in toks2
+    for noise in ("Users", "Library", "Mobile", "Documents", "CloudDocs", "Abc123", "145045"):
+        assert noise not in toks2
 
 
 def test_candidates_adds_entity_query_when_present(monkeypatch):

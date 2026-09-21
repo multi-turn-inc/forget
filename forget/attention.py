@@ -249,6 +249,9 @@ _ENT_STOP = {"You", "Your", "The", "Asia", "Seoul", "DM", "CI", "KST", "UTC", "2
 def entity_query(tail: list[dict[str, Any]], turns: int = 8, top: int = 20) -> str:
     """최근 turns턴에서 이름(호칭 앞)·영문 토큰·3~5자리 숫자를 빈도순으로 모은 한 줄. 없으면 빈 문자열."""
     txt = "\n".join(str(t.get("text", ""))[:600] for t in tail[-turns:])
+    # 경로·URL 어절은 통째로 뗀다 — «/Users/junghunkim/Library/Mobile\ Documents/…/에이닷/….txt» 한 줄이 Users·Library·Mobile·
+    # Documents·CloudDocs 다섯 토큰을 질의에 넣었다(2026-09-21 06:19Z 실측).
+    txt = re.sub(r"\S*[/\\]\S*", " ", txt)
     found = _ENT_NAME.findall(txt) + _ENT_LATIN.findall(txt) + _ENT_NUM.findall(txt)
     c: dict[str, int] = {}
     for w in found:
