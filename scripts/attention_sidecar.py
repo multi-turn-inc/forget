@@ -78,8 +78,25 @@ def latest_transcript(harness: str = "auto") -> Path:
     (자동 세션·다른 창의 도구 소음에 끌려가지 않게)."""
     keys = list(HARNESS_GLOBS) if harness == "auto" else [harness]
     files = [f for k in keys for g in HARNESS_GLOBS[k] for f in glob.glob(os.path.expanduser(g))]
-    recent = sorted(files, key=os.path.getmtime, reverse=True)[:8]
-    return Path(max(recent, key=lambda f: (_last_user_ts(f), os.path.getmtime(f))))
+    recent = sorted(files, key=os.path.getmtime, reverse=True)[:RECENT_WINDOW]
+    return Path(max(recent, key=lambda f: (_user_ts_cached(f), os.path.getmtime(f))))
+
+
+RECENT_WINDOW = 48   # mtime 상위 8은 너무 좁았다 — SDK 세션 8개가 정훈 창보다 새로우면 창이 슬라이스 밖으로 밀려 entrypoint 필터가 닿지도 못한다(09-21 실측: 1시간 내 수정 20개, 6시간 111개)
+_TS_CACHE: dict[str, tuple[float, int, float]] = {}   # path -> (mtime, size, last_user_ts) — 안 바뀐 파일은 다시 읽지 않는다
+
+
+def _user_ts_cached(path: str) -> float:
+    try:
+        st = os.stat(path); key = (st.st_mtime, st.st_size)
+    except Exception:
+        return 0.0
+    hit = _TS_CACHE.get(path)
+    if hit and hit[:2] == key:
+        return hit[2]
+    ts = _last_user_ts(path)
+    _TS_CACHE[path] = (key[0], key[1], ts)
+    return ts
 
 
 def ensure_tunnel() -> None:
