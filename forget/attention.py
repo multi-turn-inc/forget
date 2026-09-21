@@ -22,13 +22,13 @@ from . import activation as A
 ATTN_DIR = A.ATTN_DIR
 MCP_URL = os.getenv("FORGET_MCP_URL", "http://localhost:8000/mcp/forget/http/junghunkim")
 LLM_URL = os.getenv("FORGET_MID_URL", "http://127.0.0.1:18813")          # ollama (Spark 터널)
-GATE_MODEL = os.getenv("FORGET_GATE_MODEL", "qwen3.6:35b-a3b-q4_K_M")     # 1.3s
+GATE_MODEL = os.getenv("FORGET_GATE_MODEL", "qwen3.5:27b")     # 5~10s · 35b-a3b는 18813에 없음(2026-09-10~20 404 원인)
 JUDGE_MODEL = os.getenv("FORGET_JUDGE_MODEL", "qwen3.6:27b")              # ~8s
 BLOCK_MAX = 8
 TAIL_TURNS = 12
 TAIL_CHARS = 4000
 CANDIDATES = 12
-GATE_TIMEOUT = 20
+GATE_TIMEOUT = 60
 JUDGE_TIMEOUT = 120
 
 
