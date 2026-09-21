@@ -13,7 +13,7 @@ from forget import attention as T
 
 HARNESS_GLOBS = {"claude": ["~/.claude/projects/*/*.jsonl"], "pi": ["~/.pi/agent/sessions/*/*.jsonl"],
                  "codex": ["~/.codex/sessions/*/*/*/rollout-*.jsonl"], "body": ["~/.forget/body/*.jsonl"]}
-HARNESS_ENTRYPOINTS = {"sdk-cli"}   # 상주·devloop 등 SDK로 띄운 세션의 user 턴은 «사람 발화»가 아니다 — latest_transcript가 이들에 끌려 정훈 창을 놓쳤다(09-21 관측: 오늘 log.jsonl에 정훈 원문 0줄)
+HARNESS_ENTRYPOINTS = {"sdk-cli", None}   # 상주·devloop 등 SDK로 띄운 세션의 user 턴은 «사람 발화»가 아니다 — latest_transcript가 이들에 끌려 정훈 창을 놓쳤다(09-21 관측: 오늘 log.jsonl에 정훈 원문 0줄)
 
 
 def _last_user_ts(path: str) -> float:
