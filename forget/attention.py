@@ -109,6 +109,18 @@ def tail_offset(path: Path, tail_bytes: int | None = None) -> int:
     return start + nl + 1 if nl >= 0 else size
 
 
+# Claude Code가 user role로 기록하지만 사람이 친 게 아닌 줄들. 2026-09-21 DILABv2 창 실측: 마지막 «user» 턴이
+# «Your claude.ai usage limit has reset…»이라 그 문장이 검색 질의가 됐고 주차 법인 기억 적중 0(엔티티 질의는 12).
+_INJECTED_TAGS = ("<system-reminder", "<task-notification", "<local-command", "<command-name", "<command-message",
+                  "<bash-input", "<bash-stdout", "<bash-stderr", "<environment_context", "<ide_")
+_INJECTED_PREFIX = ("Your claude.ai usage limit has reset", "[Request interrupted")
+
+
+def _injected_user(txt: str) -> bool:
+    head = txt.lstrip()[:48]
+    return head.startswith(_INJECTED_TAGS) or head.startswith(_INJECTED_PREFIX)
+
+
 def read_turns(path: Path, offset: int = 0) -> tuple[list[dict[str, Any]], int]:
     """offset 바이트부터 새 줄을 읽어 (role, text, ts) 턴으로. 도구 결과는 뺀다."""
     turns: list[dict[str, Any]] = []
@@ -151,8 +163,8 @@ def read_turns(path: Path, offset: int = 0) -> tuple[list[dict[str, Any]], int]:
         txt = _text(content).strip()
         if not txt or d.get("isCompactSummary") or txt.startswith("[Request interrupted"):
             continue
-        if role == "user" and txt.startswith("<") and "system-reminder" in txt[:40]:
-            continue
+        if role == "user" and _injected_user(txt):
+            continue                                          # 하네스가 user 자리에 넣은 기계 줄 — 정훈의 말이 아니다
         if role == "assistant" and all(ln.startswith("[도구 ") for ln in txt.splitlines()):
             role = "action"                                   # 도구만 부른 턴 — 틱은 세되 문장은 아니다
         turns.append({"role": role, "text": txt[:3000], "ts": d.get("timestamp") or now_iso()})

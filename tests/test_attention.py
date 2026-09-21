@@ -27,6 +27,26 @@ def test_read_turns_skips_tool_results_and_marks_tool_only_turns(tmp_path):
     assert [t["text"] for t in more] == ["그래"] and off2 > off
 
 
+def test_read_turns_drops_harness_injected_user_lines(tmp_path):
+    # 2026-09-21 DILABv2 실측: Claude Code가 user role로 적는 기계 줄(<task-notification>·usage limit reset·
+    # <local-command-*>·<bash-input>)이 «정훈의 마지막 말»로 읽혀 검색 질의가 됐다 — 주차 법인 기억 적중 0.
+    p = tmp_path / "s.jsonl"
+    p.write_text("\n".join([
+        _claude_line("user", "답글 왔나"),
+        _claude_line("user", "<task-notification>\n<task-id>bpgvz5pmg</task-id>\n</task-notification>"),
+        _claude_line("user", "Your claude.ai usage limit has reset. Continue the task you were working on."),
+        _claude_line("user", "<local-command-stdout>Set model to opus</local-command-stdout>"),
+        _claude_line("user", "<command-name>/model</command-name>"),
+        _claude_line("user", "<bash-input>ls</bash-input>"),
+        _claude_line("user", [{"type": "text", "text": "<system-reminder>x</system-reminder>"}]),
+        _claude_line("user", "그건 내가 정하는거야. 일단 남주 주면 돼."),
+    ]) + "\n")
+    turns, _ = T.read_turns(p, 0)
+    assert [t["text"] for t in turns] == ["답글 왔나", "그건 내가 정하는거야. 일단 남주 주면 돼."]
+    # 사람 말이 태그처럼 보여도 등록된 하네스 태그가 아니면 남긴다
+    assert not T._injected_user("<b>굵게</b> 이건 사람 말")
+
+
 def test_apply_judgement_edits_block_and_caps():
     st = {"block": [{"id": "old", "text": "o", "light": "green"}], "seen": {}}
     cands = [{"id": f"c{i}", "memory": f"m{i}", "trust": {"light": "green"}} for i in range(10)]
