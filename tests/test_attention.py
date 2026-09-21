@@ -91,6 +91,19 @@ def test_candidates_adds_entity_query_when_present(monkeypatch):
     assert timing["queries"] == 3 and any("이명범" in q and "5080" in q for q in calls)
 
 
+def test_silence_snooze_expires_but_judge_seen_is_permanent(monkeypatch):
+    # 2026-09-21: 침묵 틱 seen이 영구라 ParkChain 365 green(8bc1e796)이 06:27Z 이후 영영 후보에서 빠졌다.
+    import time as _t
+    monkeypatch.setattr(T, "search", lambda q, limit=40: [{"id": "p", "memory": "ParkChain"}, {"id": "j", "memory": "judged"}])
+    monkeypatch.setattr(T.A, "rerank", lambda rs, stats, exclude_machine=False: list(rs))
+    st = {"seen": {"j": "t"}, "block": [], "snoozed": {"p": _t.time()}}
+    tail = [{"role": "user", "text": "파크체인"}]
+    assert [c["id"] for c in T.candidates(tail, st, {})] == []          # 둘 다 빠짐
+    st["snoozed"]["p"] = _t.time() - T.SNOOZE_S - 1
+    assert [c["id"] for c in T.candidates(tail, st, {})] == ["p"]       # 재운 건 되살아나고 판사 seen은 영구
+    assert "p" not in st["snoozed"]                                      # 만료 항목은 지운다
+
+
 def test_apply_judgement_edits_block_and_caps():
     st = {"block": [{"id": "old", "text": "o", "light": "green"}], "seen": {}}
     cands = [{"id": f"c{i}", "memory": f"m{i}", "trust": {"light": "green"}} for i in range(10)]

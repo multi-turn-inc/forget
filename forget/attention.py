@@ -30,6 +30,7 @@ TAIL_CHARS = 4000
 CANDIDATES = 12
 GATE_TIMEOUT = 60
 JUDGE_TIMEOUT = 120
+SNOOZE_S = int(os.getenv("FORGET_ATTENTION_SNOOZE_S", "1800"))   # 침묵 틱이 재운 후보가 되살아나는 시간(30분)
 
 
 def now_iso() -> str:
@@ -265,7 +266,15 @@ def candidates(tail: list[dict[str, Any]], st: dict[str, Any], stats: dict[str, 
     users = [t["text"] for t in tail if t["role"] == "user"]
     if not users:
         return []
-    seen_ids = set(st["seen"]) | {b["id"] for b in st["block"]}
+    # 침묵 틱의 «본 것»은 영구가 아니다 — 8bc1e796(ParkChain 365 green)이 06:27Z 침묵 틱 상위 4에 들어 seen에 박혔고, 이후
+    # 정훈이 ParkChain 이미지 얘기를 해도 다시 못 올라왔다(2026-09-21 실측). 게이트가 «이미 대화에 있다»고 한 건 그 순간의 판단이라
+    # SNOOZE_S만 재우고 되살린다. 판사가 본 것(apply_judgement의 seen)은 그대로 영구.
+    now = time.time()
+    snoozed = st.get("snoozed") or {}
+    for k in [k for k, t in snoozed.items() if now - float(t) > SNOOZE_S]:
+        snoozed.pop(k, None)
+    st["snoozed"] = snoozed
+    seen_ids = set(st["seen"]) | set(snoozed) | {b["id"] for b in st["block"]}
     pool: dict[str, dict[str, Any]] = {}
     queries = {users[-1][:400], situation(tail)[:800]}
     eq = entity_query(tail)
@@ -420,8 +429,8 @@ def tick(st: dict[str, Any], source: Path, force: bool = False, k_actions: int =
     res["gate"] = g
     res["gate_s"] = round(time.time() - t1, 2)
     if not g.get("has") or float(g.get("conf") or 0) < 0.5:
-        for c in cands[:4]:                                  # 상위 넷은 본 것으로 — 같은 걸 매 틱 다시 묻지 않게
-            st["seen"][c["id"]] = now_iso()
+        for c in cands[:4]:                                  # 상위 넷은 SNOOZE_S 동안 재운다 — 같은 걸 매 틱 다시 묻지 않게(영구 seen은 판사 몫)
+            st.setdefault("snoozed", {})[c["id"]] = time.time()
         log("silence", **res)
         st["actions_since_judge"] = 0
         return res
