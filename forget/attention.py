@@ -241,7 +241,9 @@ def situation(tail: list[dict[str, Any]]) -> str:
 # 엔티티 질의 — 정훈 문장·situation 문자열만으로는 고유명사 기억이 안 올라온다(2026-09-21 DILABv2 실측: 이명범·김남주 5080(9/3)·
 # 공단 VPN(9/17)·이명범 통화(9/2) 세 green이 문장 질의 6종 전부 부재, 아래 추출 질의로 3/3 적중). «이명범 님»의 공백,
 # «5080은»의 조사 때문에 \b는 못 쓴다.
-_ENT_NAME = re.compile(r"([가-힣]{2,4})\s?(?:님|씨|과장|부장|소장|대표)")
+_ENT_NAME = re.compile(r"([가-힣]{2,4})(\s?)(?:님|씨|과장|부장|소장|대표)")
+# 호칭과 띄어 쓴 앞 어절이 조사로 끝나면 이름이 아니다 — «답글은 소장»·«제안이고 대표»가 질의에 들어갔다(2026-09-21 06:2x Z 실측).
+_ENT_PARTICLE_END = set("은는이가을를도고에의로와과서만")
 _ENT_LATIN = re.compile(r"(?<![A-Za-z])[A-Z][A-Za-z0-9]{1,9}(?![A-Za-z])")
 _ENT_NUM = re.compile(r"(?<!\d)\d{3,5}(?!\d)")
 _ENT_STOP = {"You", "Your", "The", "Asia", "Seoul", "DM", "CI", "KST", "UTC", "2025", "2026", "2027"}
@@ -253,7 +255,8 @@ def entity_query(tail: list[dict[str, Any]], turns: int = 8, top: int = 20) -> s
     # 경로·URL 어절은 통째로 뗀다 — «/Users/junghunkim/Library/Mobile\ Documents/…/에이닷/….txt» 한 줄이 Users·Library·Mobile·
     # Documents·CloudDocs 다섯 토큰을 질의에 넣었다(2026-09-21 06:19Z 실측).
     txt = re.sub(r"\S*[/\\]\S*", " ", txt)
-    found = _ENT_NAME.findall(txt) + _ENT_LATIN.findall(txt) + _ENT_NUM.findall(txt)
+    names = [w for w, sp in _ENT_NAME.findall(txt) if not (sp and w[-1] in _ENT_PARTICLE_END)]
+    found = names + _ENT_LATIN.findall(txt) + _ENT_NUM.findall(txt)
     c: dict[str, int] = {}
     for w in found:
         if w not in _ENT_STOP:

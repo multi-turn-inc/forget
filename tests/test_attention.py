@@ -78,6 +78,13 @@ def test_entity_query_pulls_names_numbers_and_latin_tokens():
     assert "이명범" in toks2
     for noise in ("Users", "Library", "Mobile", "Documents", "CloudDocs", "Abc123", "145045"):
         assert noise not in toks2
+    # 호칭과 띄어 쓴 조사 어절은 이름이 아니다(2026-09-21: «답글은 소장»·«제안이고 대표»가 질의에 들어감). 붙여 쓴 «신부장»·띄어 쓴 «이명범 님»은 남는다
+    q3 = T.entity_query([{"role": "user", "text": "답글은 소장 님께 드리고 제안이고 대표 님도 보시게. 신부장님과 이명범 님, 안현준 소장"}])
+    toks3 = q3.split()
+    for noise in ("답글은", "제안이고"):
+        assert noise not in toks3
+    for keep in ("신부장", "이명범", "안현준"):
+        assert keep in toks3
 
 
 def test_candidates_adds_entity_query_when_present(monkeypatch):
