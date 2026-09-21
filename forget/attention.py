@@ -85,6 +85,25 @@ def _text(content: Any) -> str:
     return "\n".join(out)
 
 
+SWITCH_TAIL_BYTES = 2 * 1024 * 1024   # 소스 전환 시 뒤에서 이만큼만 읽는다 — resident.jsonl(480MB)을 매 전환마다 통째로 파싱하던 것(new_turns 36만 · fast_s 36s · 412회)의 처치
+
+
+def tail_offset(path: Path, tail_bytes: int = SWITCH_TAIL_BYTES) -> int:
+    """파일 끝에서 tail_bytes 안쪽의 첫 줄 경계. 작은 파일은 0(처음부터)."""
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return 0
+    if size <= tail_bytes:
+        return 0
+    start = size - tail_bytes
+    with open(path, "rb") as f:
+        f.seek(start)
+        chunk = f.read(tail_bytes)
+    nl = chunk.find(b"\n")
+    return start + nl + 1 if nl >= 0 else size
+
+
 def read_turns(path: Path, offset: int = 0) -> tuple[list[dict[str, Any]], int]:
     """offset 바이트부터 새 줄을 읽어 (role, text, ts) 턴으로. 도구 결과는 뺀다."""
     turns: list[dict[str, Any]] = []
@@ -324,7 +343,7 @@ def record_observations(j: dict[str, Any], min_conf: float = 0.85) -> list[str]:
 # ── 한 틱 ───────────────────────────────────────────────────────────────
 def tick(st: dict[str, Any], source: Path, force: bool = False, k_actions: int = 3, dry: bool = False) -> dict[str, Any]:
     if st.get("source") != str(source):
-        st.update({"source": str(source), "offset": 0, "tail": [], "seen": {}, "injected": [], "actions_since_judge": 0})
+        st.update({"source": str(source), "offset": tail_offset(source), "tail": [], "seen": {}, "injected": [], "actions_since_judge": 0})
     new, st["offset"] = read_turns(source, int(st.get("offset", 0)))
     st["tail"] = (st["tail"] + [t for t in new if t["role"] != "action"])[-TAIL_TURNS * 2:]
     st["ticks"] = st.get("ticks", 0) + 1
