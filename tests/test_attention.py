@@ -36,6 +36,23 @@ def test_apply_judgement_edits_block_and_caps():
     assert all(c["id"] in st["seen"] for c in cands)
 
 
+def test_candidates_fills_timing_breakdown(monkeypatch):
+    """fast_s 분해: search_s·rerank_s·queries·pool이 timing에 남는다(2026-09-21 · 원장 검색 비용 특정)."""
+    calls = []
+    monkeypatch.setattr(T, "search", lambda q, limit=40: (calls.append(q), [{"id": "a", "memory": "x"}, {"id": "b", "memory": "y"}])[1])
+    monkeypatch.setattr(T.A, "rerank", lambda rs, stats, exclude_machine=False: list(rs))
+    st = {"seen": {"b": "t"}, "block": []}
+    tail = [{"role": "user", "text": "하네스"}, {"role": "assistant", "text": "응"}]
+    timing: dict = {}
+    out = T.candidates(tail, st, {}, timing)
+    assert [c["id"] for c in out] == ["a"]
+    assert set(timing) == {"search_s", "rerank_s", "queries", "pool"}
+    assert timing["queries"] == len(calls) and timing["pool"] == 1
+    assert timing["search_s"] >= 0 and timing["rerank_s"] >= 0
+    # timing 없이도 동작
+    assert [c["id"] for c in T.candidates(tail, st, {})] == ["a"]
+
+
 def test_parse_json_tolerates_prose():
     assert T.parse_json('여기 답: {"has": true, "conf": 0.8}') == {"has": True, "conf": 0.8}
     assert T.parse_json("없음") == {}

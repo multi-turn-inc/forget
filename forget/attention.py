@@ -218,20 +218,27 @@ def situation(tail: list[dict[str, Any]]) -> str:
     return s[-TAIL_CHARS:]
 
 
-def candidates(tail: list[dict[str, Any]], st: dict[str, Any], stats: dict[str, Any]) -> list[dict[str, Any]]:
+def candidates(tail: list[dict[str, Any]], st: dict[str, Any], stats: dict[str, Any], timing: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """timing이 주어지면 search_s(질의별 합)·rerank_s·queries·pool을 채운다 — fast_s 20~40s의 주범 특정용(2026-09-21)."""
     users = [t["text"] for t in tail if t["role"] == "user"]
     if not users:
         return []
     seen_ids = set(st["seen"]) | {b["id"] for b in st["block"]}
     pool: dict[str, dict[str, Any]] = {}
-    for q in {users[-1][:400], situation(tail)[:800]}:
+    queries = {users[-1][:400], situation(tail)[:800]}
+    ts = time.time()
+    for q in queries:
         for r in search(q, 40):
             if r.get("id") and r["id"] not in seen_ids:
                 pool.setdefault(r["id"], r)
+    search_s = time.time() - ts
     def _own(r: dict[str, Any]) -> bool:                 # 자기 메아리 차단: 사이드카가 쓴 관찰은 후보가 아니다
         md = r.get("metadata") or {}
         return (isinstance(md, dict) and md.get("source") == "attention-sidecar") or str(r.get("memory", "")).startswith("[관찰·")
+    tr = time.time()
     ranked = A.rerank([r for r in pool.values() if not _own(r)], stats, exclude_machine=True)
+    if timing is not None:
+        timing.update({"search_s": round(search_s, 2), "rerank_s": round(time.time() - tr, 2), "queries": len(queries), "pool": len(pool)})
     return ranked[:CANDIDATES]
 
 
@@ -357,8 +364,9 @@ def tick(st: dict[str, Any], source: Path, force: bool = False, k_actions: int =
         return {"status": "wait", "new": len(new)}
     t0 = time.time()
     stats = A.load_stats()
-    cands = candidates(st["tail"], st, stats)
-    res: dict[str, Any] = {"status": "ticked", "new_turns": len(new), "cands": len(cands), "fast_s": round(time.time() - t0, 2)}
+    timing: dict[str, Any] = {"stats_s": round(time.time() - t0, 2)}
+    cands = candidates(st["tail"], st, stats, timing)
+    res: dict[str, Any] = {"status": "ticked", "new_turns": len(new), "cands": len(cands), "fast_s": round(time.time() - t0, 2), **timing}
     if not cands:
         log("silence", reason="no candidates", **res)
         return res
