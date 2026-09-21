@@ -49,7 +49,10 @@ def mcp(name: str, args: dict[str, Any], timeout: int = 60) -> Any:
 
 
 def search(query: str, limit: int = 40) -> list[dict[str, Any]]:
-    r = mcp("search_memories", {"query": query[:1500], "limit": limit})
+    # recall="low" = 원장의 gate-v2 LLM 재선별을 건너뛴 넓은 풀. 사이드카는 자기 rerank·게이트를
+    # 따로 돌리므로 서버 게이트는 중복이고, 그 비용이 search_s 7~22s/질의였다(2026-09-21 실측:
+    # low 1~3s · high 7~22s · 2질의/틱). 후보 폭도 high(11)보다 low(41)가 넓다.
+    r = mcp("search_memories", {"query": query[:1500], "limit": limit, "recall": "low"})
     return r.get("results", []) if isinstance(r, dict) else []
 
 

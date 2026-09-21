@@ -53,6 +53,17 @@ def test_candidates_fills_timing_breakdown(monkeypatch):
     assert [c["id"] for c in T.candidates(tail, st, {})] == ["a"]
 
 
+def test_search_requests_raw_pool_without_server_gate(monkeypatch):
+    """search()는 recall=low로 원장 게이트 LLM을 건너뛴다 — 사이드카가 rerank·게이트를 자체 수행하므로
+    서버 gate-v2는 중복이고 질의당 7~22s였다(2026-09-21 실측)."""
+    seen = {}
+    monkeypatch.setattr(T, "mcp", lambda name, args, timeout=60: (seen.update({"name": name, "args": args}), {"results": [{"id": "a"}]})[1])
+    assert T.search("x" * 2000, 40) == [{"id": "a"}]
+    assert seen["name"] == "search_memories"
+    assert seen["args"]["recall"] == "low"
+    assert seen["args"]["limit"] == 40 and len(seen["args"]["query"]) == 1500
+
+
 def test_parse_json_tolerates_prose():
     assert T.parse_json('여기 답: {"has": true, "conf": 0.8}') == {"has": True, "conf": 0.8}
     assert T.parse_json("없음") == {}
