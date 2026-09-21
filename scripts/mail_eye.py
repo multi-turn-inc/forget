@@ -101,6 +101,22 @@ def new_deadline_rows(rows: list[dict], prior: list[dict]) -> list[dict]:
     return [r for r in rows if r["deadline"] and _key(r) not in seen]
 
 
+INBOX = Path(os.getenv("ONE_INBOX", Path.home() / "Documents" / "one" / "inbox.md"))
+
+
+def post_to_inbox(line: str, path: Path = INBOX, now: datetime | None = None) -> None:
+    """resident._reply와 같은 서식으로 쪽지함에 남긴다 — 책상이 보이고 텔레그램 다리가 폰으로 민다.
+    launchd 아래서는 stdout이 로그 파일로만 가므로 이 경로가 없으면 «말:»은 아무에게도 닿지 않는다."""
+    body = re.sub(r"^\s*말\s*[:：]\s*", "", line).strip()
+    body = re.sub(r"\s+", " ", body)[:600]
+    if not body:
+        return
+    ts = (now or datetime.now()).strftime("%m-%d %H:%M")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a") as f:
+        f.write(f"— 나 ({ts}): {body}\n")
+
+
 def speak_line(new_rows: list[dict]) -> str:
     """정훈에게 올릴 한 줄. 새 [기한] 메일이 없으면 빈 문자열(침묵)."""
     if not new_rows:
@@ -114,7 +130,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--since", default=None, help="KST 'YYYY-MM-DD HH:MM' (기본: 지금-6h)")
     ap.add_argument("--dry", action="store_true")
     ap.add_argument("--timeout", type=int, default=600)
-    ap.add_argument("--speak", action="store_true", help="새 [기한] 메일이 있을 때만 «말:» 한 줄을 stdout 마지막에 인쇄")
+    ap.add_argument("--speak", action="store_true", help="새 [기한] 메일이 있을 때만 «말:» 한 줄을 stdout 마지막에 인쇄하고 쪽지함(--inbox)에 남긴다")
+    ap.add_argument("--inbox", default=str(INBOX), help="쪽지함 경로(기본 $ONE_INBOX 또는 ~/Documents/one/inbox.md)")
     a = ap.parse_args(argv)
     since = a.since or (datetime.now(KST) - timedelta(hours=6)).strftime("%Y-%m-%d %H:%M")
     prompt = build_prompt(since)
@@ -142,6 +159,7 @@ def main(argv: list[str] | None = None) -> int:
         line = speak_line(fresh)
         if line:
             print(line)
+            post_to_inbox(line, Path(a.inbox))
     return 0
 
 

@@ -61,6 +61,19 @@ def test_new_deadline_rows_dedupes_against_prior_runs_and_speaks_only_when_new()
     assert "박연진" not in line
 
 
+def test_post_to_inbox_writes_resident_reply_format_and_skips_empty(tmp_path):
+    from datetime import datetime
+    inbox = tmp_path / "one" / "inbox.md"
+    mail_eye.post_to_inbox("", inbox)
+    assert not inbox.exists()
+    mail_eye.post_to_inbox("말: 기한 있는 메일 1건 — 감리 09:00 «시정조치 결과 9/25까지 제출 요청»(받은편지함)", inbox, now=datetime(2026, 9, 21, 18, 0))
+    text = inbox.read_text()
+    assert text == "— 나 (09-21 18:00): 기한 있는 메일 1건 — 감리 09:00 «시정조치 결과 9/25까지 제출 요청»(받은편지함)\n"
+    mail_eye.post_to_inbox("말: 둘째\n줄", inbox, now=datetime(2026, 9, 21, 18, 30))
+    lines = inbox.read_text().splitlines()
+    assert len(lines) == 2 and lines[1] == "— 나 (09-21 18:30): 둘째 줄"
+
+
 def test_parse_flags_by_subject_regex_without_marker():
     rows = mail_eye.parse("- 감리 | 09:00 | 시정조치 결과 9/25까지 제출 요청 | 받은편지함")
     assert rows[0]["deadline"]
