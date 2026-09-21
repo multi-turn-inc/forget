@@ -88,8 +88,10 @@ def _text(content: Any) -> str:
 SWITCH_TAIL_BYTES = 2 * 1024 * 1024   # 소스 전환 시 뒤에서 이만큼만 읽는다 — resident.jsonl(480MB)을 매 전환마다 통째로 파싱하던 것(new_turns 36만 · fast_s 36s · 412회)의 처치
 
 
-def tail_offset(path: Path, tail_bytes: int = SWITCH_TAIL_BYTES) -> int:
-    """파일 끝에서 tail_bytes 안쪽의 첫 줄 경계. 작은 파일은 0(처음부터)."""
+def tail_offset(path: Path, tail_bytes: int | None = None) -> int:
+    """파일 끝에서 tail_bytes 안쪽의 첫 줄 경계. 작은 파일은 0(처음부터). 기본값은 호출 시점의 SWITCH_TAIL_BYTES."""
+    if tail_bytes is None:
+        tail_bytes = SWITCH_TAIL_BYTES
     try:
         size = path.stat().st_size
     except OSError:

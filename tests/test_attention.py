@@ -55,13 +55,11 @@ def test_tail_offset_starts_at_line_boundary_near_end(tmp_path):
     turns, end = T.read_turns(p, off)
     assert end == size and turns and turns[-1]["text"] == "m49"
     assert all(t["text"].startswith("m") for t in turns)
-    # 전환 틱: offset 0이 아니라 tail_offset에서 시작
-    st = {"source": "", "offset": 0, "tail": [], "block": [], "seen": {}, "injected": [], "ticks": 0, "actions_since_judge": 0}
-    T.SWITCH_TAIL_BYTES, saved = 300, T.SWITCH_TAIL_BYTES
+    # 기본 인자는 호출 시점의 모듈 상수를 본다(tick이 tail_offset(source)로 부르므로)
+    saved = T.SWITCH_TAIL_BYTES
+    T.SWITCH_TAIL_BYTES = 300
     try:
-        T.tick(st, p, force=False) if False else None
-        st.update({"source": str(p), "offset": T.tail_offset(p), "tail": [], "seen": {}, "injected": [], "actions_since_judge": 0})
-        assert st["offset"] == off
+        assert T.tail_offset(p) == off
     finally:
         T.SWITCH_TAIL_BYTES = saved
     # 없는 파일은 0
