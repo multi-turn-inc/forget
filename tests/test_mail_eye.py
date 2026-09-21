@@ -47,6 +47,20 @@ def test_compact_raw_drops_accessibility_dump_keeps_report_lines():
     assert len(mail_eye.parse(out)) == 2
 
 
+def test_new_deadline_rows_dedupes_against_prior_runs_and_speaks_only_when_new():
+    old = {"sender": "박연진", "at": "09-14 08:54", "subject": "[DIP] 홍보물 제작 내용 요청 (~9/18)", "box": "스팸함", "deadline": True}
+    plain = {"sender": "김정화", "at": "13:34", "subject": "싱가포르 핀테크 안내", "box": "받은편지함", "deadline": False}
+    new = {"sender": "감리", "at": "09:00", "subject": "시정조치 결과 9/25까지 제출 요청", "box": "받은편지함", "deadline": True}
+    prior = [{"rows": [old, plain]}]
+    assert mail_eye.new_deadline_rows([old, plain], prior) == []
+    assert mail_eye.speak_line([]) == ""
+    fresh = mail_eye.new_deadline_rows([old, plain, new], prior)
+    assert fresh == [new]
+    line = mail_eye.speak_line(fresh)
+    assert line.startswith("말: 기한 있는 메일 1건") and "감리" in line and "9/25" in line
+    assert "박연진" not in line
+
+
 def test_parse_flags_by_subject_regex_without_marker():
     rows = mail_eye.parse("- 감리 | 09:00 | 시정조치 결과 9/25까지 제출 요청 | 받은편지함")
     assert rows[0]["deadline"]

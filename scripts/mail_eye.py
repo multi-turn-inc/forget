@@ -85,11 +85,36 @@ def parse(report: str) -> list[dict]:
     return rows
 
 
+def _key(r: dict) -> tuple[str, str, str]:
+    return (r.get("sender", ""), r.get("at", ""), r.get("subject", ""))
+
+
+def load_prior(path: Path = OUT) -> list[dict]:
+    if not path.exists():
+        return []
+    return [json.loads(l) for l in path.read_text().splitlines() if l.strip()]
+
+
+def new_deadline_rows(rows: list[dict], prior: list[dict]) -> list[dict]:
+    """이전 실행에서 이미 본 (발신자·시각·제목)은 뺀 [기한] 줄만. 주기 실행이 같은 메일로 두 번 말하지 않게."""
+    seen = {_key(r) for rec in prior for r in rec.get("rows", [])}
+    return [r for r in rows if r["deadline"] and _key(r) not in seen]
+
+
+def speak_line(new_rows: list[dict]) -> str:
+    """정훈에게 올릴 한 줄. 새 [기한] 메일이 없으면 빈 문자열(침묵)."""
+    if not new_rows:
+        return ""
+    items = "; ".join(f"{r['sender']} {r['at']} «{r['subject']}»" + (f"({r['box']})" if r.get("box") else "") for r in new_rows)
+    return f"말: 기한 있는 메일 {len(new_rows)}건 — {items}"
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--since", default=None, help="KST 'YYYY-MM-DD HH:MM' (기본: 지금-6h)")
     ap.add_argument("--dry", action="store_true")
     ap.add_argument("--timeout", type=int, default=600)
+    ap.add_argument("--speak", action="store_true", help="새 [기한] 메일이 있을 때만 «말:» 한 줄을 stdout 마지막에 인쇄")
     a = ap.parse_args(argv)
     since = a.since or (datetime.now(KST) - timedelta(hours=6)).strftime("%Y-%m-%d %H:%M")
     prompt = build_prompt(since)
@@ -104,6 +129,8 @@ def main(argv: list[str] | None = None) -> int:
         return 3
     report = run_aside(prompt, timeout=a.timeout)
     rows = parse(report)
+    prior = load_prior()
+    fresh = new_deadline_rows(rows, prior)
     rec = {"at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
            "since_kst": since, "n": len(rows), "deadline": [r for r in rows if r["deadline"]], "rows": rows,
            "raw": compact_raw(report)[-4000:]}
@@ -111,6 +138,10 @@ def main(argv: list[str] | None = None) -> int:
     with open(OUT, "a") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     print(json.dumps({k: rec[k] for k in ("at", "since_kst", "n", "deadline")}, ensure_ascii=False))
+    if a.speak:
+        line = speak_line(fresh)
+        if line:
+            print(line)
     return 0
 
 
