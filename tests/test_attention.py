@@ -47,6 +47,18 @@ def test_read_turns_drops_harness_injected_user_lines(tmp_path):
     assert not T._injected_user("<b>굵게</b> 이건 사람 말")
 
 
+def test_load_state_scrubs_injected_lines_from_persisted_tail(tmp_path, monkeypatch):
+    monkeypatch.setattr(T, "ATTN_DIR", tmp_path)
+    (tmp_path / "state.json").write_text(json.dumps({"source": "s", "offset": 9, "tail": [
+        {"role": "user", "text": "답글 왔나", "ts": "t"},
+        {"role": "user", "text": "Your claude.ai usage limit has reset. Continue", "ts": "t"},
+        {"role": "assistant", "text": "초안입니다", "ts": "t"},
+    ], "block": [], "seen": {}, "injected": [], "ticks": 0, "actions_since_judge": 0}, ensure_ascii=False))
+    st = T.load_state()
+    assert [t["text"] for t in st["tail"]] == ["답글 왔나", "초안입니다"]
+    assert st["offset"] == 9
+
+
 def test_apply_judgement_edits_block_and_caps():
     st = {"block": [{"id": "old", "text": "o", "light": "green"}], "seen": {}}
     cands = [{"id": f"c{i}", "memory": f"m{i}", "trust": {"light": "green"}} for i in range(10)]

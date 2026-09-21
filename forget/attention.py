@@ -177,7 +177,11 @@ def load_state() -> dict[str, Any]:
     p = ATTN_DIR / "state.json"
     if p.exists():
         try:
-            return json.loads(p.read_text())
+            st = json.loads(p.read_text())
+            # 재기동 전에 저장된 tail에 하네스 주입 줄이 남아 있으면 여기서 뗀다 — 아니면 오프셋이 파일 끝이라
+            # 새 필터가 24턴 뒤에나 효력을 낸다(2026-09-21 실측: 재기동 후 tail 마지막 user = usage-limit 줄).
+            st["tail"] = [t for t in st.get("tail", []) if not (t.get("role") == "user" and _injected_user(str(t.get("text", ""))))]
+            return st
         except Exception:
             pass
     return {"source": "", "offset": 0, "tail": [], "block": [], "seen": {}, "injected": [], "ticks": 0, "actions_since_judge": 0}
